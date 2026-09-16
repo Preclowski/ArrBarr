@@ -12,7 +12,7 @@ import UIKit
 /// What a poster is being used for — which is what decides how big a copy we
 /// keep. Sizing by purpose rather than by source is the whole point: the arr's
 /// artwork is 421 kB on average, and a 40×60 pt list row was pulling all of it.
-public enum PosterTier: String, Sendable, CaseIterable {
+nonisolated public enum PosterTier: String, Sendable, CaseIterable {
     /// Spotlight results and every small UI slot (up to ~85 pt on the long
     /// edge, which is 256 px even at @3x).
     case icon
@@ -129,24 +129,24 @@ public struct PosterFetch: Sendable {
 /// in-flight dedup, one negative cache — with retention and size decided by the
 /// tier rather than by the call site.
 public actor PosterStore {
-    public static let shared = PosterStore()
+    nonisolated public static let shared = PosterStore()
 
     private let memory = NSCache<NSString, PlatformImage>()
     private let session: URLSession
     private let logger = Logger(category: "PosterStore")
-    private static let memoryCostCap = 50 * 1024 * 1024
+    nonisolated private static let memoryCostCap = 50 * 1024 * 1024
 
     private var inflight: [String: Task<PlatformImage?, Never>] = [:]
     private var negativeCache: [String: Date] = [:]
-    private static let negativeTTL: TimeInterval = 60 * 60
+    nonisolated private static let negativeTTL: TimeInterval = 60 * 60
     /// A poster that failed is not retried for a week. Kept on disk (unlike the
     /// in-memory negative cache) so the library prefetch doesn't spend its
     /// whole budget re-trying the same dead artwork after every relaunch.
-    private static let missTTL: TimeInterval = 7 * 24 * 3600
+    nonisolated private static let missTTL: TimeInterval = 7 * 24 * 3600
     /// How stale a file's mtime may get before `keepAlive` refreshes it. Keeps
     /// the touch-on-use write down to once a week per file while still keeping
     /// live entries far away from their retention limit.
-    private static let touchThreshold: TimeInterval = 7 * 24 * 3600
+    nonisolated private static let touchThreshold: TimeInterval = 7 * 24 * 3600
 
     private var didMigrate = false
 
@@ -335,7 +335,7 @@ public actor PosterStore {
     ///
     /// Purely a transport detail: the cache key stays the ORIGINAL url, so
     /// changing variants never orphans what we already stored.
-    static func sourceURL(for url: URL, tier: PosterTier) -> URL? {
+    nonisolated static func sourceURL(for url: URL, tier: PosterTier) -> URL? {
         switch url.host {
         case "image.tmdb.org":
             // /t/p/<size>/<file> — the size segment is the only part to swap.
@@ -454,7 +454,7 @@ public actor PosterStore {
     ///
     /// Encodes JPEG unless the source actually has an alpha channel — some
     /// artwork ships as RGBA PNG, and JPEG would flatten transparency to black.
-    static func resized(_ data: Data, maxPixelSize: Int?) -> Data? {
+    nonisolated static func resized(_ data: Data, maxPixelSize: Int?) -> Data? {
         guard let cap = maxPixelSize else { return data }
         guard let src = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         if let props = CGImageSourceCopyPropertiesAtIndex(src, 0, nil) as? [CFString: Any],
@@ -516,7 +516,7 @@ public actor PosterStore {
         "\(key(for: url)).\(tier.rawValue)"
     }
 
-    static func key(for url: URL) -> String {
+    nonisolated static func key(for url: URL) -> String {
         let digest = SHA256.hash(data: Data(url.absoluteString.utf8))
         return digest.map { String(format: "%02x", $0) }.joined()
     }

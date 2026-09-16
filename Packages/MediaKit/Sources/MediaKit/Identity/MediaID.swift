@@ -1,122 +1,149 @@
 import Foundation
 
-/// What kind of thing an id names. Part of every identity because ids are only
-/// unique per namespace *and* per kind — TMDB movie 603 and TMDB series 603
-/// are different titles, and that confusion is how a link opens the wrong
-/// thing.
-public enum MediaKind: String, Hashable, Sendable, Codable, CaseIterable {
-    case movie
-    case series
-    case season
-    case episode
-    /// Lidarr's world. TonightBarr shows neither, but ArrBarr browses both and
-    /// the model has to hold them or it will be forked the day it moves.
-    case artist
-    case album
+public enum MediaKind: String, Sendable, Codable, CaseIterable, Hashable {
+    case movie, series, season, episode, artist, album, track, person
 }
 
-/// Which media server a server-local id came from. Their id spaces are
-/// private to the server, so the kind travels with the id.
-public enum MediaServerFlavor: String, Hashable, Sendable, Codable {
-    case plex
-    case jellyfin
-    case emby
-}
+public enum IDNamespace: Hashable, Sendable, Codable {
+    case tmdbMovie, tmdbSeries, tmdbPerson
+    case tvdb, imdb
+    case musicBrainzArtist, musicBrainzAlbum, musicBrainzTrack
+    case arr(InstanceID)
+    case mediaServer(InstanceID)
 
-/// Which arr a numeric library id came from. Same reasoning: Radarr movie 12
-/// and Sonarr series 12 share nothing but the number.
-public enum ArrFlavor: String, Hashable, Sendable, Codable {
-    case radarr
-    case sonarr
-    case lidarr
-    case whisparr
-}
-
-/// One id, in one namespace.
-///
-/// Kept as an enum rather than a bare `Int`/`String` so a value carries the
-/// scheme it belongs to. The distinction between `.tmdbMovie` and `.tmdbSeries`
-/// is deliberate and load-bearing: TMDB has two id spaces, no arr can resolve
-/// a TMDB series id directly, and treating them as one number is the classic
-/// way to open the wrong title.
-public enum MediaID: Hashable, Sendable, Codable {
-    case tmdbMovie(Int)
-    case tmdbSeries(Int)
-    case tvdb(Int)
-    /// "ttNNNNNNN" — stored verbatim, prefix included, because that is how
-    /// every service writes it.
-    case imdb(String)
-    case musicBrainz(String)
-    /// A media server's own item id (Plex ratingKey/guid, Jellyfin item id).
-    case server(MediaServerFlavor, String)
-    /// An arr's library row id.
-    case arr(ArrFlavor, Int)
-
-    /// The namespace, without the value — used for "do I already know an id
-    /// of this kind?" lookups and as the debug label.
-    public var namespace: Namespace {
-        switch self {
-        case .tmdbMovie: .tmdbMovie
-        case .tmdbSeries: .tmdbSeries
-        case .tvdb: .tvdb
-        case .imdb: .imdb
-        case .musicBrainz: .musicBrainz
-        case .server(let flavor, _): .server(flavor)
-        case .arr(let flavor, _): .arr(flavor)
-        }
-    }
-
-    public enum Namespace: Hashable, Sendable {
-        case tmdbMovie, tmdbSeries, tvdb, imdb, musicBrainz
-        case server(MediaServerFlavor)
-        case arr(ArrFlavor)
-    }
-
-    /// The kind this id can only ever name, when the namespace settles it.
-    /// `nil` where the namespace spans kinds (IMDb ids name films and series
-    /// alike, an arr id follows its arr).
     public var impliedKind: MediaKind? {
         switch self {
         case .tmdbMovie: .movie
         case .tmdbSeries, .tvdb: .series
-        case .arr(let flavor, _): flavor == .sonarr ? .series : .movie
-        case .imdb, .musicBrainz, .server: nil
+        case .tmdbPerson: .person
+        case .musicBrainzArtist: .artist
+        case .musicBrainzAlbum: .album
+        case .musicBrainzTrack: .track
+        case .imdb, .arr, .mediaServer: nil
         }
     }
 
-    /// Stable, human-readable form — cache keys, logs, deep links.
-    /// Round-trips through `init?(token:)`.
-    public var token: String {
+    var token: String {
         switch self {
-        case .tmdbMovie(let id): "tmdb-movie:\(id)"
-        case .tmdbSeries(let id): "tmdb-series:\(id)"
-        case .tvdb(let id): "tvdb:\(id)"
-        case .imdb(let id): "imdb:\(id)"
-        case .musicBrainz(let id): "mbid:\(id)"
-        case .server(let flavor, let id): "\(flavor.rawValue):\(id)"
-        case .arr(let flavor, let id): "\(flavor.rawValue):\(id)"
+        case .tmdbMovie: "tmdb-movie"
+        case .tmdbSeries: "tmdb-series"
+        case .tmdbPerson: "tmdb-person"
+        case .tvdb: "tvdb"
+        case .imdb: "imdb"
+        case .musicBrainzArtist: "mb-artist"
+        case .musicBrainzAlbum: "mb-album"
+        case .musicBrainzTrack: "mb-track"
+        case let .arr(i): "arr:\(i)"
+        case let .mediaServer(i): "server:\(i)"
         }
     }
 
-    public init?(token: String) {
-        guard let separator = token.firstIndex(of: ":") else { return nil }
-        let scheme = String(token[token.startIndex..<separator])
-        let value = String(token[token.index(after: separator)...])
-        guard !value.isEmpty else { return nil }
-        switch scheme {
-        case "tmdb-movie": guard let id = Int(value) else { return nil }; self = .tmdbMovie(id)
-        case "tmdb-series": guard let id = Int(value) else { return nil }; self = .tmdbSeries(id)
-        case "tvdb": guard let id = Int(value) else { return nil }; self = .tvdb(id)
-        case "imdb": self = .imdb(value)
-        case "mbid": self = .musicBrainz(value)
+    init?(token: String) {
+        switch token {
+        case "tmdb-movie": self = .tmdbMovie
+        case "tmdb-series": self = .tmdbSeries
+        case "tmdb-person": self = .tmdbPerson
+        case "tvdb": self = .tvdb
+        case "imdb": self = .imdb
+        case "mb-artist": self = .musicBrainzArtist
+        case "mb-album": self = .musicBrainzAlbum
+        case "mb-track": self = .musicBrainzTrack
         default:
-            if let flavor = MediaServerFlavor(rawValue: scheme) {
-                self = .server(flavor, value)
-            } else if let flavor = ArrFlavor(rawValue: scheme), let id = Int(value) {
-                self = .arr(flavor, id)
-            } else {
-                return nil
+            let parts = token.split(separator: ":", maxSplits: 1).map(String.init)
+            guard parts.count == 2, let id = InstanceID(token: parts[1]) else { return nil }
+            switch parts[0] {
+            case "arr": self = .arr(id)
+            case "server": self = .mediaServer(id)
+            default: return nil
             }
         }
     }
+}
+
+extension InstanceID {
+    init?(token: String) {
+        let parts = token.split(separator: "#").map(String.init)
+        guard parts.count == 2, let kind = InstanceKind(rawValue: parts[0]), let ordinal = Int(parts[1]) else { return nil }
+        self.init(kind, ordinal: ordinal)
+    }
+}
+
+public struct MediaID: Hashable, Sendable, Codable, CustomStringConvertible {
+    public let namespace: IDNamespace
+    public let value: String
+
+    public init(namespace: IDNamespace, value: String) { self.namespace = namespace; self.value = value }
+
+    /// Round-trips `description`: the last `:` separates namespace and value.
+    public init?(_ token: String) {
+        guard let split = token.lastIndex(of: ":") else { return nil }
+        guard let ns = IDNamespace(token: String(token[..<split])) else { return nil }
+        let value = String(token[token.index(after: split)...])
+        guard !value.isEmpty else { return nil }
+        self.init(namespace: ns, value: value)
+    }
+
+    public var description: String { "\(namespace.token):\(value)" }
+
+    public static func tmdbMovie(_ id: Int) -> MediaID { .init(namespace: .tmdbMovie, value: String(id)) }
+    public static func tmdbSeries(_ id: Int) -> MediaID { .init(namespace: .tmdbSeries, value: String(id)) }
+    public static func tmdbPerson(_ id: Int) -> MediaID { .init(namespace: .tmdbPerson, value: String(id)) }
+    public static func tvdb(_ id: Int) -> MediaID { .init(namespace: .tvdb, value: String(id)) }
+    public static func imdb(_ id: String) -> MediaID { .init(namespace: .imdb, value: id.lowercased()) }
+    public static func musicBrainz(_ ns: IDNamespace, _ id: String) -> MediaID { .init(namespace: ns, value: id.lowercased()) }
+    public static func arr(_ instance: InstanceID, _ id: Int) -> MediaID { .init(namespace: .arr(instance), value: String(id)) }
+    public static func server(_ instance: InstanceID, _ id: String) -> MediaID { .init(namespace: .mediaServer(instance), value: id) }
+
+    public var intValue: Int? { Int(value) }
+}
+
+/// One model for every kind; flat lineage keeps it Hashable and Codable.
+public struct MediaIdentity: Hashable, Sendable, Codable {
+    public struct Ancestor: Hashable, Sendable, Codable {
+        public let kind: MediaKind
+        public let ids: Set<MediaID>
+        public let ordinal: Int?
+        public init(kind: MediaKind, ids: Set<MediaID>, ordinal: Int? = nil) { self.kind = kind; self.ids = ids; self.ordinal = ordinal }
+    }
+
+    public let kind: MediaKind
+    public let ids: Set<MediaID>
+    public let ordinal: Int?
+    public let lineage: [Ancestor]
+
+    public init(kind: MediaKind, ids: Set<MediaID>, ordinal: Int? = nil, lineage: [Ancestor] = []) {
+        self.kind = kind; self.ids = ids; self.ordinal = ordinal; self.lineage = lineage
+    }
+
+    public func id(in namespace: IDNamespace) -> MediaID? { ids.first { $0.namespace == namespace } }
+
+    public func merging(_ other: MediaIdentity) -> MediaIdentity {
+        MediaIdentity(kind: kind, ids: ids.union(other.ids), ordinal: ordinal ?? other.ordinal, lineage: lineage.isEmpty ? other.lineage : lineage)
+    }
+
+    /// Shared id, same kind, same ordinal; never a title or a year.
+    public func matches(_ other: MediaIdentity) -> Bool {
+        kind == other.kind && ordinal == other.ordinal && !ids.isDisjoint(with: other.ids)
+    }
+}
+
+public struct Crosswalk: Hashable, Sendable, Codable {
+    public enum Confidence: Int, Sendable, Codable, Comparable {
+        case inferred = 40, verified = 80, asserted = 100
+        public static func < (l: Self, r: Self) -> Bool { l.rawValue < r.rawValue }
+    }
+    public enum Source: String, Sendable, Codable { case arrRecord, arrLookup, mediaServerGuid, tmdbExternalIDs, tmdbFind, libraryIndex }
+
+    public let from: MediaID
+    public let to: MediaID
+    public let kind: MediaKind
+    public let confidence: Confidence
+    public let source: Source
+    public let fetchedAt: Date
+
+    public init(from: MediaID, to: MediaID, kind: MediaKind, confidence: Confidence, source: Source, fetchedAt: Date) {
+        self.from = from; self.to = to; self.kind = kind; self.confidence = confidence; self.source = source; self.fetchedAt = fetchedAt
+    }
+
+    public var reversed: Crosswalk { Crosswalk(from: to, to: from, kind: kind, confidence: confidence, source: source, fetchedAt: fetchedAt) }
 }

@@ -11,7 +11,7 @@ import SwiftUI
 /// plus the same hover-tint background. Diverged by ~2pt on padding /
 /// spacing across iterations and the user noticed; pulling it into one
 /// place keeps them in lock-step from now on.
-public struct PosterMetadataRow<TrailingAccessory: View>: View {
+public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingAccessory: View>: View {
     let posterURL: URL?
     let posterAPIKey: String?
     /// Every caller so far is a list row at 26×38, comfortably inside the icon
@@ -42,11 +42,11 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
     /// by Search rows to surface an "In library" tag without burning a
     /// metadata segment (a coloured chip reads at a glance; an extra
     /// "· In library" string does not). `nil` keeps the title alone.
-    let titleBadge: AnyView?
+    @ViewBuilder let titleBadge: () -> TitleBadge
     /// Optional chip leading the FIRST metadata line (Library's status
     /// chip). Rendered before the text segments, no separator dot — the
     /// chip's own outline already sets it apart.
-    let metadataBadge: AnyView?
+    @ViewBuilder let metadataBadge: () -> MetadataBadge
     /// Right-hand accessory. Pass `EmptyView()` if you don't want one.
     let trailing: () -> TrailingAccessory
     let onTap: () -> Void
@@ -66,10 +66,10 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
         metadataSegments2: [String] = [],
-        titleBadge: AnyView? = nil,
-        metadataBadge: AnyView? = nil,
         disabled: Bool = false,
         onTap: @escaping () -> Void,
+        @ViewBuilder titleBadge: @escaping () -> TitleBadge,
+        @ViewBuilder metadataBadge: @escaping () -> MetadataBadge,
         @ViewBuilder trailing: @escaping () -> TrailingAccessory
     ) {
         self.posterURL = posterURL
@@ -126,9 +126,7 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                     Text(title)
                         .scaledFont(size: 12, weight: .medium)
                         .lineLimit(1)
-                    if let titleBadge {
-                        titleBadge
-                    }
+                    titleBadge()
                     // Chevron telegraphs "tap to drill in" without
                     // depending on hover — works on iOS (no hover)
                     // and clarifies macOS rows too. Skipped on
@@ -137,11 +135,9 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                         LinkChevron(size: 9)
                     }
                 }
-                if metadataBadge != nil || !metadataSegments.isEmpty {
+                if hasMetadataBadge || !metadataSegments.isEmpty {
                     HStack(spacing: 5) {
-                        if let metadataBadge {
-                            metadataBadge
-                        }
+                        metadataBadge()
                         metadataLine(metadataSegments, colors: metadataSegmentColors)
                     }
                     .scaledFont(size: 10)
@@ -160,6 +156,11 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
         .contentShape(Rectangle())
     }
 
+    /// Does this row actually carry a metadata chip? Read off the TYPE, not
+    /// off an optional: the badge is a generic view now, and a row without one
+    /// is spelled `EmptyView` at compile time.
+    private var hasMetadataBadge: Bool { MetadataBadge.self != EmptyView.self }
+
     @ViewBuilder
     private func metadataLine(_ segments: [String], colors: [Color?]) -> some View {
         HStack(spacing: 4) {
@@ -177,5 +178,96 @@ public struct PosterMetadataRow<TrailingAccessory: View>: View {
                     )
             }
         }
+    }
+}
+
+
+// MARK: - Badge-free initialisers
+//
+// The badges are generic rather than `AnyView` so SwiftUI keeps each row's
+// static structure and can update a row in place instead of rebuilding its
+// subtree — which is what type erasure costs in a scrolling list. Most rows
+// carry no badge at all, hence these: the generic parameter is pinned to
+// `EmptyView` and the argument disappears from the call site.
+public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
+    init(
+        posterURL: URL?,
+        posterAPIKey: String?,
+        posterTier: PosterTier = .icon,
+        posterSize: CGSize,
+        posterCornerRadius: CGFloat = 3,
+        posterBlurred: Bool,
+        posterFallbackSymbol: String = "",
+        title: String,
+        metadataSegments: [String],
+        metadataSegmentColors: [Color?] = [],
+        metadataSegments2: [String] = [],
+        disabled: Bool = false,
+        onTap: @escaping () -> Void,
+        @ViewBuilder trailing: @escaping () -> TrailingAccessory
+    ) {
+        self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
+                  posterSize: posterSize, posterCornerRadius: posterCornerRadius,
+                  posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  title: title, metadataSegments: metadataSegments,
+                  metadataSegmentColors: metadataSegmentColors,
+                  metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
+                  titleBadge: { EmptyView() }, metadataBadge: { EmptyView() }, trailing: trailing)
+    }
+}
+
+public extension PosterMetadataRow where MetadataBadge == EmptyView {
+    init(
+        posterURL: URL?,
+        posterAPIKey: String?,
+        posterTier: PosterTier = .icon,
+        posterSize: CGSize,
+        posterCornerRadius: CGFloat = 3,
+        posterBlurred: Bool,
+        posterFallbackSymbol: String = "",
+        title: String,
+        metadataSegments: [String],
+        metadataSegmentColors: [Color?] = [],
+        metadataSegments2: [String] = [],
+        disabled: Bool = false,
+        onTap: @escaping () -> Void,
+        @ViewBuilder titleBadge: @escaping () -> TitleBadge,
+        @ViewBuilder trailing: @escaping () -> TrailingAccessory
+    ) {
+        self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
+                  posterSize: posterSize, posterCornerRadius: posterCornerRadius,
+                  posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  title: title, metadataSegments: metadataSegments,
+                  metadataSegmentColors: metadataSegmentColors,
+                  metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
+                  titleBadge: titleBadge, metadataBadge: { EmptyView() }, trailing: trailing)
+    }
+}
+
+public extension PosterMetadataRow where TitleBadge == EmptyView {
+    init(
+        posterURL: URL?,
+        posterAPIKey: String?,
+        posterTier: PosterTier = .icon,
+        posterSize: CGSize,
+        posterCornerRadius: CGFloat = 3,
+        posterBlurred: Bool,
+        posterFallbackSymbol: String = "",
+        title: String,
+        metadataSegments: [String],
+        metadataSegmentColors: [Color?] = [],
+        metadataSegments2: [String] = [],
+        disabled: Bool = false,
+        onTap: @escaping () -> Void,
+        @ViewBuilder metadataBadge: @escaping () -> MetadataBadge,
+        @ViewBuilder trailing: @escaping () -> TrailingAccessory
+    ) {
+        self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
+                  posterSize: posterSize, posterCornerRadius: posterCornerRadius,
+                  posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  title: title, metadataSegments: metadataSegments,
+                  metadataSegmentColors: metadataSegmentColors,
+                  metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
+                  titleBadge: { EmptyView() }, metadataBadge: metadataBadge, trailing: trailing)
     }
 }

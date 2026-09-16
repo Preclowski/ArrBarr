@@ -19,7 +19,7 @@ import Foundation
 ///     UI can route a tap to the right detail surface
 ///   - Add flow — pattern-matched dispatch to the right arr client
 ///     (`addMovie(tmdbId:)` vs `addSeries(tvdbId:)` etc.)
-public enum MediaRef: Hashable, Sendable {
+nonisolated public enum MediaRef: Hashable, Sendable {
     case tmdb(Int)
     case tvdb(Int)
     /// TMDB's **series** id — a different id space from `.tmdb`, which is
@@ -152,7 +152,7 @@ public enum MediaRef: Hashable, Sendable {
 
 // MARK: - SearchResult bridge
 
-public extension SearchResult {
+nonisolated public extension SearchResult {
     /// Source-aware canonical identity. Lets call sites compare or
     /// route by `MediaRef` without re-deriving the scheme from
     /// `source` + `externalId` everywhere.
@@ -179,7 +179,7 @@ public extension SearchResult {
 /// ranking semantics (text → relevance score, ref → exact-match
 /// bypass) and the call sites that consume `SearchInput` switch on
 /// the case rather than re-parsing the original string.
-public enum SearchInput: Equatable, Sendable {
+nonisolated public enum SearchInput: Equatable, Sendable {
     case text(String)
     case ref(MediaRef)
 
@@ -214,7 +214,7 @@ public enum SearchInput: Equatable, Sendable {
 /// 2049" cases burn more value than the feature provides. If a year
 /// filter is ever needed, add it as an explicit UI control rather
 /// than parsing it out of the free-text field.
-public enum QueryParser {
+nonisolated public enum QueryParser {
     public static func parse(_ input: String) -> SearchInput {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if let ref = MediaRef(urlString: trimmed) {

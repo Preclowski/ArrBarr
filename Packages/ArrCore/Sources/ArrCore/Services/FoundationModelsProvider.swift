@@ -7,11 +7,9 @@ import FoundationModels
 /// recent-enough OS, but Apple Intelligence supported AND enabled. The Settings
 /// AI provider picker hides the Foundation Models option when this is false.
 public enum FoundationModelsAvailability {
-    public static var isSupported: Bool {
+    nonisolated public static var isSupported: Bool {
         #if canImport(FoundationModels)
-        if #available(macOS 26.0, iOS 26.0, *) {
-            if case .available = SystemLanguageModel.default.availability { return true }
-        }
+        if case .available = SystemLanguageModel.default.availability { return true }
         #endif
         return false
     }
@@ -22,7 +20,6 @@ public enum FoundationModelsAvailability {
 #if canImport(FoundationModels)
 import FoundationModels
 
-@available(macOS 26.0, iOS 26.0, *)
 public struct FoundationModelsProvider: LLMProvider {
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
@@ -85,7 +82,7 @@ public struct FoundationModelsProvider: LLMProvider {
 
     // MARK: - Private
 
-    private static func buildInstructions(tools: [LLMTool]) -> Instructions {
+    nonisolated private static func buildInstructions(tools: [LLMTool]) -> Instructions {
         // Foundation Models sees only a single stringified `json` argument on
         // each DynamicMCPTool, so the framework can't expose the real schema
         // to the model. We compensate by spelling each tool's JSON schema out
@@ -182,9 +179,8 @@ public struct FoundationModelsProvider: LLMProvider {
 /// Actor that collects (tool call, result) pairs recorded by `DynamicMCPTool.call(arguments:)`
 /// during a single LLM session. ChatViewModel drains it after `respond` returns
 /// and renders them as `.tool` messages without re-executing.
-@available(macOS 26.0, iOS 26.0, *)
 actor DynamicMCPToolBox {
-    static let shared = DynamicMCPToolBox()
+    nonisolated static let shared = DynamicMCPToolBox()
     private var pendingCalls: [ToolCall] = []
     private var pendingResults: [String] = []
     private var pendingRich: [ChatRichContent?] = []
@@ -214,7 +210,6 @@ actor DynamicMCPToolBox {
 /// struct: a single `json` string field. The tool performs the real MCP call
 /// synchronously inside `call(arguments:)` and records both call and result
 /// in `DynamicMCPToolBox`.
-@available(macOS 26.0, iOS 26.0, *)
 struct DynamicMCPTool: Tool {
 
     let spec: LLMTool

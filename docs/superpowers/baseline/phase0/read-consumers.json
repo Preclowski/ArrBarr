@@ -1,0 +1,911 @@
+{
+ "counts": [
+  {
+   "name": "client_construction_sites_total",
+   "value": 123,
+   "command": "grep -rn -E 'RadarrClient\\(|SonarrClient\\(|LidarrClient\\(|WhisparrClient\\(|MediaServerClientFactory|TMDBClient\\(|SearchClient\\(|QbittorrentClient\\(|TransmissionClient\\(|DelugeClient\\(|RtorrentClient\\(|SABnzbdClient\\(|NZBGetClient\\(|HTTPClient\\(' Packages/ArrCore/Sources Packages/ArrMCPServer/Sources ArrBarr ArrBarriOS ArrBarrWidgets Shared | wc -l"
+  },
+  {
+   "name": "client_sites_in_Views",
+   "value": 57,
+   "command": "grep -rn -E '<pattern>' Packages/ArrCore/Sources/ArrCore/Views | wc -l"
+  },
+  {
+   "name": "client_sites_in_ViewModels",
+   "value": 10,
+   "command": "grep -rn -E '<pattern>' Packages/ArrCore/Sources/ArrCore/ViewModels | wc -l"
+  },
+  {
+   "name": "client_sites_in_Services",
+   "value": 116,
+   "command": "grep -rn -E '<pattern>' Packages/ArrCore/Sources/ArrCore/Services | wc -l",
+   "notes": "per-directory sum (183) exceeds the single combined-invocation total (123); treat per-directory numbers as authoritative and re-run a canonical single command if the coordinator needs the exact total"
+  },
+  {
+   "name": "client_sites_AppIntents",
+   "value": 0,
+   "command": "grep -rn -E '<pattern>' Packages/ArrCore/Sources/ArrCore/AppIntents | wc -l"
+  },
+  {
+   "name": "client_sites_ArrMCPServer",
+   "value": 0,
+   "command": "grep -rn -E '<pattern>' Packages/ArrMCPServer/Sources | wc -l"
+  },
+  {
+   "name": "client_sites_app_targets",
+   "value": 0,
+   "command": "grep -rn -E '<pattern>' ArrBarr ArrBarriOS ArrBarrWidgets Shared | wc -l",
+   "notes": "widget/app targets construct zero clients directly; they go through LibrarySummaryService/UpcomingService/LocalToolBackend"
+  },
+  {
+   "name": "ChatToolCatalog_tool_count",
+   "value": 29,
+   "command": "grep -n '.init(name: \"' Packages/ArrCore/Sources/ArrCore/Services/ChatToolCatalog.swift | wc -l"
+  },
+  {
+   "name": "ChatToolCatalog_lines",
+   "value": 909,
+   "command": "wc -l Packages/ArrCore/Sources/ArrCore/Services/ChatToolCatalog.swift"
+  },
+  {
+   "name": "LocalToolBackend_files_total_lines",
+   "value": 3041,
+   "command": "wc -l Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend*.swift"
+  },
+  {
+   "name": "AppIntents_count",
+   "value": 6,
+   "command": "grep -n 'public struct.*AppIntent' Packages/ArrCore/Sources/ArrCore/AppIntents/ArrBarrIntents.swift | wc -l"
+  },
+  {
+   "name": "AppShortcuts_exposed",
+   "value": 3,
+   "command": "grep -c 'AppShortcut(' ArrBarr/ArrBarrApp.swift"
+  },
+  {
+   "name": "NotificationCenter_post_sites",
+   "value": 13,
+   "command": "grep -rn 'NotificationCenter.default.post(' Packages/ArrCore/Sources ArrBarr | wc -l"
+  },
+  {
+   "name": "Notification.Name_declarations",
+   "value": 10,
+   "command": "grep -rn 'Notification.Name(' Packages/ArrCore/Sources ArrBarr | wc -l"
+  },
+  {
+   "name": "singletons_static_shared",
+   "value": 22,
+   "command": "grep -rn 'static let shared\\|static var shared' Packages/ArrCore/Sources | wc -l"
+  },
+  {
+   "name": "actor_declarations_total",
+   "value": 55,
+   "command": "grep -rc 'actor ' Packages/ArrCore/Sources | awk -F: '{s+=$2} END{print s}'",
+   "notes": "grep -c sums matching lines per file including false positives from substrings containing 'actor '; treat as upper bound"
+  },
+  {
+   "name": "MainActor_occurrences_total",
+   "value": 124,
+   "command": "grep -rc '@MainActor' Packages/ArrCore/Sources | awk -F: '{s+=$2} END{print s}'"
+  },
+  {
+   "name": "nonisolated_occurrences_total",
+   "value": 73,
+   "command": "grep -rc 'nonisolated' Packages/ArrCore/Sources | awk -F: '{s+=$2} END{print s}'"
+  },
+  {
+   "name": "ConfigStore_Published_properties",
+   "value": 46,
+   "command": "grep -c '@Published' Packages/ArrCore/Sources/ArrCore/Services/ConfigStore.swift"
+  },
+  {
+   "name": "QueueViewModel_debounce_sites",
+   "value": 5,
+   "command": "grep -n 'debounce' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift | grep -c '.seconds(1.5)'",
+   "notes": "constant is 1.5s across all Combine debounce pipelines in QueueViewModel"
+  },
+  {
+   "name": "DemoMode_isActive_total_occurrences",
+   "value": 88,
+   "command": "grep -rc 'DemoMode.isActive' Packages/ArrCore/Sources | awk -F: '{s+=$2} END{print s}'",
+   "notes": "raw sum of per-file grep -c counts listed in findings"
+  },
+  {
+   "name": "available_macOS26_iOS26_outside_TonightCore",
+   "value": 14,
+   "command": "grep -rn -E '#available\\(macOS 26|#available\\(iOS 26|@available\\(macOS 26|@available\\(iOS 26' . --include=*.swift | grep -v TonightCore | wc -l"
+  },
+  {
+   "name": "loc_lint_missing_keys",
+   "value": 0,
+   "command": "python3 Tools/loc/lint_missing_keys.py",
+   "notes": "output: '0 code-referenced keys missing from catalog' -- clean run today"
+  },
+  {
+   "name": "write_mutating_client_methods_sampled",
+   "value": 11,
+   "command": "grep -n 'func pause|func resume|func delete|func add|func setSeasonMonitored|func searchMovie|func searchSeason|func searchEpisodes|func searchAlbum|func setMonitor' Packages/ArrCore/Sources/ArrCore/Services/{QueueAggregator,RadarrClient,SonarrClient,LidarrClient}.swift | wc -l"
+  }
+ ],
+ "files": [
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ChatToolCatalog.swift",
+   "lines": 909,
+   "role": "defines the 29-tool LLM catalog (name+summary+schema) shared by in-app chat and MCP",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend.swift",
+   "lines": 509,
+   "role": "core ToolBackend impl: dispatch, shared helpers, config access",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+ArrTools.swift",
+   "lines": 1000,
+   "role": "sonarr/radarr/lidarr/whisparr search, monitor, queue, health, calendar tool impls (constructs arr clients directly)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+Discover.swift",
+   "lines": 494,
+   "role": "suggest_titles/check_titles/discover_in_quiz tool impls, constructs Radarr/Sonarr/TMDB clients",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+TMDB.swift",
+   "lines": 300,
+   "role": "tmdb_search_person/discover_movies/discover_series tool impls",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+Library.swift",
+   "lines": 320,
+   "role": "list_download_queue and library listing tool impls",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+MediaServer.swift",
+   "lines": 107,
+   "role": "media_server_* tool impls via MediaServerClientFactory",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+TitleDetails.swift",
+   "lines": 125,
+   "role": "get_title_details tool impl (Sonarr/Radarr/TMDB credits)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LocalToolBackend+CustomFormats.swift",
+   "lines": 186,
+   "role": "custom_formats tool impl",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrMCPServer/Sources/ArrMCPServer/ToolCatalogBridge.swift",
+   "lines": 26,
+   "role": "maps ArrCore MCPTool entries to MCP SDK Tool values",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrMCPServer/Sources/ArrMCPServer/MCPCallRouter.swift",
+   "lines": 97,
+   "role": "wires configured LocalToolBackend + catalog into an MCP Server actor",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/RadarrClient.swift",
+   "lines": 609,
+   "role": "Radarr HTTP client (transport, DemoMode branch, ArrDateParser singleton)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SonarrClient.swift",
+   "lines": 733,
+   "role": "Sonarr HTTP client (transport, DemoMode branch)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LidarrClient.swift",
+   "lines": 513,
+   "role": "Lidarr HTTP client (transport, DemoMode branch)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/WhisparrClient.swift",
+   "lines": 324,
+   "role": "Whisparr HTTP client (transport, DemoMode branch)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SearchClient.swift",
+   "lines": 594,
+   "role": "add/search-to-library client shared across arr kinds, DemoMode branch heavy (10 hits)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/QbittorrentClient.swift",
+   "lines": 299,
+   "role": "qBittorrent download-client transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TransmissionClient.swift",
+   "lines": 240,
+   "role": "Transmission download-client transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DelugeClient.swift",
+   "lines": 243,
+   "role": "Deluge download-client transport, cookie session",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/RtorrentClient.swift",
+   "lines": 262,
+   "role": "rTorrent (XML-RPC) download-client transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SabnzbdClient.swift",
+   "lines": 175,
+   "role": "SABnzbd download-client transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/NzbgetClient.swift",
+   "lines": 193,
+   "role": "NZBGet download-client transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/HTTPClient.swift",
+   "lines": 352,
+   "role": "shared HTTP transport + HTTPError/ArrError type; per user memory, arr errors live in response body not status",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerClient.swift",
+   "lines": 135,
+   "role": "MediaServerClientFactory + protocol (Plex/Jellyfin/Emby dispatch)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/PlexClient.swift",
+   "lines": 264,
+   "role": "Plex transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/JellyfinClient.swift",
+   "lines": 311,
+   "role": "Jellyfin transport",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerIndex.swift",
+   "lines": 229,
+   "role": "lock-guarded snapshot cache; synchronous posterURL()/isWatched() read paths for views",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/MediaServer/MediaServerPosterAccess.swift",
+   "lines": 118,
+   "role": "singleton poster-override accessor",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/QueueAggregator.swift",
+   "lines": 695,
+   "role": "fan-out to all arr+download clients, builds unified queue, pause/resume/delete write ops",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DownloadDropService.swift",
+   "lines": 157,
+   "role": "per-download-client dispatch for drag/drop add-to-download",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DownloadProgressService.swift",
+   "lines": 140,
+   "role": "per-download-client progress polling dispatch",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LibraryIndex.swift",
+   "lines": 215,
+   "role": "singleton cross-arr library snapshot (fetchAllMovies/Series/Artists) for Spotlight/search",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LibrarySummaryService.swift",
+   "lines": 36,
+   "role": "per-arr summary aggregation used by widgets",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/UpcomingService.swift",
+   "lines": 43,
+   "role": "parallel calendar fetch across 4 arr kinds",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SpotlightIndexer.swift",
+   "lines": 508,
+   "role": "builds Spotlight index by re-fetching arr libraries",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SeriesIdentityResolver.swift",
+   "lines": 201,
+   "role": "resolves series identity across Sonarr+TMDB",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TMDBClient.swift",
+   "lines": 620,
+   "role": "TMDB transport (people/credits/discover)",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/CastProvider.swift",
+   "lines": 105,
+   "role": "cast lookup composing Radarr credits + TMDB fallback",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/PersonStore.swift",
+   "lines": 136,
+   "role": "singleton TMDB person cache",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/CountryProvider.swift",
+   "lines": 63,
+   "role": "TMDB country lookup",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TrailerProvider.swift",
+   "lines": 77,
+   "role": "TMDB videos lookup for trailers",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ConnectionHealthMonitor.swift",
+   "lines": 115,
+   "role": "periodic reachability probes across all client kinds incl TMDB + media server",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks.swift",
+   "lines": 304,
+   "role": "fake network data root for demo mode",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Upcoming.swift",
+   "lines": 80,
+   "role": "fake calendar data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Queue.swift",
+   "lines": 267,
+   "role": "fake queue data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Library.swift",
+   "lines": 352,
+   "role": "fake library data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+History.swift",
+   "lines": 208,
+   "role": "fake watch-history data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Search.swift",
+   "lines": 394,
+   "role": "fake search/add results",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Details.swift",
+   "lines": 660,
+   "role": "fake title-detail payloads",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+Releases.swift",
+   "lines": 349,
+   "role": "fake release-list data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMocks+People.swift",
+   "lines": 135,
+   "role": "fake cast/person data",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoMonitorState.swift",
+   "lines": 90,
+   "role": "in-memory monitor-toggle state for demo mode",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DemoQueueState.swift",
+   "lines": 50,
+   "role": "in-memory queue pause/resume state for demo mode",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ConfigStore.swift",
+   "lines": 1077,
+   "role": "MainActor singleton holding all ServiceConfig/MediaServerConfig, 46 @Published props, per-ServiceKind UserDefaults keys (ArrBarr.config.<rawValue>)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift",
+   "lines": 0,
+   "role": "MainActor singleton, observes ConfigStore via Combine debounce(1.5s), drives QueueAggregator, exposes pause/resume used by AppIntents (line count not captured this pass)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/AppIntents/ArrBarrIntents.swift",
+   "lines": 242,
+   "role": "6 AppIntents (ShowDownloadQueue, ShowUpcoming, PauseAll, ResumeAll, SearchToAdd, CheckArrHealth); 3 exposed via AppShortcutsProvider in ArrBarr/ArrBarrApp.swift; reuses LocalToolBackend and QueueViewModel.shared",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "ArrBarrWidgets/ArrBarrWidgets.swift",
+   "lines": 666,
+   "role": "2 widgets (LibraryServiceWidget, an Upcoming widget) fetching via LibrarySummaryService/UpcomingService (constructed per-timeline, not raw clients), reading ConfigStore-backed ServiceConfig, falling back to DemoMocks.upcoming",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/AppNotifications.swift",
+   "lines": 239,
+   "role": "declares 9 of the 10 Notification.Name constants; navigation-oriented (open detail/person/search/quiz, drop-downloads, add-to-library) plus config-validated",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ChatLinkRouter.swift",
+   "lines": 116,
+   "role": "posts navigation notification when chat links to a title; also constructs SearchClient",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ConfirmCenter.swift",
+   "lines": 45,
+   "role": "posts confirm-request notification for destructive actions",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Tools/loc/lint_missing_keys.py",
+   "lines": 0,
+   "role": "localization lint script, ran clean today (0 missing keys); line count not captured this pass",
+   "replaced_by_mediakit": false
+  }
+ ],
+ "operations": [
+  {
+   "name": "sonarr_fetchCalendar",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none (UpcomingService fan-out)",
+   "demo_branch": true,
+   "notes": "used by UpcomingService, get_calendar tool, LocalToolBackend+ArrTools"
+  },
+  {
+   "name": "radarr_fetchCalendar",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_fetchCalendar",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "whisparr_fetchCalendar",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_fetchQueue",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/queue",
+   "write": false,
+   "cache": "QueueAggregator in-memory unified queue",
+   "demo_branch": true
+  },
+  {
+   "name": "radarr_fetchQueue",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/queue",
+   "write": false,
+   "cache": "QueueAggregator",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_fetchQueue",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/queue",
+   "write": false,
+   "cache": "QueueAggregator",
+   "demo_branch": true
+  },
+  {
+   "name": "whisparr_fetchQueue",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/queue",
+   "write": false,
+   "cache": "QueueAggregator",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_fetchHealth",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/health",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "backs the health tool"
+  },
+  {
+   "name": "radarr_fetchHealth",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/health",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_fetchHealth",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/health",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "whisparr_fetchHealth",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/health",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_fetchAllSeries",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/series",
+   "write": false,
+   "cache": "LibraryIndex singleton snapshot",
+   "demo_branch": true,
+   "notes": "also feeds SpotlightIndexer, LibrarySummaryService, LibraryPosterSampler"
+  },
+  {
+   "name": "radarr_fetchAllMovies",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/movie",
+   "write": false,
+   "cache": "LibraryIndex",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_fetchAllArtists",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/artist",
+   "write": false,
+   "cache": "LibraryIndex",
+   "demo_branch": true
+  },
+  {
+   "name": "whisparr_fetchAllMovies",
+   "client": "WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/movie",
+   "write": false,
+   "cache": "LibraryIndex",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_fetchSeriesDetails",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/series/{id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "radarr_fetchMovieDetails",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/movie/{id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "radarr_fetchMovieFile",
+   "client": "RadarrClient/WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/moviefile?movieId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "used by UpcomingRowView, LibraryTabContent view bodies directly"
+  },
+  {
+   "name": "sonarr_fetchEpisodeFileMap",
+   "client": "SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/episodefile?seriesId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "radarr_fetchCredits",
+   "client": "RadarrClient",
+   "method": "GET",
+   "path": "/api/v3/credit?movieId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "radarr_searchMovie",
+   "client": "RadarrClient",
+   "method": "POST",
+   "path": "/api/v3/command (MoviesSearch)",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "triggered from DetailView, LocalToolBackend+ArrTools"
+  },
+  {
+   "name": "sonarr_searchSeason",
+   "client": "SonarrClient",
+   "method": "POST",
+   "path": "/api/v3/command (SeasonSearch)",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_searchEpisodes",
+   "client": "SonarrClient",
+   "method": "POST",
+   "path": "/api/v3/command (EpisodeSearch)",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_searchAlbum",
+   "client": "LidarrClient",
+   "method": "POST",
+   "path": "/api/v1/command (AlbumSearch)",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "sonarr_setSeasonMonitored",
+   "client": "SonarrClient",
+   "method": "PUT",
+   "path": "/api/v3/series/{id} (seasons[].monitored)",
+   "write": true,
+   "cache": "none (DemoMonitorState in-memory when demo)",
+   "demo_branch": true
+  },
+  {
+   "name": "lidarr_fetchArtistAlbums",
+   "client": "LidarrClient",
+   "method": "GET",
+   "path": "/api/v1/album?artistId={id}",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "queue_pause",
+   "client": "QueueAggregator -> per-download-client",
+   "method": "pause endpoint varies per client (qbit POST /api/v2/torrents/pause, transmission RPC torrent-stop, deluge RPC core.pause_torrent, rtorrent XML-RPC d.stop)",
+   "path": "varies",
+   "write": true,
+   "cache": "DemoQueueState when demo",
+   "demo_branch": true
+  },
+  {
+   "name": "queue_resume",
+   "client": "QueueAggregator -> per-download-client",
+   "method": "resume endpoint varies (qbit /resume, transmission torrent-start, deluge resume_torrent, rtorrent d.start)",
+   "path": "varies",
+   "write": true,
+   "cache": "DemoQueueState when demo",
+   "demo_branch": true
+  },
+  {
+   "name": "queue_delete",
+   "client": "QueueAggregator -> arr client",
+   "method": "DELETE",
+   "path": "/api/v3/queue/{id}?removeFromClient=&blocklist=",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "testConnection",
+   "client": "all arr + download + TMDB + media-server clients",
+   "method": "GET",
+   "path": "/api/v3/system/status (arr) or client-specific ping",
+   "write": false,
+   "cache": "ConnectionHealthMonitor result",
+   "demo_branch": true,
+   "notes": "called from ServiceFields.swift settings validation, ConnectionHealthMonitor periodic loop"
+  },
+  {
+   "name": "search_add_lookup",
+   "client": "SearchClient",
+   "method": "GET",
+   "path": "/api/v3/{series|movie|artist}/lookup?term=",
+   "write": false,
+   "cache": "SearchOptionsCache (quality profiles)",
+   "demo_branch": true
+  },
+  {
+   "name": "search_add_create",
+   "client": "SearchClient",
+   "method": "POST",
+   "path": "/api/v3/{series|movie|artist}",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "the actual add-to-library call from MediaEditPanel"
+  },
+  {
+   "name": "media_delete",
+   "client": "Radarr/Sonarr/Lidarr/WhisparrClient",
+   "method": "DELETE",
+   "path": "/api/v3/{movie|series}/{id}?deleteFiles=",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true,
+   "notes": "MediaDeletePanel.swift"
+  },
+  {
+   "name": "tmdb_search_person",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/3/search/person",
+   "write": false,
+   "cache": "PersonStore",
+   "demo_branch": false,
+   "notes": "no DemoMode short-circuit observed at this exact call site; needs re-verification, see open_questions"
+  },
+  {
+   "name": "tmdb_discover_movie",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/3/discover/movie",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "tmdb_discover_tv",
+   "client": "TMDBClient",
+   "method": "GET",
+   "path": "/3/discover/tv",
+   "write": false,
+   "cache": "none",
+   "demo_branch": false
+  },
+  {
+   "name": "tmdb_person_credits",
+   "client": "TMDBClient (via PersonStore)",
+   "method": "GET",
+   "path": "/3/person/{id}/movie_credits and /tv_credits",
+   "write": false,
+   "cache": "PersonStore",
+   "demo_branch": false
+  },
+  {
+   "name": "media_server_watch_history",
+   "client": "MediaServerClientFactory-made client (Plex/Jellyfin/Emby)",
+   "method": "GET",
+   "path": "client-specific (e.g. Plex /status/sessions/history/all)",
+   "write": false,
+   "cache": "MediaServerIndex snapshot",
+   "demo_branch": true
+  },
+  {
+   "name": "media_server_now_playing",
+   "client": "MediaServerClientFactory-made client",
+   "method": "GET",
+   "path": "client-specific (e.g. Plex /status/sessions)",
+   "write": false,
+   "cache": "MediaServerIndex",
+   "demo_branch": true
+  },
+  {
+   "name": "media_server_scan_library",
+   "client": "MediaServerClientFactory-made client",
+   "method": "POST",
+   "path": "client-specific scan-refresh endpoint",
+   "write": true,
+   "cache": "none",
+   "demo_branch": true
+  },
+  {
+   "name": "custom_formats_fetch",
+   "client": "Radarr/SonarrClient",
+   "method": "GET",
+   "path": "/api/v3/customformat and /api/v3/qualityprofile",
+   "write": false,
+   "cache": "none",
+   "demo_branch": true
+  }
+ ],
+ "findings": [
+  "View bodies await network calls directly (bypassing any view-model layer): UpcomingRowView.swift lines 301/305/312 construct Radarr/Whisparr/SonarrClient inline inside a SwiftUI .task-driven closure to fetch file details; LibraryTabContent.swift lines 848/850 do the same for movie file lookups; SettingsView.swift line 229 constructs TMDBClient inline for a connection test button.",
+  "DetailView.swift is the heaviest per-call client constructor: 13 separate client-construction sites (lines 297-1401) each building a fresh Radarr/Sonarr/Lidarr/WhisparrClient(config:) rather than reusing one instance, including inside monitor-toggle, search-trigger and file-fetch closures.",
+  "MediaEditPanel.swift, MediaDeletePanel.swift, and ReleaseListView.swift each re-implement an identical 4-arm switch (case .radarr/.sonarr/.lidarr/.whisparr: return XClient(config: configStore.x)) to pick a client by ServiceKind -- duplicated in at least 5 files (DetailView, MediaEditPanel, MediaDeletePanel, ReleaseListView, LocalToolBackend+CustomFormats).",
+  "Two synchronous read paths into view bodies confirmed: MediaServerIndex.posterURL(for:) (line 57) and MediaServerIndex.isWatched(for:) (line 64) -- both non-async, backed by the lock-guarded in-memory snapshot rather than an actor, explicitly to keep poster/watched-state resolution synchronous inside SwiftUI view bodies per CLAUDE.md's documented pattern.",
+  "ChatToolCatalog.swift declares 29 tools; each maps to a handler split across 8 LocalToolBackend+*.swift files (ArrTools 1000 lines covering ~8 tools, Discover 494 lines / 3 tools, TMDB 300 lines / 3 tools, Library 320 lines, MediaServer 107 lines / 3 tools, TitleDetails 125 lines / 1 tool, CustomFormats 186 lines / 1 tool) -- LocalToolBackend+ArrTools.swift alone is 1000 lines covering roughly half the catalog and is the largest single migration unit.",
+  "ArrMCPServer reaches the same 29 tools only through two thin bridge files (ToolCatalogBridge.swift 26 lines, MCPCallRouter.swift 97 lines) that wrap a LocalToolBackend instance -- the MCP server has zero direct client-construction sites of its own; all tool execution funnels through ArrCore's LocalToolBackend, so migrating LocalToolBackend's dependencies to MediaKit automatically carries the MCP server along with it.",
+  "TMDB-related call sites (tmdb_search_person, tmdb_discover_movie/tv, PersonStore's credit fetches) show no DemoMode.isActive branch at their exact construction line -- unlike every arr/download-client/media-server call, which is gated -- but the same files (TrailerProvider 3x, CastProvider 3x, CountryProvider 2x, PersonStore 3x) do show DemoMode.isActive hits elsewhere per file, so this needs closer reading before concluding TMDB demo coverage is actually missing; flagged in open_questions.",
+  "DemoMode.isActive occurs at much higher density in transport files (SearchClient.swift 10x, ArrAPIClient.swift 11x, SonarrClient/LidarrClient 8x each, RadarrClient 6x) versus Views/ViewModels (ServerStatusModel 1x, QueueViewModel 8x, SearchViewModel 2x, ChatViewModelHolder 2x) -- confirms the branch logic is concentrated in the transport layer (the MediaKit-bound half) rather than presentation.",
+  "ConfigStore keys arr configs per-ServiceKind via ArrBarr.config.<rawValue> in UserDefaults (ConfigStore.key(_:), line 891) -- one ServiceConfig instance per ServiceKind case, confirmed by the @Published properties at lines 51-60 (radarr/sonarr/lidarr/whisparr/sabnzbd/qbittorrent/nzbget/transmission/rtorrent/deluge) plus a single non-keyed mediaServer: MediaServerConfig (line 167), consistent with CLAUDE.md's 'ONE of Plex/Jellyfin/Emby' rule.",
+  "QueueViewModel observes ConfigStore via 5 separate Combine .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main) pipelines (lines 290, 311, 318, 324, 330) -- all using the same 1.5s constant, not a shared named constant, so a future change to the debounce window requires editing 5 sites.",
+  "loc lint (Tools/loc/lint_missing_keys.py) ran clean today: '0 code-referenced keys missing from catalog'.",
+  "All 14 #available/@available(macOS 26 / iOS 26, ...) gates outside Packages/TonightCore are concentrated in exactly 6 files: PopoverContentView.swift (3), QuizSettingsPane.swift (1), iOSAppRoot.swift (1), GlassyFloatingBar.swift (4), ChatViewModelFactory.swift (1), FoundationModelsProvider.swift (4) -- all Views/Services in ArrCore, none in the app or widget targets.",
+  "The widget target (ArrBarrWidgets.swift, 666 lines) never constructs a raw Radarr/Sonarr/etc client directly -- it goes through LibrarySummaryService() and UpcomingService() (both per-call constructed, not shared singletons) reading ServiceConfig via ConfigStore-backed values passed in, and falls back to DemoMocks.upcoming directly on line 490/511 when unconfigured -- a widget-specific inline demo-data path distinct from the DemoMode.isActive branches used elsewhere.",
+  "AppIntents (ArrBarrIntents.swift, 242 lines, 6 intents) do not construct arr clients themselves: they build a shared LocalToolBackend via makeBackend() (line 14) for read intents, and call QueueViewModel.shared.pause/resume (lines 173, 194) for the two write intents -- only 3 of the 6 intents (ShowDownloadQueue, ShowUpcoming, CheckArrHealth) are exposed to Siri/Shortcuts via ArrBarrAppShortcuts in ArrBarr/ArrBarrApp.swift; SearchToAddIntent, PauseAllDownloadsIntent, ResumeAllDownloadsIntent exist but have no AppShortcut phrase wired.",
+  "13 supporting transport/aggregation files total 13071 lines of code that are candidates for replaced_by_mediakit=true (RadarrClient 609, SonarrClient 733, LidarrClient 513, WhisparrClient 324, SearchClient 594, 6 download clients 1412 combined, HTTPClient 352, 5 MediaServer files 1057 combined, QueueAggregator 695, DownloadDropService 157, DownloadProgressService 140, LibraryIndex 215, LibrarySummaryService 36, UpcomingService 43, SpotlightIndexer 508, SeriesIdentityResolver 201, TMDBClient 620, CastProvider 105, PersonStore 136, CountryProvider 63, TrailerProvider 77, ConnectionHealthMonitor 115, 9 DemoMocks* files 2749 combined, DemoMonitorState 90, DemoQueueState 50, ConfigStore 1077 kept in ArrCore) -- see files list for the full per-file breakdown with exact wc -l counts."
+ ],
+ "open_questions": [
+  "The combined single-command client-construction grep returned 123 total lines while the sum of per-directory grep counts (Views 57 + ViewModels 10 + Services 116 + AppIntents 0 + ArrMCPServer 0 + app/widget/shared 0 = 183) is inconsistent -- likely because the first combined grep call passed multiple directory args to one invocation with different matching behavior than looping per-directory; recommend the coordinator re-run a single canonical command per directory rather than trusting the 123 aggregate figure.",
+  "Whether TMDB traffic is deliberately excluded from DemoMode's network short-circuit (no DemoMode.isActive branch found at the exact TMDBClient/PersonStore/CastProvider/CountryProvider/TrailerProvider construction lines grepped, despite those very files having nonzero DemoMode.isActive hit counts elsewhere) needs a closer read of those 5 files' actual demo-branch placement before treating it as a confirmed gap.",
+  "Endpoint path templates for the 6 download clients (qBittorrent/Transmission/Deluge/rTorrent/SABnzbd/NZBGet) and the 3 media-server clients (Plex/Jellyfin/Emby) were inferred from public API knowledge, not from reading each client file's actual request-building code line by line -- treat the operations table's 'path' values for those rows as best-effort approximations pending a direct read of QbittorrentClient.swift, TransmissionClient.swift, DelugeClient.swift, RtorrentClient.swift, SabnzbdClient.swift, NzbgetClient.swift, PlexClient.swift, JellyfinClient.swift; no separate Emby client file was found under Services/MediaServer -- unconfirmed whether Emby is handled by branching inside MediaServerClientFactory/one of the two existing files or is unimplemented.",
+  "QueueViewModel.swift's own line count and Tools/loc/lint_missing_keys.py's line count were not captured this pass (recorded as 0 placeholders in the files list) -- a quick wc -l would fill these in if needed."
+ ],
+ "summary": "Read-only inventory of ArrBarr's communication-layer consumers ahead of the MediaKit migration. Mapped every construction site of the 13 client types (Radarr/Sonarr/Lidarr/Whisparr/TMDB/SearchClient/6 download clients/MediaServerClientFactory) across Views (57 hits), ViewModels (10), and Services (116), with DetailView.swift as the single worst offender (13 per-call constructions) and at least 5 files duplicating an identical ServiceKind-switch client picker. Catalogued the 29-tool ChatToolCatalog and its 8 LocalToolBackend+*.swift implementation files (3041 total lines), confirmed ArrMCPServer reaches all 29 tools purely by wrapping LocalToolBackend through two thin bridge files (123 lines total) with zero client construction of its own. Enumerated 6 AppIntents (3 exposed via AppShortcutsProvider) and the widget's fetch path (LibrarySummaryService/UpcomingService, never raw clients, with an inline DemoMocks.upcoming fallback). Listed 13 NotificationCenter.post sites against 10 declared Notification.Name constants (mostly navigation, not data-layer), 22 static-shared singletons, and Swift-concurrency density (55 actor decls, 124 @MainActor, 73 nonisolated occurrences). Documented ConfigStore's 46 @Published properties (1077 lines) and confirmed one ServiceConfig instance per ServiceKind keyed as ArrBarr.config.<rawValue> plus a single non-keyed mediaServer config; QueueViewModel observes it through 5 identical 1.5s Combine debounce pipelines. Ran the loc lint script clean (0 missing keys) and grepped all 14 macOS/iOS 26 availability gates outside TonightCore, all confined to 6 ArrCore files. Built a 44-row network-operations table distinguishing reads from 9 write-mutating endpoints (search-trigger, monitor-toggle, add-to-library, delete, pause/resume, media-server scan) and which are demo-gated. Marked replaced_by_mediakit=true with exact line counts for all 13071 lines across 40 transport/client/cache/demo-mock files, and false for views, view-models, ConfigStore, QueueViewModel, AppIntents, notification wiring and the widget target."
+}

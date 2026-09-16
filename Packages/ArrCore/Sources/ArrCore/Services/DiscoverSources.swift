@@ -1,6 +1,6 @@
 import Foundation
 
-public enum DiscoverSources {
+nonisolated public enum DiscoverSources {
 
     // MARK: - Radarr Library source
 

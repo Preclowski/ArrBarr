@@ -47,7 +47,7 @@ extension LocalToolBackend {
 
     /// Only strips with at least one tappable head are worth rendering — a row
     /// of grey silhouettes that go nowhere is worse than the prose alone.
-    private static func castRich(_ members: [CastMember]) -> ChatRichContent? {
+    nonisolated private static func castRich(_ members: [CastMember]) -> ChatRichContent? {
         let usable = members.filter { $0.tmdbPersonId != nil }
         return usable.isEmpty ? nil : .cast(usable)
     }
@@ -83,7 +83,7 @@ extension LocalToolBackend {
     /// "• Keanu Reeves — Neo" ×15. The personId rides along so the model can
     /// link a name it mentions (see the linking rules in the system prompt) or
     /// pull that person's filmography without a second name lookup.
-    private static func castText(_ members: [CastMember]) -> String {
+    nonisolated private static func castText(_ members: [CastMember]) -> String {
         let lines = members.prefix(15).map { m -> String in
             var line = "• \(m.name)"
             if let role = m.role, !role.isEmpty { line += " — \(role)" }
@@ -95,7 +95,7 @@ extension LocalToolBackend {
 
     // MARK: - Formatting
 
-    private static func formatMovieDetails(_ d: RadarrMovieDetail) -> String {
+    nonisolated private static func formatMovieDetails(_ d: RadarrMovieDetail) -> String {
         var out = d.year.map { "\(d.title) (\($0))" } ?? d.title
         var facts: [String] = []
         if let r = d.runtime, r > 0 { facts.append("\(r) min") }
@@ -108,7 +108,7 @@ extension LocalToolBackend {
         return out
     }
 
-    private static func formatSeriesDetails(_ d: SonarrSeriesDetail) -> String {
+    nonisolated private static func formatSeriesDetails(_ d: SonarrSeriesDetail) -> String {
         var out = d.year.map { "\(d.title) (\($0))" } ?? d.title
         var facts: [String] = []
         if let n = d.network, !n.isEmpty { facts.append(n) }

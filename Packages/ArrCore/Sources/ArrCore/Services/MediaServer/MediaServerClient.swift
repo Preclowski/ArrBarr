@@ -3,7 +3,7 @@ import Foundation
 /// What ArrBarr asks of a media server. Eight calls, all of them either reads or
 /// maintenance the user explicitly pressed — nothing here writes library
 /// content, and there is no delete path on purpose.
-public protocol MediaServerClient: Sendable {
+nonisolated public protocol MediaServerClient: Sendable {
     var config: MediaServerConfig { get }
 
     /// Reachability + version, and (Jellyfin / Emby) the user id whose play
@@ -34,28 +34,16 @@ public protocol MediaServerClient: Sendable {
     func seasonPosters(seriesItemId: String) async throws -> [Int: URL]
 }
 
-public enum MediaServerClientFactory {
-    /// The client for the currently selected server, or nil when the feature is
-    /// off / half-configured. Callers treat nil as "no media server", which is
-    /// the same path they take when a fetch fails.
+nonisolated public enum MediaServerClientFactory {
     public static func make(config: MediaServerConfig) -> MediaServerClient? {
         guard config.isConfigured else { return nil }
-        switch config.kind {
-        case .plex:
-            return PlexClient(config: config)
-        case .jellyfin, .emby:
-            // One implementation for both: Jellyfin is Emby's fork and the
-            // endpoints ArrBarr touches (`/System/Info`, `/Users`, `/Items`,
-            // `/Sessions`, `/Library/Refresh`) never diverged. Only the auth
-            // header differs, and that already lives on `MediaServerKind`.
-            return JellyfinClient(config: config)
-        }
+        return MediaServerFacade(config: config)
     }
 }
 
 // MARK: - Shared helpers
 
-extension MediaServerClient {
+nonisolated extension MediaServerClient {
     /// Base URL with any trailing slashes removed, so path joining can't
     /// produce a double slash (which some reverse proxies 404).
     var normalizedBaseURL: String {
@@ -80,7 +68,7 @@ extension MediaServerClient {
 /// `com.plexapp.agents.themoviedb://157336?lang=en`, and TVDB's
 /// `com.plexapp.agents.thetvdb://121361/2/1`. Jellyfin and Emby use a plain
 /// `ProviderIds` dictionary and need only the numeric parsing.
-public enum MediaServerGuidParser {
+nonisolated public enum MediaServerGuidParser {
 
     /// Every external key encoded in one guid string, or none.
     public static func key(from guid: String) -> MediaServerExternalKey? {

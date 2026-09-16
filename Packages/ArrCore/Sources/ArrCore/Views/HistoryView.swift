@@ -24,10 +24,12 @@ public struct HistoryView: View {
     var onOpenDetail: ((QueueItem) -> Void)? = nil
 
     public var body: some View {
-        VStack(spacing: 0) {
-            if showHeader { header }
-            content(feed)
-        }
+        // Header in the safe area, not as a stacked row: the rows scroll under
+        // it and the system blurs the seam, like every other surface here.
+        content(feed)
+            .safeAreaBar(edge: .top, spacing: 0) {
+                if showHeader { header }
+            }
         // The feed outlives this view, so a reopened popover shows the rows it
         // had at once; this brings them up to date behind them. Re-run when the
         // iOS tab swaps `source` in place.
@@ -151,6 +153,9 @@ public struct HistoryView: View {
             .padding(.bottom, 8)
         }
         .scrollBounceBehavior(.basedOnSize)
+        // Content blurs softly under the floating glass chrome instead of
+        // being cut off by it — same treatment as the queue.
+        .scrollEdgeEffectStyle(.soft, for: .top)
         .frame(maxHeight: .infinity)
     }
 
@@ -159,7 +164,8 @@ public struct HistoryView: View {
     private func sectionHeader(_ bucket: HistoryItem.TimeBucket, isFirst: Bool) -> some View {
         Text(verbatim: sectionTitle(bucket))
             .scaledFont(size: 11, weight: .semibold)
-            .foregroundStyle(.secondary)
+            // Same level as every other section title — see `DetailSectionHeader`.
+            .foregroundStyle(.primary)
             .padding(.horizontal, Tokens.Spacing.queueRowH + Self.queueListInset)
             .padding(.top, isFirst ? 8 : 14)
             .padding(.bottom, 4)
@@ -168,9 +174,10 @@ public struct HistoryView: View {
 
     private func sectionTitle(_ bucket: HistoryItem.TimeBucket) -> String {
         let locale = configStore.currentLocale
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = locale
-        formatter.unitsStyle = .full
+        // Shared, not built here: this runs per section header per body pass —
+        // i.e. while the list scrolls — and a formatter costs far more to
+        // allocate and configure than to use.
+        let formatter = CachedDateFormatters.relative(.full, locale: locale)
         switch bucket {
         case .hours(0): return AppLocalized.string("history.bucket.lastHour", locale: locale)
         case .hours(let hours): return formatter.localizedString(from: DateComponents(hour: -hours))

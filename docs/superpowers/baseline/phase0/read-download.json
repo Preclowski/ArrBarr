@@ -1,0 +1,648 @@
+{
+ "counts": [
+  {
+   "name": "download client files (Qbit/Transmission/Deluge/Rtorrent/Sab/Nzbget) total LOC",
+   "value": 1412,
+   "command": "wc -l QbittorrentClient.swift TransmissionClient.swift DelugeClient.swift RtorrentClient.swift SabnzbdClient.swift NzbgetClient.swift",
+   "notes": "299+240+243+262+175+193"
+  },
+  {
+   "name": "download-client + realtime + aggregator + progress-cache + health-monitor total LOC (replaced_by_mediakit candidates)",
+   "value": 3113,
+   "command": "wc -l QbittorrentClient.swift TransmissionClient.swift DelugeClient.swift RtorrentClient.swift SabnzbdClient.swift NzbgetClient.swift QueueAggregator.swift RealtimeUpdates.swift ConnectionHealthMonitor.swift DownloadProgressService.swift | tail -1"
+  },
+  {
+   "name": "QueueViewModel.swift LOC (stays in ArrCore)",
+   "value": 1562,
+   "command": "wc -l ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "RealtimeFrameParsingTests.swift test count",
+   "value": 11,
+   "command": "grep -c '@Test(' Tests/ArrCoreTests/RealtimeFrameParsingTests.swift"
+  },
+  {
+   "name": "grep hits for 'protocol DownloadClient' (does not exist under that name)",
+   "value": 0,
+   "command": "grep -rn 'protocol DownloadClient' Packages/ArrCore/Sources/ArrCore/Services/"
+  },
+  {
+   "name": "occurrences of 429/Retry-After handling anywhere in Services",
+   "value": 0,
+   "command": "grep -rn '429|retryAfter|Retry-After' Packages/ArrCore/Sources/ArrCore/Services/*.swift"
+  },
+  {
+   "name": "debounce(for:) call sites in QueueViewModel",
+   "value": 8,
+   "command": "grep -c 'debounce(for:' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "ConnectionHealthMonitor.minInterval (probe throttle, seconds)",
+   "value": 60,
+   "command": "grep -n 'minInterval' Packages/ArrCore/Sources/ArrCore/Services/ConnectionHealthMonitor.swift"
+  },
+  {
+   "name": "QueueViewModel.unreachableThreshold / ConnectionHealth.downThreshold (consecutive strikes)",
+   "value": 3,
+   "command": "grep -n 'unreachableThreshold\\|downThreshold' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift Packages/ArrCore/Sources/ArrCore/ViewModels/ConnectionHealth.swift"
+  },
+  {
+   "name": "ConfigStore.foregroundInterval / backgroundInterval (seconds)",
+   "value": 30,
+   "command": "grep -n 'foregroundInterval\\|backgroundInterval' Packages/ArrCore/Sources/ArrCore/Services/ConfigStore.swift"
+  },
+  {
+   "name": "ConfigStore.realtimeSilenceTimeout (seconds)",
+   "value": 300,
+   "command": "grep -n 'realtimeSilenceTimeout' Packages/ArrCore/Sources/ArrCore/Services/ConfigStore.swift"
+  },
+  {
+   "name": "QueueViewModel.realtimeBurstWindow (seconds)",
+   "value": 0.25,
+   "command": "grep -n 'realtimeBurstWindow' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "QueueViewModel.upcomingInterval (seconds)",
+   "value": 1800,
+   "command": "grep -n 'upcomingInterval' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "QueueViewModel.healthInterval (seconds)",
+   "value": 900,
+   "command": "grep -n 'healthInterval' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "DownloadProgressService default ttl / maxCacheAge (seconds)",
+   "value": 2,
+   "command": "grep -n 'init(ttl' Packages/ArrCore/Sources/ArrCore/Services/DownloadProgressService.swift",
+   "notes": "ttl=2, maxCacheAge=60"
+  },
+  {
+   "name": "SignalRConnection reconnect backoff: initial/max/coldStart (seconds)",
+   "value": 30,
+   "command": "grep -n 'backoffNs\\|maxBackoffNs\\|coldStartNs\\|failureCeilingBeforeColdStart' Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift",
+   "notes": "initial 1s, doubling to 30s cap, after 10 consecutive dead cycles drops to 300s (5min) cold-start retry"
+  },
+  {
+   "name": "SignalRConnection ping pump interval (seconds)",
+   "value": 15,
+   "command": "grep -n 'interval: UInt64 = 15_000_000_000' Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift"
+  },
+  {
+   "name": "SignalRConnection minimumHealthyLifetime (seconds)",
+   "value": 30,
+   "command": "grep -n 'minimumHealthyLifetime' Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift"
+  },
+  {
+   "name": "listen() receive watchdog timeout (seconds, steady-state)",
+   "value": 60,
+   "command": "grep -n 'receiveWithTimeout(ws, seconds: 60)' Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift"
+  },
+  {
+   "name": "consumeHandshake receive watchdog timeout (seconds)",
+   "value": 30,
+   "command": "grep -n 'receiveWithTimeout(ws, seconds: 30)' Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift"
+  },
+  {
+   "name": "healthDebounce fixed delay (seconds)",
+   "value": 2,
+   "command": "grep -n 'commonModeTimer(interval: 2' Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift"
+  },
+  {
+   "name": "maxConcurrentSideLoads (arr metadata side-loads, NOT download clients)",
+   "value": 4,
+   "command": "grep -n 'maxConcurrentSideLoads: Int' Packages/ArrCore/Sources/ArrCore/Services/ArrAPIClient.swift"
+  },
+  {
+   "name": "ParallelResolve width used in discover flows (unrelated to download clients)",
+   "value": 8,
+   "command": "grep -n 'ParallelResolve.orderedMap' Packages/ArrCore/Sources/ArrCore/Services/DiscoverSources.swift"
+  },
+  {
+   "name": "qBittorrent fetchTorrents maxFilterHashes (URL length safety cap)",
+   "value": 50,
+   "command": "grep -n 'maxFilterHashes' Packages/ArrCore/Sources/ArrCore/Services/QbittorrentClient.swift"
+  }
+ ],
+ "files": [
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/QbittorrentClient.swift",
+   "lines": 299,
+   "role": "qBittorrent 4.x/5.x WebUI client (SID-cookie login or API-key Bearer); torrent add/pause/resume/delete/force-start; batch progress via /torrents/info",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/TransmissionClient.swift",
+   "lines": 240,
+   "role": "Transmission JSON-RPC client (X-Transmission-Session-Id CSRF handshake); torrent-add/start/stop/remove; batch progress via torrent-get",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DelugeClient.swift",
+   "lines": 243,
+   "role": "Deluge JSON-RPC-over-HTTP client (auth.login cookie session, in-band error envelope); add/pause/resume/remove; label plugin category; batch progress via core.get_torrents_status",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/RtorrentClient.swift",
+   "lines": 262,
+   "role": "rTorrent XML-RPC client (hand-rolled XML encode/decode, no session); load/stop/start/erase; batch progress via d.multicall2 with alignment-checked chunking",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/SabnzbdClient.swift",
+   "lines": 175,
+   "role": "SABnzbd REST client (query-string apikey, no session); queue pause/resume/delete, addfile multipart upload; batch progress via mode=queue",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/NzbgetClient.swift",
+   "lines": 193,
+   "role": "NZBGet JSON-RPC client (HTTP Basic auth, no session); editqueue pause/resume/delete, append upload; batch progress via listgroups",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/QueueAggregator.swift",
+   "lines": 695,
+   "role": "Merges 4 arrs' queues with download-client live progress overlay (matched by lowercased downloadId); routes pause/resume/delete/continue to the right client by fuzzy name match; unreachable-vs-service-error classification",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/DownloadProgressService.swift",
+   "lines": 141,
+   "role": "Actor cache fronting all 6 DownloadProgressSource clients: 2s TTL debounce, 60s max staleness before falling back to arr value, coalesces concurrent callers into one fetch",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/RealtimeUpdates.swift",
+   "lines": 751,
+   "role": "Hand-rolled SignalR-over-WebSocket client per arr (negotiate POST, JSON Hub Protocol framing, exponential backoff with cold-start throttle, per-source liveness tracking); RealtimeManager + SignalRConnection actors",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/ConnectionHealthMonitor.swift",
+   "lines": 115,
+   "role": "Actor that probes download clients + OpenAI + TMDB + media server testConnection(), throttled to once/60s unless forced",
+   "replaced_by_mediakit": true
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/ViewModels/ConnectionHealth.swift",
+   "lines": 92,
+   "role": "MainActor @Observable canonical health-state store (per-service snapshots, 3-strike debounce before flipping red); consumed by Settings dots and popover 'Needs you' rows",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Models/ConnectionHealthState.swift",
+   "lines": 33,
+   "role": "Plain enum/struct model: unknown/ok/down + ServiceHealthSnapshot",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/ViewModels/ServerStatusModel.swift",
+   "lines": 83,
+   "role": "MainActor @Observable view-model for Settings > Status disk-space panel; fetches /diskspace from the 4 arrs directly (not from download clients)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Views/ServerStatusView.swift",
+   "lines": 377,
+   "role": "SwiftUI view for Settings > Status (disk space, health, connection dots)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/WidgetDataStore.swift",
+   "lines": 243,
+   "role": "App-group UserDefaults snapshot store (upcoming items, demo flag, configs) read by the WidgetKit extension; no download-client or realtime dependency",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/LibrarySummaryService.swift",
+   "lines": 36,
+   "role": "Widget-weight library summary fetch via arr clients directly (no LocalToolBackend, no download clients)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/Services/UpcomingService.swift",
+   "lines": 43,
+   "role": "Widget-weight calendar fetch via arr clients directly (no download clients)",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Sources/ArrCore/ViewModels/QueueViewModel.swift",
+   "lines": 1562,
+   "role": "Central @MainActor view-model: owns polling timers, realtime debounce/coalescing, health probing schedule, wake handling, progress interpolation — domain composition, stays in ArrCore",
+   "replaced_by_mediakit": false
+  },
+  {
+   "path": "Packages/ArrCore/Tests/ArrCoreTests/RealtimeFrameParsingTests.swift",
+   "lines": 115,
+   "role": "Swift Testing suite, 11 @Test cases, covers SignalRConnection.parse(frame:source:) pure function only: queue/fileImported/queueStatus event mapping, name-casing insensitivity, malformed/close/ping frames, missing-envelope fallback. Does not test negotiate, WebSocket transport, or backoff.",
+   "replaced_by_mediakit": false
+  }
+ ],
+ "operations": [
+  {
+   "name": "qBittorrent login",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/auth/login",
+   "write": true,
+   "cache": "session cookie cached on actor (loggedIn flag + sessionGeneration)",
+   "demo_branch": false,
+   "notes": "Only when username non-empty; API-key mode (empty username) skips login, sends Authorization: Bearer <key> per request instead"
+  },
+  {
+   "name": "qBittorrent pause",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/torrents/stop",
+   "write": true,
+   "notes": "form: hashes"
+  },
+  {
+   "name": "qBittorrent resume",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/torrents/start",
+   "write": true
+  },
+  {
+   "name": "qBittorrent delete",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/torrents/delete",
+   "write": true,
+   "notes": "deleteFiles=false always"
+  },
+  {
+   "name": "qBittorrent force-start (continueDownload)",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/torrents/setForceStart",
+   "write": true
+  },
+  {
+   "name": "qBittorrent test connection",
+   "client": "QbittorrentClient",
+   "method": "GET",
+   "path": "/api/v2/app/version",
+   "write": false
+  },
+  {
+   "name": "qBittorrent add torrent",
+   "client": "QbittorrentClient",
+   "method": "POST",
+   "path": "/api/v2/torrents/add",
+   "write": true,
+   "notes": "multipart; sends both paused+stopped fields for 4.x/5.x compat; 409=duplicate"
+  },
+  {
+   "name": "qBittorrent default-add-paused pref",
+   "client": "QbittorrentClient",
+   "method": "GET",
+   "path": "/api/v2/app/preferences",
+   "write": false
+  },
+  {
+   "name": "qBittorrent progress batch",
+   "client": "QbittorrentClient",
+   "method": "GET",
+   "path": "/api/v2/torrents/info",
+   "write": false,
+   "cache": "DownloadProgressService (2s ttl/60s max age)",
+   "notes": "hashes query filter only when <=50 ids (maxFilterHashes)"
+  },
+  {
+   "name": "Transmission RPC (all methods)",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc",
+   "write": false,
+   "notes": "session-id via X-Transmission-Session-Id 409 handshake, retried once; login is per-request Basic auth (no session state)"
+  },
+  {
+   "name": "Transmission pause",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (torrent-stop)",
+   "write": true
+  },
+  {
+   "name": "Transmission resume",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (torrent-start)",
+   "write": true
+  },
+  {
+   "name": "Transmission delete",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (torrent-remove)",
+   "write": true,
+   "notes": "delete-local-data=false"
+  },
+  {
+   "name": "Transmission add torrent",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (torrent-add)",
+   "write": true,
+   "notes": "category mapped to download-dir subfolder; duplicate=success"
+  },
+  {
+   "name": "Transmission session-get (defaults/download-dir)",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (session-get)",
+   "write": false
+  },
+  {
+   "name": "Transmission test connection",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (session-get version)",
+   "write": false
+  },
+  {
+   "name": "Transmission progress batch",
+   "client": "TransmissionClient",
+   "method": "POST",
+   "path": "/transmission/rpc (torrent-get)",
+   "write": false,
+   "cache": "DownloadProgressService"
+  },
+  {
+   "name": "Deluge login",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (auth.login)",
+   "write": true,
+   "cache": "session cookie cached on actor (loggedIn + sessionGeneration)",
+   "notes": "in-band error {code:1,'Not authenticated'} detected in HTTP 200 body, retried once"
+  },
+  {
+   "name": "Deluge pause",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.pause_torrent)",
+   "write": true
+  },
+  {
+   "name": "Deluge resume",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.resume_torrent)",
+   "write": true
+  },
+  {
+   "name": "Deluge delete",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.remove_torrent)",
+   "write": true
+  },
+  {
+   "name": "Deluge add magnet",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.add_torrent_magnet)",
+   "write": true
+  },
+  {
+   "name": "Deluge add file",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.add_torrent_file)",
+   "write": true
+  },
+  {
+   "name": "Deluge label set (category)",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (label.set_torrent)",
+   "write": true,
+   "notes": "non-fatal if Label plugin disabled"
+  },
+  {
+   "name": "Deluge default add_paused config",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.get_config_value)",
+   "write": false
+  },
+  {
+   "name": "Deluge test connection",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (daemon.info)",
+   "write": false
+  },
+  {
+   "name": "Deluge progress batch",
+   "client": "DelugeClient",
+   "method": "POST",
+   "path": "/json (core.get_torrents_status)",
+   "write": false,
+   "cache": "DownloadProgressService"
+  },
+  {
+   "name": "rTorrent pause/resume/delete",
+   "client": "RtorrentClient",
+   "method": "POST",
+   "path": "/ (XML-RPC d.stop/d.start/d.erase)",
+   "write": true,
+   "notes": "no session/login at all; Basic auth per request if username set"
+  },
+  {
+   "name": "rTorrent test connection",
+   "client": "RtorrentClient",
+   "method": "POST",
+   "path": "/ (XML-RPC system.client_version)",
+   "write": false
+  },
+  {
+   "name": "rTorrent progress batch",
+   "client": "RtorrentClient",
+   "method": "POST",
+   "path": "/ (XML-RPC d.multicall2)",
+   "write": false,
+   "cache": "DownloadProgressService",
+   "notes": "ids param ignored; alignment-verified 4-value chunking (hash/completed/size/rate)"
+  },
+  {
+   "name": "rTorrent add (magnet/file)",
+   "client": "RtorrentClient",
+   "method": "POST",
+   "path": "/ (XML-RPC load.normal/load.start/load.raw/load.raw_start)",
+   "write": true,
+   "notes": "category set via trailing d.custom1.set= command at load time only"
+  },
+  {
+   "name": "SABnzbd pause/resume/delete",
+   "client": "SabnzbdClient",
+   "method": "GET",
+   "path": "/api?mode=queue&name=<action>",
+   "write": true,
+   "notes": "apikey in query string; no session"
+  },
+  {
+   "name": "SABnzbd add nzb",
+   "client": "SabnzbdClient",
+   "method": "POST",
+   "path": "/api?mode=addfile",
+   "write": true,
+   "notes": "multipart; priority=-2 for paused (no dedicated add-paused flag)"
+  },
+  {
+   "name": "SABnzbd test connection",
+   "client": "SabnzbdClient",
+   "method": "GET",
+   "path": "/api?mode=queue",
+   "write": false,
+   "notes": "deliberately NOT mode=version (unauthenticated 200 would false-positive)"
+  },
+  {
+   "name": "SABnzbd progress/slots fetch",
+   "client": "SabnzbdClient",
+   "method": "GET",
+   "path": "/api?mode=queue",
+   "write": false,
+   "cache": "DownloadProgressService"
+  },
+  {
+   "name": "NZBGet pause/resume/delete",
+   "client": "NzbgetClient",
+   "method": "POST",
+   "path": "/jsonrpc (editqueue GroupPause/GroupResume/GroupDelete)",
+   "write": true,
+   "notes": "Basic auth per request; no session"
+  },
+  {
+   "name": "NZBGet add nzb",
+   "client": "NzbgetClient",
+   "method": "POST",
+   "path": "/jsonrpc (append)",
+   "write": true,
+   "notes": "base64 content inline, v13+ positional 10-arg signature"
+  },
+  {
+   "name": "NZBGet test connection",
+   "client": "NzbgetClient",
+   "method": "POST",
+   "path": "/jsonrpc (version)",
+   "write": false
+  },
+  {
+   "name": "NZBGet progress batch",
+   "client": "NzbgetClient",
+   "method": "POST",
+   "path": "/jsonrpc (listgroups)",
+   "write": false,
+   "cache": "DownloadProgressService"
+  },
+  {
+   "name": "arr queue fetch (x4)",
+   "client": "RadarrClient/SonarrClient/LidarrClient/WhisparrClient",
+   "method": "GET",
+   "path": "/api/v3/queue (or v1 lidarr)",
+   "write": false,
+   "demo_branch": false,
+   "notes": "fetched in parallel via async let in QueueAggregator.fetch()/fetch(source:)"
+  },
+  {
+   "name": "arr queue delete",
+   "client": "RadarrClient/etc via QueueAggregator.deleteViaArr",
+   "method": "DELETE",
+   "path": "/api/v3/queue/{id}",
+   "write": true,
+   "demo_branch": true,
+   "notes": "DemoMode.isActive short-circuits to DemoQueueState.perform in-memory; removeFromClient param controls client-side cleanup for grouped/season-pack rows"
+  },
+  {
+   "name": "arr queue grab (continueDownload with no downloadId)",
+   "client": "RadarrClient/etc via QueueAggregator.grabViaArr",
+   "method": "POST",
+   "path": "/api/v3/queue/grab/{id}",
+   "write": true,
+   "demo_branch": true
+  },
+  {
+   "name": "arr health fetch (x4)",
+   "client": "RadarrClient/etc",
+   "method": "GET",
+   "path": "/api/v3/health",
+   "write": false,
+   "demo_branch": false
+  },
+  {
+   "name": "arr calendar/upcoming fetch (x4)",
+   "client": "RadarrClient/etc",
+   "method": "GET",
+   "path": "/api/v3/calendar",
+   "write": false,
+   "demo_branch": false
+  },
+  {
+   "name": "arr history fetch (x4)",
+   "client": "RadarrClient/etc",
+   "method": "GET",
+   "path": "/api/v3/history",
+   "write": false,
+   "demo_branch": false
+  },
+  {
+   "name": "arr disk space fetch (x4, ServerStatusModel)",
+   "client": "RadarrClient/etc",
+   "method": "GET",
+   "path": "/api/v3/diskspace",
+   "write": false,
+   "demo_branch": true,
+   "notes": "DemoMode returns static demoDisks array"
+  },
+  {
+   "name": "SignalR negotiate (per arr)",
+   "client": "SignalRConnection",
+   "method": "POST",
+   "path": "/signalr/messages/negotiate?negotiateVersion=1",
+   "write": false,
+   "demo_branch": true,
+   "notes": "reconfigure() skips connecting entirely when DemoMode.isActive"
+  },
+  {
+   "name": "SignalR WebSocket connect+listen (per arr)",
+   "client": "SignalRConnection",
+   "method": "WS",
+   "path": "/signalr/messages?id=<token>&access_token=<key>",
+   "write": false,
+   "demo_branch": true
+  },
+  {
+   "name": "download-client health probe (testConnection, all 6 kinds)",
+   "client": "ConnectionHealthMonitor via ConnectionTester",
+   "method": "varies (GET/POST per client)",
+   "path": "each client's own testConnection() endpoint",
+   "write": false,
+   "demo_branch": false,
+   "notes": "throttled to once/60s (minInterval) via probeIfDue; force bypass on manual Test Connection / config change"
+  }
+ ],
+ "findings": [
+  "No retry/backoff/429 handling anywhere outside SignalR's reconnect loop: none of the 6 download-client actors (Qbit/Transmission/Deluge/Rtorrent/Sab/Nzbget) check for HTTP 429 or Retry-After; a single failed request just throws. Only qBittorrent and Deluge retry ONE time on a 401/403 session-expiry (re-login then retry), which is a distinct mechanism from rate-limit backoff.",
+  "SignalRConnection.runLoop is the only place with real backoff: exponential 1s->30s (doubling), and after 10 consecutive 'dead' cycles (no frame received AND under 30s minimumHealthyLifetime) it throttles to a 300s (5-minute) cold-start retry so a broken reverse-proxy can't pin the app at the 30s ceiling forever.",
+  "maxConcurrentSideLoads (=4, in ArrAPIClient.swift) and ParallelResolve (width 4-8, in DiscoverSources.swift / LocalToolBackend+Discover.swift) are unrelated to download clients or queue progress — they cap concurrent per-episode/per-album arr metadata side-loads and Discover/Quiz TMDB resolution fan-out respectively. Neither is used by QueueAggregator, RealtimeUpdates, or any download client.",
+  "Only 2 of 6 download clients have a real session/login concept: qBittorrent (SID cookie via /auth/login, or Bearer API key if username empty) and Deluge (auth.login cookie). Transmission uses a lightweight CSRF-style X-Transmission-Session-Id handshake (409 response header, retried once, not a login). rTorrent, SABnzbd, NZBGet have no session at all — Basic auth or apikey-in-query per request.",
+  "QueueAggregator caches one client instance per (kind, config) pair on itself (cachedQbitClient/cachedTransmissionClient/cachedDelugeClient only — NOT rTorrent/SABnzbd/NZBGet, which are constructed fresh on every performViaClient call) specifically to avoid re-login cost for the two clients that have a login handshake.",
+  "DownloadProgressService (not explicitly named in the task's file list but is the cache QueueAggregator calls into) is the single point fronting all 6 clients' fetchProgress(ids:): 2s TTL to coalesce bursty poll+realtime refreshes into one round-trip, 60s maxCacheAge before falling back to arr-reported progress, and a 'some clients failed vs all clients failed' distinction so a transient blip doesn't snap progress bars back to stale arr values.",
+  "RealtimeFrameParsingTests.swift (11 @Test cases) covers ONLY the pure SignalRConnection.parse(frame:source:) function — envelope shape, name-casing, queueStatus resource extraction, malformed/close/ping frames, missing-arguments fallback. It does NOT test negotiate(), the WebSocket handshake consumeHandshake(), the backoff/reconnect loop in runLoop(), or ping pump timing — those paths are untested at the unit level.",
+  "Widget target dependency check: ArrBarrWidgets.swift only calls WidgetDataStore (serviceConfig/isDemoActive) plus LibrarySummaryService/UpcomingService (both build arr clients directly). None of the 6 download clients, QueueAggregator, RealtimeUpdates, ConnectionHealthMonitor, or DownloadProgressService are referenced anywhere under ArrBarrWidgets/ — the widget never touches download-client/realtime code at all, confirming that whole subsystem is queue-popover-only.",
+  "ConnectionHealth.swift + ConnectionHealthState.swift + ServerStatusModel.swift + ServerStatusView.swift are UI/state-composition layers that CONSUME probe/health results (from ConnectionHealthMonitor and QueueViewModel) but issue no network calls of their own except ServerStatusModel's own /diskspace fetch (which goes to the arrs, not download clients) — correctly classified as staying in ArrCore, not moving to MediaKit.",
+  "systemDidWake() (QueueViewModel) does exactly two things: realtime.forceReconnect() (tear down + rebuild every SignalR socket immediately, bypassing the reconnect loop's backoff) then refresh() (full 4-arr + progress poll) — this is the only wake-specific code path in scope; there is no separate wake handling inside RealtimeUpdates.swift itself beyond forceReconnect() being called."
+ ],
+ "open_questions": [
+  "DownloadProgressService.swift was not in the task's explicit file list but is the direct cache QueueAggregator.fetch()/fetch(source:) calls into for client progress overlay — included it here since 'which cache fronts it' can't be answered without it. Confirm whether MediaKit's rewrite scope already accounts for this file or expects it named separately.",
+  "The task asks for 'coalescing window for SignalR bursts' — QueueViewModel.realtimeBurstWindow (0.25s) plus realtimeRefreshFloor() (1s popover-open / backgroundInterval popover-closed) is the coalescing logic, but it lives in QueueViewModel (view-model/domain layer), not in RealtimeUpdates.swift itself. RealtimeUpdates.swift only exposes raw per-event dispatch with no batching of its own — confirm this split (transport emits raw events; view-model coalesces) is the intended MediaKit boundary, i.e. whether the coalescing logic itself is meant to move into MediaKit's communication layer or stay in ArrCore's QueueViewModel.",
+  "ArrMCPServer package also depends on ArrCore's download-client types indirectly (ToolCatalogBridge/LocalToolBackend can trigger queue pause/resume/delete via QueueAggregator) — not explored in this pass since it was out of the given scope; worth a follow-up inventory if MediaKit's client swap needs to keep the MCP tool surface working."
+ ],
+ "summary": "Full inventory of ArrBarr's download-client / progress / realtime / health subsystem (ArrCore, scope: download clients, progress, realtime, health), gathered read-only against branch feat/mediakit-foundation. Six download-client actors (QbittorrentClient, TransmissionClient, DelugeClient, RtorrentClient, SabnzbdClient, NzbgetClient — 1412 LOC combined) each conform to two shared protocols (DownloadProgressSource in Models/DownloadProgress.swift, DownloadAddSource in Models/DownloadDrop.swift; no 'protocol DownloadClient' exists under that name). QueueAggregator.swift (695 LOC) merges the 4 arrs' queues with download-client progress fetched through DownloadProgressService.swift (141 LOC, 2s TTL / 60s max-staleness cache), matched by lowercased downloadId, and routes pause/resume/delete/continue actions to whichever client's user-chosen name best matches. RealtimeUpdates.swift (751 LOC) is a hand-rolled SignalR-over-WebSocket client (no third-party SDK) with per-arr negotiate/handshake/backoff, tested only at the frame-parsing level by RealtimeFrameParsingTests.swift (11 cases, transport/backoff untested). ConnectionHealthMonitor.swift (115 LOC) probes all 6 download clients + OpenAI/TMDB/media-server testConnection() once per 60s. All ten of these files are candidates for replaced_by_mediakit=true (3113 LOC total); QueueViewModel, ConnectionHealth, ServerStatusModel/View, ConnectionHealthState, WidgetDataStore, LibrarySummaryService and UpcomingService stay in ArrCore as domain/view-model/widget composition. The WidgetKit target never touches any download-client or realtime code directly. No 429/Retry-After handling exists anywhere outside SignalR's own exponential-backoff reconnect loop."
+}

@@ -32,7 +32,10 @@ private enum QueueHeaderType {
     static let count: CGFloat = 11
     static let chevron: CGFloat = 9
     static let vPad: CGFloat = 0
-    static let titleStyle: HierarchicalShapeStyle = .secondary
+    // `.primary`, like every other section title: the popover's text is
+    // vibrant, so a secondary heading blends into the glass and reads as
+    // half-transparent. The count beside it stays `.tertiary`.
+    static let titleStyle: HierarchicalShapeStyle = .primary
     #endif
 }
 

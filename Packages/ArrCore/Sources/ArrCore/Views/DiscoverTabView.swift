@@ -929,17 +929,11 @@ private struct GlassCircleButton: View {
         }
     }
 
+    /// System glass. The hand-painted sheen gradient that used to fake the
+    /// highlight is gone — real glass lights its own edge.
     private var glassCircle: some View {
         Circle()
-            .fill(.ultraThinMaterial)
-            .overlay(
-                Circle().fill(
-                    LinearGradient(
-                        colors: [Color.white.opacity(0.18), Color.white.opacity(0.03)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-            )
+            .fill(.clear)
+            .glassEffect(.regular.interactive(), in: .circle)
     }
 }

@@ -9,7 +9,6 @@ import SwiftUI
 /// Poster auth key for the source's configured arr. Returns the api key for
 /// whichever arr `item.source` points at, regardless of whether the poster
 /// actually requires auth — callers gate on `item.posterRequiresAuth`.
-@MainActor
 func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
     configStore.serviceConfig(for: item.source).apiKey
 }
@@ -17,7 +16,6 @@ func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
 /// Deep-link to the arr's web UI for this item, if we know a slug. Path
 /// differs per arr — Sonarr uses `/series/`, Lidarr `/album/`, Radarr +
 /// Whisparr both use `/movie/` (Whisparr is a Radarr fork).
-@MainActor
 func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
     guard let slug = item.contentSlug else { return nil }
     let cfg = configStore.serviceConfig(for: item.source)
@@ -36,7 +34,6 @@ func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
 /// `mediaServerKeys` lets the connected media server's artwork win over the
 /// arr's — callers that have the title's provider ids pass them, the rest get
 /// the previous behaviour.
-@MainActor
 func arrPosterURL(images: [ArrImage]?, for item: QueueItem,
                   in configStore: ConfigStore,
                   mediaServerKeys: [MediaServerExternalKey] = []) -> URL? {

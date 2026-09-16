@@ -34,7 +34,7 @@ public struct iOSAppRoot: View {
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
     @State private var quizAddResult: SearchResult?
-    /// Which tab is on screen. `.arrBarrOpenDetail` is posted by surfaces that
+    /// Which tab is on screen. `AppMessages.OpenDetail` is posted by surfaces that
     /// live in several stacks at once (library tiles, chat cards, Spotlight), and
     /// every stack that listens would push its own copy — leaving a stale detail
     /// waiting behind the tabs the user never looked at. Listeners check this.
@@ -66,7 +66,7 @@ public struct iOSAppRoot: View {
     }
 
     public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
-        let vm = viewModel ?? QueueViewModel()
+        let vm = viewModel ?? QueueViewModel(configStore: .shared)
         let cs = configStore ?? .shared
         self._viewModel = State(initialValue: vm)
         self._configStore = ObservedObject(wrappedValue: cs)
@@ -143,13 +143,9 @@ public struct iOSAppRoot: View {
         .onChange(of: selectedTab) { _, _ in
             if !searchVM.isActive { searchPresented = false }
         }
-        // Posted by the `discover_in_quiz` chat tool and by the resume card.
-        // userInfo carries the mood label, pre-resolved items and an optional
-        // `append` flag that extends a live deck instead of replacing it.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
-            guard let mood = note.userInfo?["mood"] as? String,
-                  let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
-            let append = (note.userInfo?["append"] as? Bool) ?? false
+        // The `discover_in_quiz` chat tool and the resume card; `append` extends a live deck instead of replacing it.
+        .onMessage(AppMessages.OpenDiscoverQuiz.self) { message in
+            let (mood, items, append) = (message.mood, message.items, message.append)
             let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
                 || !discoverViewModel.sessionSkipped.isEmpty
                 || discoverViewModel.current != nil
@@ -164,10 +160,7 @@ public struct iOSAppRoot: View {
         // Swiping a not-in-library pick right asks for the add panel. macOS
         // hosts it in the popover; without this the whole "add" half of the
         // quiz — and chat's "add this missing title" cards — did nothing here.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
-            guard let result = note.userInfo?["result"] as? SearchResult else { return }
-            quizAddResult = result
-        }
+        .onMessage(AppMessages.OpenSearchAdd.self) { quizAddResult = $0.result }
         .fullScreenCover(isPresented: $showDiscoverOverlay) {
             DiscoverTabView(
                 viewModel: discoverViewModel,
@@ -326,10 +319,9 @@ private struct QueueTab: View {
         // bar offering navigation away from a half-made selection.
         .toolbar(selecting ? .hidden : .visible, for: .tabBar)
         // Search-to-add App Intent → run the search here.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
-            guard let q = note.userInfo?["query"] as? String else { return }
+        .onMessage(AppMessages.SearchQuery.self) { message in
             searchResult = nil
-            searchVM.query = q
+            searchVM.query = message.query
         }
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
@@ -339,9 +331,9 @@ private struct QueueTab: View {
         }
         // In-library search hits route through DetailRequest — listen for it
         // here so they push the detail (Upcoming tab does the same).
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
-            detailItem = item
+        .onMessage(AppMessages.OpenDetail.self) { message in
+            guard isActive else { return }
+            detailItem = message.item
         }
     }
 
@@ -478,14 +470,9 @@ struct SearchField: ViewModifier {
     }
 }
 
-/// `searchToolbarBehavior` is iOS 26; below that the field stays a drawer.
 struct MinimizedSearchToolbar: ViewModifier {
     func body(content: Content) -> some View {
-        if #available(iOS 26.0, *) {
-            content.searchToolbarBehavior(.minimize)
-        } else {
-            content
-        }
+        content.searchToolbarBehavior(.minimize)
     }
 }
 
@@ -531,9 +518,9 @@ private struct LibraryTab: View {
         // Library tiles open through `DetailRequest.post`, same as queue rows.
         // Without this the tap posted into a tab that wasn't listening and
         // nothing happened.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
-            detailItem = item
+        .onMessage(AppMessages.OpenDetail.self) { message in
+            guard isActive else { return }
+            detailItem = message.item
         }
     }
 }
@@ -584,9 +571,9 @@ private struct UpcomingTab: View {
         // UpcomingRowView's `openDetail()` posts a DetailRequest
         // notification — wire it to push DetailView, same pattern as
         // MainWindowView on macOS.
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-            guard isActive, let item = note.userInfo?["item"] as? QueueItem else { return }
-            detailItem = item
+        .onMessage(AppMessages.OpenDetail.self) { message in
+            guard isActive else { return }
+            detailItem = message.item
         }
     }
 
@@ -674,10 +661,7 @@ private struct ChatTab: View {
             }
         }
         .personDestination($personRef)
-        .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
-            guard let ref = note.userInfo?["ref"] as? PersonRef else { return }
-            personRef = ref
-        }
+        .onMessage(AppMessages.OpenPerson.self) { personRef = $0.ref }
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -700,11 +684,6 @@ private struct SettingsTab: View {
                     DemoMode.seedConfigsIfNeeded(configStore)
                 } else {
                     DemoMode.resetDemoStore()
-                    // iOS toggles demo in place (macOS relaunches, which drops
-                    // this by itself), so the in-memory queue edits have to be
-                    // wiped alongside the demo profile.
-                    DemoQueueState.reset()
-                    DemoMonitorState.reset()
                 }
                 Task { await viewModel.refresh() }
                 return true

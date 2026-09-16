@@ -132,6 +132,9 @@ public struct ChatView: View {
                     .padding(.top, 44)
                 }
             }
+            // Bubbles blur softly under the tab bar / "New chat" pill rather
+            // than being cut off by them — same edge as every other tab.
+            .scrollEdgeEffectStyle(.soft, for: .top)
             .onChange(of: viewModel.messages.count) { _, _ in
                 withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("chatBottom", anchor: .bottom) }
             }
@@ -225,7 +228,9 @@ public struct ChatView: View {
         // into a lozenge. 18.5 = half the one-line height (17pt of text + 2×10
         // padding), i.e. exactly the capsule the filter bars draw — so at rest
         // they are indistinguishable, and growing just adds straight sides.
-        .glassyFloatingBar(focused: inputFocused, cornerRadius: 18.5)
+        // Inverted for the same reason as the search capsule — the two inputs
+        // are the same control surface and must not drift apart.
+        .glassyFloatingBar(focused: inputFocused, cornerRadius: 18.5, inverted: true)
         // Typeable the moment Chat is on screen, whether the panel just opened
         // on this tab or the user switched to it. Hopped to the next main-actor
         // turn because the field is not in the responder chain during

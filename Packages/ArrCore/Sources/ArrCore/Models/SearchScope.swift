@@ -5,7 +5,7 @@ import Foundation
 /// TMDB people lookup. The narrow scopes gate which clients fire at all — an
 /// album search never pings Radarr, a people search only hits TMDB — so scoping
 /// is both a relevance filter and a request saver.
-public enum SearchScope: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum SearchScope: String, CaseIterable, Identifiable, Sendable {
     case all, movie, series, album, people, whisparr
 
     public var id: String { rawValue }

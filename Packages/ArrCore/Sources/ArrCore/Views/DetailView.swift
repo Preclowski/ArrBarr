@@ -225,7 +225,7 @@ public struct DetailView: View {
         // unavailable — the data is stale, the action can't land. Both cases
         // hide the CTA (and the episode-row pause/resume/delete callbacks below).
         // Demo is exempt: no client is configured there and the actions are
-        // served by the fixture state (DemoQueueState).
+        // served by the fixture transport.
         if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
@@ -294,16 +294,16 @@ public struct DetailView: View {
             case .radarr, .whisparr:
                 radarrDetail?.monitored = monitored
                 let client: any ArrAPIClient = item.source == .radarr
-                    ? RadarrClient(config: configStore.radarr)
-                    : WhisparrClient(config: configStore.whisparr)
+                    ? configStore.radarrClient
+                    : configStore.whisparrClient
                 try await client.setMovieMonitored(movieId: entityId, monitored: monitored)
             case .sonarr:
                 sonarrDetail?.monitored = monitored
-                try await SonarrClient(config: configStore.sonarr)
+                try await configStore.sonarrClient
                     .setSeriesMonitored(seriesId: entityId, monitored: monitored)
             case .lidarr:
                 lidarrAlbum?.monitored = monitored
-                try await LidarrClient(config: configStore.lidarr)
+                try await configStore.lidarrClient
                     .setAlbumMonitored(albumId: entityId, monitored: monitored)
             }
         } catch {
@@ -333,7 +333,7 @@ public struct DetailView: View {
             sonarrDetail?.seasons = seasons
         }
         do {
-            try await SonarrClient(config: configStore.sonarr).setSeasonMonitored(
+            try await configStore.sonarrClient.setSeasonMonitored(
                 seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
         } catch {}
         await load(showSpinner: false)
@@ -359,6 +359,10 @@ public struct DetailView: View {
     private var detailBody: some View {
         ZStack {
             VStack(spacing: 0) {
+                // Stacked header, not a `safeAreaBar`: tried both orders of
+                // bar + `.scrollEdgeEffectStyle(.soft)` here and the system
+                // never drew its blur on this surface, so the content just
+                // disappeared under a header with nothing marking the seam.
                 header
                 ScrollView {
                     content
@@ -520,7 +524,7 @@ public struct DetailView: View {
                         sonarrEpisodes[idx].monitored = monitored
                     }
                     do {
-                        try await SonarrClient(config: configStore.sonarr)
+                        try await configStore.sonarrClient
                             .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
                     } catch {
                         await load(showSpinner: false)
@@ -849,12 +853,7 @@ public struct DetailView: View {
     private static let searchWatchWindow: TimeInterval = 180
 
     private func searchClient() -> (any ArrAPIClient)? {
-        switch item.source {
-        case .radarr: return RadarrClient(config: configStore.radarr)
-        case .whisparr: return WhisparrClient(config: configStore.whisparr)
-        case .lidarr: return LidarrClient(config: configStore.lidarr)
-        case .sonarr: return nil
-        }
+        item.source == .sonarr ? nil : configStore.arrClient(for: item.source)
     }
 
     /// Fire the arr's own "search now" command for this movie / album — the
@@ -865,12 +864,12 @@ public struct DetailView: View {
         do {
             switch item.source {
             case .radarr:
-                try await RadarrClient(config: configStore.radarr).searchMovie(movieId: entityId)
+                try await configStore.radarrClient.searchMovie(movieId: entityId)
             case .whisparr:
-                try await WhisparrClient(config: configStore.whisparr)
+                try await configStore.whisparrClient
                     .postCommand(["name": "MoviesSearch", "movieIds": [entityId]])
             case .lidarr:
-                try await LidarrClient(config: configStore.lidarr).searchAlbum(albumId: entityId)
+                try await configStore.lidarrClient.searchAlbum(albumId: entityId)
             case .sonarr:
                 break
             }
@@ -921,12 +920,14 @@ public struct DetailView: View {
         } label: {
             Image(systemName: "xmark")
                 .scaledFont(size: CancelCTAMetrics.glyph, weight: .bold)
+                .foregroundStyle(.red)
                 .frame(width: 26)
                 // Must match `PauseResumeButton`'s own padding, or the two
                 // buttons sitting side by side come out different heights.
                 .padding(.vertical, CancelCTAMetrics.vPadding)
         }
-        .modifier(GlassProminentButtonStyle())
+        // Matches the pause/resume capsule beside it — see `GlassTintedButtonStyle`.
+        .modifier(GlassTintedButtonStyle())
         .tint(.red)
         .help(Text("queue.cancelDownload.button", bundle: .module))
         .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
@@ -1057,7 +1058,7 @@ public struct DetailView: View {
                         await setSeasonMonitored(seasonNumber: season.seasonNumber, monitored: monitored)
                     },
                     onAutomaticSeasonSearch: { season in
-                        try? await SonarrClient(config: configStore.sonarr).searchSeason(
+                        try? await configStore.sonarrClient.searchSeason(
                             seriesId: item.entityId ?? 0, seasonNumber: season.seasonNumber)
                     },
                     onManualSeasonSearch: { season in
@@ -1341,7 +1342,7 @@ public struct DetailView: View {
         do {
             switch item.source {
             case .radarr:
-                let client = RadarrClient(config: configStore.radarr)
+                let client = configStore.radarrClient
                 async let detail = client.fetchMovieDetails(id: entityId)
                 // Movie-file is fetched separately because /movie/{id}
                 // doesn't include customFormats on the inline movieFile
@@ -1355,14 +1356,14 @@ public struct DetailView: View {
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
                 async let movieCountries = CountryProvider.movieCountries(
-                    tmdbId: radarrDetail?.tmdbId, demoMovieId: entityId, configStore: configStore)
+                    tmdbId: radarrDetail?.tmdbId, configStore: configStore)
                 let movieCredits = await CastProvider.movieCredits(
                     radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
                 cast = movieCredits.cast
                 directors = movieCredits.directors
                 countries = await movieCountries
             case .sonarr:
-                let client = SonarrClient(config: configStore.sonarr)
+                let client = configStore.sonarrClient
                 async let d = client.fetchSeriesDetails(id: entityId)
                 async let eps = client.fetchEpisodes(seriesId: entityId)
                 async let files = (try? client.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
@@ -1381,16 +1382,14 @@ public struct DetailView: View {
                 qualityProfileName = await Self.profileName(
                     id: sonarrDetail?.qualityProfileId, config: configStore.sonarr, source: .sonarr)
                 async let seriesCountries = CountryProvider.seriesCountries(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
-                    demoSeriesId: entityId, configStore: configStore)
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
                 let seriesCredits = await CastProvider.seriesCredits(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
-                    demoSeriesId: entityId, configStore: configStore)
+                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
                 cast = seriesCredits.cast
                 directors = seriesCredits.directors
                 countries = await seriesCountries
             case .lidarr:
-                let client = LidarrClient(config: configStore.lidarr)
+                let client = configStore.lidarrClient
                 async let a = client.fetchAlbumDetails(id: entityId)
                 async let ts = client.fetchTracks(albumId: entityId)
                 async let fs = client.fetchTrackFiles(albumId: entityId)
@@ -1398,7 +1397,7 @@ public struct DetailView: View {
                 lidarrTracks = try await ts
                 lidarrTrackFiles = (try? await fs) ?? []
             case .whisparr:
-                let client = WhisparrClient(config: configStore.whisparr)
+                let client = configStore.whisparrClient
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }

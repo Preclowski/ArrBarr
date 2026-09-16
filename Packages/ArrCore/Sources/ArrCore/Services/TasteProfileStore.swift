@@ -14,7 +14,7 @@ import Foundation
 /// Lock-guarded rather than an actor so the LLM providers can read it
 /// synchronously while building a system prompt (same reasoning as
 /// `MediaServerIndex`).
-public final class TasteProfileStore: @unchecked Sendable {
+nonisolated public final class TasteProfileStore: @unchecked Sendable {
 
     public static let shared = TasteProfileStore()
 

@@ -33,18 +33,26 @@ Packages/ArrCore/           # the real codebase (Swift 6 tools, lang mode v5)
   Sources/ArrCore/
     Models/        # QueueItem, QueueGroup, ArrTypes, ChatMessage, DiscoverItem,
                    #   MCPTypes, ServiceConfig, DownloadClientTypes, …
-    Services/      # arr clients (Sonarr/Radarr/Lidarr/Whisparr), download
-                   #   clients (qBittorrent/Transmission/rTorrent/Deluge/
-                   #   SABnzbd/NZBGet), QueueAggregator, RealtimeUpdates,
-                   #   ConfigStore, SecretStore, KVSyncCoordinator, SyncedKeys,
-                   #   LLM providers, ToolBackend +
-                   #   LocalToolBackend, DemoMocks, WidgetDataStore, …
+    Services/      # ServiceGateway (the one door to MediaKit), facades over it
+                   #   (RadarrClient…, DownloadClients, TMDBClient,
+                   #   MediaServerFacade), QueueAggregator, ConfigStore,
+                   #   SecretStore, KVSyncCoordinator, SyncedKeys, LLM providers,
+                   #   ToolBackend + LocalToolBackend, DemoMocks, WidgetDataStore, …
+    Compositions/  # ArrCompositions / ArrQueueLoader: MediaKit records → QueueItem,
+                   #   UpcomingItem, HistoryItem
     ViewModels/    # QueueViewModel, ChatViewModel, DiscoverViewModel, SearchViewModel
     Views/         # all SwiftUI (PopoverContentView, SettingsView, ChatView,
                    #   DiscoverTabView, SearchView, DetailView, iOSAppRoot, …)
     AppIntents/    # ArrBarrIntents — Siri/Shortcuts/Spotlight
     Resources/Localizable.xcstrings   # single string catalog, Bundle.module
   Tests/ArrCoreTests/        # ~40 test files (Swift Testing: import Testing, @Test/#expect)
+
+Packages/MediaKit/          # zero-dependency communication layer (Swift 6, strict):
+                            #   transport, per-host limits, SQLite resource store,
+                            #   SignalR, clients for the arrs / download clients /
+                            #   media servers / TMDB, FixtureTransport for demo
+  Sources/MediaKit/Fixtures/<kind>.json   # anonymised recordings, open-source titles only
+  Sources/MediaKitRecording/              # read-only recording transport + allow-list
 
 Packages/ArrMCPServer/      # MCP server (depends on ArrCore)
   Sources/ArrMCPServer/
@@ -59,7 +67,24 @@ docs/{design,notes}/             # ad-hoc design notes
 ```
 
 External deps (resolved by SPM): `swift-nio`, `mcp-swift-sdk`, `swift-log`,
-`eventsource`, plus swift-collections/atomics/system transitively.
+`eventsource`, plus swift-collections/atomics/system transitively. MediaKit has none.
+
+## MediaKit
+
+All HTTP, sockets and caching live in `Packages/MediaKit`; ArrCore never builds a
+`URLSession` for a service. `ServiceGateway` (owned by `ConfigStore`) assembles one
+`MediaStack` from the profile, reconciles it on config changes, swaps in
+`FixtureTransport` for demo, and is the only thing that touches MediaKit's registry.
+Views and view-models take facades from `ConfigStore` (`radarrClient`,
+`arrClient(for:)`, `tmdbClient`, `mediaServerClient`) or `ServiceHandles` for a
+Settings draft — never construct a client. Reads go through `ResourceStore`
+policies (`cacheFirst`, `staleWhileRevalidate`, `mustRevalidate`); writes are
+`Command`s that declare invalidation tags. Realtime is `EventHub` over
+`SignalRSource`. Fixtures are packed one JSON per kind by `Tools/fixtures/pack_fixtures.py`;
+re-record only through `MediaKitRecording` (reads only, allow-list) and run
+`Tools/fixtures/anonymize_fixtures.py --check` before committing. Package tests:
+`(cd Packages/MediaKit && swift test)`. ArrCore compiles with
+`.defaultIsolation(MainActor.self)`: wire models, helpers and facades are `nonisolated`.
 
 ## Build & Run
 
@@ -72,6 +97,14 @@ pkill -x ArrBarr 2>/dev/null; sleep 0.5 && open build/Build/Products/Debug/ArrBa
 ```
 
 After every code change: rebuild, then kill and relaunch the app — don't ask first.
+
+Xcode 27 ships an MCP server (`xcrun mcpbridge`, configured for this project) —
+prefer `BuildProject` + `GetBuildLog` over parsing `xcodebuild` output when the
+project is open in Xcode, `DocumentationSearch` before using any macOS/iOS 26+
+API from memory, `RunCodeSnippet` for quick behaviour probes, and
+`RunProject` + `GetConsoleOutput` to read the app's OSLog. Worktrees are not
+open in Xcode: use the `xcodebuild` commands there. Package tests stay on
+`swift test`.
 
 Other schemes: `ArrBarriOS`, `ArrBarrWidgets`, `ArrCore`, `ArrMCPServer`,
 `Paywall Test`. Build configs: **Debug**, **Release** (OSS/GitHub) and
@@ -87,6 +120,7 @@ fastest via SwiftPM:
 ```bash
 (cd Packages/ArrCore && swift test)
 (cd Packages/ArrMCPServer && swift test)
+(cd Packages/MediaKit && swift test)
 ```
 
 ## Key Patterns
@@ -102,6 +136,8 @@ fastest via SwiftPM:
   toggling re-points `ConfigStore` live and wipes only the demo suite; the real
   profile is never touched. Launch with `--args -ArrBarrDemo YES` (macOS; bare
   `--demo` only unlocks Developer options) or `ARRBARR_DEMO_SUITE=1` (iOS).
+  Every demo answer comes from MediaKit's bundled fixtures through
+  `FixtureTransport`; `DemoMocks` only keeps the chat persona and people search.
 - **MCP server**: `MCPServerController` (actor, NIO HTTP host, bearer auth, tool
   whitelist) is started/stopped from `AppDelegate.wireMCPServer` based on
   `ConfigStore`. swift-log (server + NIO) is bridged into `os.Logger` via
@@ -122,9 +158,12 @@ fastest via SwiftPM:
   read those while developing). Never log a URL whole — `url.loggableDescription`
   drops the query, where every API key lives. Timings go to `AppSignpost`
   (`OSSignposter`), not to log lines.
-- **Realtime**: `RealtimeUpdates` consumes Servarr SignalR/WebSocket. Servarr
-  nests `action` inside `arguments[0].body` — parse that envelope, and force a
-  reconnect on system wake (`queueVM.systemDidWake()`).
+- **Realtime**: MediaKit's `SignalRSource` + `EventHub` per arr; `QueueViewModel`
+  subscribes to `gateway.events.events()`. Servarr nests `action` inside
+  `arguments[0].body`; system wake forces a reconnect (`queueVM.systemDidWake()`).
+- **In-app messages**: surfaces talk to their hosts through typed
+  `AppMessages.*` (`NotificationCenter.AsyncMessage`), observed with
+  `.onMessage(_:perform:)` — no `Notification.Name` posts.
 - **Media server**: ONE of Plex / Jellyfin / Emby (`MediaServerConfig`, not a
   `ServiceKind`). `MediaServerIndex` is a lock-guarded snapshot — not an actor —
   so poster resolution stays synchronous; it supplies artwork overrides, the

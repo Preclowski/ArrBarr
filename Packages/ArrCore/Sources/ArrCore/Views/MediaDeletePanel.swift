@@ -198,12 +198,7 @@ struct MediaDeletePanel: View {
     // MARK: - Data
 
     private var client: any ArrAPIClient {
-        switch request.source {
-        case .radarr: return RadarrClient(config: configStore.radarr)
-        case .sonarr: return SonarrClient(config: configStore.sonarr)
-        case .lidarr: return LidarrClient(config: configStore.lidarr)
-        case .whisparr: return WhisparrClient(config: configStore.whisparr)
-        }
+        configStore.arrClient(for: request.source)
     }
 
     /// The record's REST path — the same one the edit panel reads and writes.
@@ -253,7 +248,8 @@ struct MediaDeleteModalOverlay: View {
             MediaDeletePanel(request: request, onCancel: onDismiss, onDeleted: onDeleted)
                 .background(
                     Rectangle()
-                        .fill(.thinMaterial)
+                        .fill(.clear)
+                        .glassEffect(.regular, in: .rect)
                         .overlay(alignment: .top) { Divider().opacity(0.4) }
                         .ignoresSafeArea(edges: .bottom)
                 )

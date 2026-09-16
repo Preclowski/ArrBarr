@@ -1,7 +1,7 @@
 import Foundation
 
-public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
-    public enum Source: String, CaseIterable, Sendable, Codable { case radarr, sonarr, lidarr, whisparr
+nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable {
+    nonisolated public enum Source: String, CaseIterable, Sendable, Codable { case radarr, sonarr, lidarr, whisparr
 
         public var displayName: String {
             switch self {

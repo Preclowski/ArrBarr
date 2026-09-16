@@ -165,7 +165,7 @@ struct QueueGroupingTests {
             item(id: "1", downloadId: "shared"),
             item(id: "2", downloadId: "shared"),
         ]
-        guard case .group(let g) = QueueGrouping.group(items)[0] else {
+        guard case .group = QueueGrouping.group(items)[0] else {
             Issue.record("expected group"); return
         }
     }

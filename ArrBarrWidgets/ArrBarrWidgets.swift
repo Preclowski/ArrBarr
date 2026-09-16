@@ -487,7 +487,12 @@ struct UpcomingEntry: TimelineEntry {
 
 struct UpNextProvider: AppIntentTimelineProvider {
     func placeholder(in context: Context) -> UpcomingEntry {
-        UpcomingEntry(date: Date(), items: UpcomingService.curate(DemoMocks.upcoming, limit: 4), anyConfigured: true)
+        UpcomingEntry(date: Date(), items: [
+            UpcomingItem(id: "placeholder-movie", source: .radarr, title: "Big Buck Bunny", subtitle: nil,
+                         airDate: Date().addingTimeInterval(3600), releaseType: "digital", hasFile: false, overview: nil),
+            UpcomingItem(id: "placeholder-episode", source: .sonarr, title: "Pioneer One", subtitle: "S01E02",
+                         airDate: Date().addingTimeInterval(86400), releaseType: nil, hasFile: false, overview: nil),
+        ], anyConfigured: true)
     }
 
     func snapshot(for configuration: UpcomingConfigIntent, in context: Context) async -> UpcomingEntry {
@@ -508,7 +513,7 @@ struct UpNextProvider: AppIntentTimelineProvider {
         if c.showWhisparr { enabled.insert(.whisparr) }
 
         if WidgetDataStore.isDemoActive {
-            let items = UpcomingService.curate(DemoMocks.upcoming.filter { enabled.contains($0.source) }, limit: 8)
+            let items = await UpcomingService.demo(sources: enabled, limit: 8)
             return UpcomingEntry(date: Date(), items: items, anyConfigured: true)
         }
 

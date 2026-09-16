@@ -4,7 +4,7 @@ import Foundation
 /// ArrBarr only ever needs to line an entry up against a Radarr movie or a
 /// Sonarr series, so seasons, episodes and tracks collapse into their parent
 /// or are dropped.
-public enum MediaServerItemKind: String, Sendable, Equatable {
+nonisolated public enum MediaServerItemKind: String, Sendable, Equatable {
     case movie, show
 }
 
@@ -12,7 +12,7 @@ public enum MediaServerItemKind: String, Sendable, Equatable {
 /// last resort (remakes, localized titles, "The" prefixes) — every one of the
 /// three servers stores provider ids, and so do the arrs, so the join is done
 /// on ids alone.
-public enum MediaServerExternalKey: Hashable, Sendable {
+nonisolated public enum MediaServerExternalKey: Hashable, Sendable {
     case tmdb(Int)
     case tvdb(Int)
     case imdb(String)
@@ -50,7 +50,7 @@ public enum MediaServerExternalKey: Hashable, Sendable {
 /// counts, last-played dates), but the app joins on ids and asks only two
 /// questions of the answer — "which artwork?" and "seen it?". Fields nothing
 /// reads would be fields nothing keeps correct.
-public struct MediaServerEntry: Sendable, Equatable {
+nonisolated public struct MediaServerEntry: Sendable, Equatable {
     /// The server's own id — `ratingKey` on Plex, `Id` on Jellyfin/Emby.
     /// Distinct titles are counted by it, since one title occupies several
     /// index keys.
@@ -72,7 +72,7 @@ public struct MediaServerEntry: Sendable, Equatable {
 }
 
 /// An in-progress playback on the server.
-public struct MediaServerSession: Sendable, Equatable {
+nonisolated public struct MediaServerSession: Sendable, Equatable {
     public let title: String
     /// "Movie" / series+episode line, already assembled for display.
     public let subtitle: String?
@@ -95,7 +95,7 @@ public struct MediaServerSession: Sendable, Equatable {
 }
 
 /// One finished play, newest first when returned in a list.
-public struct MediaServerWatch: Sendable, Equatable {
+nonisolated public struct MediaServerWatch: Sendable, Equatable {
     public let title: String
     public let year: Int?
     public let kind: MediaServerItemKind
@@ -113,7 +113,7 @@ public struct MediaServerWatch: Sendable, Equatable {
 /// Jellyfin / Emby. The unit maintenance runs on: a rescan or a purge is
 /// asked of one library, never of the whole server, so a 40 000-track music
 /// section isn't rescanned because a movie just finished importing.
-public struct MediaServerLibrary: Identifiable, Equatable, Sendable {
+nonisolated public struct MediaServerLibrary: Identifiable, Equatable, Sendable {
     public enum Kind: Sendable {
         case movies, series, music, other
 
@@ -143,7 +143,7 @@ public struct MediaServerLibrary: Identifiable, Equatable, Sendable {
 
 /// Outcome of a successful connection test: what to show the user, plus the
 /// user id the client resolved on their behalf (Jellyfin / Emby only).
-public struct MediaServerHandshake: Sendable, Equatable {
+nonisolated public struct MediaServerHandshake: Sendable, Equatable {
     /// e.g. "Plex 1.40.2" — shown verbatim in Settings.
     public let versionLine: String
     /// Non-nil when the server scopes play state per user and one was found.
@@ -155,7 +155,7 @@ public struct MediaServerHandshake: Sendable, Equatable {
     }
 }
 
-public enum MediaServerError: LocalizedError {
+nonisolated public enum MediaServerError: LocalizedError {
     case notConfigured
     /// "Empty trash" is a Plex concept — Jellyfin and Emby delete an item when
     /// its file goes, so there is nothing to purge.

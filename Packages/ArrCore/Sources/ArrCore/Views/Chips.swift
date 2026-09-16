@@ -193,6 +193,10 @@ public struct ScoreChip: View {
         ScoreLabel(score: score, size: 9, weight: .semibold)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
+            // Outlined in its OWN colour, like every other tinted chip — it
+            // used to be the one borderless chip in a strip of outlined ones,
+            // which read as a missing box rather than a deliberate one.
+            .chipOutline(ScoreLabel.color(score))
     }
 }
 
@@ -224,6 +228,15 @@ public struct ProfileChip: View {
 }
 
 extension View {
+    /// The one chip outline. A tinted chip is outlined in ITS tint, never in a
+    /// neutral grey — the border is part of the same signal as the text.
+    func chipOutline(_ color: Color, opacity: Double = 0.30) -> some View {
+        overlay(
+            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                .stroke(color.opacity(opacity), lineWidth: 0.75)
+        )
+    }
+
     /// Fill for the un-outlined chips. Outlined chips centre a 0.75 pt stroke
     /// on their edge, so half of it draws outside the frame — the fill grows
     /// by that half so filled and outlined chips read the same size.
@@ -286,7 +299,7 @@ public struct TagChip: View {
             .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(strokeColor.opacity(0.30), lineWidth: 0.75))
+            .chipOutline(strokeColor)
     }
 }
 
@@ -374,7 +387,7 @@ public struct CustomFormatStrip: View {
                             .scaledFont(size: 9, weight: .medium)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.primary.opacity(0.22), lineWidth: 0.75))
+                            .chipOutline(.primary, opacity: 0.22)
                     }
                     if score != 0 {
                         // Chip metrics, no stroke (see ScoreChip).

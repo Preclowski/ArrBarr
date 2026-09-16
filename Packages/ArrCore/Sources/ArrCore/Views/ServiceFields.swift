@@ -207,13 +207,13 @@ struct ServiceFields: View {
         let kind = self.kind
         Task {
             do {
-                let result = try await ConnectionTester.test(kind: kind, config: snapshot)
+                let result = try await ServiceHandles.testConnection(kind, config: snapshot)
                 await MainActor.run {
                     testState = .success(result)
                     ConnectionHealth.shared.forceOK(.arr(kind), detail: result)
                     // Kick a queue refresh so a just-entered key clears the
                     // stale "missing API key" banner right away.
-                    NotificationCenter.default.post(name: .arrBarrConfigValidated, object: nil)
+                    AppMessages.post(AppMessages.ConfigValidated())
                 }
             } catch {
                 let message = error.userFacingMessage
@@ -222,23 +222,6 @@ struct ServiceFields: View {
                     ConnectionHealth.shared.forceDown(.arr(kind), message: message)
                 }
             }
-        }
-    }
-}
-
-enum ConnectionTester {
-    static func test(kind: ServiceKind, config: ServiceConfig) async throws -> String {
-        switch kind {
-        case .radarr:       return try await RadarrClient(config: config).testConnection()
-        case .sonarr:       return try await SonarrClient(config: config).testConnection()
-        case .lidarr:       return try await LidarrClient(config: config).testConnection()
-        case .whisparr:     return try await WhisparrClient(config: config).testConnection()
-        case .sabnzbd:      return try await SabnzbdClient(config: config).testConnection()
-        case .nzbget:       return try await NzbgetClient(config: config).testConnection()
-        case .qbittorrent:  return try await QbittorrentClient(config: config).testConnection()
-        case .transmission: return try await TransmissionClient(config: config).testConnection()
-        case .rtorrent:     return try await RtorrentClient(config: config).testConnection()
-        case .deluge:       return try await DelugeClient(config: config).testConnection()
         }
     }
 }

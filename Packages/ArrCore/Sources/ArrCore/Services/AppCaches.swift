@@ -55,7 +55,7 @@ public enum AppCaches {
     /// kicks.
     public static func clearArtwork() async {
         await PosterStore.shared.clearAllTiers()
-        await PosterTint.resetCache()
+        PosterTint.resetCache()
         logger.notice("cleared the artwork cache on request")
     }
 }

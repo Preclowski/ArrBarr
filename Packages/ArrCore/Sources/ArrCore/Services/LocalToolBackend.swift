@@ -34,7 +34,7 @@ public typealias ToolConfirmationHandler = @Sendable (ToolCall) async -> ToolCon
 /// site that forgets to bind a handler loses the ability to mutate, it does not
 /// silently gain the ability to mutate unconfirmed.
 public enum ToolConfirmationContext {
-    @TaskLocal public static var handler: ToolConfirmationHandler?
+    @TaskLocal nonisolated public static var handler: ToolConfirmationHandler?
 }
 
 /// In-process tool backend. Uses ArrCore's existing Sonarr/Radarr clients.
@@ -63,7 +63,7 @@ public actor LocalToolBackend: ToolBackend {
     /// Tool *arguments* are never logged: they carry the user's search terms
     /// and, through them, the shape of their library. The name plus the outcome
     /// is what a support question actually needs.
-    private static let log = Logger(category: "Tools")
+    nonisolated private static let log = Logger(category: "Tools")
 
     /// Cards already surfaced by suggest_titles in this conversation, by
     /// SearchResult identity. Cuts cross-call repeats — the loop where every
@@ -314,7 +314,7 @@ public actor LocalToolBackend: ToolBackend {
 
     // MARK: - Formatting helpers
 
-    static func stringArg(_ value: JSONValue, key: String) -> String {
+    nonisolated static func stringArg(_ value: JSONValue, key: String) -> String {
         if case .object(let dict) = value, case .string(let s) = dict[key] {
             return s
         }
@@ -323,7 +323,7 @@ public actor LocalToolBackend: ToolBackend {
 
     /// Extract an integer arg. Tolerates JSON numbers OR strings (LLM might
     /// serialize "12345" instead of 12345).
-    static func intArg(_ value: JSONValue, key: String) -> Int {
+    nonisolated static func intArg(_ value: JSONValue, key: String) -> Int {
         guard case .object(let dict) = value, let v = dict[key] else { return 0 }
         switch v {
         case .number(let n): return Int(n)
@@ -334,7 +334,7 @@ public actor LocalToolBackend: ToolBackend {
 
     /// Like `intArg` but distinguishes "absent" from "zero". Used by
     /// tools where 0 is a legitimate value (season number, etc.).
-    static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
+    nonisolated static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
         guard case .object(let dict) = value, let v = dict[key] else { return nil }
         switch v {
         case .number(let n): return Int(n)
@@ -345,7 +345,7 @@ public actor LocalToolBackend: ToolBackend {
 
     /// Bool arg parser. Defaults to `nil` when absent so callers can
     /// distinguish "missing" from "explicit false".
-    static func optionalBoolArg(_ value: JSONValue, key: String) -> Bool? {
+    nonisolated static func optionalBoolArg(_ value: JSONValue, key: String) -> Bool? {
         guard case .object(let dict) = value, let v = dict[key] else { return nil }
         switch v {
         case .bool(let b): return b
@@ -355,7 +355,7 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     /// Pull `[Int]` out of a JSON-RPC arguments object.
-    static func intArrayArg(_ value: JSONValue, key: String) -> [Int] {
+    nonisolated static func intArrayArg(_ value: JSONValue, key: String) -> [Int] {
         guard case .object(let dict) = value, case .array(let arr) = dict[key] else { return [] }
         return arr.compactMap { entry -> Int? in
             switch entry {
@@ -368,7 +368,7 @@ public actor LocalToolBackend: ToolBackend {
 
     /// Condensed search result text for the LLM — id + title + year only.
     /// No overview, no rating, no year-match markers (the carousel makes those visible).
-    static func formatSearchResultsCondensed(
+    nonisolated static func formatSearchResultsCondensed(
         _ results: [SearchResult],
         query: String,
         kind: String
@@ -412,7 +412,7 @@ public actor LocalToolBackend: ToolBackend {
     /// Shared library-list formatter. Caller passes the line transform so
     /// per-arr field selection (tvdbId vs tmdbId vs foreignArtistId vs file
     /// state) stays where it belongs without four near-identical functions.
-    static func formatLibrary<Rec>(
+    nonisolated static func formatLibrary<Rec>(
         serviceName: String,
         itemNounSingular: String,
         itemNounPlural: String,
@@ -434,7 +434,7 @@ public actor LocalToolBackend: ToolBackend {
         return out
     }
 
-    static func formatArtistSearchCondensed(_ results: [SearchResult], query: String) -> String {
+    nonisolated static func formatArtistSearchCondensed(_ results: [SearchResult], query: String) -> String {
         guard !results.isEmpty else { return "No results found." }
         let top = results.prefix(15)
         let lines = top.map { r -> String in
@@ -459,7 +459,7 @@ enum DownloadClientKind: Sendable {
 
 /// The six download-client connection configs the `health` tool can probe.
 /// Each defaults to `.empty` (skipped) so callers only fill what's set up.
-public struct DownloadClientConfigs: Sendable {
+nonisolated public struct DownloadClientConfigs: Sendable {
     public var qbittorrent: ServiceConfig
     public var transmission: ServiceConfig
     public var nzbget: ServiceConfig

@@ -14,7 +14,7 @@ import Foundation
 ///   - UserDefaults:  defaults write pl.incred.ArrBarr ArrBarrShowWelcome -bool true
 ///                    (one-shot — cleared after the welcome window opens so
 ///                    it doesn't loop on every launch)
-public enum WelcomeContent {
+nonisolated public enum WelcomeContent {
     /// Bump when shipping a release with features worth re-introducing.
     /// Must have a matching entry (with at least one item) in `whatsNewEntries`.
     public static let currentVersion = "0.10.0"

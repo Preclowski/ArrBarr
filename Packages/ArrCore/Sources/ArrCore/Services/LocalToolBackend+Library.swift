@@ -14,16 +14,16 @@ extension LocalToolBackend {
     /// instead. Generous on purpose: one big result costs a fraction of what a
     /// second LLM round costs, and paging a library through an agent is the
     /// slowest way to answer anything.
-    static var libraryRowCap: Int { 100 }
+    nonisolated static var libraryRowCap: Int { 100 }
     /// Draw size for an unfiltered call.
-    static var librarySampleSize: Int { 40 }
+    nonisolated static var librarySampleSize: Int { 40 }
 
     // MARK: - Shared parsing
 
     /// `invalidSort` carries the raw string when `sortBy` was present but not
     /// in the vocabulary — the tool reports it rather than silently returning
     /// a differently-ordered answer than the model asked for.
-    static func libraryQuery(_ args: JSONValue) -> (query: LibraryQuery, invalidSort: String?) {
+    nonisolated static func libraryQuery(_ args: JSONValue) -> (query: LibraryQuery, invalidSort: String?) {
         let rawSort = stringArg(args, key: "sortBy")
         let sort = rawSort.isEmpty ? nil : LibrarySort.parse(rawSort)
         let limit = optionalIntArg(args, key: "limit").map { max(1, $0) }
@@ -39,7 +39,7 @@ extension LocalToolBackend {
         return (query, (!rawSort.isEmpty && sort == nil) ? rawSort : nil)
     }
 
-    static let sortVocabulary = "rating, year, added, title, random — optionally suffixed .asc/.desc (e.g. 'rating' = rating.desc, 'year.asc')"
+    nonisolated static let sortVocabulary = "rating, year, added, title, random — optionally suffixed .asc/.desc (e.g. 'rating' = rating.desc, 'year.asc')"
 
     /// Watch state is only knowable with a media server connected. Everywhere
     /// below, "no server" means the marker is simply absent — never a printed
@@ -200,7 +200,7 @@ extension LocalToolBackend {
 
     /// `titles: ["Dune 2021", {title: "Andor", year: 2022}]` — both forms, since
     /// a model that has just written prose will reach for bare strings.
-    static func titleQueries(_ value: JSONValue) -> [(title: String, year: Int?)] {
+    nonisolated static func titleQueries(_ value: JSONValue) -> [(title: String, year: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["titles"] else { return [] }
         return arr.compactMap { entry -> (String, Int?)? in
             switch entry {
@@ -237,7 +237,7 @@ extension LocalToolBackend {
         return watched ? ", watched" : ", not watched"
     }
 
-    static func libraryLine(title: String, year: Int?, genres: [String],
+    nonisolated static func libraryLine(title: String, year: Int?, genres: [String],
                             rating: Double?, state: String,
                             watched: Bool, ids: String) -> String {
         var parts: [String] = []
@@ -298,7 +298,7 @@ extension LocalToolBackend {
         return out
     }
 
-    static func describe(_ query: LibraryQuery) -> String {
+    nonisolated static func describe(_ query: LibraryQuery) -> String {
         var parts: [String] = []
         if !query.title.isEmpty { parts.append("'\(query.title)'") }
         if !query.genre.isEmpty { parts.append("genre \(query.genre)") }

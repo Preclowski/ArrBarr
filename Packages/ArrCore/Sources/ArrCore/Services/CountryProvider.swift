@@ -19,10 +19,7 @@ enum CountryProvider {
 
     // MARK: - Public API
 
-    static func movieCountries(tmdbId: Int?, demoMovieId: Int?, configStore: ConfigStore) async -> [String] {
-        if DemoMode.isActive {
-            return demoMovieId.map { DemoMocks.radarrMovieCountries(movieId: $0) } ?? []
-        }
+    static func movieCountries(tmdbId: Int?, configStore: ConfigStore) async -> [String] {
         guard let tmdbId, tmdbId > 0 else { return [] }
         return await cache.value(for: "movie:\(tmdbId)") {
             let key = configStore.tmdbApiKey
@@ -34,10 +31,7 @@ enum CountryProvider {
     /// Series countries. `tmdbId` is tried first; when Sonarr didn't ship one,
     /// `tvdbId` is resolved via TMDB `/find` — the same fallback the cast strip
     /// needs, and for the same reason.
-    static func seriesCountries(tmdbId: Int?, tvdbId: Int?, demoSeriesId: Int?, configStore: ConfigStore) async -> [String] {
-        if DemoMode.isActive {
-            return demoSeriesId.map { DemoMocks.sonarrSeriesCountries(seriesId: $0) } ?? []
-        }
+    static func seriesCountries(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> [String] {
         let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-")"
         return await cache.value(for: key) {
             let apiKey = configStore.tmdbApiKey

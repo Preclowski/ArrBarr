@@ -188,6 +188,8 @@ struct LocalToolBackendTests {
         }
         // V5 season-monitor PUT + command POST both accepted.
         LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        // Without a probed Sonarr 5 the toggle is the v3 read-modify-write; the record must have the seasons.
+        LocalStubProtocol.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
         LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
         let b = backend()
@@ -215,6 +217,8 @@ struct LocalToolBackendTests {
             LocalStubProtocol.reset()
         }
         LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        // Without a probed Sonarr 5 the toggle is the v3 read-modify-write; the record must have the seasons.
+        LocalStubProtocol.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
         LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
         let b = backend()

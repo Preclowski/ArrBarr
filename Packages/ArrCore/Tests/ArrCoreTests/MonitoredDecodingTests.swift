@@ -75,37 +75,4 @@ struct MonitoredDecodingTests {
     /// Demo has to be able to show BOTH states — an all-monitored fixture set
     /// makes the outline glyph unreachable in the one build meant to show the
     /// feature off (and unscreenshottable for the site).
-    @Test("Demo fixtures cover both monitored states")
-    func demoCoversBothStates() {
-        let seasons = DemoMocks.sonarrDetails.values.flatMap { $0.seasons ?? [] }
-        let episodes = DemoMocks.sonarrEpisodeData.values.flatMap { $0 }
-        let movies = DemoMocks.radarrDetails.values
-        let albums = DemoMocks.lidarrDetails.values
-
-        #expect(movies.allSatisfy { $0.monitored != nil })
-        #expect(albums.allSatisfy { $0.monitored != nil })
-        #expect(DemoMocks.sonarrDetails.values.allSatisfy { $0.monitored != nil })
-
-        #expect(seasons.contains { $0.monitored == false })
-        #expect(seasons.contains { $0.monitored == true })
-        #expect(episodes.contains { $0.monitored == false })
-        #expect(episodes.contains { $0.monitored == true })
-        #expect(movies.contains { $0.monitored == false })
-        #expect(albums.contains { $0.monitored == false })
-    }
-
-    /// Sonarr cascades a season's monitored flag to its episodes, so a demo
-    /// season that says "unmonitored" while its episodes claim otherwise
-    /// would be a state the real server never produces.
-    @Test("Demo seasons and their episodes agree on monitoring")
-    func demoCascadeIsConsistent() {
-        for (seriesId, detail) in DemoMocks.sonarrDetails {
-            let episodes = DemoMocks.sonarrEpisodes(seriesId: seriesId)
-            for season in detail.seasons ?? [] where season.monitored == false {
-                let inSeason = episodes.filter { $0.seasonNumber == season.seasonNumber }
-                #expect(inSeason.allSatisfy { $0.monitored == false },
-                        "series \(seriesId) S\(season.seasonNumber) is unmonitored but has monitored episodes")
-            }
-        }
-    }
 }

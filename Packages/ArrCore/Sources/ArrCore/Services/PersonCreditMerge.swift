@@ -2,7 +2,7 @@ import Foundation
 
 /// A person credit entry as the merge cares about it — both TMDB summary
 /// types (movie / tv) qualify.
-public protocol TMDBPersonCredit {
+nonisolated public protocol TMDBPersonCredit {
     var id: Int { get }
     var department: String? { get }
     var popularity: Double? { get }
@@ -20,7 +20,7 @@ extension TMDBTVSummary: TMDBPersonCredit {}
 /// identity. Cast entries read as Actor; crew entries count only when the
 /// department is Directing or Writing (producer-type credits would balloon
 /// the list without saying anything a media library cares about).
-public enum PersonCreditMerge {
+nonisolated public enum PersonCreditMerge {
     private enum Role: Int, CaseIterable {
         case actor, director, writer
         var label: String {

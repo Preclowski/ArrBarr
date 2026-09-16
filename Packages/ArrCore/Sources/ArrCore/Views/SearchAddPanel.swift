@@ -165,7 +165,8 @@ public struct SearchAddPanel: View {
             .padding(.top, 8)
             .background(
                 Rectangle()
-                    .fill(.thinMaterial)
+                    .fill(.clear)
+                    .glassEffect(.regular, in: .rect)
                     .overlay(alignment: .top) {
                         Divider().opacity(0.4)
                     }
@@ -177,7 +178,7 @@ public struct SearchAddPanel: View {
             // Enrich first so the hero card upgrades from TMDB-lean to
             // full-fat IMDB/RT/runtime as soon as possible. Runs in
             // parallel with loadOptions — they hit different endpoints.
-            async let enrich: Void = {
+            async let enrich: Void = { @MainActor in
                 if needsEnrichment, let enriched = await viewModel.enrich(result) {
                     result = enriched
                 }
@@ -353,7 +354,7 @@ public struct SearchAddPanel: View {
             // aren't guaranteed to be TMDB movie ids.
             async let movieCountries: [String] = result.source == .radarr
                 ? CountryProvider.movieCountries(
-                    tmdbId: result.externalId, demoMovieId: nil, configStore: configStore)
+                    tmdbId: result.externalId, configStore: configStore)
                 : []
             let credits = await CastProvider.movieCredits(
                 radarrMovieId: nil, tmdbId: result.externalId, configStore: configStore)
@@ -362,10 +363,10 @@ public struct SearchAddPanel: View {
             countries = await movieCountries
         case .sonarr:
             async let seriesCountries = CountryProvider.seriesCountries(
-                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId,
                 configStore: configStore)
             let credits = await CastProvider.seriesCredits(
-                tmdbId: result.tmdbTVId, tvdbId: result.externalId, demoSeriesId: nil,
+                tmdbId: result.tmdbTVId, tvdbId: result.externalId,
                 configStore: configStore)
             cast = credits.cast
             directors = credits.directors

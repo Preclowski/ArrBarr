@@ -52,7 +52,7 @@ import Foundation
 /// Diacritic-, case-, width- and punctuation-insensitive throughout (the fold
 /// is `TitleMatch.fold`, shared with the library filter), so "spiderman"
 /// reaches "Spider-Man" and "pozeracz" reaches "Pożeracz".
-enum SearchRelevance {
+nonisolated enum SearchRelevance {
     /// Score a single result against a *pre-normalised* query. Returns
     /// 0 for "no match" so the caller can keep or drop based on intent
     /// (the live filter is substring-driven and shows every match;

@@ -39,7 +39,7 @@ public enum DeveloperMode {
 /// session — every consumer that reads `isActive` (the queue refresh path,
 /// the popover's `isVisible(_:)` filter, etc.) sees the new value on its
 /// next call.
-public enum DemoMode {
+nonisolated public enum DemoMode {
     public static let key = "ArrBarrDemo"
 
     /// Separate UserDefaults suite holding the ENTIRE demo profile (service
@@ -78,7 +78,7 @@ public enum DemoMode {
 
 /// Public-domain / CC-licensed titles used as preview content.
 /// Posters come from picsum.photos with deterministic seeds, no auth.
-public enum DemoMocks {
+nonisolated public enum DemoMocks {
     /// Per-service library headlines for the Library Status widget in demo mode,
     /// matching the curated demo universe (Big Buck Bunny / Sintel / Tears of
     /// Steel; Pioneer One / Caminandes; Nine Inch Nails / Brad Sucks). Sizes are
@@ -150,155 +150,4 @@ public enum DemoMocks {
             ?? label
         return URL(string: "https://placehold.co/\(w)x\(h)/\(bg)/ffffff/png?text=\(encoded)&font=lato")
     }
-
-    // MARK: - Builders
-
-    enum Aspect { case portrait, square }
-
-    struct ExistingFile {
-        let quality: String?
-        let formats: [String]
-        let score: Int
-        let size: Int64
-        let fileName: String
-    }
-
-    static func queueItem(
-        source: QueueItem.Source, id: String,
-        title: String, subtitle: String? = nil,
-        seasonNumber: Int? = nil, episodeNumber: Int? = nil, episodeTitle: String? = nil,
-        releaseName: String? = nil,
-        status: QueueItem.Status, progress: Double,
-        quality: String?, formats: [String], score: Int,
-        client: String = "qBittorrent", indexer: String? = nil,
-        upgrade: Bool, existing: ExistingFile? = nil,
-        posterSeed: String, aspect: Aspect,
-        downloadId: String? = nil,
-        releaseGroup: String? = nil,
-        entityId: Int? = nil,
-        statusMessages: [String] = []
-    ) -> QueueItem {
-        let total: Int64 = 4_500_000_000
-        let left = Int64(Double(total) * (1 - progress))
-        let timeLeft: String? = switch status {
-        case .downloading: "00:14:23"
-        case .queued: "—"
-        default: nil
-        }
-        let proto: QueueItem.DownloadProtocol = {
-            switch client.lowercased() {
-            case let c where c.contains("sab") || c.contains("nzbget"): return .usenet
-            default: return .torrent
-            }
-        }()
-        let (w, h) = (aspect == .square) ? (200, 200) : (200, 300)
-        return QueueItem(
-            id: id, source: source, arrQueueId: abs(id.hashValue % 99999),
-            downloadId: downloadId ?? id, downloadProtocol: proto, downloadClient: client,
-            indexer: indexer,
-            title: title, subtitle: subtitle,
-            seasonNumber: seasonNumber, episodeNumber: episodeNumber, episodeTitle: episodeTitle,
-            releaseName: releaseName,
-            status: status, progress: progress,
-            sizeTotal: total, sizeLeft: left, timeLeft: timeLeft,
-            customFormats: formats, customFormatScore: score,
-            quality: quality, releaseGroup: releaseGroup, isUpgrade: upgrade,
-            existingCustomFormats: existing?.formats ?? [],
-            existingCustomFormatScore: existing?.score,
-            existingQuality: existing?.quality,
-            existingSize: existing?.size,
-            existingFileName: existing?.fileName,
-            contentSlug: posterSeed,
-            entityId: entityId,
-            posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
-            posterRequiresAuth: false,
-            statusMessages: statusMessages
-        )
-    }
-
-    static func posterLabel(title: String, subtitle: String?) -> String {
-        if let sub = subtitle, let ep = sub.split(separator: "·").first?.trimmingCharacters(in: .whitespaces) {
-            return "\(title)\n\(ep)"
-        }
-        return title
-    }
-
-    static func upcomingItem(
-        source: UpcomingItem.Source, id: String,
-        title: String, subtitle: String? = nil,
-        daysAhead: Int = 0, hoursAhead: Int = 0,
-        releaseType: String, hasFile: Bool,
-        posterSeed: String, aspect: Aspect,
-        entityId: Int? = nil, trackCount: Int? = nil
-    ) -> UpcomingItem {
-        let cal = Calendar.current
-        let withDays = cal.date(byAdding: .day, value: daysAhead, to: Date()) ?? Date()
-        let date = cal.date(byAdding: .hour, value: hoursAhead, to: withDays) ?? withDays
-        let (w, h) = (aspect == .square) ? (200, 200) : (200, 300)
-        // Fake ratings + runtime per source so the demo upcoming list shows
-        // the same metadata richness as real arr data. Deterministic from
-        // the title hash so each row gets a stable score across launches.
-        // Lidarr stays nil — album runtime isn't a single number.
-        let hash = abs(title.hashValue)
-        let imdb = (source == .lidarr) ? nil : Double(60 + hash % 35) / 10.0  // 6.0–9.5
-        let runtime: Int? = {
-            switch source {
-            case .radarr, .whisparr: return 90 + hash % 60   // 90–149 min
-            case .sonarr:            return 22 + hash % 40   // 22–61 min episode
-            case .lidarr:            return nil
-            }
-        }()
-        return UpcomingItem(
-            id: id, source: source, title: title, subtitle: subtitle,
-            airDate: date, releaseType: releaseType, hasFile: hasFile,
-            overview: "Demo overview text. \(title) is part of the open-source / CC-licensed sample content used for ArrBarr previews.",
-            posterURL: poster(label: posterLabel(title: title, subtitle: subtitle), seed: posterSeed, w: w, h: h),
-            posterRequiresAuth: false,
-            imdb: imdb,
-            runtime: runtime,
-            entityId: entityId,
-            trackCount: trackCount
-        )
-    }
-
-    static func historyItem(
-        _ source: QueueItem.Source, id: String,
-        minutesAgo: Int, event: HistoryItem.EventType,
-        title: String, subtitle: String? = nil,
-        sourceTitle: String?,
-        quality: String?, formats: [String], score: Int,
-        posterSeed: String? = nil,
-        arrId: Int? = nil, fileKey: String? = nil, downloadId: String? = nil,
-        client: String? = nil, indexer: String? = nil, sizeGB: Double? = nil,
-        reason: String? = nil, fileOnDisk: HistoryItem.FileSnapshot? = nil, hadFile: Bool? = nil,
-        hint: HistoryItem.GroupHint? = nil
-    ) -> HistoryItem {
-        // Square covers for Lidarr artists, 2:3 posters for everything else.
-        let (w, h) = source == .lidarr ? (300, 300) : (200, 300)
-        return HistoryItem(
-            id: "demo-\(id)",
-            source: source,
-            date: Date().addingTimeInterval(-Double(minutesAgo) * 60),
-            eventType: event,
-            title: title,
-            subtitle: subtitle,
-            sourceTitle: sourceTitle,
-            quality: quality,
-            customFormats: formats,
-            customFormatScore: score,
-            groupHint: hint,
-            posterURL: posterSeed.flatMap { poster(label: title, seed: $0, w: w, h: h) },
-            posterRequiresAuth: false,
-            arrId: arrId,
-            fileKey: fileKey,
-            downloadId: downloadId,
-            downloadClient: client,
-            indexer: indexer,
-            size: sizeGB.map { Int64($0 * 1_073_741_824) },
-            deleteReason: reason,
-            fileOnDisk: fileOnDisk,
-            hadFileOnDisk: hadFile
-        )
-    }
-
 }

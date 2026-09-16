@@ -71,7 +71,7 @@ struct LidarrArtistView: View {
         guard let artistId = item.entityId else { return }
         artist?.monitored = monitored
         do {
-            try await LidarrClient(config: configStore.lidarr)
+            try await configStore.lidarrClient
                 .setArtistMonitored(artistId: artistId, monitored: monitored)
         } catch {
             await load()
@@ -454,7 +454,7 @@ struct LidarrArtistView: View {
         loading = true
         loadError = nil
         defer { loading = false }
-        let client = LidarrClient(config: configStore.lidarr)
+        let client = configStore.lidarrClient
         async let a = client.fetchArtistDetails(id: artistId)
         async let al = client.fetchArtistAlbums(artistId: artistId)
         do {

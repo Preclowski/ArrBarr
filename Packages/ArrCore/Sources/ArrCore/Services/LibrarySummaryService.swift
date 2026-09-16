@@ -23,7 +23,7 @@ public actor LibrarySummaryService {
         return await [r, s, l, w].compactMap { $0 }
     }
 
-    private static func fetch(
+    nonisolated private static func fetch(
         _ config: ServiceConfig,
         _ body: @Sendable (ServiceConfig) async throws -> LibrarySummary
     ) async -> LibrarySummary? {

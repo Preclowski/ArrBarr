@@ -5,7 +5,7 @@ import SwiftUI
 /// in progress, tap to come back". Picks count overlays as a chip so
 /// the user reads it without leaving the chat.
 ///
-/// Tap on the deck fires `arrBarrOpenDiscoverQuiz` with `append: true`
+/// Tap on the deck posts `AppMessages.OpenDiscoverQuiz` with `append: true`
 /// and an empty items list — the receiver (`PopoverContentView`)
 /// interprets that as "reopen the overlay without disturbing the
 /// current session" and flips `showDiscoverOverlay = true`.
@@ -156,18 +156,7 @@ public struct QuizResumeCard: View {
     }
 
     private func resumeQuiz() {
-        // Empty items + append: true → PopoverContentView's existing
-        // handler short-circuits seeding (no `extend(items: [])` is a
-        // no-op) and just flips `showDiscoverOverlay = true`. Reuses
-        // the existing notification rather than adding a parallel one.
-        NotificationCenter.default.post(
-            name: .arrBarrOpenDiscoverQuiz,
-            object: nil,
-            userInfo: [
-                "mood": mood,
-                "items": [DiscoverItem](),
-                "append": true,
-            ]
-        )
+        // Empty items + append: the host's handler skips seeding (`extend(items: [])` is a no-op) and just shows the overlay.
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: mood, items: [], append: true))
     }
 }

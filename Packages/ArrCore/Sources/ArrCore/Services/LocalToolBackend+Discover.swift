@@ -246,7 +246,7 @@ extension LocalToolBackend {
 
     /// Top-`pool` by the caller's ranking, then a random `deck`-sized draw
     /// from it. Pure so the variety rule is testable.
-    static func poolThenDraw<T>(_ ranked: [T], pool: Int, deck: Int) -> [T] {
+    nonisolated static func poolThenDraw<T>(_ ranked: [T], pool: Int, deck: Int) -> [T] {
         Array(ranked.prefix(pool).shuffled().prefix(deck))
     }
 
@@ -335,17 +335,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: text)
         }
 
-        await MainActor.run {
-            NotificationCenter.default.post(
-                name: .arrBarrOpenDiscoverQuiz,
-                object: nil,
-                userInfo: [
-                    "mood": label,
-                    "items": payload,
-                    "append": append,
-                ]
-            )
-        }
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: label, items: payload, append: append))
         let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }
         let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
         var summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"
@@ -358,7 +348,7 @@ extension LocalToolBackend {
 
     /// Splits an appended round into what the deck hasn't shown yet and what
     /// it would drop. Pure so the dedup rule is testable without arr lookups.
-    static func splitAlreadyShown(_ items: [DiscoverItem],
+    nonisolated static func splitAlreadyShown(_ items: [DiscoverItem],
                                   shown: Set<String>) -> (fresh: [DiscoverItem], dropped: [DiscoverItem]) {
         var fresh: [DiscoverItem] = []
         var dropped: [DiscoverItem] = []

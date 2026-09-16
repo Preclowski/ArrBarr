@@ -1,0 +1,2761 @@
+{
+ "discovermovies": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-65-backdrop.jpg",
+     "genre_ids": [
+      878,
+      28,
+      12
+     ],
+     "id": 969681,
+     "original_language": "en",
+     "original_title": "Open Movie 65",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 766.2638,
+     "poster_path": "/open-movie-65-poster.jpg",
+     "release_date": "2026-07-29",
+     "softcore": false,
+     "title": "Open Movie 65",
+     "video": false,
+     "vote_average": 7.85,
+     "vote_count": 2675
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-66-backdrop.jpg",
+     "genre_ids": [
+      35,
+      12,
+      10751,
+      16
+     ],
+     "id": 1204680,
+     "original_language": "en",
+     "original_title": "Open Movie 66",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 593.0284,
+     "poster_path": "/open-movie-66-poster.jpg",
+     "release_date": "2026-08-20",
+     "softcore": false,
+     "title": "Open Movie 66",
+     "video": false,
+     "vote_average": 7.6,
+     "vote_count": 374
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-40-backdrop.jpg",
+     "genre_ids": [
+      28,
+      27,
+      878
+     ],
+     "id": 1375646,
+     "original_language": "ko",
+     "original_title": "Open Movie 40",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 454.2796,
+     "poster_path": "/open-movie-40-poster.jpg",
+     "release_date": "2026-05-21",
+     "softcore": false,
+     "title": "Open Movie 40",
+     "video": false,
+     "vote_average": 8.078,
+     "vote_count": 786
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-67-backdrop.jpg",
+     "genre_ids": [
+      12,
+      28,
+      14
+     ],
+     "id": 1368337,
+     "original_language": "en",
+     "original_title": "Open Movie 67",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 433.1516,
+     "poster_path": "/open-movie-67-poster.jpg",
+     "release_date": "2026-07-15",
+     "softcore": false,
+     "title": "Open Movie 67",
+     "video": false,
+     "vote_average": 8.007,
+     "vote_count": 3694
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-68-backdrop.jpg",
+     "genre_ids": [
+      28,
+      53
+     ],
+     "id": 1288445,
+     "original_language": "en",
+     "original_title": "Open Movie 68",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 348.4092,
+     "poster_path": "/open-movie-68-poster.jpg",
+     "release_date": "2026-08-19",
+     "softcore": false,
+     "title": "Open Movie 68",
+     "video": false,
+     "vote_average": 6.441,
+     "vote_count": 395
+    }
+   ],
+   "total_pages": 1001,
+   "total_results": 20001
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "discovertv": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-37-backdrop.jpg",
+     "first_air_date": "2017-02-20",
+     "genre_ids": [
+      10751,
+      35,
+      18
+     ],
+     "id": 91759,
+     "name": "Open Series 37",
+     "origin_country": [
+      "HK"
+     ],
+     "original_language": "cn",
+     "original_name": "Open Series 37",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 750.4806,
+     "poster_path": "/open-series-37-poster.jpg",
+     "softcore": false,
+     "vote_average": 5.4,
+     "vote_count": 46
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-38-backdrop.jpg",
+     "first_air_date": "2007-08-05",
+     "genre_ids": [
+      35,
+      10764
+     ],
+     "id": 30801,
+     "name": "Open Series 38",
+     "origin_country": [
+      "KR"
+     ],
+     "original_language": "ko",
+     "original_name": "Open Series 38",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 691.455,
+     "poster_path": "/open-series-38-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.667,
+     "vote_count": 30
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-10-backdrop.jpg",
+     "first_air_date": "2022-02-03",
+     "genre_ids": [
+      10759,
+      80
+     ],
+     "id": 108978,
+     "name": "Open Series 10",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 10",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 650.433,
+     "poster_path": "/open-series-10-poster.jpg",
+     "softcore": false,
+     "vote_average": 8.113,
+     "vote_count": 3296
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-39-backdrop.jpg",
+     "first_air_date": "1969-11-10",
+     "genre_ids": [
+      10762,
+      35
+     ],
+     "id": 502,
+     "name": "Open Series 39",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 39",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 614.3406,
+     "poster_path": "/open-series-39-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.135,
+     "vote_count": 293
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-40-backdrop.jpg",
+     "first_air_date": "2009-07-16",
+     "genre_ids": [
+      10767,
+      35
+     ],
+     "id": 22980,
+     "name": "Open Series 40",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 40",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 584.0501,
+     "poster_path": "/open-series-40-poster.jpg",
+     "softcore": false,
+     "vote_average": 4.916,
+     "vote_count": 95
+    }
+   ],
+   "total_pages": 630,
+   "total_results": 12587
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "moviecountries": {
+  "body": {
+   "adult": false,
+   "backdrop_path": "/open-movie-69-backdrop.jpg",
+   "belongs_to_collection": null,
+   "budget": 63000000,
+   "genres": [
+    {
+     "id": 18,
+     "name": "Open Movie 70"
+    },
+    {
+     "id": 53,
+     "name": "Open Movie 71"
+    }
+   ],
+   "homepage": "",
+   "id": 550,
+   "imdb_id": "tt3706790",
+   "origin_country": [
+    "US"
+   ],
+   "original_language": "en",
+   "original_title": "Open Movie 69",
+   "overview": "An open-licensed short film from the demo library.",
+   "popularity": 32.7537,
+   "poster_path": "/open-movie-69-poster.jpg",
+   "production_companies": [
+    {
+     "id": 711,
+     "logo_path": "/open-movie-72-logo.jpg",
+     "name": "Open Movie 72",
+     "origin_country": "US"
+    },
+    {
+     "id": 508,
+     "logo_path": "/open-movie-73-logo.jpg",
+     "name": "Open Movie 73",
+     "origin_country": "US"
+    },
+    {
+     "id": 4700,
+     "logo_path": "/open-movie-74-logo.jpg",
+     "name": "Open Movie 74",
+     "origin_country": "US"
+    },
+    {
+     "id": 25,
+     "logo_path": "/open-movie-75-logo.jpg",
+     "name": "Open Movie 75",
+     "origin_country": "US"
+    },
+    {
+     "id": 20555,
+     "logo_path": "/open-movie-76-logo.jpg",
+     "name": "Open Movie 76",
+     "origin_country": "DE"
+    }
+   ],
+   "production_countries": [
+    {
+     "iso_3166_1": "DE",
+     "name": "Open Movie 77"
+    },
+    {
+     "iso_3166_1": "US",
+     "name": "Open Movie 78"
+    }
+   ],
+   "release_date": "1999-10-15",
+   "revenue": 100853753,
+   "runtime": 139,
+   "softcore": false,
+   "spoken_languages": [
+    {
+     "english_name": "English",
+     "iso_639_1": "en",
+     "name": "Open Movie 79"
+    }
+   ],
+   "status": "Released",
+   "tagline": "An open-licensed demo title.",
+   "title": "Open Movie 69",
+   "video": false,
+   "vote_average": 8.437,
+   "vote_count": 32853
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "moviecredits": {
+  "body": {
+   "cast": [
+    {
+     "adult": false,
+     "cast_id": 4,
+     "character": "Character 13",
+     "credit_id": "52fe4250c3a36847f80149f3",
+     "gender": 2,
+     "id": 819,
+     "known_for_department": "Acting",
+     "name": "Open Series 41",
+     "order": 0,
+     "original_name": "Open Series 41",
+     "popularity": 5.6425,
+     "profile_path": "/open-series-41-profile.jpg"
+    },
+    {
+     "adult": false,
+     "cast_id": 5,
+     "character": "Character 14",
+     "credit_id": "52fe4250c3a36847f80149f7",
+     "gender": 2,
+     "id": 287,
+     "known_for_department": "Acting",
+     "name": "Open Series 42",
+     "order": 1,
+     "original_name": "Open Series 42",
+     "popularity": 9.5387,
+     "profile_path": "/open-series-42-profile.jpg"
+    },
+    {
+     "adult": false,
+     "cast_id": 285,
+     "character": "Character 15",
+     "credit_id": "631f0de8bd32090082733691",
+     "gender": 1,
+     "id": 1283,
+     "known_for_department": "Acting",
+     "name": "Open Series 43",
+     "order": 2,
+     "original_name": "Open Series 43",
+     "popularity": 3.7186,
+     "profile_path": "/open-series-43-profile.jpg"
+    },
+    {
+     "adult": false,
+     "cast_id": 7,
+     "character": "Character 16",
+     "credit_id": "52fe4250c3a36847f80149ff",
+     "gender": 2,
+     "id": 7470,
+     "known_for_department": "Acting",
+     "name": "Open Series 44",
+     "order": 3,
+     "original_name": "Open Series 44",
+     "popularity": 2.6373,
+     "profile_path": "/open-series-44-profile.jpg"
+    },
+    {
+     "adult": false,
+     "cast_id": 286,
+     "character": "Character 17",
+     "credit_id": "631f0e29ce9e91007f757d86",
+     "gender": 2,
+     "id": 7499,
+     "known_for_department": "Acting",
+     "name": "Open Series 45",
+     "order": 4,
+     "original_name": "Open Series 45",
+     "popularity": 3.8749,
+     "profile_path": "/open-series-45-profile.jpg"
+    }
+   ],
+   "crew": [
+    {
+     "adult": false,
+     "credit_id": "52fe4250c3a36847f8014a2f",
+     "department": "Production",
+     "gender": 1,
+     "id": 7481,
+     "job": "Casting",
+     "known_for_department": "Production",
+     "name": "Open Series 46",
+     "original_name": "Open Series 46",
+     "popularity": 0.5474,
+     "profile_path": "/open-series-46-profile.jpg"
+    },
+    {
+     "adult": false,
+     "credit_id": "52fe4250c3a36847f8014a17",
+     "department": "Sound",
+     "gender": 2,
+     "id": 7477,
+     "job": "Original Music Composer",
+     "known_for_department": "Sound",
+     "name": "Open Series 47",
+     "original_name": "Open Series 47",
+     "popularity": 0.3796,
+     "profile_path": null
+    },
+    {
+     "adult": false,
+     "credit_id": "52fe4250c3a36847f8014a1d",
+     "department": "Sound",
+     "gender": 2,
+     "id": 7478,
+     "job": "Original Music Composer",
+     "known_for_department": "Sound",
+     "name": "Open Series 48",
+     "original_name": "Open Series 48",
+     "popularity": 0.3822,
+     "profile_path": "/open-series-48-profile.jpg"
+    },
+    {
+     "adult": false,
+     "credit_id": "52fe4250c3a36847f8014a4d",
+     "department": "Writing",
+     "gender": 2,
+     "id": 7468,
+     "job": "Novel",
+     "known_for_department": "Writing",
+     "name": "Open Series 49",
+     "original_name": "Open Series 49",
+     "popularity": 0.61,
+     "profile_path": "/open-series-49-profile.jpg"
+    },
+    {
+     "adult": false,
+     "credit_id": "52fe4250c3a36847f8014a29",
+     "department": "Editing",
+     "gender": 2,
+     "id": 7480,
+     "job": "Editor",
+     "known_for_department": "Editing",
+     "name": "Open Series 50",
+     "original_name": "Open Series 50",
+     "popularity": 0.7385,
+     "profile_path": null
+    }
+   ],
+   "id": 550
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "movievideos": {
+  "body": {
+   "id": 550,
+   "results": [
+    {
+     "id": "67c90f7a3dd7da394f24957b",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "V0Fqdb-smqo",
+     "name": "Open Movie 80",
+     "official": false,
+     "published_at": "2025-02-14T14:25:16.000Z",
+     "site": "YouTube",
+     "size": 2160,
+     "type": "Featurette"
+    },
+    {
+     "id": "64fb16fbdb4ed610343d72c3",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "dfeUzm6KF4g",
+     "name": "Open Movie 81",
+     "official": true,
+     "published_at": "2019-10-15T18:59:47.000Z",
+     "site": "YouTube",
+     "size": 1080,
+     "type": "Trailer"
+    },
+    {
+     "id": "65d00d0c57176f017b8fc73d",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "tiWCNtGDGEY",
+     "name": "Open Movie 82",
+     "official": true,
+     "published_at": "2015-05-08T15:59:05.000Z",
+     "site": "YouTube",
+     "size": 480,
+     "type": "Featurette"
+    },
+    {
+     "id": "653b36ba5907de00c4953699",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "6JnN1DmbqoU",
+     "name": "Open Movie 83",
+     "official": false,
+     "published_at": "2015-02-26T03:19:25.000Z",
+     "site": "YouTube",
+     "size": 1080,
+     "type": "Trailer"
+    },
+    {
+     "id": "5c9294240e0a267cd516835f",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "BdJKm16Co6M",
+     "name": "Open Movie 84",
+     "official": true,
+     "published_at": "2014-10-02T19:20:22.000Z",
+     "site": "YouTube",
+     "size": 1080,
+     "type": "Trailer"
+    }
+   ]
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "persondetails": {
+  "body": {
+   "adult": false,
+   "also_known_as": [
+    "Person 43"
+   ],
+   "biography": "A performer in the demo library.",
+   "birthday": "1963-12-18",
+   "deathday": null,
+   "gender": 2,
+   "homepage": null,
+   "id": 287,
+   "imdb_id": "nm0000093",
+   "known_for_department": "Acting",
+   "name": "Open Series 42",
+   "place_of_birth": "",
+   "popularity": 9.5387,
+   "profile_path": "/open-series-42-profile.jpg"
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "personmoviecredits": {
+  "body": {
+   "cast": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-85-backdrop.jpg",
+     "character": "Character 18",
+     "credit_id": "52fe4212c3a36847f8001b39",
+     "genre_ids": [
+      878,
+      53,
+      9648
+     ],
+     "id": 63,
+     "order": 2,
+     "original_language": "en",
+     "original_title": "Open Movie 85",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 15.2302,
+     "poster_path": "/open-movie-85-poster.jpg",
+     "release_date": "1995-12-29",
+     "softcore": false,
+     "title": "Open Movie 85",
+     "video": false,
+     "vote_average": 7.614,
+     "vote_count": 9381
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-86-backdrop.jpg",
+     "character": "Character 19",
+     "credit_id": "52fe4218c3a36847f8003be5",
+     "genre_ids": [
+      80,
+      35
+     ],
+     "id": 107,
+     "order": 3,
+     "original_language": "en",
+     "original_title": "Open Movie 86",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 17.4408,
+     "poster_path": "/open-movie-86-poster.jpg",
+     "release_date": "2000-09-01",
+     "softcore": false,
+     "title": "Open Movie 86",
+     "video": false,
+     "vote_average": 7.829,
+     "vote_count": 10261
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-87-backdrop.jpg",
+     "character": "Character 20",
+     "credit_id": "52fe4220c3a36847f800616b",
+     "genre_ids": [
+      53,
+      80
+     ],
+     "id": 161,
+     "order": 1,
+     "original_language": "en",
+     "original_title": "Open Movie 87",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 22.5264,
+     "poster_path": "/open-movie-87-poster.jpg",
+     "release_date": "2001-12-07",
+     "softcore": false,
+     "title": "Open Movie 87",
+     "video": false,
+     "vote_average": 7.467,
+     "vote_count": 12882
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-88-backdrop.jpg",
+     "character": "Character 20",
+     "credit_id": "52fe4221c3a36847f80062e5",
+     "genre_ids": [
+      53,
+      80
+     ],
+     "id": 163,
+     "order": 2,
+     "original_language": "en",
+     "original_title": "Open Movie 88",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 15.3325,
+     "poster_path": "/open-movie-88-poster.jpg",
+     "release_date": "2004-12-09",
+     "softcore": false,
+     "title": "Open Movie 88",
+     "video": false,
+     "vote_average": 6.566,
+     "vote_count": 8116
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-89-backdrop.jpg",
+     "character": "Character 21",
+     "credit_id": "52fe4233c3a36847f800bb79",
+     "genre_ids": [
+      18
+     ],
+     "id": 293,
+     "order": 1,
+     "original_language": "en",
+     "original_title": "Open Movie 89",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 6.2126,
+     "poster_path": "/open-movie-89-poster.jpg",
+     "release_date": "1992-10-09",
+     "softcore": false,
+     "title": "Open Movie 89",
+     "video": false,
+     "vote_average": 7,
+     "vote_count": 1235
+    }
+   ],
+   "crew": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-90-backdrop.jpg",
+     "credit_id": "52fe42f5c3a36847f802ff41",
+     "department": "Production",
+     "genre_ids": [
+      18,
+      53,
+      80
+     ],
+     "id": 1422,
+     "job": "Producer",
+     "original_language": "en",
+     "original_title": "Open Movie 90",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 25.739,
+     "poster_path": "/open-movie-90-poster.jpg",
+     "release_date": "2006-10-04",
+     "softcore": false,
+     "title": "Open Movie 90",
+     "video": false,
+     "vote_average": 8.159,
+     "vote_count": 16624
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-91-backdrop.jpg",
+     "credit_id": "52fe4329c3a36847f803ee3b",
+     "department": "Production",
+     "genre_ids": [
+      18,
+      53,
+      36
+     ],
+     "id": 1988,
+     "job": "Producer",
+     "original_language": "en",
+     "original_title": "Open Movie 91",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 3.3755,
+     "poster_path": "/open-movie-91-poster.jpg",
+     "release_date": "2007-06-22",
+     "softcore": false,
+     "title": "Open Movie 91",
+     "video": false,
+     "vote_average": 6.388,
+     "vote_count": 358
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-92-backdrop.jpg",
+     "credit_id": "52fe43c7c3a36847f806ef0b",
+     "department": "Production",
+     "genre_ids": [
+      18,
+      37
+     ],
+     "id": 4512,
+     "job": "Producer",
+     "original_language": "en",
+     "original_title": "Open Movie 92",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 6.9185,
+     "poster_path": "/open-movie-92-poster.jpg",
+     "release_date": "2007-09-20",
+     "softcore": false,
+     "title": "Open Movie 92",
+     "video": false,
+     "vote_average": 7.066,
+     "vote_count": 2866
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-93-backdrop.jpg",
+     "credit_id": "52fe446ac3a368484e021e13",
+     "department": "Production",
+     "genre_ids": [
+      28,
+      80
+     ],
+     "id": 23483,
+     "job": "Producer",
+     "original_language": "en",
+     "original_title": "Open Movie 93",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 11.9071,
+     "poster_path": "/open-movie-93-poster.jpg",
+     "release_date": "2010-03-26",
+     "softcore": false,
+     "title": "Open Movie 93",
+     "video": false,
+     "vote_average": 7.124,
+     "vote_count": 12625
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-94-backdrop.jpg",
+     "credit_id": "52fe4495c3a368484e02af99",
+     "department": "Production",
+     "genre_ids": [
+      18,
+      10749,
+      14
+     ],
+     "id": 24420,
+     "job": "Executive Producer",
+     "original_language": "en",
+     "original_title": "Open Movie 94",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 8.829,
+     "poster_path": "/open-movie-94-poster.jpg",
+     "release_date": "2009-08-14",
+     "softcore": false,
+     "title": "Open Movie 94",
+     "video": false,
+     "vote_average": 6.954,
+     "vote_count": 2780
+    }
+   ],
+   "id": 287
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "persontvcredits": {
+  "body": {
+   "cast": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-51-backdrop.jpg",
+     "character": "Character 22",
+     "credit_id": "525333fb19c295794002c720",
+     "episode_count": 1,
+     "first_air_date": "1985-09-24",
+     "first_credit_air_date": "1987-11-10",
+     "genre_ids": [
+      35
+     ],
+     "id": 54,
+     "name": "Open Series 51",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 51",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 13.9142,
+     "poster_path": "/open-series-51-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.489,
+     "vote_count": 177
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-52-backdrop.jpg",
+     "character": "Character 23",
+     "credit_id": "525704eb760ee3776a008abe",
+     "episode_count": 1,
+     "first_air_date": "1987-09-29",
+     "first_credit_air_date": "1989-10-03",
+     "genre_ids": [
+      18
+     ],
+     "id": 1448,
+     "name": "Open Series 52",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 52",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 16.7651,
+     "poster_path": "/open-series-52-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.273,
+     "vote_count": 33
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-53-backdrop.jpg",
+     "character": "Character 24",
+     "credit_id": "52570765760ee3776a03124d",
+     "episode_count": 1,
+     "first_air_date": "1987-04-12",
+     "first_credit_air_date": "1988-05-01",
+     "genre_ids": [
+      80,
+      9648,
+      18
+     ],
+     "id": 1486,
+     "name": "Open Series 53",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 53",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 42.9997,
+     "poster_path": "/open-series-53-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.268,
+     "vote_count": 205
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-54-backdrop.jpg",
+     "character": "Character 25",
+     "credit_id": "5257157c760ee3776a132ba8",
+     "episode_count": 2,
+     "first_air_date": "2000-04-12",
+     "first_credit_air_date": "2002-02-10",
+     "genre_ids": [
+      35
+     ],
+     "id": 1795,
+     "name": "Open Series 54",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 54",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 29.4502,
+     "poster_path": "/open-series-54-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.752,
+     "vote_count": 312
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-55-backdrop.jpg",
+     "character": "Character 25",
+     "credit_id": "52572b4e760ee3776a2d9c26",
+     "episode_count": 1,
+     "first_air_date": "1996-07-22",
+     "first_credit_air_date": "2012-02-01",
+     "genre_ids": [
+      10763,
+      35
+     ],
+     "id": 2224,
+     "name": "Open Series 55",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 55",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 231.1704,
+     "poster_path": "/open-series-55-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.4,
+     "vote_count": 658
+    }
+   ],
+   "crew": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-56-backdrop.jpg",
+     "credit_id": "58cf92ae9251415a7d0339c3",
+     "department": "Production",
+     "episode_count": 16,
+     "first_air_date": "2016-12-16",
+     "first_credit_air_date": "2016-12-16",
+     "genre_ids": [
+      10765,
+      9648,
+      18
+     ],
+     "id": 69061,
+     "job": "Executive Producer",
+     "name": "Open Series 56",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 56",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 19.0289,
+     "poster_path": "/open-series-56-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.539,
+     "vote_count": 1452
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-57-backdrop.jpg",
+     "credit_id": "58d06d6e9251415a240011dc",
+     "department": "Production",
+     "episode_count": 8,
+     "first_air_date": "2017-03-05",
+     "first_credit_air_date": "2017-03-05",
+     "genre_ids": [
+      18
+     ],
+     "id": 69851,
+     "job": "Executive Producer",
+     "name": "Open Series 57",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 57",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 9.7644,
+     "poster_path": "/open-series-57-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.6,
+     "vote_count": 260
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-58-backdrop.jpg",
+     "credit_id": "5a45e03a9251411fab090cc0",
+     "department": "Production",
+     "episode_count": 1,
+     "first_air_date": "",
+     "first_credit_air_date": null,
+     "genre_ids": [
+      18
+     ],
+     "id": 6860,
+     "job": "Executive Producer",
+     "name": "Open Series 58",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 58",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 2.5645,
+     "poster_path": "/open-series-58-poster.jpg",
+     "softcore": false,
+     "vote_average": 3.4,
+     "vote_count": 5
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-59-backdrop.jpg",
+     "credit_id": "5b177cc9c3a3687412008e66",
+     "department": "Production",
+     "episode_count": 10,
+     "first_air_date": "2021-05-13",
+     "first_credit_air_date": "2021-05-13",
+     "genre_ids": [
+      18,
+      10765
+     ],
+     "id": 80039,
+     "job": "Executive Producer",
+     "name": "Open Series 59",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 59",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 6.907,
+     "poster_path": "/open-series-59-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.212,
+     "vote_count": 153
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-60-backdrop.jpg",
+     "credit_id": "5f604e5e156cc70038e2836c",
+     "department": "Production",
+     "episode_count": 6,
+     "first_air_date": "2020-09-14",
+     "first_credit_air_date": "2020-09-14",
+     "genre_ids": [
+      9648,
+      18,
+      10765
+     ],
+     "id": 90259,
+     "job": "Executive Producer",
+     "name": "Open Series 60",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 60",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 7.9505,
+     "poster_path": "/open-series-60-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.479,
+     "vote_count": 236
+    }
+   ],
+   "id": 287
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "recommendedmovies": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-95-backdrop.jpg",
+     "genre_ids": [
+      80,
+      18
+     ],
+     "id": 641,
+     "media_type": "movie",
+     "original_language": "en",
+     "original_title": "Open Movie 95",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 7.8635,
+     "poster_path": "/open-movie-95-poster.jpg",
+     "release_date": "2000-10-06",
+     "softcore": false,
+     "title": "Open Movie 95",
+     "video": false,
+     "vote_average": 8.007,
+     "vote_count": 11285
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-96-backdrop.jpg",
+     "genre_ids": [
+      80,
+      53
+     ],
+     "id": 187,
+     "media_type": "movie",
+     "original_language": "en",
+     "original_title": "Open Movie 96",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 9.8819,
+     "poster_path": "/open-movie-96-poster.jpg",
+     "release_date": "2005-04-01",
+     "softcore": false,
+     "title": "Open Movie 96",
+     "video": false,
+     "vote_average": 7.5,
+     "vote_count": 9053
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-97-backdrop.jpg",
+     "genre_ids": [
+      18,
+      10770
+     ],
+     "id": 50032,
+     "media_type": "movie",
+     "original_language": "en",
+     "original_title": "Open Movie 97",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 2.4775,
+     "poster_path": "/open-movie-97-poster.jpg",
+     "release_date": "2007-09-23",
+     "softcore": false,
+     "title": "Open Movie 97",
+     "video": false,
+     "vote_average": 7.386,
+     "vote_count": 232
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-98-backdrop.jpg",
+     "genre_ids": [
+      28,
+      80,
+      18
+     ],
+     "id": 483906,
+     "media_type": "movie",
+     "original_language": "en",
+     "original_title": "Open Movie 98",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 8.2105,
+     "poster_path": "/open-movie-98-poster.jpg",
+     "release_date": "2019-01-25",
+     "softcore": false,
+     "title": "Open Movie 98",
+     "video": false,
+     "vote_average": 6.406,
+     "vote_count": 2576
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-99-backdrop.jpg",
+     "genre_ids": [
+      28,
+      18,
+      80
+     ],
+     "id": 1439930,
+     "media_type": "movie",
+     "original_language": "en",
+     "original_title": "Open Movie 99",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 44.859,
+     "poster_path": "/open-movie-99-poster.jpg",
+     "release_date": "2026-05-12",
+     "softcore": false,
+     "title": "Open Movie 99",
+     "video": false,
+     "vote_average": 8.277,
+     "vote_count": 2215
+    }
+   ],
+   "total_pages": 17,
+   "total_results": 333
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "recommendedtv": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-61-backdrop.jpg",
+     "first_air_date": "2022-08-21",
+     "genre_ids": [
+      10765,
+      18,
+      10759
+     ],
+     "id": 94997,
+     "media_type": "tv",
+     "name": "Open Series 61",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 61",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 128.619,
+     "poster_path": "/open-series-61-poster.jpg",
+     "softcore": false,
+     "vote_average": 8.382,
+     "vote_count": 7116
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-62-backdrop.jpg",
+     "first_air_date": "2019-12-20",
+     "genre_ids": [
+      10765,
+      18,
+      10759
+     ],
+     "id": 71912,
+     "media_type": "tv",
+     "name": "Open Series 62",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 62",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 55.6005,
+     "poster_path": "/open-series-62-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.89,
+     "vote_count": 6890
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-63-backdrop.jpg",
+     "first_air_date": "2008-11-01",
+     "genre_ids": [
+      10765,
+      10759,
+      18
+     ],
+     "id": 7704,
+     "media_type": "tv",
+     "name": "Open Series 63",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 63",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 19.6045,
+     "poster_path": "/open-series-63-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.457,
+     "vote_count": 371
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-64-backdrop.jpg",
+     "first_air_date": "2017-01-06",
+     "genre_ids": [
+      10765,
+      18,
+      10759
+     ],
+     "id": 62417,
+     "media_type": "tv",
+     "name": "Open Series 64",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 64",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 5.4487,
+     "poster_path": "/open-series-64-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.6,
+     "vote_count": 215
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-65-backdrop.jpg",
+     "first_air_date": "2022-12-25",
+     "genre_ids": [
+      10765,
+      10759,
+      18
+     ],
+     "id": 106541,
+     "media_type": "tv",
+     "name": "Open Series 65",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 65",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 10.6765,
+     "poster_path": "/open-series-65-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.489,
+     "vote_count": 819
+    }
+   ],
+   "total_pages": 25,
+   "total_results": 498
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "searchperson": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 525,
+     "known_for": [
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-100-backdrop.jpg",
+       "genre_ids": [
+        12,
+        18,
+        878
+       ],
+       "id": 157336,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 100",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 50.3767,
+       "poster_path": "/open-movie-100-poster.jpg",
+       "release_date": "2014-11-05",
+       "softcore": false,
+       "title": "Open Movie 100",
+       "video": false,
+       "vote_average": 8.487,
+       "vote_count": 41140
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-101-backdrop.jpg",
+       "genre_ids": [
+        28,
+        878,
+        12
+       ],
+       "id": 27205,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 101",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 52.7091,
+       "poster_path": "/open-movie-101-poster.jpg",
+       "release_date": "2010-07-15",
+       "softcore": false,
+       "title": "Open Movie 101",
+       "video": false,
+       "vote_average": 8.373,
+       "vote_count": 40167
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-102-backdrop.jpg",
+       "genre_ids": [
+        28,
+        53
+       ],
+       "id": 155,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 102",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 43.8306,
+       "poster_path": "/open-movie-102-poster.jpg",
+       "release_date": "2008-07-16",
+       "softcore": false,
+       "title": "Open Movie 102",
+       "video": false,
+       "vote_average": 8.5,
+       "vote_count": 36686
+      }
+     ],
+     "known_for_department": "Directing",
+     "name": "Open Series 66",
+     "original_name": "Open Series 66",
+     "popularity": 8.7795,
+     "profile_path": "/open-series-66-profile.jpg"
+    },
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 19508,
+     "known_for": [
+      {
+       "adult": false,
+       "backdrop_path": "/open-series-68-backdrop.jpg",
+       "first_air_date": "2010-11-26",
+       "genre_ids": [
+        16,
+        10765,
+        10759
+       ],
+       "id": 33217,
+       "media_type": "tv",
+       "name": "Open Series 68",
+       "origin_country": [
+        "US"
+       ],
+       "original_language": "en",
+       "original_name": "Open Series 68",
+       "overview": "An open-licensed series from the demo library.",
+       "popularity": 63.59,
+       "poster_path": "/open-series-68-poster.jpg",
+       "softcore": false,
+       "vote_average": 8.379,
+       "vote_count": 1250
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-103-backdrop.jpg",
+       "genre_ids": [
+        28,
+        12,
+        9648
+       ],
+       "id": 335787,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 103",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 14.2414,
+       "poster_path": "/open-movie-103-poster.jpg",
+       "release_date": "2022-02-10",
+       "softcore": false,
+       "title": "Open Movie 103",
+       "video": false,
+       "vote_average": 6.872,
+       "vote_count": 7146
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-104-backdrop.jpg",
+       "genre_ids": [
+        28,
+        12,
+        878
+       ],
+       "id": 54138,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 104",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 10.4258,
+       "poster_path": "/open-movie-104-poster.jpg",
+       "release_date": "2013-05-05",
+       "softcore": false,
+       "title": "Open Movie 104",
+       "video": false,
+       "vote_average": 7.3,
+       "vote_count": 9864
+      }
+     ],
+     "known_for_department": "Acting",
+     "name": "Open Series 67",
+     "original_name": "Open Series 67",
+     "popularity": 1.7414,
+     "profile_path": "/open-series-67-profile.jpg"
+    },
+    {
+     "adult": false,
+     "gender": 0,
+     "id": 6279342,
+     "known_for": [
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-105-backdrop.jpg",
+       "genre_ids": [
+        16,
+        10402,
+        10749,
+        35
+       ],
+       "id": 1712688,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 105",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.6099,
+       "poster_path": "/open-movie-105-poster.jpg",
+       "release_date": "2026-04-29",
+       "softcore": false,
+       "title": "Open Movie 105",
+       "video": false,
+       "vote_average": 10,
+       "vote_count": 1
+      },
+      {
+       "adult": false,
+       "backdrop_path": null,
+       "genre_ids": [
+        35,
+        18,
+        10402
+       ],
+       "id": 1720881,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 106",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.5208,
+       "poster_path": "/open-movie-106-poster.jpg",
+       "release_date": "2026-04-17",
+       "softcore": false,
+       "title": "Open Movie 106",
+       "video": false,
+       "vote_average": 0,
+       "vote_count": 0
+      },
+      {
+       "adult": false,
+       "backdrop_path": null,
+       "genre_ids": [
+        35,
+        18,
+        10402
+       ],
+       "id": 1720889,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 107",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.4675,
+       "poster_path": "/open-movie-107-poster.jpg",
+       "release_date": "2026-04-23",
+       "softcore": false,
+       "title": "Open Movie 107",
+       "video": false,
+       "vote_average": 0,
+       "vote_count": 0
+      }
+     ],
+     "known_for_department": "Directing",
+     "name": "Open Series 69",
+     "original_name": "Open Series 69",
+     "popularity": 0.2685,
+     "profile_path": "/open-series-69-profile.jpg"
+    },
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 527,
+     "known_for": [
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-100-backdrop.jpg",
+       "genre_ids": [
+        12,
+        18,
+        878
+       ],
+       "id": 157336,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 100",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 50.3767,
+       "poster_path": "/open-movie-100-poster.jpg",
+       "release_date": "2014-11-05",
+       "softcore": false,
+       "title": "Open Movie 100",
+       "video": false,
+       "vote_average": 8.487,
+       "vote_count": 41140
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-102-backdrop.jpg",
+       "genre_ids": [
+        28,
+        53
+       ],
+       "id": 155,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 102",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 43.8306,
+       "poster_path": "/open-movie-102-poster.jpg",
+       "release_date": "2008-07-16",
+       "softcore": false,
+       "title": "Open Movie 102",
+       "video": false,
+       "vote_average": 8.5,
+       "vote_count": 36686
+      },
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-108-backdrop.jpg",
+       "genre_ids": [
+        28,
+        80,
+        18,
+        53
+       ],
+       "id": 49026,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 108",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 71.2361,
+       "poster_path": "/open-movie-108-poster.jpg",
+       "release_date": "2012-07-17",
+       "softcore": false,
+       "title": "Open Movie 108",
+       "video": false,
+       "vote_average": 7.8,
+       "vote_count": 24920
+      }
+     ],
+     "known_for_department": "Writing",
+     "name": "Open Series 70",
+     "original_name": "Open Series 70",
+     "popularity": 1.9138,
+     "profile_path": "/open-series-70-profile.jpg"
+    },
+    {
+     "adult": false,
+     "gender": 0,
+     "id": 6279344,
+     "known_for": [
+      {
+       "adult": false,
+       "backdrop_path": "/open-movie-105-backdrop.jpg",
+       "genre_ids": [
+        16,
+        10402,
+        10749,
+        35
+       ],
+       "id": 1712688,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 105",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.6099,
+       "poster_path": "/open-movie-105-poster.jpg",
+       "release_date": "2026-04-29",
+       "softcore": false,
+       "title": "Open Movie 105",
+       "video": false,
+       "vote_average": 10,
+       "vote_count": 1
+      },
+      {
+       "adult": false,
+       "backdrop_path": null,
+       "genre_ids": [
+        35,
+        18,
+        10402
+       ],
+       "id": 1720881,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 106",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.5208,
+       "poster_path": "/open-movie-106-poster.jpg",
+       "release_date": "2026-04-17",
+       "softcore": false,
+       "title": "Open Movie 106",
+       "video": false,
+       "vote_average": 0,
+       "vote_count": 0
+      },
+      {
+       "adult": false,
+       "backdrop_path": null,
+       "genre_ids": [
+        35,
+        18,
+        10402
+       ],
+       "id": 1720889,
+       "media_type": "movie",
+       "original_language": "en",
+       "original_title": "Open Movie 107",
+       "overview": "An open-licensed short film from the demo library.",
+       "popularity": 0.4675,
+       "poster_path": "/open-movie-107-poster.jpg",
+       "release_date": "2026-04-23",
+       "softcore": false,
+       "title": "Open Movie 107",
+       "video": false,
+       "vote_average": 0,
+       "vote_count": 0
+      }
+     ],
+     "known_for_department": "Directing",
+     "name": "Open Series 66",
+     "original_name": "Open Series 66",
+     "popularity": 0.2823,
+     "profile_path": null
+    }
+   ],
+   "total_pages": 62,
+   "total_results": 1224
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "similarmovies": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-109-backdrop.jpg",
+     "genre_ids": [
+      10752,
+      28,
+      18
+     ],
+     "id": 929590,
+     "original_language": "en",
+     "original_title": "Open Movie 109",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 17.6428,
+     "poster_path": "/open-movie-109-poster.jpg",
+     "release_date": "2024-04-10",
+     "softcore": false,
+     "title": "Open Movie 109",
+     "video": false,
+     "vote_average": 6.845,
+     "vote_count": 4556
+    },
+    {
+     "adult": false,
+     "backdrop_path": null,
+     "genre_ids": [
+      36,
+      18,
+      10402
+     ],
+     "id": 72633,
+     "original_language": "ru",
+     "original_title": "Open Movie 110",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 1.233,
+     "poster_path": "/open-movie-110-poster.jpg",
+     "release_date": "1965-11-16",
+     "softcore": false,
+     "title": "Open Movie 110",
+     "video": false,
+     "vote_average": 4.75,
+     "vote_count": 4
+    },
+    {
+     "adult": false,
+     "backdrop_path": null,
+     "genre_ids": [
+      18,
+      10749
+     ],
+     "id": 691795,
+     "original_language": "cs",
+     "original_title": "Open Movie 111",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 0.5384,
+     "poster_path": null,
+     "release_date": "1928-11-28",
+     "softcore": false,
+     "title": "Open Movie 111",
+     "video": false,
+     "vote_average": 8,
+     "vote_count": 1
+    },
+    {
+     "adult": false,
+     "backdrop_path": null,
+     "genre_ids": [
+      18,
+      10749
+     ],
+     "id": 510584,
+     "original_language": "cs",
+     "original_title": "Open Movie 112",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 0.6317,
+     "poster_path": "/open-movie-112-poster.jpg",
+     "release_date": "1939-02-10",
+     "softcore": false,
+     "title": "Open Movie 112",
+     "video": false,
+     "vote_average": 4.25,
+     "vote_count": 4
+    },
+    {
+     "adult": false,
+     "backdrop_path": null,
+     "genre_ids": [
+      18,
+      35,
+      9648
+     ],
+     "id": 359047,
+     "original_language": "fr",
+     "original_title": "Open Movie 113",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 3.877,
+     "poster_path": "/open-movie-113-poster.jpg",
+     "release_date": "1947-08-26",
+     "softcore": false,
+     "title": "Open Movie 113",
+     "video": false,
+     "vote_average": 5.333,
+     "vote_count": 3
+    }
+   ],
+   "total_pages": 1001,
+   "total_results": 20001
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "similartv": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-71-backdrop.jpg",
+     "first_air_date": "1998-04-12",
+     "genre_ids": [
+      18,
+      10768
+     ],
+     "id": 28330,
+     "name": "Open Series 71",
+     "origin_country": [
+      "GB"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 71",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 1.8655,
+     "poster_path": "/open-series-71-poster.jpg",
+     "softcore": false,
+     "vote_average": 0,
+     "vote_count": 0
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-72-backdrop.jpg",
+     "first_air_date": "2009-01-05",
+     "genre_ids": [
+      18,
+      10768
+     ],
+     "id": 28379,
+     "name": "Open Series 72",
+     "origin_country": [
+      "GB"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 72",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 4.628,
+     "poster_path": "/open-series-72-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.312,
+     "vote_count": 373
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-73-backdrop.jpg",
+     "first_air_date": "1999-12-15",
+     "genre_ids": [
+      18
+     ],
+     "id": 91807,
+     "name": "Open Series 73",
+     "origin_country": [
+      "BR"
+     ],
+     "original_language": "pt",
+     "original_name": "Open Series 73",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 1.5695,
+     "poster_path": "/open-series-73-poster.jpg",
+     "softcore": false,
+     "vote_average": 4.5,
+     "vote_count": 4
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-74-backdrop.jpg",
+     "first_air_date": "2019-09-06",
+     "genre_ids": [
+      18
+     ],
+     "id": 91725,
+     "name": "Open Series 74",
+     "origin_country": [
+      "BE",
+      "HU",
+      "MA",
+      "GB",
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 74",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 9.8195,
+     "poster_path": "/open-series-74-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.388,
+     "vote_count": 354
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-75-backdrop.jpg",
+     "first_air_date": "2021-09-12",
+     "genre_ids": [
+      18,
+      80
+     ],
+     "id": 91746,
+     "name": "Open Series 75",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 75",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 11.9938,
+     "poster_path": "/open-series-75-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.937,
+     "vote_count": 71
+    }
+   ],
+   "total_pages": 1001,
+   "total_results": 20001
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "testconnection": {
+  "body": {
+   "change_keys": [
+    "adult",
+    "air_date",
+    "also_known_as",
+    "alternative_titles",
+    "biography"
+   ],
+   "images": {
+    "backdrop_sizes": [
+     "w300",
+     "w780",
+     "w1280",
+     "original"
+    ],
+    "base_url": "https://example.invalid/movie/item/base-url.jpg",
+    "logo_sizes": [
+     "w45",
+     "w92",
+     "w154",
+     "w185",
+     "w300"
+    ],
+    "poster_sizes": [
+     "w92",
+     "w154",
+     "w185",
+     "w342",
+     "w500"
+    ],
+    "profile_sizes": [
+     "w45",
+     "w185",
+     "h632",
+     "original"
+    ],
+    "secure_base_url": "https://example.invalid/movie/item/secure-base-url.jpg",
+    "still_sizes": [
+     "w92",
+     "w185",
+     "w300",
+     "original"
+    ]
+   }
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvcountries": {
+  "body": {
+   "adult": false,
+   "backdrop_path": "/open-series-76-backdrop.jpg",
+   "created_by": [],
+   "episode_run_time": [],
+   "first_air_date": "2011-04-17",
+   "genres": [
+    {
+     "id": 10765,
+     "name": "Open Movie 114"
+    },
+    {
+     "id": 18,
+     "name": "Open Movie 70"
+    },
+    {
+     "id": 10759,
+     "name": "Open Movie 115"
+    }
+   ],
+   "homepage": "",
+   "id": 1399,
+   "in_production": false,
+   "languages": [
+    "en"
+   ],
+   "last_air_date": "2019-05-19",
+   "last_episode_to_air": {
+    "air_date": "2019-05-19",
+    "episode_number": 6,
+    "episode_type": "finale",
+    "id": 1551830,
+    "name": "Episode 6",
+    "overview": "An open-licensed episode from the demo library.",
+    "production_code": "806",
+    "runtime": 80,
+    "season_number": 8,
+    "show_id": 1399,
+    "still_path": "/episode-6-still.jpg",
+    "vote_average": 4.5,
+    "vote_count": 454
+   },
+   "name": "Open Series 76",
+   "networks": [
+    {
+     "id": 49,
+     "logo_path": "/open-movie-116-logo.jpg",
+     "name": "Open Movie 116",
+     "origin_country": "US"
+    }
+   ],
+   "next_episode_to_air": null,
+   "number_of_episodes": 73,
+   "number_of_seasons": 8,
+   "origin_country": [
+    "US"
+   ],
+   "original_language": "en",
+   "original_name": "Open Series 76",
+   "overview": "An open-licensed series from the demo library.",
+   "popularity": 217.263,
+   "poster_path": "/open-series-76-poster.jpg",
+   "production_companies": [
+    {
+     "id": 76043,
+     "logo_path": "/open-movie-117-logo.jpg",
+     "name": "Open Movie 117",
+     "origin_country": "US"
+    },
+    {
+     "id": 12525,
+     "logo_path": null,
+     "name": "Open Movie 118",
+     "origin_country": ""
+    },
+    {
+     "id": 5820,
+     "logo_path": null,
+     "name": "Open Movie 119",
+     "origin_country": "GB"
+    },
+    {
+     "id": 12526,
+     "logo_path": null,
+     "name": "Open Movie 120",
+     "origin_country": "US"
+    },
+    {
+     "id": 286828,
+     "logo_path": null,
+     "name": "Open Movie 121",
+     "origin_country": ""
+    }
+   ],
+   "production_countries": [
+    {
+     "iso_3166_1": "GB",
+     "name": "Open Movie 122"
+    },
+    {
+     "iso_3166_1": "US",
+     "name": "Open Movie 78"
+    }
+   ],
+   "seasons": [
+    {
+     "air_date": "2010-12-05",
+     "episode_count": 300,
+     "id": 3627,
+     "name": "Open Movie 123",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-123-poster.jpg",
+     "season_number": 0,
+     "vote_average": 0
+    },
+    {
+     "air_date": "2011-04-17",
+     "episode_count": 10,
+     "id": 3624,
+     "name": "Open Movie 124",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-124-poster.jpg",
+     "season_number": 1,
+     "vote_average": 8.4
+    },
+    {
+     "air_date": "2012-04-01",
+     "episode_count": 10,
+     "id": 3625,
+     "name": "Open Movie 125",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-125-poster.jpg",
+     "season_number": 2,
+     "vote_average": 8.3
+    },
+    {
+     "air_date": "2013-03-31",
+     "episode_count": 10,
+     "id": 3626,
+     "name": "Open Movie 126",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-126-poster.jpg",
+     "season_number": 3,
+     "vote_average": 8.3
+    },
+    {
+     "air_date": "2014-04-06",
+     "episode_count": 10,
+     "id": 3628,
+     "name": "Open Movie 127",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-127-poster.jpg",
+     "season_number": 4,
+     "vote_average": 8.5
+    }
+   ],
+   "softcore": false,
+   "spoken_languages": [
+    {
+     "english_name": "English",
+     "iso_639_1": "en",
+     "name": "Open Movie 79"
+    }
+   ],
+   "status": "Ended",
+   "tagline": "An open-licensed demo title.",
+   "type": "Scripted",
+   "vote_average": 8.471,
+   "vote_count": 27728
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvcreators": {
+  "body": {
+   "adult": false,
+   "backdrop_path": "/open-series-76-backdrop.jpg",
+   "created_by": [],
+   "episode_run_time": [],
+   "first_air_date": "2011-04-17",
+   "genres": [
+    {
+     "id": 10765,
+     "name": "Open Movie 114"
+    },
+    {
+     "id": 18,
+     "name": "Open Movie 70"
+    },
+    {
+     "id": 10759,
+     "name": "Open Movie 115"
+    }
+   ],
+   "homepage": "",
+   "id": 1399,
+   "in_production": false,
+   "languages": [
+    "en"
+   ],
+   "last_air_date": "2019-05-19",
+   "last_episode_to_air": {
+    "air_date": "2019-05-19",
+    "episode_number": 6,
+    "episode_type": "finale",
+    "id": 1551830,
+    "name": "Episode 6",
+    "overview": "An open-licensed episode from the demo library.",
+    "production_code": "806",
+    "runtime": 80,
+    "season_number": 8,
+    "show_id": 1399,
+    "still_path": "/episode-6-still.jpg",
+    "vote_average": 4.5,
+    "vote_count": 454
+   },
+   "name": "Open Series 76",
+   "networks": [
+    {
+     "id": 49,
+     "logo_path": "/open-movie-116-logo.jpg",
+     "name": "Open Movie 116",
+     "origin_country": "US"
+    }
+   ],
+   "next_episode_to_air": null,
+   "number_of_episodes": 73,
+   "number_of_seasons": 8,
+   "origin_country": [
+    "US"
+   ],
+   "original_language": "en",
+   "original_name": "Open Series 76",
+   "overview": "An open-licensed series from the demo library.",
+   "popularity": 217.263,
+   "poster_path": "/open-series-76-poster.jpg",
+   "production_companies": [
+    {
+     "id": 76043,
+     "logo_path": "/open-movie-117-logo.jpg",
+     "name": "Open Movie 117",
+     "origin_country": "US"
+    },
+    {
+     "id": 12525,
+     "logo_path": null,
+     "name": "Open Movie 118",
+     "origin_country": ""
+    },
+    {
+     "id": 5820,
+     "logo_path": null,
+     "name": "Open Movie 119",
+     "origin_country": "GB"
+    },
+    {
+     "id": 12526,
+     "logo_path": null,
+     "name": "Open Movie 120",
+     "origin_country": "US"
+    },
+    {
+     "id": 286828,
+     "logo_path": null,
+     "name": "Open Movie 121",
+     "origin_country": ""
+    }
+   ],
+   "production_countries": [
+    {
+     "iso_3166_1": "GB",
+     "name": "Open Movie 122"
+    },
+    {
+     "iso_3166_1": "US",
+     "name": "Open Movie 78"
+    }
+   ],
+   "seasons": [
+    {
+     "air_date": "2010-12-05",
+     "episode_count": 300,
+     "id": 3627,
+     "name": "Open Movie 123",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-123-poster.jpg",
+     "season_number": 0,
+     "vote_average": 0
+    },
+    {
+     "air_date": "2011-04-17",
+     "episode_count": 10,
+     "id": 3624,
+     "name": "Open Movie 124",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-124-poster.jpg",
+     "season_number": 1,
+     "vote_average": 8.4
+    },
+    {
+     "air_date": "2012-04-01",
+     "episode_count": 10,
+     "id": 3625,
+     "name": "Open Movie 125",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-125-poster.jpg",
+     "season_number": 2,
+     "vote_average": 8.3
+    },
+    {
+     "air_date": "2013-03-31",
+     "episode_count": 10,
+     "id": 3626,
+     "name": "Open Movie 126",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-126-poster.jpg",
+     "season_number": 3,
+     "vote_average": 8.3
+    },
+    {
+     "air_date": "2014-04-06",
+     "episode_count": 10,
+     "id": 3628,
+     "name": "Open Movie 127",
+     "overview": "An open-licensed short film from the demo library.",
+     "poster_path": "/open-movie-127-poster.jpg",
+     "season_number": 4,
+     "vote_average": 8.5
+    }
+   ],
+   "softcore": false,
+   "spoken_languages": [
+    {
+     "english_name": "English",
+     "iso_639_1": "en",
+     "name": "Open Movie 79"
+    }
+   ],
+   "status": "Ended",
+   "tagline": "An open-licensed demo title.",
+   "type": "Scripted",
+   "vote_average": 8.471,
+   "vote_count": 27728
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvcredits": {
+  "body": {
+   "cast": [
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 22970,
+     "known_for_department": "Acting",
+     "name": "Open Series 77",
+     "order": 0,
+     "original_name": "Open Series 77",
+     "popularity": 4.0193,
+     "profile_path": "/open-series-77-profile.jpg",
+     "roles": [
+      {
+       "character": "Character 26",
+       "credit_id": "5256c8b219c2956ff6047cd8",
+       "episode_count": 73
+      }
+     ],
+     "total_episode_count": 73
+    },
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 239019,
+     "known_for_department": "Acting",
+     "name": "Open Series 78",
+     "order": 1,
+     "original_name": "Open Series 78",
+     "popularity": 3.1447,
+     "profile_path": "/open-series-78-profile.jpg",
+     "roles": [
+      {
+       "character": "Character 27",
+       "credit_id": "5256c8af19c2956ff6047af6",
+       "episode_count": 73
+      }
+     ],
+     "total_episode_count": 73
+    },
+    {
+     "adult": false,
+     "gender": 2,
+     "id": 12795,
+     "known_for_department": "Acting",
+     "name": "Open Series 79",
+     "order": 5,
+     "original_name": "Open Series 79",
+     "popularity": 3.3894,
+     "profile_path": "/open-series-79-profile.jpg",
+     "roles": [
+      {
+       "character": "Character 28",
+       "credit_id": "5256c8ad19c2956ff604793e",
+       "episode_count": 73
+      }
+     ],
+     "total_episode_count": 73
+    },
+    {
+     "adult": false,
+     "gender": 1,
+     "id": 17286,
+     "known_for_department": "Acting",
+     "name": "Open Series 80",
+     "order": 6,
+     "original_name": "Open Series 80",
+     "popularity": 5.7861,
+     "profile_path": "/open-series-80-profile.jpg",
+     "roles": [
+      {
+       "character": "Character 29",
+       "credit_id": "5256c8ad19c2956ff60479ce",
+       "episode_count": 73
+      }
+     ],
+     "total_episode_count": 73
+    },
+    {
+     "adult": false,
+     "gender": 1,
+     "id": 1223786,
+     "known_for_department": "Acting",
+     "name": "Open Series 81",
+     "order": 8,
+     "original_name": "Open Series 81",
+     "popularity": 6.5605,
+     "profile_path": "/open-series-81-profile.jpg",
+     "roles": [
+      {
+       "character": "Character 30",
+       "credit_id": "5256c8af19c2956ff60479f6",
+       "episode_count": 73
+      }
+     ],
+     "total_episode_count": 73
+    }
+   ],
+   "crew": [
+    {
+     "adult": false,
+     "department": "Art",
+     "gender": 1,
+     "id": 6411,
+     "jobs": [
+      {
+       "credit_id": "54eee9e5c3a3686d5800584e",
+       "episode_count": 43,
+       "job": "Production Design"
+      }
+     ],
+     "known_for_department": "Art",
+     "name": "Open Series 82",
+     "original_name": "Open Series 82",
+     "popularity": 0.4849,
+     "profile_path": "/open-series-82-profile.jpg",
+     "total_episode_count": 43
+    },
+    {
+     "adult": false,
+     "department": "Art",
+     "gender": 2,
+     "id": 80424,
+     "jobs": [
+      {
+       "credit_id": "56b8665b9251414c4500967c",
+       "episode_count": 30,
+       "job": "Art Direction"
+      }
+     ],
+     "known_for_department": "Art",
+     "name": "Open Series 83",
+     "original_name": "Open Series 83",
+     "popularity": 0.4021,
+     "profile_path": null,
+     "total_episode_count": 30
+    },
+    {
+     "adult": false,
+     "department": "Art",
+     "gender": 1,
+     "id": 9153,
+     "jobs": [
+      {
+       "credit_id": "54eee8b8c3a3686d5e005430",
+       "episode_count": 29,
+       "job": "Production Design"
+      }
+     ],
+     "known_for_department": "Art",
+     "name": "Open Series 84",
+     "original_name": "Open Series 84",
+     "popularity": 0.7003,
+     "profile_path": null,
+     "total_episode_count": 29
+    },
+    {
+     "adult": false,
+     "department": "Art",
+     "gender": 0,
+     "id": 1406918,
+     "jobs": [
+      {
+       "credit_id": "624178ea7caa47008aca4d25",
+       "episode_count": 5,
+       "job": "Assistant Art Director"
+      },
+      {
+       "credit_id": "57bb168cc3a36815bb007ae3",
+       "episode_count": 10,
+       "job": "Art Direction"
+      }
+     ],
+     "known_for_department": "Art",
+     "name": "Open Series 85",
+     "original_name": "Open Series 85",
+     "popularity": 0.3998,
+     "profile_path": null,
+     "total_episode_count": 15
+    },
+    {
+     "adult": false,
+     "department": "Art",
+     "gender": 2,
+     "id": 986677,
+     "jobs": [
+      {
+       "credit_id": "69862fe09bc91e93b248de69",
+       "episode_count": 6,
+       "job": "Concept Artist"
+      },
+      {
+       "credit_id": "69862fcd25a9fb833e691830",
+       "episode_count": 6,
+       "job": "Supervising Art Director"
+      }
+     ],
+     "known_for_department": "Art",
+     "name": "Open Series 86",
+     "original_name": "Open Series 86",
+     "popularity": 0.5936,
+     "profile_path": null,
+     "total_episode_count": 12
+    }
+   ],
+   "id": 1399
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvdbidfromtvid": {
+  "body": {
+   "facebook_id": "",
+   "freebase_id": "",
+   "freebase_mid": "",
+   "id": 1399,
+   "imdb_id": "tt7907186",
+   "instagram_id": "",
+   "tvdb_id": 121361,
+   "tvrage_id": 24493,
+   "twitter_id": "",
+   "wikidata_id": ""
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvidfromtvdb": {
+  "body": {
+   "movie_results": [],
+   "person_results": [],
+   "tv_episode_results": [
+    {
+     "air_date": "1956-02-26",
+     "episode_number": 22,
+     "episode_type": "standard",
+     "id": 356630,
+     "media_type": "tv_episode",
+     "name": "Episode 22",
+     "overview": "An open-licensed episode from the demo library.",
+     "production_code": "",
+     "runtime": 26,
+     "season_number": 1,
+     "show_id": 5273,
+     "still_path": "/episode-22-still.jpg",
+     "vote_average": 6.5,
+     "vote_count": 2
+    }
+   ],
+   "tv_results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-76-backdrop.jpg",
+     "first_air_date": "2011-04-17",
+     "genre_ids": [
+      10765,
+      18,
+      10759
+     ],
+     "id": 1399,
+     "media_type": "tv",
+     "name": "Open Series 76",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 76",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 217.263,
+     "poster_path": "/open-series-76-poster.jpg",
+     "softcore": false,
+     "vote_average": 8.471,
+     "vote_count": 27728
+    }
+   ],
+   "tv_season_results": []
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ },
+ "tvvideos": {
+  "body": {
+   "id": 1399,
+   "results": [
+    {
+     "id": "64ec59a7e894a60101224a01",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "KPLWWIOCOOQ",
+     "name": "Open Movie 128",
+     "official": true,
+     "published_at": "2021-04-05T16:00:07.000Z",
+     "site": "YouTube",
+     "size": 1080,
+     "type": "Trailer"
+    },
+    {
+     "id": "5c999b48c3a36863b73b9d42",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "y2ZJ3lTaREY",
+     "name": "Open Movie 129",
+     "official": true,
+     "published_at": "2019-03-25T14:00:06.000Z",
+     "site": "YouTube",
+     "size": 1080,
+     "type": "Behind the Scenes"
+    },
+    {
+     "id": "5c92c2519251412b51773135",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "f3MUpuRF6Ck",
+     "name": "Open Movie 130",
+     "official": true,
+     "published_at": "2019-03-11T14:00:03.000Z",
+     "site": "YouTube",
+     "size": 720,
+     "type": "Behind the Scenes"
+    },
+    {
+     "id": "6233756fba131b001f875249",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "s7L2PVdrb_8",
+     "name": "Open Movie 131",
+     "official": true,
+     "published_at": "2011-04-18T20:20:02.000Z",
+     "site": "YouTube",
+     "size": 720,
+     "type": "Opening Credits"
+    },
+    {
+     "id": "5c9295200e0a267cd8168bd8",
+     "iso_3166_1": "US",
+     "iso_639_1": "en",
+     "key": "BpJYNVhGf1s",
+     "name": "Open Movie 132",
+     "official": true,
+     "published_at": "2011-03-04T04:21:14.000Z",
+     "site": "YouTube",
+     "size": 720,
+     "type": "Trailer"
+    }
+   ]
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200
+ }
+}

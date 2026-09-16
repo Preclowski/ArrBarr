@@ -9,7 +9,7 @@ import Foundation
 /// cannot be answered by tags — half the great 90s romances are tagged
 /// Drama + Romance — so genres travel in every row and the model applies the
 /// judgement. Tools state facts; taste stays with the agent.
-public struct LibraryQuery: Sendable, Equatable {
+nonisolated public struct LibraryQuery: Sendable, Equatable {
     public var title: String
     public var genre: String
     public var startYear: Int?
@@ -49,7 +49,7 @@ public struct LibraryQuery: Sendable, Equatable {
 /// One sort key for the library list tools. Wire form is `field` or
 /// `field.asc` / `field.desc` ("rating", "year.asc", …) — dotted like TMDB's
 /// sort keys, so the model carries one convention across tools.
-public struct LibrarySort: Sendable, Equatable {
+nonisolated public struct LibrarySort: Sendable, Equatable {
     public enum Field: String, Sendable {
         case rating, year, added, title, random
     }
@@ -78,7 +78,7 @@ public struct LibrarySort: Sendable, Equatable {
 }
 
 /// A library record, seen through the only fields filtering needs.
-public protocol LibraryFilterable {
+nonisolated public protocol LibraryFilterable {
     var filterTitle: String { get }
     var filterYear: Int? { get }
     var filterGenres: [String] { get }
@@ -88,7 +88,7 @@ public protocol LibraryFilterable {
     var filterAdded: String? { get }
 }
 
-extension RadarrLibraryRecord: LibraryFilterable {
+nonisolated extension RadarrLibraryRecord: LibraryFilterable {
     public var filterTitle: String { title ?? "" }
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
@@ -96,7 +96,7 @@ extension RadarrLibraryRecord: LibraryFilterable {
     public var filterAdded: String? { added }
 }
 
-extension SonarrLibraryRecord: LibraryFilterable {
+nonisolated extension SonarrLibraryRecord: LibraryFilterable {
     public var filterTitle: String { title ?? "" }
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
@@ -104,7 +104,7 @@ extension SonarrLibraryRecord: LibraryFilterable {
     public var filterAdded: String? { added }
 }
 
-public enum LibraryFilter {
+nonisolated public enum LibraryFilter {
 
     /// Apply a query to a library. `isWatched` is injected rather than read
     /// from `MediaServerIndex` inside, so the rule is testable without a

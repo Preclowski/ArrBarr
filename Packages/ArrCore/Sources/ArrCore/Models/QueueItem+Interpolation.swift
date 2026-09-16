@@ -18,7 +18,7 @@ import Foundation
 ///    extrapolate from — the connection may be gone, the download stalled —
 ///    and the bar holds at the last honest position instead of drifting off
 ///    into fiction.
-public extension QueueItem {
+nonisolated public extension QueueItem {
 
     /// Fraction of the download gained per second, or nil when it cannot be
     /// known — which is most rows: only something actively downloading has a

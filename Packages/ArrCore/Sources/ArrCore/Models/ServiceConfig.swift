@@ -1,6 +1,6 @@
 import Foundation
 
-public struct ServiceConfig: Codable, Equatable, Sendable {
+nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var baseURL: String
     public var apiKey: String
@@ -44,10 +44,19 @@ public struct ServiceConfig: Codable, Equatable, Sendable {
         DemoMode.isActive ? enabled : (isConfigured && !apiKey.isEmpty)
     }
 
+    /// Should this service be live in the stack? The arrs (and SABnzbd) are
+    /// gated on their API key — `isVisible`. The password-based download
+    /// clients (qBittorrent, Transmission, Deluge, rTorrent) HAVE no API key,
+    /// so gating them on one left every one of them permanently reported as
+    /// "not configured" no matter what the user typed in Settings.
+    public func isUsable(as kind: ServiceKind) -> Bool {
+        kind.requiresApiKey ? isVisible : isConfigured
+    }
+
     public static let empty = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 }
 
-public enum ServiceKind: String, CaseIterable, Identifiable, Sendable {
+nonisolated public enum ServiceKind: String, CaseIterable, Identifiable, Sendable {
     case radarr, sonarr, lidarr, whisparr, sabnzbd, qbittorrent, nzbget, transmission, rtorrent, deluge
     public var id: String { rawValue }
 

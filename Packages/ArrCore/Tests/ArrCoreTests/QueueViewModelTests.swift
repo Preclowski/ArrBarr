@@ -2,6 +2,7 @@ import Testing
 import Foundation
 import Combine
 import Observation
+import MediaKit
 @testable import ArrCore
 
 // MARK: - Test doubles
@@ -658,5 +659,47 @@ struct ObservationGranularityTests {
         legacy.b = 1                          // a view reading only `a` still re-renders
         #expect(willChange == 1)
         _ = cancellable
+    }
+}
+
+@Suite("QueueViewModel calendar invalidation")
+@MainActor
+struct QueueViewModelCalendarInvalidationTests {
+    /// Polls rather than sleeps: `Invalidated` is delivered asynchronously, so the assertion has to outlive one hop.
+    private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
+        for _ in 0..<200 {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        Issue.record("condition never held")
+    }
+
+    /// A grabbed title lands and MediaKit invalidates that arr's calendar. The Upcoming list has to re-read then —
+    /// waiting out its 30-minute loop leaves the row saying the user still doesn't have the file.
+    @Test("A calendar invalidation re-reads the upcoming list")
+    func calendarInvalidationRefreshesUpcoming() async throws {
+        let (sut, fake, config) = makeSUT()
+        sut.bootstrapCalendarInvalidation()
+        let before = fake.upcomingCallCount
+        NotificationCenter.default.post(
+            Invalidated(tags: [.collection(.calendar, QueueItem.Source.radarr.instanceID)], reason: .event),
+            subject: config.gateway.kit.subject)
+        try await waitUntil { fake.upcomingCallCount > before }
+    }
+
+    /// Only the calendar: a queue invalidation arrives on every progress tick and must not drag the calendar with it.
+    @Test("Invalidating another collection leaves the calendar alone")
+    func otherCollectionsAreIgnored() async throws {
+        let (sut, fake, config) = makeSUT()
+        sut.bootstrapCalendarInvalidation()
+        let before = fake.upcomingCallCount
+        let subject = config.gateway.kit.subject
+        NotificationCenter.default.post(
+            Invalidated(tags: [.collection(.queue, QueueItem.Source.radarr.instanceID)], reason: .event), subject: subject)
+        NotificationCenter.default.post(
+            Invalidated(tags: [.collection(.calendar, QueueItem.Source.sonarr.instanceID)], reason: .event), subject: subject)
+        // Same center, same subscriber: the calendar message cannot be handled before the queue one.
+        try await waitUntil { fake.upcomingCallCount > before }
+        #expect(fake.upcomingCallCount == before + 1)
     }
 }

@@ -170,12 +170,7 @@ struct ReleaseListView: View {
     // MARK: - Data
 
     private func makeClient() -> (any ArrAPIClient)? {
-        switch target.source {
-        case .radarr: return RadarrClient(config: configStore.radarr)
-        case .sonarr: return SonarrClient(config: configStore.sonarr)
-        case .lidarr: return LidarrClient(config: configStore.lidarr)
-        case .whisparr: return WhisparrClient(config: configStore.whisparr)
-        }
+        configStore.arrClient(for: target.source)
     }
 
     private func load() async {

@@ -86,11 +86,7 @@ public enum ChatViewModelFactory {
         }
         switch chatProvider {
         case .foundationModels:
-            if #available(macOS 26.0, iOS 26.0, *) {
-                provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
-            } else {
-                provider = UnavailableLLMProvider()
-            }
+            provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
         case .openai:
             if openai.isConfigured {
                 provider = OpenAIProvider(config: openai, replyLanguage: replyLanguage)

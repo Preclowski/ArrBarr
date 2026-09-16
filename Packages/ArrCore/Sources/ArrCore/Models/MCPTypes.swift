@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - JSON value (schema-less JSON)
 
-public indirect enum JSONValue: Codable, Equatable, Sendable {
+nonisolated public indirect enum JSONValue: Codable, Equatable, Sendable {
     case null
     case bool(Bool)
     case number(Double)
@@ -36,7 +36,7 @@ public indirect enum JSONValue: Codable, Equatable, Sendable {
 
 // MARK: - Tool descriptor
 
-public struct MCPTool: Decodable, Sendable, Equatable {
+nonisolated public struct MCPTool: Decodable, Sendable, Equatable {
     public let name: String
     public let description: String
     public let inputSchema: JSONValue

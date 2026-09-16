@@ -17,7 +17,6 @@ import Observation
 ///
 /// Observable state changes once per batch, never per page: every change
 /// re-lays out the whole list, and mid-batch churn is what made it jump.
-@MainActor
 @Observable
 final class HistoryFeed {
     typealias Fetch = @MainActor (_ source: QueueItem.Source, _ page: Int) async -> HistoryResult

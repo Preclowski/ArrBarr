@@ -18,7 +18,7 @@ import Foundation
 /// `sonarr_blocklist_release` would have matched nothing and run unconfirmed.
 /// It is now an ALLOWLIST — anything not listed needs confirmation, so a newly
 /// added tool stays gated until somebody deliberately vouches for it.
-public enum MCPToolWhitelist {
+nonisolated public enum MCPToolWhitelist {
 
     /// Every tool that only READS: metadata lookups, library listings,
     /// calendar / queue / health reporting, TMDB queries, and the two

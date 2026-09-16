@@ -13,8 +13,8 @@ extension LocalToolBackend {
     /// because the model will happily ask for "all of it", and a full Plex
     /// history is thousands of rows of tokens for a question that never needed
     /// more than a page.
-    private static var watchHistoryDefaultLimit: Int { 20 }
-    private static var watchHistoryMaxLimit: Int { 100 }
+    nonisolated private static var watchHistoryDefaultLimit: Int { 20 }
+    nonisolated private static var watchHistoryMaxLimit: Int { 100 }
 
     /// The client, or a thrown error. `callTool` already turns an unconfigured
     /// media server into a canned line before dispatch, so this is a backstop

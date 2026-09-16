@@ -256,7 +256,7 @@ public struct RemotePoster: View {
         #if os(macOS)
         scale = NSScreen.main?.backingScaleFactor ?? 2
         #else
-        scale = UIScreen.main.scale
+        scale = UITraitCollection.current.displayScale
         #endif
         let needed = max(size.width, size.height) * scale
         let have = max(image.size.width, image.size.height)

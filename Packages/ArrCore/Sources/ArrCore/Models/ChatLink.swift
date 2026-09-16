@@ -14,7 +14,7 @@ import Foundation
 /// anything that doesn't parse here never becomes a tappable link, and anything
 /// that does is handed to the same routers the rest of the app uses, so a bad id
 /// fails as a normal "not found", not as a crash or a random surface.
-public enum ChatLink: Equatable, Sendable {
+nonisolated public enum ChatLink: Equatable, Sendable {
     case media(MediaRef)
     /// `name` comes from the link's own text — `PersonView` shows it in the
     /// header while TMDB details load, so a link reads correctly the instant

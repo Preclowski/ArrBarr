@@ -17,7 +17,7 @@ import Foundation
 /// The returned formatters are shared and must only be *used*, never
 /// reconfigured. Formatting itself is thread-safe (Foundation guarantees it for
 /// `DateFormatter` and friends); only the construction below is serialized.
-enum CachedDateFormatters {
+nonisolated enum CachedDateFormatters {
     private static let lock = NSLock()
     private nonisolated(unsafe) static var dateFormatters: [String: DateFormatter] = [:]
     private nonisolated(unsafe) static var relativeFormatters: [String: RelativeDateTimeFormatter] = [:]

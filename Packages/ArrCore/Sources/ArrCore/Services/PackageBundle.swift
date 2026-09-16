@@ -7,5 +7,5 @@ import Foundation
 /// up a string from ArrCore's `Localizable.xcstrings` — menu titles,
 /// alert text, window titles — uses this accessor instead.
 public extension Bundle {
-    static let arrCore: Bundle = .module
+    nonisolated static let arrCore: Bundle = .module
 }

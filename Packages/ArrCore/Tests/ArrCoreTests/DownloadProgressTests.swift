@@ -1,4 +1,5 @@
 import Testing
+import MediaKit
 @testable import ArrCore
 
 @Suite("Download-client progress overlay")
@@ -23,8 +24,8 @@ struct DownloadProgressOverlayTests {
             item("a", downloadId: "ABCDEF", progress: 0.10),  // arr says 10%
             item("b", downloadId: "nzo_1", progress: 0.20),   // no client entry
         ]
-        let progress: [String: DownloadProgress] = [
-            "abcdef": DownloadProgress(progress: 0.90),  // client says 90% (lowercased key)
+        let progress: [String: DownloadTask] = [
+            "abcdef": task("abcdef", progress: 0.90),  // client says 90% (lowercased key)
         ]
         let out = QueueAggregator.overlay(items, with: progress)
         #expect(out[0].progress == 0.90)  // uppercase arr hash matched the lowercased client key
@@ -41,13 +42,11 @@ struct DownloadProgressOverlayTests {
     @Test("An item without a downloadId can't be matched → arr value")
     func noDownloadId() {
         let items = [item("a", downloadId: nil, progress: 0.44)]
-        let out = QueueAggregator.overlay(items, with: ["abcdef": DownloadProgress(progress: 0.9)])
+        let out = QueueAggregator.overlay(items, with: ["abcdef": task("abcdef", progress: 0.9)])
         #expect(out[0].progress == 0.44)
     }
 
-    @Test("DownloadProgress clamps out-of-range values to 0...1")
-    func clamps() {
-        #expect(DownloadProgress(progress: 1.5).progress == 1.0)
-        #expect(DownloadProgress(progress: -0.2).progress == 0.0)
+    private func task(_ id: String, progress: Double) -> DownloadTask {
+        DownloadTask(id: id, name: id, state: .downloading, progress: progress, instance: InstanceID(.qbittorrent))
     }
 }

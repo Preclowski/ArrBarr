@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let queueVM = QueueViewModel.shared
     private lazy var mcpController = MCPServerController()
     private var cancellables = Set<AnyCancellable>()
+    private var dropMessages: Task<Void, Never>?
 
     /// Held for the whole process lifetime to keep macOS App Nap from throttling
     /// our polling timers and the notification-flush timer. A menu-bar accessory
@@ -47,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// launched at login, lives for days and is never watched while it starts,
     /// so "did it come up, in which mode, and what did the OS hand it later" is
     /// only answerable from the log.
-    private static let log = Logger(category: "Lifecycle")
+    nonisolated private static let log = Logger(category: "Lifecycle")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()
@@ -94,12 +95,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Drops onto the panel / detached window arrive as a notification (the
         // SwiftUI side can't reach the window plumbing) and land in the same
         // add window as every other entry point.
-        NotificationCenter.default.publisher(for: .arrBarrDropDownloads)
-            .sink { [weak self] note in
-                guard let urls = note.userInfo?["urls"] as? [URL] else { return }
-                self?.enqueueDrops(urls.compactMap(DownloadDrop.init(url:)))
+        dropMessages = Task { [weak self] in
+            for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.DropDownloads.self) {
+                self?.enqueueDrops(message.urls.compactMap(DownloadDrop.init(url:)))
             }
-            .store(in: &cancellables)
+        }
 
         // An arr's download client (or its category) can change under us, and
         // the resolved destinations are memoised — so any config edit drops

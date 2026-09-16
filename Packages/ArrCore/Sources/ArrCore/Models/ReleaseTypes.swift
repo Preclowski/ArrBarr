@@ -4,7 +4,7 @@ import Foundation
 /// a candidate release on an indexer that the user can grab. Fields are lenient
 /// (mostly optional) so the same model decodes across Sonarr/Radarr/Lidarr,
 /// whose release resources differ slightly.
-public struct Release: Decodable, Identifiable, Sendable {
+nonisolated public struct Release: Codable, Identifiable, Sendable {
     public let guid: String
     public let title: String
     public let indexer: String?
@@ -47,11 +47,11 @@ public struct Release: Decodable, Identifiable, Sendable {
         case fullSeason
     }
 
-    public struct QualityContainer: Decodable, Sendable {
+    nonisolated public struct QualityContainer: Codable, Sendable {
         public let quality: NamedRef?
     }
 
-    public struct NamedRef: Decodable, Sendable {
+    nonisolated public struct NamedRef: Codable, Sendable {
         public let name: String?
     }
 }
@@ -59,7 +59,7 @@ public struct Release: Decodable, Identifiable, Sendable {
 /// Identifies what to run a manual search for. Drives `ReleaseListView` —
 /// `source` picks the arr client, `query` is the exact `/release` query
 /// (movieId / episodeId / albumId, or a season's seriesId + seasonNumber).
-public struct ManualSearchTarget: Identifiable, Hashable, Sendable {
+nonisolated public struct ManualSearchTarget: Identifiable, Hashable, Sendable {
     public let source: QueueItem.Source
     public let title: String
     public let query: [URLQueryItem]

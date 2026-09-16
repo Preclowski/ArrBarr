@@ -22,6 +22,18 @@ public actor UpcomingService {
         return Self.curate(all, limit: limit)
     }
 
+    /// The demo calendar for `sources`, from the bundled fixtures (the widget's demo mode).
+    public static func demo(sources: Set<UpcomingItem.Source>, limit: Int) async -> [UpcomingItem] {
+        let gateway = await MainActor.run { ServiceGateway.demo(kinds: Set(sources.map(\.serviceKind))) }
+        var all: [UpcomingItem] = []
+        for source in sources {
+            let base = ServiceGateway.demoURL(source.serviceKind.instanceKind).absoluteString
+            all += (try? await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base)) ?? []
+        }
+        await gateway.kit.stop()
+        return curate(all, limit: limit)
+    }
+
     /// Future-ish (drop entries that aired more than a day ago), soonest-first,
     /// trimmed to `limit`. Exposed for demo reuse.
     public static func curate(_ items: [UpcomingItem], limit: Int) -> [UpcomingItem] {

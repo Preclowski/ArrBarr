@@ -1,6 +1,6 @@
 import Foundation
 
-public enum ChatProvider: String, Codable, CaseIterable, Sendable, Identifiable {
+nonisolated public enum ChatProvider: String, Codable, CaseIterable, Sendable, Identifiable {
     case foundationModels = "fm"
     case openai = "openai"
 
@@ -14,7 +14,7 @@ public enum ChatProvider: String, Codable, CaseIterable, Sendable, Identifiable 
     }
 }
 
-public struct OpenAIConfig: Codable, Equatable, Sendable {
+nonisolated public struct OpenAIConfig: Codable, Equatable, Sendable {
     public var baseURL: String
     public var apiKey: String
     public var model: String

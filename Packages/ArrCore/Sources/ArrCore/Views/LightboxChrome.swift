@@ -25,7 +25,12 @@ struct LightboxCloseButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        .glassPill()
+        // The glass shape follows the view's BOUNDS, so the bounds have to be
+        // square or a "circle" comes out an oval: the button's own style adds
+        // horizontal padding around the label on macOS, which is what widened
+        // it. Pin the frame first, then draw the glass in it.
+        .frame(width: 30, height: 30)
+        .glassEffect(.regular.interactive(), in: .circle)
         #if os(macOS)
         .keyboardShortcut(.cancelAction)
         #endif

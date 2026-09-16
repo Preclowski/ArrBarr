@@ -355,7 +355,7 @@ struct MediaServerSettingsPane: View {
         testState = .running
         let config = configStore.mediaServer
         Task {
-            guard let client = MediaServerClientFactory.make(config: config) else {
+            guard let client = ServiceHandles.mediaServer(config: config) else {
                 testState = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }
@@ -383,7 +383,7 @@ struct MediaServerSettingsPane: View {
     }
 
     private func loadLibraries() async {
-        guard let client = MediaServerClientFactory.make(config: configStore.mediaServer) else { return }
+        guard let client = configStore.mediaServerClient else { return }
         libraries = .loading
         libraryStates = [:]
         do {
@@ -399,7 +399,7 @@ struct MediaServerSettingsPane: View {
         libraryStates[library.id] = .running
         let config = configStore.mediaServer
         Task {
-            guard let client = MediaServerClientFactory.make(config: config) else {
+            guard let client = ServiceHandles.mediaServer(config: config) else {
                 libraryStates[library.id] = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }

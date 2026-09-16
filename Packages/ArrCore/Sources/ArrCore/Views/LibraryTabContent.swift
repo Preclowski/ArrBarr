@@ -43,6 +43,123 @@ private struct LibraryFilterStrip<Content: View>: View {
 }
 #endif
 
+// MARK: - Browsing state
+//
+// File scope, not nested in `LibraryTabContent`: the filter bar is its own
+// view now (see `LibraryFilterBar`) and both it and the grid speak in these
+// terms.
+
+private enum ViewMode: String { case grid, list }
+
+private enum StatusFilter: CaseIterable {
+    case all, missing, unmonitored
+
+    /// Key for the view model's memoized filter / count caches.
+    var cacheKey: String { String(describing: self) }
+
+    var labelKey: String {
+        switch self {
+        case .all: return "search.all.button"
+        case .missing: return "search.missing.button"
+        case .unmonitored: return "Unmonitored"
+        }
+    }
+}
+
+private enum SortMode: CaseIterable {
+    case title, releaseDate, dateAdded, size, imdb, tmdb, rating
+
+    /// Key for the view model's per-axis sorted cache — see
+    /// `LibraryViewModel.sorted(_:cacheKey:using:)`. Must stay 1:1 with
+    /// `areInIncreasingOrder` ("title" is also the model's pre-warm key).
+    var cacheKey: String { String(describing: self) }
+
+    /// The axis' comparator, handed to the view model's memoized sort.
+    /// Sorting used to happen inline in `visibleEntries` on every body
+    /// pass — ~20ms+ for a ~3k library on the localized title axis.
+    var areInIncreasingOrder: (LibraryEntry, LibraryEntry) -> Bool {
+        switch self {
+        case .title:
+            return LibraryViewModel.titleAscending
+        case .releaseDate:
+            // Newest first; undated entries sink to the end. Title breaks
+            // ties ascending — hence the flipped operands on the second
+            // element.
+            return { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
+        case .dateAdded:
+            // Most recently added first — "what did I just add" is the
+            // whole point of this axis.
+            return { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
+        case .size:
+            return { $0.sizeOnDisk > $1.sizeOnDisk }
+        case .imdb:
+            return { ($0.ratingImdb ?? -1) > ($1.ratingImdb ?? -1) }
+        case .tmdb:
+            return { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
+        case .rating:
+            return { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
+        }
+    }
+
+    /// Brand names (IMDb/TMDB) render verbatim; the rest localize.
+    var label: Text {
+        switch self {
+        case .title: return Text("library.sort.title", bundle: .module)
+        case .releaseDate: return Text("library.sort.releaseDate", bundle: .module)
+        case .dateAdded: return Text("library.sort.dateAdded", bundle: .module)
+        case .size: return Text("queue.size.button", bundle: .module)
+        case .imdb: return Text(verbatim: "IMDb")
+        case .tmdb: return Text(verbatim: "TMDB")
+        case .rating: return Text("Rating", bundle: .module)
+        }
+    }
+
+    /// What the menu row draws. The rating axes ARE services, so they wear
+    /// the service's own mark rather than a third identical star.
+    ///
+    /// The `-mono` assets, not the full-colour ones `RatingPill` uses: a
+    /// menu row is a monochrome context (SF Symbols on the rows above),
+    /// and the colour marks are filled artwork that can't be templated —
+    /// IMDb's is a plaque with the letters drawn on top, so its silhouette
+    /// is a solid blob. These are single-path silhouettes, so they tint
+    /// themselves like every other glyph in the menu.
+    enum Glyph {
+        case symbol(String)
+        /// Asset name in `ServiceIcons.xcassets`.
+        case brand(String)
+    }
+
+    /// `.rating` is whichever single score the source ships, so its mark
+    /// depends on the source: TVDB's for Sonarr, and a plain star for
+    /// Lidarr, whose score is its metadata provider's and wears no mark
+    /// we have.
+    func glyph(for source: QueueItem.Source) -> Glyph {
+        switch self {
+        case .title: return .symbol("textformat")
+        case .releaseDate: return .symbol("calendar")
+        case .dateAdded: return .symbol("tray.and.arrow.down")
+        case .size: return .symbol("internaldrive")
+        case .imdb: return .brand("rating-imdb-mono")
+        case .tmdb: return .brand("rating-tmdb-mono")
+        case .rating: return source == .sonarr ? .brand("rating-tvdb-mono") : .symbol("star")
+        }
+    }
+
+    /// Radarr exposes IMDb and TMDB as two separate sort axes (mirroring its
+    /// own UI); Sonarr and Lidarr each ship one score, so both get `.rating`;
+    /// Whisparr ships none. Lidarr has no release date either — that belongs
+    /// to an artist's albums, not the artist — but every arr dates what it
+    /// added, so `.dateAdded` is offered everywhere.
+    static func available(for source: QueueItem.Source) -> [SortMode] {
+        switch source {
+        case .radarr: return [.title, .releaseDate, .dateAdded, .size, .imdb, .tmdb]
+        case .sonarr: return [.title, .releaseDate, .dateAdded, .size, .rating]
+        case .whisparr: return [.title, .releaseDate, .dateAdded, .size]
+        case .lidarr: return [.title, .dateAdded, .size, .rating]
+        }
+    }
+}
+
 /// The Library tab's content: the browsing strip and the cover grid. Search is
 /// not this view's business — `SearchHost` wraps it above the tabs.
 struct LibraryTabContent: View {
@@ -60,116 +177,8 @@ struct LibraryTabContent: View {
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
 
-    private enum ViewMode: String { case grid, list }
-
     private var viewMode: ViewMode {
         ViewMode(rawValue: viewModeRaw) ?? .grid
-    }
-
-    private enum StatusFilter: CaseIterable {
-        case all, missing, unmonitored
-
-        var labelKey: String {
-            switch self {
-            case .all: return "search.all.button"
-            case .missing: return "search.missing.button"
-            case .unmonitored: return "Unmonitored"
-            }
-        }
-    }
-
-    private enum SortMode: CaseIterable {
-        case title, releaseDate, dateAdded, size, imdb, tmdb, rating
-
-        /// Key for the view model's per-axis sorted cache — see
-        /// `LibraryViewModel.sorted(_:cacheKey:using:)`. Must stay 1:1 with
-        /// `areInIncreasingOrder` ("title" is also the model's pre-warm key).
-        var cacheKey: String { String(describing: self) }
-
-        /// The axis' comparator, handed to the view model's memoized sort.
-        /// Sorting used to happen inline in `visibleEntries` on every body
-        /// pass — ~20ms+ for a ~3k library on the localized title axis.
-        var areInIncreasingOrder: (LibraryEntry, LibraryEntry) -> Bool {
-            switch self {
-            case .title:
-                return LibraryViewModel.titleAscending
-            case .releaseDate:
-                // Newest first; undated entries sink to the end. Title breaks
-                // ties ascending — hence the flipped operands on the second
-                // element.
-                return { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
-            case .dateAdded:
-                // Most recently added first — "what did I just add" is the
-                // whole point of this axis.
-                return { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
-            case .size:
-                return { $0.sizeOnDisk > $1.sizeOnDisk }
-            case .imdb:
-                return { ($0.ratingImdb ?? -1) > ($1.ratingImdb ?? -1) }
-            case .tmdb:
-                return { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
-            case .rating:
-                return { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
-            }
-        }
-
-        /// Brand names (IMDb/TMDB) render verbatim; the rest localize.
-        var label: Text {
-            switch self {
-            case .title: return Text("library.sort.title", bundle: .module)
-            case .releaseDate: return Text("library.sort.releaseDate", bundle: .module)
-            case .dateAdded: return Text("library.sort.dateAdded", bundle: .module)
-            case .size: return Text("queue.size.button", bundle: .module)
-            case .imdb: return Text(verbatim: "IMDb")
-            case .tmdb: return Text(verbatim: "TMDB")
-            case .rating: return Text("Rating", bundle: .module)
-            }
-        }
-
-        /// What the menu row draws. The rating axes ARE services, so they wear
-        /// the service's own mark rather than a third identical star.
-        ///
-        /// The `-mono` assets, not the full-colour ones `RatingPill` uses: a
-        /// menu row is a monochrome context (SF Symbols on the rows above),
-        /// and the colour marks are filled artwork that can't be templated —
-        /// IMDb's is a plaque with the letters drawn on top, so its silhouette
-        /// is a solid blob. These are single-path silhouettes, so they tint
-        /// themselves like every other glyph in the menu.
-        enum Glyph {
-            case symbol(String)
-            /// Asset name in `ServiceIcons.xcassets`.
-            case brand(String)
-        }
-
-        /// `.rating` is whichever single score the source ships, so its mark
-        /// depends on the source: TVDB's for Sonarr, and a plain star for
-        /// Lidarr, whose score is its metadata provider's and wears no mark
-        /// we have.
-        func glyph(for source: QueueItem.Source) -> Glyph {
-            switch self {
-            case .title: return .symbol("textformat")
-            case .releaseDate: return .symbol("calendar")
-            case .dateAdded: return .symbol("tray.and.arrow.down")
-            case .size: return .symbol("internaldrive")
-            case .imdb: return .brand("rating-imdb-mono")
-            case .tmdb: return .brand("rating-tmdb-mono")
-            case .rating: return source == .sonarr ? .brand("rating-tvdb-mono") : .symbol("star")
-            }
-        }
-    }
-
-    /// Radarr exposes IMDb and TMDB as two separate sort axes (mirroring its
-    /// own UI); Sonarr and Lidarr each ship one score, so both get `.rating`;
-    /// Whisparr ships none. Lidarr has no release date either — that belongs
-    /// to an artist's albums, not the artist — but every arr dates what it
-    /// added, so `.dateAdded` is offered everywhere.
-    private var availableSorts: [SortMode] {
-        switch source {
-        case .radarr: return [.title, .releaseDate, .dateAdded, .size, .imdb, .tmdb]
-        case .sonarr: return [.title, .releaseDate, .dateAdded, .size, .rating]
-        case .whisparr: return [.title, .releaseDate, .dateAdded, .size]
-        case .lidarr: return [.title, .dateAdded, .size, .rating]
-        }
     }
 
     private var availableSources: [QueueItem.Source] {
@@ -190,8 +199,16 @@ struct LibraryTabContent: View {
         }
     }
 
-    private func count(for filter: StatusFilter) -> Int {
-        allEntries.count { matches($0, filter: filter) }
+    /// One count per filter, each memoized on the view model — the bar takes
+    /// them as a plain value so it doesn't reach into the model itself.
+    private var filterCounts: [StatusFilter: Int] {
+        var out: [StatusFilter: Int] = [:]
+        for filter in StatusFilter.allCases {
+            out[filter] = viewModel.count(source, cacheKey: filter.cacheKey, over: allEntries) {
+                matches($0, filter: filter)
+            }
+        }
+        return out
     }
 
     private var visibleEntries: [LibraryEntry] {
@@ -199,9 +216,11 @@ struct LibraryTabContent: View {
         // filtering a pre-sorted list preserves order, and the filters are
         // the cheap half (sub-ms even at ~3k entries; the localized title
         // sort was the ~20ms-per-body-pass hitch felt on tab entry).
-        var out = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
-        out = out.filter { matches($0, filter: statusFilter) }
-        return out
+        let sorted = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
+        // Memoized too: `surface` re-runs whenever anything around the grid
+        // does, and re-filtering ~3k records copies the whole array each time.
+        return viewModel.visible(source, cacheKey: "\(sort.cacheKey)|\(statusFilter.cacheKey)",
+                                 from: sorted) { matches($0, filter: statusFilter) }
     }
 
     var body: some View {
@@ -221,7 +240,7 @@ struct LibraryTabContent: View {
         .onChange(of: source) { _, _ in
             // A sort axis the new arr doesn't offer (IMDb on Sonarr) snaps
             // back to the default rather than silently sorting on nils.
-            if !availableSorts.contains(sort) { sort = .title }
+            if !SortMode.available(for: source).contains(sort) { sort = .title }
             Task { await load() }
         }
     }
@@ -232,187 +251,6 @@ struct LibraryTabContent: View {
             config: configStore.config(for: source.serviceKind),
             force: force
         )
-    }
-
-    // MARK: - Top strip
-
-    private var topStrip: some View {
-        HStack(spacing: 6) {
-            if availableSources.count > 1 {
-                sourceMenu
-                Rectangle()
-                    .fill(.quaternary)
-                    .frame(width: 1, height: 14)
-            }
-            // Chips scroll horizontally — the localized labels ("Niemonitorowane")
-            // overflow 400 pt and would otherwise wrap inside the capsules.
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(StatusFilter.allCases, id: \.self) { filter in
-                        statusChip(filter)
-                    }
-                }
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            Spacer(minLength: 4)
-            viewModeToggle
-            sortMenu
-        }
-        .padding(.horizontal, 12)
-        .padding(.bottom, 6)
-    }
-
-    /// Arr picker — a rectangular menu-chip, deliberately NOT capsule-shaped
-    /// so it reads as a different control class than the status chips beside
-    /// it (mockup note: "pill na pillu" was the failure mode).
-    /// `.menuStyle(.button)` + `.buttonStyle(.plain)` — the ONE combination
-    /// that renders a custom SwiftUI label faithfully (same as the queue's
-    /// scopeMenu). `.borderlessButton` flattens the label (native-size
-    /// images, default menu font, dropped backgrounds — the oversized-
-    /// "Radarr" bug), and a transparent Menu overlaid on a hand-drawn chip
-    /// collapses to zero hit area.
-    private var sourceMenu: some View {
-        Menu {
-            ForEach(availableSources, id: \.self) { s in
-                Button { source = s } label: {
-                    Label {
-                        Text(verbatim: s.displayName)
-                    } icon: {
-                        // The arr's own mark rather than a generic film/tv
-                        // glyph. These assets ship as templates, so they tint
-                        // themselves and sit in the menu as monochrome as the
-                        // SF Symbols they replace.
-                        if s == source {
-                            Image(systemName: "checkmark")
-                        } else {
-                            MenuBrandIcon(asset: s.brandIconName, template: true)
-                        }
-                    }
-                }
-            }
-        } label: {
-            HStack(spacing: 4) {
-                // Trigger chip is an ordinary view, so the shared `ServiceIcon`
-                // works here — only the menu ROWS need the pre-sized variant.
-                ServiceIcon(source: source, size: LibraryChrome.brandIcon)
-                Text(verbatim: source.displayName)
-                    .scaledFont(size: LibraryChrome.label, weight: .semibold)
-                Image(systemName: "chevron.down")
-                    .scaledFont(size: LibraryChrome.chevron, weight: .semibold)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, LibraryChrome.chipHPad)
-            .padding(.vertical, LibraryChrome.chipVPad)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(Color.primary.opacity(0.30), lineWidth: 0.75)
-            )
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .help(Text("library.source.help", bundle: .module))
-    }
-
-    private func statusChip(_ filter: StatusFilter) -> some View {
-        let selected = statusFilter == filter
-        let count = count(for: filter)
-        return Button {
-            withAnimation(.easeOut(duration: 0.15)) { statusFilter = filter }
-        } label: {
-            HStack(spacing: 3) {
-                Text(LocalizedStringKey(filter.labelKey), bundle: .module)
-                    .scaledFont(size: LibraryChrome.label, weight: selected ? .semibold : .medium)
-                    .lineLimit(1)
-                if count > 0 {
-                    Text(verbatim: "\(count)")
-                        .scaledFont(size: LibraryChrome.label, weight: .regular)
-                        .monospacedDigit()
-                        .opacity(0.65)
-                }
-            }
-            .fixedSize()
-            // Selected = the same soft primary tint the tab bar's selection
-            // pill uses (see TabPillBackground) — an inverted fill washed out
-            // under the popover's vibrancy and left the label unreadable.
-            .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-            .padding(.horizontal, LibraryChrome.chipHPad)
-            .padding(.vertical, LibraryChrome.chipVPad)
-            .background {
-                if selected {
-                    Capsule().fill(Color.primary.opacity(0.14))
-                } else {
-                    Capsule().strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.75)
-                }
-            }
-            .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
-    /// One button that flips grid ⇄ list. The glyph shows the layout you'd
-    /// switch TO (like Finder's view toggles), the tooltip names it.
-    private var viewModeToggle: some View {
-        Button {
-            withAnimation(.easeOut(duration: 0.15)) {
-                viewModeRaw = (viewMode == .grid ? ViewMode.list : .grid).rawValue
-            }
-        } label: {
-            Image(systemName: viewMode == .grid ? "list.bullet" : "square.grid.2x2")
-                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
-                .foregroundStyle(.secondary)
-                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .help(Text(viewMode == .grid ? "library.view.list" : "library.view.grid", bundle: .module))
-        .accessibilityLabel(Text(viewMode == .grid ? "library.view.list" : "library.view.grid", bundle: .module))
-    }
-
-    /// SF Symbol or brand mark for one sort row — both monochrome, both
-    /// tinted by the menu.
-    @ViewBuilder
-    private func sortGlyph(_ glyph: SortMode.Glyph) -> some View {
-        switch glyph {
-        case .symbol(let name):
-            Image(systemName: name)
-        case .brand(let asset):
-            MenuBrandIcon(asset: asset, template: true)
-        }
-    }
-
-    private var sortMenu: some View {
-        Menu {
-            ForEach(availableSorts, id: \.self) { mode in
-                Button { sort = mode } label: {
-                    Label {
-                        mode.label
-                    } icon: {
-                        // Selection still wins the slot — a row that only
-                        // changed its glyph doesn't read as "this is the
-                        // active sort".
-                        if sort == mode {
-                            Image(systemName: "checkmark")
-                        } else {
-                            sortGlyph(mode.glyph(for: source))
-                        }
-                    }
-                }
-            }
-        } label: {
-            Image(systemName: "arrow.up.arrow.down")
-                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
-                .foregroundStyle(.secondary)
-                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
-                .contentShape(Rectangle())
-        }
-        .menuStyle(.borderlessButton)
-        .menuIndicator(.hidden)
-        .buttonStyle(.plain)
-        .fixedSize()
-        .help(Text("library.sort.help", bundle: .module))
     }
 
     // MARK: - Grid
@@ -453,6 +291,7 @@ struct LibraryTabContent: View {
                                 LibraryTile(entry: entry, apiKey: apiKey(for: entry))
                             }
                         }
+                        .scrollTargetLayout()
                         .padding(.horizontal, 12)
                         .padding(.top, 2)
                     } else {
@@ -461,15 +300,32 @@ struct LibraryTabContent: View {
                                 LibraryListRow(entry: entry, apiKey: apiKey(for: entry))
                             }
                         }
+                        .scrollTargetLayout()
                         .padding(.top, 2)
                     }
                 }
                 // Keep the last row clear of the floating capsule.
                 .padding(.bottom, 58)
             }
+            // Switching tabs tears this view down (the host swaps tab content
+            // rather than keeping it mounted), so the position is parked on the
+            // view model, which outlives it, and restored on the way back.
+            .scrollPosition(id: gridAnchor, anchor: .top)
             .scrollBounceBehavior(.basedOnSize)
+            // Content blurs softly under the floating glass chrome instead of
+            // being cut off by it — same treatment as the queue.
+            .scrollEdgeEffectStyle(.soft, for: .top)
             .frame(maxHeight: .infinity)
         }
+    }
+
+    /// Top-most visible tile, parked on the view model. Hand-rolled rather
+    /// than `@State` + sync: the scroll view writes this on every frame of a
+    /// drag, and the model stores it `@ObservationIgnored` so those writes
+    /// invalidate nothing.
+    private var gridAnchor: Binding<LibraryEntry.ID?> {
+        Binding(get: { viewModel.gridAnchor[source] },
+                set: { viewModel.gridAnchor[source] = $0 })
     }
 
     private var gridColumns: [GridItem] {
@@ -524,13 +380,22 @@ struct LibraryTabContent: View {
     private var surface: some View {
         let entries = visibleEntries
         let phase = phase(entries)
-        return VStack(spacing: 0) {
-            LibraryFilterStrip { topStrip }
-            gridOrState(entries, phase: phase)
-                .id(phase)
-                .transition(.opacity)
-        }
-        .animation(.easeOut(duration: 0.25), value: phase)
+        return gridOrState(entries, phase: phase)
+            .id(phase)
+            .transition(.opacity)
+            // Strip in the safe area: the covers scroll under it (and under
+            // the tab bar above it) instead of starting below a hard line.
+            .safeAreaBar(edge: .top, spacing: 0) {
+                LibraryFilterStrip {
+                    LibraryFilterBar(sources: availableSources,
+                                     counts: filterCounts,
+                                     source: $source,
+                                     statusFilter: $statusFilter,
+                                     sort: $sort,
+                                     viewModeRaw: $viewModeRaw)
+                }
+            }
+            .animation(.easeOut(duration: 0.25), value: phase)
     }
 }
 
@@ -631,6 +496,13 @@ private struct LibraryTile: View {
                     )
                     .aspectRatio(entry.posterAspect, contentMode: .fit)
                 }
+                // Watched wedge in the corner the monitored bookmark doesn't
+                // use, clipped to the tile's radius so the fold follows the
+                // rounded corner. Overlay AND clip are attached only on a
+                // watched tile: an unconditional `clipShape` would put an extra
+                // render pass on every cover in the grid for a corner most of
+                // them don't draw.
+                .modifier(WatchedCorner(watched: entry.watched))
                 .overlay(alignment: .topTrailing) {
                     // Monitored marker — the arr web UIs' bookmark language.
                     // White glyph + soft shadow so it reads over any poster
@@ -706,8 +578,9 @@ private struct LibraryListRow: View {
     /// detail hero and this tab's own tooltip use. As a bare dot-joined
     /// segment it read as another quality string sitting next to the real
     /// one; the chip says "this is the target, not what's on disk".
-    private var profileBadge: AnyView? {
-        entry.profileName.map { AnyView(ProfileChip(name: $0)) }
+    @ViewBuilder
+    private var profileBadge: some View {
+        if let name = entry.profileName { ProfileChip(name: name) }
     }
 
     var body: some View {
@@ -719,8 +592,8 @@ private struct LibraryListRow: View {
             posterFallbackSymbol: entry.source.symbol,
             title: rowTitle,
             metadataSegments: metadataSegments,
-            metadataBadge: profileBadge,
-            onTap: { entry.openDetail() }
+            onTap: { entry.openDetail() },
+            metadataBadge: { profileBadge }
         ) {
             // Status sits at the row's trailing edge, so the chips line up in
             // a column down the list instead of starting at a different x on
@@ -733,6 +606,22 @@ private struct LibraryListRow: View {
         }
         .opacity(entry.state == .unmonitored ? 0.55 : 1)
         .libraryTooltip(entry: entry, apiKey: apiKey)
+    }
+}
+
+/// See the call site — conditional so untouched tiles keep their plain
+/// compositing.
+private struct WatchedCorner: ViewModifier {
+    let watched: Bool
+
+    func body(content: Content) -> some View {
+        if watched {
+            content
+                .overlay(alignment: .topLeading) { WatchedCornerBadge() }
+                .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
+        } else {
+            content
+        }
     }
 }
 
@@ -833,10 +722,10 @@ private struct LibraryEntryTooltip: View {
             switch entry.source {
             case .radarr:
                 countries = await CountryProvider.movieCountries(
-                    tmdbId: entry.externalId, demoMovieId: entry.arrId, configStore: configStore)
+                    tmdbId: entry.externalId, configStore: configStore)
             case .sonarr:
                 countries = await CountryProvider.seriesCountries(
-                    tmdbId: nil, tvdbId: entry.externalId, demoSeriesId: entry.arrId, configStore: configStore)
+                    tmdbId: nil, tvdbId: entry.externalId, configStore: configStore)
             case .lidarr, .whisparr:
                 break
             }
@@ -845,9 +734,9 @@ private struct LibraryEntryTooltip: View {
             guard fileDetails == nil, entry.state == .complete else { return }
             switch entry.source {
             case .radarr:
-                fileDetails = try? await RadarrClient(config: configStore.radarr).fetchMovieFile(movieId: entry.arrId)
+                fileDetails = try? await configStore.radarrClient.fetchMovieFile(movieId: entry.arrId)
             case .whisparr:
-                fileDetails = try? await WhisparrClient(config: configStore.whisparr).fetchMovieFile(movieId: entry.arrId)
+                fileDetails = try? await configStore.whisparrClient.fetchMovieFile(movieId: entry.arrId)
             case .sonarr, .lidarr:
                 break
             }
@@ -927,5 +816,199 @@ private struct LibraryEntryTooltip: View {
         }
         // Release status renders as a title-row chip now, not a grid line.
         return lines
+    }
+}
+
+// MARK: - Filter bar
+
+/// The library's browsing strip: arr picker, status filters, layout toggle,
+/// sort menu.
+///
+/// Its OWN view, not a computed property on `LibraryTabContent`. A computed
+/// property shares the parent's identity and lifetime, so it re-ran whenever
+/// anything about the parent changed — and this strip lives in the grid's
+/// safe area, i.e. it was re-evaluated while the grid scrolled. As a struct
+/// with value inputs, SwiftUI can skip it entirely when none of them moved.
+/// `counts` is passed in already computed for the same reason.
+private struct LibraryFilterBar: View {
+    let sources: [QueueItem.Source]
+    let counts: [StatusFilter: Int]
+    @Binding var source: QueueItem.Source
+    @Binding var statusFilter: StatusFilter
+    @Binding var sort: SortMode
+    @Binding var viewModeRaw: String
+
+    private var viewMode: ViewMode { ViewMode(rawValue: viewModeRaw) ?? .grid }
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if sources.count > 1 {
+                sourceMenu
+                Rectangle()
+                    .fill(.quaternary)
+                    .frame(width: 1, height: 14)
+            }
+            // Chips scroll horizontally — the localized labels ("Niemonitorowane")
+            // overflow 400 pt and would otherwise wrap inside the capsules.
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(StatusFilter.allCases, id: \.self) { filter in
+                        statusChip(filter)
+                    }
+                }
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            Spacer(minLength: 4)
+            viewModeToggle
+            sortMenu
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 6)
+    }
+
+    private var sourceMenu: some View {
+        Menu {
+            ForEach(sources, id: \.self) { s in
+                Button { source = s } label: {
+                    Label {
+                        Text(verbatim: s.displayName)
+                    } icon: {
+                        // The arr's own mark rather than a generic film/tv
+                        // glyph. These assets ship as templates, so they tint
+                        // themselves and sit in the menu as monochrome as the
+                        // SF Symbols they replace.
+                        if s == source {
+                            Image(systemName: "checkmark")
+                        } else {
+                            MenuBrandIcon(asset: s.brandIconName, template: true)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                // Trigger chip is an ordinary view, so the shared `ServiceIcon`
+                // works here — only the menu ROWS need the pre-sized variant.
+                ServiceIcon(source: source, size: LibraryChrome.brandIcon)
+                Text(verbatim: source.displayName)
+                    .scaledFont(size: LibraryChrome.label, weight: .semibold)
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: LibraryChrome.chevron, weight: .semibold)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, LibraryChrome.chipHPad)
+            .padding(.vertical, LibraryChrome.chipVPad)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .strokeBorder(Color.primary.opacity(0.30), lineWidth: 0.75)
+            )
+            .contentShape(Rectangle())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(Text("library.source.help", bundle: .module))
+    }
+
+    private func statusChip(_ filter: StatusFilter) -> some View {
+        let selected = statusFilter == filter
+        let count = counts[filter] ?? 0
+        return Button {
+            withAnimation(.easeOut(duration: 0.15)) { statusFilter = filter }
+        } label: {
+            HStack(spacing: 3) {
+                Text(LocalizedStringKey(filter.labelKey), bundle: .module)
+                    .scaledFont(size: LibraryChrome.label, weight: selected ? .semibold : .medium)
+                    .lineLimit(1)
+                if count > 0 {
+                    Text(verbatim: "\(count)")
+                        .scaledFont(size: LibraryChrome.label, weight: .regular)
+                        .monospacedDigit()
+                        // `.secondary`, not `opacity`: over glass a faded copy
+                        // of the label blends with the backdrop, where a real
+                        // hierarchy level stays a solid, legible colour.
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .fixedSize()
+            .foregroundStyle(selected ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+            .padding(.horizontal, LibraryChrome.chipHPad)
+            .padding(.vertical, LibraryChrome.chipVPad)
+            // Flat: a filled capsule for the selected filter, nothing for the
+            // rest. Glass here fought the covers behind it — the filter row is
+            // a control strip, not floating chrome.
+            .background {
+                if selected { Capsule().fill(Color.primary.opacity(0.14)) }
+            }
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// One button that flips grid ⇄ list. The glyph shows the layout you'd
+    /// switch TO (like Finder's view toggles), the tooltip names it.
+    private var viewModeToggle: some View {
+        Button {
+            withAnimation(.easeOut(duration: 0.15)) {
+                viewModeRaw = (viewMode == .grid ? ViewMode.list : .grid).rawValue
+            }
+        } label: {
+            Image(systemName: viewMode == .grid ? "list.bullet" : "square.grid.2x2")
+                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
+                .foregroundStyle(.secondary)
+                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(Text(viewMode == .grid ? "library.view.list" : "library.view.grid", bundle: .module))
+        .accessibilityLabel(Text(viewMode == .grid ? "library.view.list" : "library.view.grid", bundle: .module))
+    }
+
+    /// SF Symbol or brand mark for one sort row — both monochrome, both
+    /// tinted by the menu.
+    @ViewBuilder
+    private func sortGlyph(_ glyph: SortMode.Glyph) -> some View {
+        switch glyph {
+        case .symbol(let name):
+            Image(systemName: name)
+        case .brand(let asset):
+            MenuBrandIcon(asset: asset, template: true)
+        }
+    }
+
+    private var sortMenu: some View {
+        Menu {
+            ForEach(SortMode.available(for: source), id: \.self) { mode in
+                Button { sort = mode } label: {
+                    Label {
+                        mode.label
+                    } icon: {
+                        // Selection still wins the slot — a row that only
+                        // changed its glyph doesn't read as "this is the
+                        // active sort".
+                        if sort == mode {
+                            Image(systemName: "checkmark")
+                        } else {
+                            sortGlyph(mode.glyph(for: source))
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "arrow.up.arrow.down")
+                .scaledFont(size: LibraryChrome.glyph, weight: .medium)
+                .foregroundStyle(.secondary)
+                .frame(width: LibraryChrome.tapTarget, height: LibraryChrome.tapTarget)
+                .contentShape(Rectangle())
+        }
+        // `.button` + `.plain`, NOT `.borderlessButton`: the borderless style
+        // re-renders the label with its own metrics, which is why this glyph
+        // came out a different size and colour from the toggle beside it.
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help(Text("library.sort.help", bundle: .module))
     }
 }

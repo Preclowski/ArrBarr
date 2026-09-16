@@ -1,4 +1,7 @@
 import SwiftUI
+#if os(macOS)
+import AppKit
+#endif
 
 // MARK: - Media header card
 //
@@ -284,6 +287,9 @@ public struct MediaHeaderCard: View {
                 }
                 if !genres.isEmpty {
                     GenreChips(genres: genres)
+                } else if metadataLoading {
+                    // Chip-shaped, because the row it stands in for is chips.
+                    SkeletonBar(width: 120, height: 13, cornerRadius: Tokens.Radius.chip)
                 }
                 // Row 1 — metadata: runtime · network · certification · country.
                 if hasMetadataRow {
@@ -305,6 +311,11 @@ public struct MediaHeaderCard: View {
                         HStack(spacing: 6) {
                             ForEach(ratings, id: \.label) { RatingPill(chip: $0) }
                         }
+                    }
+                } else if metadataLoading {
+                    HStack(spacing: 6) {
+                        SkeletonBar(width: 46, height: 15, cornerRadius: Tokens.Radius.chip)
+                        SkeletonBar(width: 46, height: 15, cornerRadius: Tokens.Radius.chip)
                     }
                 }
                 // Row 3 — the directing credit, under the ratings and above
@@ -542,6 +553,39 @@ public struct PosterLightbox: View {
         return .saved
     }
 
+    /// Local scroll monitor, alive only while the lightbox is on screen.
+    @State private var scrollMonitor: Any?
+
+    /// Scroll (trackpad two-finger, or a mouse wheel) zooms the poster.
+    ///
+    /// A local `NSEvent` monitor rather than a gesture or an `NSView` overlay:
+    /// SwiftUI has no scroll-wheel gesture, an overlaid `NSView` would have to
+    /// sit above the artwork and would eat the tap-to-dismiss, and a monitor
+    /// costs nothing when the lightbox is closed because it is torn down with
+    /// it. (`.magnify` is the event the menu-bar panel never delivers —
+    /// scrolling it does, which is why this works where pinch does not.)
+    private func startScrollZoom() {
+        guard scrollMonitor == nil else { return }
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
+            // Precise deltas are trackpad points (dozens per flick); a wheel
+            // sends a handful of coarse clicks. Same feel needs very different
+            // gain.
+            let gain = event.hasPreciseScrollingDeltas ? 0.006 : 0.06
+            let factor = 1 + event.scrollingDeltaY * gain
+            guard factor > 0 else { return nil }
+            setZoom(zoom * factor)
+            baseZoom = zoom
+            if zoom <= 1.01 { offset = .zero; baseOffset = .zero }
+            revealControls()
+            return nil   // the lightbox owns the surface; nothing below scrolls
+        }
+    }
+
+    private func stopScrollZoom() {
+        if let scrollMonitor { NSEvent.removeMonitor(scrollMonitor) }
+        scrollMonitor = nil
+    }
+
     /// Show the bar and restart the idle countdown.
     private func revealControls() {
         idleHide?.cancel()
@@ -608,7 +652,9 @@ public struct PosterLightbox: View {
                 // Likewise the lift shadow: it needs a surface to fall on.
                 .shadow(color: .black.opacity(fullBleed ? 0 : 0.5), radius: 20, y: 8)
                 // Pinch to zoom, drag to pan once zoomed. iOS only — see the
-                // `showsControls` note above for why the Mac gets a slider.
+                // `showsControls` note above for why the Mac gets a slider
+                // (and, since the panel does deliver scroll, a scroll-to-zoom
+                // monitor) instead.
                 #if os(iOS)
                 .gesture(
                     MagnifyGesture()
@@ -698,6 +744,10 @@ public struct PosterLightbox: View {
             .padding(.bottom, 16)
             #endif
         }
+        #if os(macOS)
+        .onAppear { startScrollZoom() }
+        .onDisappear { stopScrollZoom() }
+        #endif
         #if os(macOS)
         // Reveal on any pointer movement over the lightbox, then let it time
         // out. `.onContinuousHover` rather than `.onHover` so a pointer that
@@ -857,7 +907,7 @@ struct RatingPill: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(chip.color.opacity(0.30), lineWidth: 0.75))
+        .chipOutline(chip.color)
     }
 }
 

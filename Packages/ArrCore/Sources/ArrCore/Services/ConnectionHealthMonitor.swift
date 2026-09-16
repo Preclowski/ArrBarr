@@ -38,7 +38,7 @@ actor ConnectionHealthMonitor {
 
     private var lastProbe: Date?
     /// Minimum gap between full probe sweeps.
-    static let minInterval: TimeInterval = 60
+    nonisolated static let minInterval: TimeInterval = 60
 
     /// Probe every configured target, but skip the sweep entirely if the last
     /// one ran less than `minInterval` ago (unless `force`). Returns one outcome
@@ -59,7 +59,7 @@ actor ConnectionHealthMonitor {
 
     // MARK: - Probing (nonisolated: runs concurrently, touches no actor state)
 
-    private static func probeAll(_ inputs: ProbeInputs) async -> [ProbeOutcome] {
+    nonisolated private static func probeAll(_ inputs: ProbeInputs) async -> [ProbeOutcome] {
         var targets: [MonitoredService] = inputs.clients.keys.map { .arr($0) }
         if inputs.openai != nil { targets.append(.openai) }
         if inputs.tmdbKey != nil { targets.append(.tmdb) }
@@ -75,14 +75,14 @@ actor ConnectionHealthMonitor {
         }
     }
 
-    private static func probeOne(_ service: MonitoredService, _ inputs: ProbeInputs) async -> ProbeOutcome {
+    nonisolated private static func probeOne(_ service: MonitoredService, _ inputs: ProbeInputs) async -> ProbeOutcome {
         do {
             switch service {
             case .arr(let kind):
                 guard let cfg = inputs.clients[kind] else {
                     return ProbeOutcome(service: service, success: false, detail: nil, message: nil)
                 }
-                let detail = try await ConnectionTester.test(kind: kind, config: cfg)
+                let detail = try await ServiceHandles.testConnection(kind, config: cfg)
                 return ProbeOutcome(service: service, success: true, detail: detail, message: nil)
             case .openai:
                 guard let cfg = inputs.openai else {

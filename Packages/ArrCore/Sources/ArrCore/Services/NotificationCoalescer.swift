@@ -1,7 +1,7 @@
 import Foundation
 import UserNotifications
 
-public extension QueueItem.Source {
+nonisolated public extension QueueItem.Source {
     var serviceKind: ServiceKind {
         switch self {
         case .radarr: return .radarr

@@ -121,7 +121,7 @@ public struct DiscoverCardView: View {
             if let overview = item.result.overview, !overview.isEmpty {
                 Text(overview)
                     .scaledFont(size: 12)
-                    .foregroundStyle(.primary.opacity(0.92))
+                    .foregroundStyle(.primary)
                     .lineSpacing(2)
                     .lineLimit(3)
                     .multilineTextAlignment(.leading)

@@ -46,7 +46,7 @@ struct SelectionCircle: View {
                 .fill(.black.opacity(selected ? 0.45 : 0.30))
             Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 20))
-                .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.white.opacity(0.9)))
+                .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.white))
         }
         .contentShape(Rectangle())
         // The ring mirrors the row's selection state, which the row
@@ -117,7 +117,7 @@ public struct QueueRowView: View {
     private var canControl: Bool {
         // Demo has no download client to configure, and hiding pause/resume
         // there would hide one of the things the demo exists to show. The
-        // action is served by the fixture state — see DemoQueueState.
+        // action is served by the fixture transport.
         if DemoMode.isActive { return true }
         guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
@@ -498,9 +498,6 @@ func downloadClientColor(_ name: String) -> Color {
 
 // `customFormatChipStrip` + `TagChip` + `TooltipFlowLayout` are
 // now in `Chips.swift`.
-
-// `TooltipActionButton` + `IconButton` are now in
-// `ActionPrimitives.swift`.
 
 // MARK: - Shared row chrome
 //

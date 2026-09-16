@@ -8,7 +8,7 @@ import Foundation
 ///
 /// Two TMDB shapes feed it: `/search/person` rows (no dates) and `/person/{id}`
 /// details (dates, and a better department).
-public struct ChatPerson: Sendable, Equatable, Identifiable {
+nonisolated public struct ChatPerson: Sendable, Equatable, Identifiable {
     public let tmdbId: Int
     public let name: String
     public let knownForDepartment: String?

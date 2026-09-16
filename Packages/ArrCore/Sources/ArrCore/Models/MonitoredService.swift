@@ -5,7 +5,7 @@ import Foundation
 /// (OpenAI, TMDB) that have no `ServiceKind` of their own. Kept separate from
 /// `ServiceKind` so the arr/download semantics there (and its many `.allCases`
 /// iterations) stay untouched.
-public enum MonitoredService: Hashable, Sendable, Identifiable {
+nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
     case arr(ServiceKind)
     case openai
     case tmdb

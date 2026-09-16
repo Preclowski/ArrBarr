@@ -14,7 +14,7 @@ import os
 ///
 /// A missing or stale index is never an error. Every reader falls back to the
 /// arr's own artwork, which is exactly what the app did before this existed.
-public final class MediaServerIndex: @unchecked Sendable {
+nonisolated public final class MediaServerIndex: @unchecked Sendable {
     public static let shared = MediaServerIndex()
 
     /// How long a snapshot is trusted before `refreshIfStale` re-fetches.
@@ -135,8 +135,8 @@ public final class MediaServerIndex: @unchecked Sendable {
     /// server that goes away mid-evening must not blank every poster in the UI.
     public func refresh(config: MediaServerConfig) async {
         guard let client = MediaServerClientFactory.make(config: config) else { return }
-        lock.lock(); isRefreshing = true; lock.unlock()
-        defer { lock.lock(); isRefreshing = false; lock.unlock() }
+        lock.withLock { isRefreshing = true }
+        defer { lock.withLock { isRefreshing = false } }
 
         do {
             let entries = try await client.libraryIndex()
@@ -156,12 +156,12 @@ public final class MediaServerIndex: @unchecked Sendable {
                 }
             }
 
-            lock.lock()
-            byKey = map
-            watchHistory = history
-            snapshotConfig = config
-            lastRefresh = Date()
-            lock.unlock()
+            lock.withLock {
+                byKey = map
+                watchHistory = history
+                snapshotConfig = config
+                lastRefresh = Date()
+            }
 
             // Polled refresh — `.debug`, same as every other repeating pass.
             logger.debug("Media server index refreshed: \(entries.count, privacy: .public) titles, \(history.count, privacy: .public) recent plays")
@@ -180,28 +180,21 @@ public final class MediaServerIndex: @unchecked Sendable {
     /// first refresh, which is also when `entry(for:)` has no answer anyway.
     public func loadSeasonPosters(for keys: [MediaServerExternalKey]) async {
         guard let itemId = entry(for: keys)?.itemId else { return }
-        lock.lock()
-        let config = snapshotConfig
-        lock.unlock()
+        let config = lock.withLock { snapshotConfig }
         guard let config, config.isConfigured else { return }
 
-        lock.lock()
-        let known = seasonPostersByItem[itemId] != nil || seasonFetchesInFlight.contains(itemId)
-        if !known { seasonFetchesInFlight.insert(itemId) }
-        lock.unlock()
+        let known = lock.withLock {
+            let known = seasonPostersByItem[itemId] != nil || seasonFetchesInFlight.contains(itemId)
+            if !known { seasonFetchesInFlight.insert(itemId) }
+            return known
+        }
         guard !known else { return }
 
-        defer {
-            lock.lock()
-            seasonFetchesInFlight.remove(itemId)
-            lock.unlock()
-        }
+        defer { lock.withLock { _ = seasonFetchesInFlight.remove(itemId) } }
         guard let client = MediaServerClientFactory.make(config: config) else { return }
         do {
             let posters = try await client.seasonPosters(seriesItemId: itemId)
-            lock.lock()
-            seasonPostersByItem[itemId] = posters
-            lock.unlock()
+            lock.withLock { seasonPostersByItem[itemId] = posters }
             logger.debug("Season posters for item \(itemId, privacy: .public): \(posters.count, privacy: .public)")
         } catch {
             logger.error(

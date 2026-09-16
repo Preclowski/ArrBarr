@@ -134,7 +134,7 @@ extension LocalToolBackend {
 
     /// One readable line per specification: human label, negate/required
     /// flags, and the matched value(s).
-    private static func describeSpecification(_ spec: ArrCustomFormatDetail.Specification) -> String {
+    nonisolated private static func describeSpecification(_ spec: ArrCustomFormatDetail.Specification) -> String {
         let label = spec.implementationName
             ?? spec.implementation.map(Self.humanizeImplementation)
             ?? "Condition"
@@ -156,7 +156,7 @@ extension LocalToolBackend {
 
     /// "ReleaseTitleSpecification" → "Release Title". Best-effort prettifier
     /// for when the API omits `implementationName`.
-    private static func humanizeImplementation(_ raw: String) -> String {
+    nonisolated private static func humanizeImplementation(_ raw: String) -> String {
         let trimmed = raw.hasSuffix("Specification")
             ? String(raw.dropLast("Specification".count))
             : raw
@@ -169,7 +169,7 @@ extension LocalToolBackend {
     }
 
     /// Flatten a `JSONValue` field value to a compact display string.
-    private static func stringifyJSON(_ value: JSONValue) -> String? {
+    nonisolated private static func stringifyJSON(_ value: JSONValue) -> String? {
         switch value {
         case .null:           return nil
         case .bool(let b):    return b ? "true" : "false"

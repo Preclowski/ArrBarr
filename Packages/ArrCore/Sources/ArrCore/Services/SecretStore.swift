@@ -6,7 +6,7 @@ import os
 /// how it is stored: whether it should sync via iCloud Keychain (`synced`, only
 /// honored in App Store builds) and whether it is pinned to this device
 /// (`deviceOnly`).
-public struct SecretKey: Sendable, Equatable {
+nonisolated public struct SecretKey: Sendable, Equatable {
     public let account: String
     /// Request iCloud Keychain sync. Only takes effect under `#if APPSTORE`;
     /// non-App-Store builds always store locally.
@@ -47,13 +47,13 @@ public struct SecretKey: Sendable, Equatable {
     }()
 }
 
-public protocol SecretStore: Sendable {
+nonisolated public protocol SecretStore: Sendable {
     func read(_ key: SecretKey) -> String?
     func set(_ value: String, for key: SecretKey)
     func delete(_ key: SecretKey)
 }
 
-public extension SecretStore {
+nonisolated public extension SecretStore {
     /// Rewrite each given secret that currently holds a value, so the store's
     /// write path re-stamps the (possibly changed) `synchronizable` attribute.
     /// Keys with no value are skipped. Used to hard-toggle iCloud Keychain sync.
@@ -66,7 +66,7 @@ public extension SecretStore {
 
 /// Keychain-backed `SecretStore`. All items share the `service` namespace; the
 /// `SecretKey.account` distinguishes them.
-public struct KeychainSecretStore: SecretStore {
+nonisolated public struct KeychainSecretStore: SecretStore {
     public static let service = "pl.incred.ArrBarr"
     /// Shared Keychain access group (team-prefixed) so the app and its iOS widget
     /// extension read the same items. Applied only when the signature actually
@@ -91,7 +91,7 @@ public struct KeychainSecretStore: SecretStore {
     }
 
     /// Pure reader for the device-local flag, defaulting to `true`.
-    public static func syncEnabled(in defaults: UserDefaults?) -> Bool {
+    nonisolated public static func syncEnabled(in defaults: UserDefaults?) -> Bool {
         guard let defaults, defaults.object(forKey: iCloudSyncEnabledKey) != nil
         else { return true }
         return defaults.bool(forKey: iCloudSyncEnabledKey)
@@ -199,7 +199,7 @@ public struct KeychainSecretStore: SecretStore {
 /// `KeychainSecretStore` instead, and
 /// `ConfigStore.migratePlaintextSecretsIntoKeychain` lifts anything this store
 /// still holds over to it on the first such launch.
-public extension SecretKey {
+nonisolated public extension SecretKey {
     /// Where this secret sits when it is stored in plain `UserDefaults` — the
     /// ad-hoc build's home for it. Public because a reader holding a snapshot
     /// of those defaults (a sibling app in the family) must not have to guess
@@ -207,7 +207,7 @@ public extension SecretKey {
     var plaintextDefaultsKey: String { "ArrBarr.\(account)" }
 }
 
-public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
+nonisolated public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
     private let defaults: UserDefaults
     public init(defaults: UserDefaults) { self.defaults = defaults }
     private func key(_ k: SecretKey) -> String { k.plaintextDefaultsKey }
@@ -220,7 +220,7 @@ public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
 }
 
 /// In-memory `SecretStore` for tests — never touches the real Keychain.
-public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
+nonisolated public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [String: String] = [:]
     public init() {}

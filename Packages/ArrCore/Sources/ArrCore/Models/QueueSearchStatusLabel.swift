@@ -5,7 +5,7 @@ import Foundation
 /// poster + title and shares the row with library/new rows that show
 /// chevrons / plus glyphs. Returns a plain `String`; callers wrap it
 /// in `Text(_:bundle:)` for localization.
-public enum QueueSearchStatusLabel {
+nonisolated public enum QueueSearchStatusLabel {
     public static func label(for item: QueueItem) -> String {
         switch item.status {
         case .downloading:

@@ -1,6 +1,6 @@
 import Foundation
 
-public struct HistoryItem: Identifiable, Equatable {
+nonisolated public struct HistoryItem: Identifiable, Equatable {
     public let id: String
     public let source: QueueItem.Source
     public let date: Date
@@ -287,7 +287,7 @@ public struct HistoryItem: Identifiable, Equatable {
     }
 }
 
-extension Dictionary where Key == String, Value == JSONValue {
+nonisolated extension Dictionary where Key == String, Value == JSONValue {
     /// One value of a history record's `data` bag as text. The arrs send every
     /// value there as a string; a bare number is accepted too.
     func historyString(_ key: String) -> String? {
@@ -301,7 +301,7 @@ extension Dictionary where Key == String, Value == JSONValue {
 
 /// One page of an arr's history as a client fetched it — raw per-file rows,
 /// not yet paired or folded (`HistoryFeed` does that over every page loaded).
-struct HistoryPage {
+nonisolated struct HistoryPage {
     let items: [HistoryItem]
     let hasMore: Bool
 }

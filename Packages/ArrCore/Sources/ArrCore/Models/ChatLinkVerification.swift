@@ -12,7 +12,7 @@ import Foundation
 /// So linking is verified, not trusted: a chat link renders as a link only if
 /// its id appears verbatim in a tool result of this conversation. Anything else
 /// stays plain text — the prose survives, the wrong door doesn't open.
-public enum ChatLinkVerification {
+nonisolated public enum ChatLinkVerification {
     /// Keys (`tmdb:603`, `person:3063`, …) harvested from every tool result.
     public static func knownKeys(in messages: [ChatMessage]) -> Set<String> {
         var out: Set<String> = []
@@ -61,7 +61,7 @@ public enum ChatLinkVerification {
     )
 }
 
-private extension NSRange {
+nonisolated private extension NSRange {
     func substring(of text: String) -> String? {
         guard let range = Range(self, in: text) else { return nil }
         return String(text[range])

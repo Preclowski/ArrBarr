@@ -13,7 +13,6 @@ import SwiftUI
 /// transient blip never flips a service red — the same ride-out-blips policy
 /// `QueueViewModel.unreachableArrs` uses. A configured-but-not-yet-confirmed
 /// service stays `.unknown` (grey), never green.
-@MainActor
 @Observable
 public final class ConnectionHealth {
     public static let shared = ConnectionHealth()

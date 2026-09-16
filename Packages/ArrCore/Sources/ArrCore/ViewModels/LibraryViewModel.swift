@@ -11,7 +11,7 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
     /// occurs for multi-file media (Sonarr episodes, Lidarr tracks).
     /// `notAvailable` = monitored, nothing on disk, and nothing grabbable
     /// yet (Radarr: minimumAvailability not met; Sonarr: no aired episodes).
-    public enum FileState: Sendable {
+    nonisolated public enum FileState: Sendable {
         case complete, partial, missing, notAvailable, unmonitored
     }
 
@@ -22,6 +22,12 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
     /// The title's foreign id — tmdbId (Radarr/Whisparr) or tvdbId (Sonarr),
     /// the key `SearchResult.externalId` carries. Nil for Lidarr artists.
     public var externalId: Int? = nil
+    /// The media server says this title has been played. Resolved once, while
+    /// the library is projected — the same moment the server's poster override
+    /// is resolved — rather than per body pass: the index is lock-guarded and
+    /// a grid of covers would take that lock on every scroll frame.
+    /// False whenever no server is configured or the title isn't indexed.
+    public var watched: Bool = false
     public let title: String
     public let year: Int?
     public let posterURL: URL?
@@ -97,7 +103,6 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable {
 /// (a few MB of JSON for a few thousand titles), so the unify runs only when
 /// the index's version for a source moves. Switching tabs or sources renders
 /// instantly from the already-unified entries.
-@MainActor
 @Observable
 public final class LibraryViewModel {
     public private(set) var entries: [QueueItem.Source: [LibraryEntry]] = [:]
@@ -116,6 +121,23 @@ public final class LibraryViewModel {
     /// inside `body`, and an observed mutation there would invalidate the
     /// very body that is running.
     @ObservationIgnored private var sortCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
+
+    /// Filtered views and per-filter counts, memoized on the same terms as
+    /// `sortCache` and cleared with it. Both used to be recomputed inside
+    /// `body`: the status-filter counts walk EVERY entry once per filter (three
+    /// passes over ~3k records) and the visible list copies a filtered array of
+    /// them — cheap once, but the filter strip lives in the grid's safe area,
+    /// so it re-evaluates while the grid scrolls and that work landed on the
+    /// scrolling frames.
+    @ObservationIgnored private var filterCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
+    @ObservationIgnored private var countCache: [QueueItem.Source: [String: Int]] = [:]
+
+    /// Where the grid was scrolled to, per source — the id of the top-most
+    /// visible tile. Lives here because the tab view is torn down on every tab
+    /// switch, and `@ObservationIgnored` because the scroll view writes it on
+    /// every frame of a drag: an observed write there would invalidate the grid
+    /// it is scrolling.
+    @ObservationIgnored public var gridAnchor: [QueueItem.Source: LibraryEntry.ID] = [:]
 
     /// The `LibraryIndex` version each source's `entries` were unified from.
     /// The grid is a PROJECTION of the index, not a second cache: it re-unifies
@@ -137,6 +159,33 @@ public final class LibraryViewModel {
         if let hit = sortCache[source]?[cacheKey] { return hit }
         let out = (entries[source] ?? []).sorted(by: comparator)
         sortCache[source, default: [:]][cacheKey] = out
+        return out
+    }
+
+    /// `sorted` narrowed to one status filter, memoized per (source, key).
+    /// `cacheKey` must identify sort axis AND filter together.
+    public func visible(
+        _ source: QueueItem.Source,
+        cacheKey: String,
+        from sorted: [LibraryEntry],
+        where predicate: (LibraryEntry) -> Bool
+    ) -> [LibraryEntry] {
+        if let hit = filterCache[source]?[cacheKey] { return hit }
+        let out = sorted.filter(predicate)
+        filterCache[source, default: [:]][cacheKey] = out
+        return out
+    }
+
+    /// How many of `base` match one filter, memoized per (source, key).
+    public func count(
+        _ source: QueueItem.Source,
+        cacheKey: String,
+        over base: [LibraryEntry],
+        where predicate: (LibraryEntry) -> Bool
+    ) -> Int {
+        if let hit = countCache[source]?[cacheKey] { return hit }
+        let out = base.count(where: predicate)
+        countCache[source, default: [:]][cacheKey] = out
         return out
     }
 
@@ -174,7 +223,7 @@ public final class LibraryViewModel {
             // Polish or German name. Best-effort, and only paid when the movie
             // list actually changed — reaching this line at all means the
             // index version moved.
-            let alts = await RadarrClient(config: config).alternateTitleMap(for: movies)
+            let alts = await ServiceHandles.radarr(config: config).alternateTitleMap(for: movies)
             projection = await Self.project {
                 Self.unify(movies, baseURL: baseURL, profiles: profiles, alternateTitles: alts)
             }
@@ -209,6 +258,8 @@ public final class LibraryViewModel {
         // The default axis arrives already sorted, so the first Library visit
         // after a fetch renders without paying the sort inside body.
         sortCache[source] = ["title": projection.byTitle]
+        filterCache[source] = nil
+        countCache[source] = nil
         indexVersions[source] = await LibraryIndex.shared.version(for: source)
         Self.logAliasCoverage(projection.entries, source: source)
     }
@@ -261,10 +312,11 @@ public final class LibraryViewModel {
                               alternateTitles: [Int: [String]] = [:]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
+            let keys = r.mediaServerKeys
             let (poster, auth) = (r.images ?? []).posterURL(
-                baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
+                baseURL: baseURL, mediaServerKeys: keys
             )
-            return LibraryEntry(
+            var entry = LibraryEntry(
                 id: "radarr-\(id)", source: .radarr, arrId: id, externalId: r.tmdbId, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
                 state: .movie(monitored: r.monitored, hasFile: r.hasFile ?? false,
@@ -288,17 +340,20 @@ public final class LibraryViewModel {
                     .compactMap { $0.flatMap(parseArrDate) }.min(),
                 dateAdded: r.added.flatMap(parseArrDate)
             )
+            entry.watched = MediaServerIndex.shared.isWatched(keys)
+            return entry
         }
     }
 
     nonisolated private static func unify(_ records: [SonarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let title = r.title else { return nil }
+            let keys = r.mediaServerKeys
             let (poster, auth) = (r.images ?? []).posterURL(
-                baseURL: baseURL, mediaServerKeys: r.mediaServerKeys
+                baseURL: baseURL, mediaServerKeys: keys
             )
             let counts = r.episodeFileCounts
-            return LibraryEntry(
+            var entry = LibraryEntry(
                 id: "sonarr-\(id)", source: .sonarr, arrId: id, externalId: r.tvdbId, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
                 state: .series(monitored: r.monitored, counts: counts),
@@ -315,6 +370,8 @@ public final class LibraryViewModel {
                 releaseDate: r.firstAired.flatMap(parseArrDate),
                 dateAdded: r.added.flatMap(parseArrDate)
             )
+            entry.watched = MediaServerIndex.shared.isWatched(keys)
+            return entry
         }
     }
 

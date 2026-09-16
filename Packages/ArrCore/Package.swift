@@ -1,12 +1,12 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "ArrCore",
     defaultLocalization: "en",
     platforms: [
-        .macOS(.v14),
-        .iOS(.v18),
+        .macOS(.v26),
+        .iOS(.v26),
     ],
     products: [
         .library(name: "ArrCore", targets: ["ArrCore"]),
@@ -23,12 +23,14 @@ let package = Package(
         // Bumping is a deliberate one-line change — same posture as the MCP SDK
         // pin in ArrMCPServer.
         .package(url: "https://github.com/swiftlang/swift-markdown.git", exact: "0.8.0"),
+        .package(path: "../MediaKit"),
     ],
     targets: [
         .target(
             name: "ArrCore",
             dependencies: [
                 .product(name: "Markdown", package: "swift-markdown"),
+                .product(name: "MediaKit", package: "MediaKit"),
             ],
             path: "Sources/ArrCore",
             resources: [
@@ -42,6 +44,8 @@ let package = Package(
                 // to the 6.0 mode is a separate cleanup — Phase 1 keeps
                 // semantics identical so the macOS app builds unchanged.
                 .swiftLanguageMode(.v5),
+                // Views, view-models and stores are main-actor code; the few off-main pieces say so explicitly.
+                .defaultIsolation(MainActor.self),
             ]
         ),
         .testTarget(

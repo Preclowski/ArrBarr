@@ -52,7 +52,7 @@ public struct PopoverContentView: View {
     /// their own person destination; chat has none, so the root hosts this one.
     @State private var personRef: PersonRef?
     /// Pending confirmation payload — set by `.onReceive` listening
-    /// for `arrBarrConfirmRequest`. Rendered as a panel-wide overlay
+    /// for `AppMessages.ConfirmRequest`. Rendered as a panel-wide overlay
     /// at the end of body.
     @State private var pendingConfirm: PendingConfirm?
     /// The search capsule's focus, owned here because ⌘N, the Add intent and
@@ -66,7 +66,7 @@ public struct PopoverContentView: View {
     @State private var searchAddFromChat = false
     /// Discover/Quiz overlay state. The view-model survives across opens
     /// (so accept/skip counters and the deck persist) and the overlay
-    /// flag is flipped by the `arrBarrOpenDiscoverQuiz` notification
+    /// flag is flipped by the `AppMessages.OpenDiscoverQuiz` notification
     /// posted by the `discover_in_quiz` chat tool.
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var showDiscoverOverlay = false
@@ -142,8 +142,7 @@ public struct PopoverContentView: View {
         if DemoMode.isActive { return true }
         switch configStore.chatProvider {
         case .foundationModels:
-            if #available(macOS 26.0, iOS 26.0, *) { return true }
-            return false
+            return true
         case .openai:
             return configStore.openai.isConfigured
         }
@@ -186,13 +185,7 @@ public struct PopoverContentView: View {
                 // Deferred for the same reason the menu-bar drop defers: this
                 // runs inside the drag handling, and opening a window from
                 // there can leave the drag session's tracking loop wedged.
-                DispatchQueue.main.async {
-                    NotificationCenter.default.post(
-                        name: .arrBarrDropDownloads,
-                        object: nil,
-                        userInfo: ["urls": urls]
-                    )
-                }
+                DispatchQueue.main.async { AppMessages.post(AppMessages.DropDownloads(urls: urls)) }
                 return true
             }
             #endif
@@ -288,22 +281,15 @@ public struct PopoverContentView: View {
                         .frame(width: 0, height: 0)
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrTriggerAdd)) { _ in
-                withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                    selectedTab = .queue
-                }
-                searchFieldFocused = true
-            }
             // Search-to-add App Intent. The menu-bar popover can't be opened
             // programmatically, so this stages the query for whenever it opens.
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrSearchQuery)) { note in
-                guard let q = note.userInfo?["query"] as? String else { return }
+            .onMessage(AppMessages.SearchQuery.self) { message in
                 selectedTab = .queue
                 // The `didSet` runs the search; there is nothing to mirror.
-                searchViewModel.query = q
+                searchViewModel.query = message.query
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDetail)) { note in
-                guard let item = note.userInfo?["item"] as? QueueItem else { return }
+            .onMessage(AppMessages.OpenDetail.self) { message in
+                let item = message.item
                 searchResult = nil
                 historySource = nil
                 if detailItem == nil {
@@ -323,31 +309,24 @@ public struct PopoverContentView: View {
                     }
                 }
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenPerson)) { note in
-                guard let ref = note.userInfo?["ref"] as? PersonRef else { return }
+            .onMessage(AppMessages.OpenPerson.self) { message in
                 searchResult = nil
                 historySource = nil
                 detailItem = nil
-                personRef = ref
+                personRef = message.ref
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenSearchAdd)) { note in
+            .onMessage(AppMessages.OpenSearchAdd.self) { message in
                 // Chat tap-to-add — show the SearchAddPanel overlay
                 // pre-loaded with the result. `searchAddFromChat` lets
                 // Back return straight to chat instead of dropping the
                 // user on the Add tab.
-                guard let result = note.userInfo?["result"] as? SearchResult else { return }
                 historySource = nil
                 detailItem = nil
                 searchAddFromChat = true
-                searchResult = result
+                searchResult = message.result
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrOpenDiscoverQuiz)) { note in
-                // Posted by the `discover_in_quiz` chat tool. userInfo carries
-                // mood label + pre-resolved items + optional `append` flag
-                // (extends an existing deck instead of replacing it).
-                guard let mood = note.userInfo?["mood"] as? String,
-                      let items = note.userInfo?["items"] as? [DiscoverItem] else { return }
-                let append = (note.userInfo?["append"] as? Bool) ?? false
+            .onMessage(AppMessages.OpenDiscoverQuiz.self) { message in
+                let (mood, items, append) = (message.mood, message.items, message.append)
                 let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
                     || !discoverViewModel.sessionSkipped.isEmpty
                     || discoverViewModel.current != nil
@@ -362,11 +341,7 @@ public struct PopoverContentView: View {
                 historySource = nil
                 showDiscoverOverlay = true
             }
-            .onReceive(NotificationCenter.default.publisher(for: .arrBarrConfirmRequest)) { note in
-                if let payload = note.userInfo?["payload"] as? PendingConfirm {
-                    pendingConfirm = payload
-                }
-            }
+            .onMessage(AppMessages.ConfirmRequest.self) { pendingConfirm = $0.payload }
             // The one trailer overlay for the whole surface, driven by the
             // shared session. Rendered up here — not inside DetailView /
             // SearchAddPanel / the Quiz, which merely start it — so a clip
@@ -434,7 +409,7 @@ public struct PopoverContentView: View {
                         source: historySource,
                         viewModel: viewModel,
                         // Pushed onto this stack directly rather than through
-                        // `.arrBarrOpenDetail`, whose handler drops the history
+                        // `AppMessages.OpenDetail`, whose handler drops the history
                         // surface — Back has to land here, not on the queue.
                         onOpenDetail: { item in
                             withAnimation(.smooth(duration: 0.22)) { detailItem = item }
@@ -446,9 +421,6 @@ public struct PopoverContentView: View {
                     // full-size surface (the back chevron in the top strip is
                     // the only nav affordance you need). Tabs reappear the
                     // moment the query clears.
-                    if !(searchViewModel.isActive && selectedTab.hostsSearch) {
-                        tabBar
-                    }
                     Group {
                         if selectedTab == .chat {
                             ChatTabContent(chatHolder: chatHolder)
@@ -478,6 +450,21 @@ public struct PopoverContentView: View {
                                     UpcomingTabContent(viewModel: viewModel)
                                 }
                             }
+                        }
+                    }
+                    // The bar sits in the content's SAFE AREA rather than in a
+                    // VStack row above it. That is what buys the Apple-looking
+                    // top edge: the list scrolls UNDER the glass and the system
+                    // draws its own soft scroll-edge blur where the two meet,
+                    // instead of the content stopping dead at a hard line.
+                    // Paired with `.scrollEdgeEffectStyle(.soft, for: .top)` on
+                    // each tab's scroll view.
+                    //
+                    // Hidden while a query owns the surface — search becomes a
+                    // full-size view whose own back chevron is the nav.
+                    .safeAreaBar(edge: .top, spacing: 0) {
+                        if !(searchViewModel.isActive && selectedTab.hostsSearch) {
+                            tabBar
                         }
                     }
                 } else {
@@ -574,7 +561,13 @@ public struct PopoverContentView: View {
         // bumping the deployment target to 26 the rim couldn't ever look
         // like real glass anyway, so it's gone — arrow + frame stay
         // visually consistent.
-        .background(Color.clear)
+        //
+        // One step lighter than the backdrop the system hands us. A *white*
+        // wash, deliberately — the popover's text is vibrant, i.e. it blends
+        // with whatever sits behind it, so lifting the surface lifts the
+        // `.secondary` / `.tertiary` labels with it. (The earlier black wash
+        // did the opposite and buried the section headers.)
+        .background(Color.white.opacity(0.06))
     }
 
     /// Modal-feeling overlay for the result detail. Shown whenever
@@ -627,7 +620,7 @@ public struct PopoverContentView: View {
     /// IS the session (see `DiscoverViewModel.seed`) — fresh picks can only come
     /// from the agent, so "more" round-trips through the chat: this prompt makes
     /// the model call `discover_in_quiz` again with `append: true`, which extends
-    /// the live deck via the `.arrBarrOpenDiscoverQuiz` handler. `mood` + the
+    /// the live deck via the `AppMessages.OpenDiscoverQuiz` handler. `mood` + the
     /// already-shown picks live in the chat history, so the model has the "like
     /// these" context without us stuffing every title into the visible message.
     /// Without this wiring the button fell back to `onRequestMore`'s no-op
@@ -644,45 +637,63 @@ public struct PopoverContentView: View {
     }
 
     private var tabBar: some View {
-        // A row of floating glass capsules, all the SAME height: the tab cluster
-        // (Queue / Upcoming / Chat / Add) sets the height via its natural size;
-        // the optional windowed-mode close island (far left), the optional
-        // offline chip, and the accessory island (kebab, + × when detached) match it
-        // through `pillHeight`. The cluster pill stretches to fill all space
-        // between, so long labels (Polish "Nadchodzące") aren't squeezed and the
-        // chrome spans the whole row.
-        HStack(spacing: 8) {
-            // Detached mode uses the real macOS traffic lights (floating top-left,
-            // only the red × active) instead of a custom in-bar close dot, so the
-            // tab bar is now identical in both surfaces — no leading close island.
-            tabPills
-                .frame(maxWidth: .infinity)
-                .glassyFloatingBar()
-            // No offline chip here: the queue itself already says the stack
-            // is unreachable, and a third capsule in the bar only crowded it.
-            // One island: the kebab (and, in detached mode, the window's ×)
-            // inside a single glass capsule (like the tab cluster nests its
-            // buttons in one capsule). The detach/attach toggle lives INSIDE
-            // the kebab menu — see `moreMenu` for why it has no own glyph.
-            HStack(spacing: 0) {
-                moreMenu
-                #if os(macOS)
-                // Detached window's close affordance: last item of the right
-                // island (the native traffic lights are hidden). Absent in the
-                // menu-bar panel, which dismisses itself on focus loss.
-                if isDetachedWindow, let onCloseWindow {
-                    windowCloseButton(action: onCloseWindow)
-                }
-                #endif
+        // Two islands — the tab cluster and the overflow glyph — sharing one
+        // `GlassEffectContainer` so they morph together (`glassEffectID`) when
+        // the accessory's contents change (the detached window's × joining the
+        // kebab). `spacing: 0` because the container BLENDS glass that sits
+        // within its spacing: at 8 — the gap between the islands — the two
+        // fused into one blob and the round kebab rendered stretched.
+        //
+        // No height is stated anywhere: the tab label's own metrics size the
+        // cluster, and `accessoryIsland` measures itself off that.
+        GlassEffectContainer(spacing: 0) {
+            HStack(spacing: 8) {
+                tabPills
+                    .frame(maxWidth: .infinity)
+                    .glassyFloatingBar()
+                    .glassEffectID("tabs", in: barGlass)
+                accessoryIsland
             }
-            // Small horizontal breathing room so the island's glyphs don't sit
-            // flush against the capsule rim (read as cramped otherwise).
-            .padding(.horizontal, 4)
-            .glassyFloatingBar()
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
         .padding(.bottom, 8)
+    }
+
+    /// The kebab (and, detached, the window ×) as its own island.
+    ///
+    /// Sized from the tab cluster's MEASURED height rather than a constant, so
+    /// the two capsules cannot drift apart. One glyph gets a square (drawn as a
+    /// circle), two get a pill.
+    private var accessoryIsland: some View {
+        #if os(macOS)
+        let hasClose = isDetachedWindow && onCloseWindow != nil
+        #else
+        let hasClose = false
+        #endif
+        let side = barHeight
+        return HStack(spacing: 0) {
+            moreMenu
+            #if os(macOS)
+            // Detached window's close affordance — the native traffic lights
+            // are hidden. Absent in the menu-bar panel, which dismisses itself
+            // on focus loss.
+            if isDetachedWindow, let onCloseWindow {
+                windowCloseButton(action: onCloseWindow)
+            }
+            #endif
+        }
+        .frame(width: hasClose ? side * 2 : side, height: side)
+        // Explicit circle: a square frame is not enough, the glass pads its own
+        // bounds and a capsule then re-derives its radius from that.
+        .glassyFloatingBar(circular: !hasClose)
+        .glassEffectID("accessory", in: barGlass)
+    }
+
+    /// The bar's height, as the tab labels came out — measured, so the island
+    /// beside them can be square without anyone hardcoding a number.
+    private var barHeight: CGFloat {
+        tabFrames.values.map(\.height).max() ?? 32
     }
 
     #if os(macOS)
@@ -693,7 +704,7 @@ public struct PopoverContentView: View {
             Image(systemName: "xmark")
                 .scaledFont(size: 12, weight: .semibold)
                 .foregroundStyle(.secondary)
-                .frame(width: Self.pillHeight, height: Self.pillHeight)
+                .frame(width: Self.glyphButton, height: Self.glyphButton)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)
@@ -717,6 +728,9 @@ public struct PopoverContentView: View {
     }
 
     @State private var tabFrames: [Tab: CGRect] = [:]
+
+    /// Ties the tab bar's two islands into one glass set — see `tabBar`.
+    @Namespace private var barGlass
 
     /// While ⌘ is held the tab labels crossfade to their ⌘-number, so the
     /// shortcut is discoverable without a menu (the numbering is the same one
@@ -854,14 +868,14 @@ public struct PopoverContentView: View {
                     // the label above: an incompressible pill row wider than
                     // the panel widens the whole surface instead of squeezing.
                     // Horizontal/vertical padding sets the breathing room INSIDE
-                    // the selection pill. The tab cluster's resulting natural
-                    // height (~32 at default scale) is the canonical bar height;
-                    // the accessory / close / offline islands grow to match it
-                    // via `pillHeight` (they don't shrink the tabs).
+                    // the selection pill, and the label's natural height is the
+                    // bar's height — the glyph buttons sitting beside it are
+                    // smaller and never stretch it.
                     .padding(.horizontal, 18)
-                    // Fixed, not padding-derived: the accessory island uses the
-                    // same constant, so the two capsules can't drift apart.
-                    .frame(height: Self.pillHeight)
+                    // Padding, not a fixed height: the label's own metrics size
+                    // the pill (and the whole bar with it), so it grows with the
+                    // user's text size instead of clipping inside a hard 32pt.
+                    .padding(.vertical, 9)
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -953,9 +967,10 @@ public struct PopoverContentView: View {
                       width: max(0, rightEdge - leftEdge), height: height)
     }
 
-    /// The one toolbar height: every tab and the accessory island's glyph
-    /// buttons (kebab, detached ×) are framed to it, so all capsules match.
-    private static let pillHeight: CGFloat = 32
+    /// Hit area for the bar's bare glyph buttons (kebab, detached ×). They are
+    /// deliberately SHORTER than the tab labels: the labels alone decide how
+    /// tall the bar is, so a glyph can never stretch it.
+    private static let glyphButton: CGFloat = 28
 
     /// Overflow menu — capsule of equal width and height = a perfect
     /// circle. The frame has to live OUTSIDE the Menu, not inside the
@@ -1012,7 +1027,7 @@ public struct PopoverContentView: View {
         }
         .menuStyle(.borderlessButton)
         .menuIndicator(.hidden)
-        .frame(width: Self.pillHeight, height: Self.pillHeight)
+        .frame(width: Self.glyphButton, height: Self.glyphButton)
         .contentShape(Capsule())
         .help(Text("common.moreOptions.button", bundle: .module))
     }
@@ -1040,11 +1055,17 @@ public struct GlassButtonStyle: ViewModifier {
         // Capsule to match GlassProminentButtonStyle — the secondary "Add to
         // Radarr" next to a capsule "Add and search" read as a leftover
         // rectangle otherwise.
-        if #available(macOS 26.0, iOS 26.0, *) {
-            content.buttonStyle(.glass).buttonBorderShape(.capsule)
-        } else {
-            content.buttonStyle(.bordered).buttonBorderShape(.capsule)
-        }
+        content.buttonStyle(.glass).buttonBorderShape(.capsule)
+    }
+}
+
+/// Translucent tinted glass — the *quiet* prominent CTA. Same capsule and the
+/// same `.tint`, but the glass keeps showing what is behind it instead of
+/// filling with the colour. For actions that sit on top of artwork and should
+/// not shout (the detail view's pause / resume / cancel).
+public struct GlassTintedButtonStyle: ViewModifier {
+    public func body(content: Content) -> some View {
+        content.buttonStyle(.glass).buttonBorderShape(.capsule)
     }
 }
 
@@ -1056,16 +1077,9 @@ public struct GlassProminentButtonStyle: ViewModifier {
         // text (and made the red trash glyph illegible on gray glass).
         // Call sites with a semantic glyph colour (the red trash) override
         // it locally — an inner foregroundStyle wins over this outer one.
-        if #available(macOS 26.0, iOS 26.0, *) {
-            content
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.capsule)
-                .foregroundStyle(.white)
-        } else {
-            content
-                .buttonStyle(.borderedProminent)
-                .buttonBorderShape(.capsule)
-                .foregroundStyle(.white)
-        }
+        content
+            .buttonStyle(.glassProminent)
+            .buttonBorderShape(.capsule)
+            .foregroundStyle(.white)
     }
 }

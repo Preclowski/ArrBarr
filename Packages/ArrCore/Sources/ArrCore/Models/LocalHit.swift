@@ -4,7 +4,7 @@ import Foundation
 /// local context: a live download from the queue, or an owned title from a
 /// loaded library. The same context on every tab — search is one surface,
 /// hosted once, and the tab underneath it does not change what it answers.
-public enum LocalHit: Identifiable {
+nonisolated public enum LocalHit: Identifiable {
     /// A live download — progress and action chrome, rendered by `QueueSearchRow`.
     case queue(QueueRowEntry)
     /// An owned title from the browsed library, rendered as an owned search row.
@@ -36,7 +36,7 @@ public enum LocalHit: Identifiable {
 /// travels with the id. Without it, a Radarr movie #42 on screen would hide a
 /// Sonarr series #42 from the results — the one wrong answer this app must
 /// never give.
-public struct OwnershipKey: Hashable, Sendable {
+nonisolated public struct OwnershipKey: Hashable, Sendable {
     public let source: QueueItem.Source
     public let arrId: Int
 
@@ -46,7 +46,7 @@ public struct OwnershipKey: Hashable, Sendable {
     }
 }
 
-public extension LocalHit {
+nonisolated public extension LocalHit {
     /// The one local context: live queue rows that match the query, then owned
     /// titles from every library already in memory (deduped against the queue
     /// rows, which already answer for them). A library that hasn't loaded yet

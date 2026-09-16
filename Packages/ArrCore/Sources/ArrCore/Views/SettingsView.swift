@@ -21,6 +21,7 @@ public struct SettingsView: View {
     @EnvironmentObject var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
     @State private var demoModeOn: Bool = DemoMode.isActive
+    @State private var telemetryReport: String?
     /// iOS: 7-tap on the Version row enables Developer mode, since iOS
     /// users can't pass `--demo` on launch.
     @State private var versionTapCount: Int = 0
@@ -226,7 +227,7 @@ public struct SettingsView: View {
             .apiKeyField()
             if !configStore.tmdbApiKey.isEmpty {
                 ApiKeyTestButton(test: {
-                    try await TMDBClient(apiKey: configStore.tmdbApiKey).testConnection()
+                    try await configStore.tmdbClient.testConnection()
                 }, service: .tmdb)
             }
             if let url = URL(string: "https://www.themoviedb.org/settings/api") {
@@ -979,7 +980,22 @@ public struct SettingsView: View {
                     Button { onShowWelcome() } label: { Text("settings.showWelcomeScreen.button", bundle: .module) }
                 }
             }
+            Button { telemetryReport = configStore.gateway.telemetry.report() } label: { Text("settings.mediaKitTelemetry.button", bundle: .module) }
         } header: { Text("settings.developerOptions.button", bundle: .module) }
+        .sheet(isPresented: Binding(get: { telemetryReport != nil }, set: { if !$0 { telemetryReport = nil } })) {
+            VStack(alignment: .trailing, spacing: 12) {
+                ScrollView {
+                    Text(telemetryReport ?? "")
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                Button { telemetryReport = nil } label: { Text("common.done.button", bundle: .module) }
+                    .keyboardShortcut(.defaultAction)
+            }
+            .padding()
+            .frame(minWidth: 560, minHeight: 380)
+        }
     }
 
     // MARK: - Service roster (shared data)

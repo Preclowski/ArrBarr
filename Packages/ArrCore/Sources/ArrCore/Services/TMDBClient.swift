@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // MARK: - Wire types
 //
@@ -9,7 +10,7 @@ import Foundation
 /// TMDB's fixed English department/job tokens. They arrive verbatim on every
 /// payload regardless of the request language, so matching them is string
 /// matching against constants — never against a localized label.
-public enum TMDBDepartment {
+nonisolated public enum TMDBDepartment {
     public static let acting = "Acting"
     public static let directing = "Directing"
     /// The crew `job` (not department) that means "this person directed it".
@@ -20,7 +21,7 @@ public enum TMDBDepartment {
     public static let coDirectorJob = "Co-Director"
 }
 
-public struct TMDBPerson: Decodable, Sendable, Equatable, Identifiable {
+nonisolated public struct TMDBPerson: Codable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
     public let knownForDepartment: String?
@@ -45,7 +46,7 @@ public struct TMDBPerson: Decodable, Sendable, Equatable, Identifiable {
 
 /// `/person/{id}` — the biography-bearing detail record. Only the fields the
 /// person view / tooltip render are decoded.
-public struct TMDBPersonDetails: Decodable, Sendable, Equatable {
+nonisolated public struct TMDBPersonDetails: Codable, Sendable, Equatable {
     public let id: Int
     public let name: String
     public let biography: String?
@@ -86,11 +87,11 @@ public struct TMDBPersonDetails: Decodable, Sendable, Equatable {
     }
 }
 
-public struct TMDBPagedPeople: Decodable, Sendable {
+nonisolated public struct TMDBPagedPeople: Codable, Sendable {
     public let results: [TMDBPerson]
 }
 
-public struct TMDBMovieSummary: Decodable, Sendable, Equatable {
+nonisolated public struct TMDBMovieSummary: Codable, Sendable, Equatable {
     public let id: Int
     public let title: String
     public let releaseDate: String?
@@ -118,7 +119,7 @@ public struct TMDBMovieSummary: Decodable, Sendable, Equatable {
     }
 }
 
-public struct TMDBTVSummary: Decodable, Sendable, Equatable {
+nonisolated public struct TMDBTVSummary: Codable, Sendable, Equatable {
     public let id: Int
     public let name: String
     public let firstAirDate: String?
@@ -146,24 +147,24 @@ public struct TMDBTVSummary: Decodable, Sendable, Equatable {
     }
 }
 
-public struct TMDBMovieCreditsResponse: Decodable, Sendable {
+nonisolated public struct TMDBMovieCreditsResponse: Codable, Sendable {
     public let cast: [TMDBMovieSummary]
     public let crew: [TMDBMovieSummary]?
 }
 
-public struct TMDBTVCreditsResponse: Decodable, Sendable {
+nonisolated public struct TMDBTVCreditsResponse: Codable, Sendable {
     public let cast: [TMDBTVSummary]
     public let crew: [TMDBTVSummary]?
 }
 
 // MARK: - Movie credits (cast + crew)
 
-public struct TMDBCredits: Decodable, Sendable, Equatable {
+nonisolated public struct TMDBCredits: Codable, Sendable, Equatable {
     public let cast: [TMDBCreditPerson]
     public let crew: [TMDBCreditPerson]
 }
 
-public struct TMDBCreditPerson: Decodable, Sendable, Equatable, Identifiable {
+nonisolated public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identifiable {
     public let id: Int
     public let name: String
     public let profilePath: String?
@@ -188,15 +189,15 @@ public struct TMDBCreditPerson: Decodable, Sendable, Equatable, Identifiable {
 /// have their own), so the creator is the credit that plays the director's
 /// role for a show. The entries carry the same id/name/profile fields as a
 /// credit person, so they decode into the same type.
-public struct TMDBTVCreatedByResponse: Decodable, Sendable {
+nonisolated public struct TMDBTVCreatedByResponse: Codable, Sendable {
     public let created_by: [TMDBCreditPerson]?
 }
 
-public struct TMDBDiscoverMovieResponse: Decodable, Sendable {
+nonisolated public struct TMDBDiscoverMovieResponse: Codable, Sendable {
     public let results: [TMDBMovieSummary]
 }
 
-public struct TMDBDiscoverTVResponse: Decodable, Sendable {
+nonisolated public struct TMDBDiscoverTVResponse: Codable, Sendable {
     public let results: [TMDBTVSummary]
 }
 
@@ -206,7 +207,7 @@ public struct TMDBDiscoverTVResponse: Decodable, Sendable {
 // stable across decades — embedding them avoids an extra round-trip per
 // session and lets the LLM pick a genre by name without a setup tool call.
 
-public enum TMDBGenres {
+nonisolated public enum TMDBGenres {
     public static let movie: [String: Int] = [
         "action": 28, "adventure": 12, "animation": 16, "comedy": 35,
         "crime": 80, "documentary": 99, "drama": 18, "family": 10751,
@@ -258,7 +259,7 @@ public enum TMDBGenres {
 //
 /// One entry of TMDB's `/videos` — in practice always a YouTube clip; TMDB
 /// hosts no video of its own, it only points at one.
-public struct TMDBVideo: Decodable, Sendable, Equatable {
+nonisolated public struct TMDBVideo: Codable, Sendable, Equatable {
     public let key: String
     public let site: String?
     public let type: String?
@@ -298,255 +299,103 @@ public struct TMDBVideo: Decodable, Sendable, Equatable {
 // Plain struct over URLSession — TMDB endpoints are stateless and don't
 // need per-instance caching. Sendable so it can be passed across actors.
 
-public struct TMDBClient: Sendable {
+/// TMDB through MediaKit: the same methods and result types as before, the key resolved per instance.
+nonisolated public struct TMDBClient: Sendable {
     public let apiKey: String
-    public let session: URLSession
 
-    public init(apiKey: String, session: URLSession = .shared) {
-        self.apiKey = apiKey
-        self.session = session
-    }
+    public init(apiKey: String) { self.apiKey = apiKey }
 
     public var isConfigured: Bool { !apiKey.isEmpty }
 
-    /// Cheap auth check — `/configuration` returns 200 even on a v3 key
-    /// without scopes. 401 means the key is wrong.
-    public func testConnection() async throws {
-        let _: TMDBConfigResponse = try await get(path: "/configuration", query: [])
+    private func context() async throws -> (ServiceGateway, TMDBService) {
+        guard isConfigured else { throw MediaKitError.notConfigured(InstanceID(.tmdb)) }
+        let gateway = await ServiceGateway.resolve()
+        let instance = await gateway.adopt(tmdbKey: apiKey)
+        await gateway.ready()
+        guard gateway.isConfigured(instance) else { throw MediaKitError.notConfigured(instance) }
+        return (gateway, TMDBService(instance: instance, capabilities: gateway.kit.capabilities))
     }
 
-    public func searchPerson(query: String) async throws -> [TMDBPerson] {
-        let resp: TMDBPagedPeople = try await get(
-            path: "/search/person",
-            query: [URLQueryItem(name: "query", value: query)]
-        )
-        return resp.results
+    /// ArrCore's TMDB types spell their keys; MediaKit's rely on the snake-case decoder.
+    private func read<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, decoder: JSONDecoder = WireCodec.decoder,
+                                                _ make: (TMDBService) -> Resource<V>) async throws -> T {
+        let (gateway, service) = try await context()
+        let template = make(service)
+        return try await gateway.store.read(Resource<T>.json(template.plan, tags: template.tags, freshness: template.freshness, decoder: decoder), policy: policy).value
     }
 
-    public func movieCredits(movieId: Int) async throws -> TMDBCredits {
-        let resp: TMDBCredits = try await get(
-            path: "/movie/\(movieId)/credits",
-            query: []
-        )
-        return resp
-    }
+    public func testConnection() async throws { _ = try await read(MediaKit.TMDBConfiguration.self, policy: .mustRevalidate, decoder: WireCodec.snakeCaseDecoder) { $0.configuration() } }
+    public func searchPerson(query: String) async throws -> [TMDBPerson] { try await read(TMDBPagedPeople.self) { $0.searchPerson(query: query) }.results }
+    public func movieCredits(movieId: Int) async throws -> TMDBCredits { try await read(TMDBCredits.self) { $0.movieCredits(id: movieId) } }
+    public func tvCredits(tvId: Int) async throws -> TMDBCredits { try await read(TMDBCredits.self) { $0.tvCredits(id: tvId) } }
+    public func tvCreators(tvId: Int) async throws -> [TMDBCreditPerson] { try await read(TMDBTVCreatedByResponse.self) { $0.tv(id: tvId) }.created_by ?? [] }
 
-    /// Series cast/crew. `aggregate_credits` rolls up the whole series'
-    /// recurring cast (better than `/credits`, which is pilot-only), so the
-    /// detail view shows the people you actually associate with the show.
-    /// Its cast entries carry `roles[]` rather than a flat `character`, but
-    /// `TMDBCredits` decodes only the shared id/name/profile fields the cast
-    /// row needs, so the same model works.
-    public func tvCredits(tvId: Int) async throws -> TMDBCredits {
-        let resp: TMDBCredits = try await get(
-            path: "/tv/\(tvId)/aggregate_credits",
-            query: []
-        )
-        return resp
-    }
+    public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? { try await read(MediaKit.TMDBFind.self, decoder: WireCodec.snakeCaseDecoder) { $0.find(tvdbID: tvdbId) }.tvResults.first?.id }
 
-    /// Series creators (`/tv/{id}` → `created_by`) — the show-level answer to
-    /// "who is behind this", since per-episode directors don't generalize.
-    public func tvCreators(tvId: Int) async throws -> [TMDBCreditPerson] {
-        let resp: TMDBTVCreatedByResponse = try await get(path: "/tv/\(tvId)", query: [])
-        return resp.created_by ?? []
-    }
-
-    /// Resolve a Sonarr `tvdbId` to TMDB's own series id via `/find` (external
-    /// source lookup). Needed because Sonarr search results carry a tvdbId, but
-    /// `tvCredits` keys on TMDB's id. Returns the first TV match, or nil.
-    public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? {
-        let resp: TMDBFindResponse = try await get(
-            path: "/find/\(tvdbId)",
-            query: [URLQueryItem(name: "external_source", value: "tvdb_id")]
-        )
-        return resp.tv_results.first?.id
-    }
-
-    private struct TMDBFindResponse: Decodable {
-        struct TVResult: Decodable { let id: Int }
-        let tv_results: [TVResult]
-    }
-
-    /// The inverse of `tvIdFromTVDB`: a TMDB tv id → the show's TVDB id, via
-    /// `/tv/{id}/external_ids`. Sonarr speaks tvdbId and nothing else, so this
-    /// is the one authoritative bridge from a TMDB-sourced series row to a
-    /// Sonarr record. Nil when TMDB has no tvdb id on file — and nil must stay
-    /// nil at the call site rather than degrading into a title search, since
-    /// matching a show by name is precisely how the wrong series got opened.
     public func tvdbIdFromTVId(_ tvId: Int) async throws -> Int? {
-        let resp: TMDBExternalIDs = try await get(
-            path: "/tv/\(tvId)/external_ids",
-            query: []
-        )
-        guard let tvdb = resp.tvdb_id, tvdb > 0 else { return nil }
+        let ids = try await read(MediaKit.TMDBExternalIDs.self, decoder: WireCodec.snakeCaseDecoder) { $0.tvExternalIDs(id: tvId) }
+        guard let tvdb = ids.tvdbId, tvdb > 0 else { return nil }
         return tvdb
     }
 
-    private struct TMDBExternalIDs: Decodable {
-        let tvdb_id: Int?
-    }
-
-    /// `/person/{id}`. Biography is localized by the account's TMDB language;
-    /// when the localized one comes back empty we retry in English so the
-    /// person view isn't blank for non-English locales.
+    /// An empty biography in the user's language falls back to the English one.
     public func personDetails(personId: Int) async throws -> TMDBPersonDetails {
-        let details: TMDBPersonDetails = try await get(path: "/person/\(personId)", query: [])
+        let details = try await read(TMDBPersonDetails.self) { $0.person(id: personId) }
         if details.biography?.isEmpty ?? true {
-            if let english: TMDBPersonDetails = try? await get(
-                path: "/person/\(personId)",
-                query: [URLQueryItem(name: "language", value: "en-US")]
-            ), !(english.biography?.isEmpty ?? true) {
+            let (gateway, service) = try await context()
+            var plan = service.person(id: personId).plan
+            plan.query.append(.init("language", "en-US"))
+            if let english = try? await gateway.store.read(Resource<TMDBPersonDetails>.json(plan, tags: [.identity(.tmdbPerson(personId))], freshness: .archival)).value,
+               !(english.biography?.isEmpty ?? true) {
                 return english
             }
         }
         return details
     }
 
-    /// Full credits — acting (`cast`) plus crew. Callers that only care about
-    /// acting read `.cast`; the person view merges directing/writing crew
-    /// credits in via `PersonCreditMerge`.
-    public func personMovieCredits(personId: Int) async throws -> TMDBMovieCreditsResponse {
-        try await get(path: "/person/\(personId)/movie_credits", query: [])
+    public func personMovieCredits(personId: Int) async throws -> TMDBMovieCreditsResponse { try await read(TMDBMovieCreditsResponse.self) { $0.personMovieCredits(id: personId) } }
+    public func personTVCredits(personId: Int) async throws -> TMDBTVCreditsResponse { try await read(TMDBTVCreditsResponse.self) { $0.personTVCredits(id: personId) } }
+
+    public func discoverMovies(genreIds: [Int] = [], startYear: Int? = nil, endYear: Int? = nil, sortBy: String = "popularity.desc", minVoteCount: Int = 50) async throws -> [TMDBMovieSummary] {
+        var extra: [(String, String)] = []
+        if !genreIds.isEmpty { extra.append(("with_genres", genreIds.map(String.init).joined(separator: ","))) }
+        if let y = startYear { extra.append(("primary_release_date.gte", "\(y)-01-01")) }
+        if let y = endYear { extra.append(("primary_release_date.lte", "\(y)-12-31")) }
+        return try await read(TMDBDiscoverMovieResponse.self) { $0.discoverMovies(sort: sortBy, minVotes: minVoteCount, extra: extra) }.results
     }
 
-    public func personTVCredits(personId: Int) async throws -> TMDBTVCreditsResponse {
-        try await get(path: "/person/\(personId)/tv_credits", query: [])
+    public func discoverTV(genreIds: [Int] = [], startYear: Int? = nil, endYear: Int? = nil, sortBy: String = "popularity.desc", minVoteCount: Int = 20) async throws -> [TMDBTVSummary] {
+        var extra: [(String, String)] = []
+        if !genreIds.isEmpty { extra.append(("with_genres", genreIds.map(String.init).joined(separator: ","))) }
+        if let y = startYear { extra.append(("first_air_date.gte", "\(y)-01-01")) }
+        if let y = endYear { extra.append(("first_air_date.lte", "\(y)-12-31")) }
+        return try await read(TMDBDiscoverTVResponse.self) { $0.discoverTV(sort: sortBy, minVotes: minVoteCount, extra: extra) }.results
     }
 
-    /// TMDB discover. `startYear`/`endYear` (inclusive) expand to ISO
-    /// `primary_release_date.gte/lte` bounds — covers "filmy z lat 90".
-    public func discoverMovies(
-        genreIds: [Int] = [],
-        startYear: Int? = nil,
-        endYear: Int? = nil,
-        sortBy: String = "popularity.desc",
-        minVoteCount: Int = 50
-    ) async throws -> [TMDBMovieSummary] {
-        var query: [URLQueryItem] = [
-            URLQueryItem(name: "sort_by", value: sortBy),
-            URLQueryItem(name: "vote_count.gte", value: String(minVoteCount)),
-            URLQueryItem(name: "include_adult", value: "false"),
-        ]
-        if !genreIds.isEmpty {
-            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
-        }
-        if let y = startYear {
-            query.append(URLQueryItem(name: "primary_release_date.gte", value: "\(y)-01-01"))
-        }
-        if let y = endYear {
-            query.append(URLQueryItem(name: "primary_release_date.lte", value: "\(y)-12-31"))
-        }
-        let resp: TMDBDiscoverMovieResponse = try await get(path: "/discover/movie", query: query)
-        return resp.results
-    }
-
-    public func discoverTV(
-        genreIds: [Int] = [],
-        startYear: Int? = nil,
-        endYear: Int? = nil,
-        sortBy: String = "popularity.desc",
-        minVoteCount: Int = 20
-    ) async throws -> [TMDBTVSummary] {
-        var query: [URLQueryItem] = [
-            URLQueryItem(name: "sort_by", value: sortBy),
-            URLQueryItem(name: "vote_count.gte", value: String(minVoteCount)),
-            URLQueryItem(name: "include_adult", value: "false"),
-        ]
-        if !genreIds.isEmpty {
-            query.append(URLQueryItem(name: "with_genres", value: genreIds.map(String.init).joined(separator: ",")))
-        }
-        if let y = startYear {
-            query.append(URLQueryItem(name: "first_air_date.gte", value: "\(y)-01-01"))
-        }
-        if let y = endYear {
-            query.append(URLQueryItem(name: "first_air_date.lte", value: "\(y)-12-31"))
-        }
-        let resp: TMDBDiscoverTVResponse = try await get(path: "/discover/tv", query: query)
-        return resp.results
-    }
-
-    public func similarMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
-        struct Envelope: Decodable { let results: [TMDBMovieSummary] }
-        let env: Envelope = try await get(
-            path: "/movie/\(movieId)/similar",
-            query: [URLQueryItem(name: "page", value: String(page))]
-        )
-        return env.results
-    }
-
-    public func similarTV(seriesId: Int, page: Int = 1) async throws -> [TMDBTVSummary] {
-        struct Envelope: Decodable { let results: [TMDBTVSummary] }
-        let env: Envelope = try await get(
-            path: "/tv/\(seriesId)/similar",
-            query: [URLQueryItem(name: "page", value: String(page))]
-        )
-        return env.results
-    }
-
-    /// `/recommendations` over `/similar` for anchor walks: similar is keyword
-    /// matching on metadata, recommendations is co-engagement — noticeably
-    /// better picks for "more like what the user kept".
     public func recommendedMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
-        struct Envelope: Decodable { let results: [TMDBMovieSummary] }
-        let env: Envelope = try await get(
-            path: "/movie/\(movieId)/recommendations",
-            query: [URLQueryItem(name: "page", value: String(page))]
-        )
-        return env.results
+        try await read(TMDBDiscoverMovieResponse.self) { $0.movieRecommendations(id: movieId, page: page) }.results
     }
 
     public func recommendedTV(seriesId: Int, page: Int = 1) async throws -> [TMDBTVSummary] {
-        struct Envelope: Decodable { let results: [TMDBTVSummary] }
-        let env: Envelope = try await get(
-            path: "/tv/\(seriesId)/recommendations",
-            query: [URLQueryItem(name: "page", value: String(page))]
-        )
-        return env.results
+        try await read(TMDBDiscoverTVResponse.self) { $0.tvRecommendations(id: seriesId, page: page) }.results
     }
 
-    // MARK: - Trailers
+    public func movieVideos(movieId: Int) async throws -> [TMDBVideo] { try await read(VideoEnvelope.self) { $0.movieVideos(id: movieId) }.results }
+    public func tvVideos(tvId: Int) async throws -> [TMDBVideo] { try await read(VideoEnvelope.self) { $0.tvVideos(id: tvId) }.results }
+    nonisolated private struct VideoEnvelope: Codable, Sendable { let results: [TMDBVideo] }
 
-    public func movieVideos(movieId: Int) async throws -> [TMDBVideo] {
-        struct Envelope: Decodable { let results: [TMDBVideo] }
-        let env: Envelope = try await get(path: "/movie/\(movieId)/videos", query: [])
-        return env.results
+    public func movieCountries(movieId: Int) async throws -> [String] {
+        Self.codes(from: try await read(TMDBCountries.self) { $0.movie(id: movieId) }, preferOrigin: false)
     }
 
-    public func tvVideos(tvId: Int) async throws -> [TMDBVideo] {
-        struct Envelope: Decodable { let results: [TMDBVideo] }
-        let env: Envelope = try await get(path: "/tv/\(tvId)/videos", query: [])
-        return env.results
+    public func tvCountries(tvId: Int) async throws -> [String] {
+        Self.codes(from: try await read(TMDBCountries.self) { $0.tv(id: tvId) }, preferOrigin: true)
     }
 
-    // MARK: - Production countries
-    //
-    // Neither Radarr nor Sonarr carries a country of production — the arr
-    // resources stop at `originalLanguage` — so TMDB is the only source for
-    // it. Both endpoints are asked for the ISO 3166-1 codes only; the display
-    // name is resolved locally against the user's locale rather than taking
-    // TMDB's English `name`, so the row follows the app's language.
-
-    private struct TMDBCountries: Decodable {
-        struct Country: Decodable { let iso_3166_1: String? }
+    nonisolated private struct TMDBCountries: Codable, Sendable {
+        nonisolated struct Country: Codable, Sendable { let iso_3166_1: String? }
         let production_countries: [Country]?
         let origin_country: [String]?
-    }
-
-    /// ISO 3166-1 alpha-2 codes for a movie. `production_countries` is the
-    /// authoritative list; `origin_country` is the fallback for the (older)
-    /// records where TMDB only filled the latter.
-    public func movieCountries(movieId: Int) async throws -> [String] {
-        let resp: TMDBCountries = try await get(path: "/movie/\(movieId)", query: [])
-        return Self.codes(from: resp, preferOrigin: false)
-    }
-
-    /// ISO 3166-1 alpha-2 codes for a series. TV records key on
-    /// `origin_country` (where the show was made) — `production_countries`
-    /// on TV is the co-production/finance list, so it's the fallback here.
-    public func tvCountries(tvId: Int) async throws -> [String] {
-        let resp: TMDBCountries = try await get(path: "/tv/\(tvId)", query: [])
-        return Self.codes(from: resp, preferOrigin: true)
     }
 
     private static func codes(from resp: TMDBCountries, preferOrigin: Bool) -> [String] {
@@ -554,67 +403,14 @@ public struct TMDBClient: Sendable {
         let origin = resp.origin_country ?? []
         let ordered = preferOrigin ? [origin, production] : [production, origin]
         let picked = ordered.first { !$0.isEmpty } ?? []
-        // TMDB occasionally repeats a code across the two lists and, rarely,
-        // within one — dedupe while keeping TMDB's order (primary first).
         var seen = Set<String>()
-        return picked
-            .map { $0.uppercased() }
-            .filter { !$0.isEmpty && seen.insert($0).inserted }
+        return picked.map { $0.uppercased() }.filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 
-    // MARK: - Image URLs
-
-    /// `path` is the `poster_path` / `profile_path` we get from TMDB —
-    /// already starts with `/`. `size` is a TMDB image preset (w92, w154,
-    /// w185, w342, w500, w780, original).
     public static func imageURL(path: String?, size: String = "w342") -> URL? {
         guard let path, !path.isEmpty else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/\(size)\(path)")
     }
 
-    // MARK: - Plumbing
-
-    private struct TMDBConfigResponse: Decodable { let images: TMDBImages? }
-    private struct TMDBImages: Decodable { let secure_base_url: String? }
-
-    /// The v4 "API Read Access Token" is a JWT (`header.payload.signature`,
-    /// usually `eyJ…`) sent as a Bearer header; the legacy v3 "API Key" is a
-    /// 32-char hex string passed as an `api_key` query param. We accept either —
-    /// detect which the user pasted so both keep working without a mode toggle.
-    public static func isReadAccessToken(_ s: String) -> Bool {
-        s.hasPrefix("eyJ") || s.split(separator: ".").count == 3
-    }
-
-    private func get<T: Decodable>(path: String, query: [URLQueryItem]) async throws -> T {
-        guard isConfigured else { throw HTTPError.missingApiKey }
-        var components = URLComponents(string: "https://api.themoviedb.org/3\(path)")!
-        let useBearer = Self.isReadAccessToken(apiKey)
-        var allQuery = query
-        if !useBearer {
-            allQuery.append(URLQueryItem(name: "api_key", value: apiKey))
-        }
-        components.queryItems = allQuery.isEmpty ? nil : allQuery
-        guard let url = components.url else { throw HTTPError.badURL }
-
-        var request = URLRequest(url: url)
-        if useBearer {
-            request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
-        }
-
-        let (data, resp): (Data, URLResponse)
-        do {
-            (data, resp) = try await session.data(for: request)
-        } catch {
-            throw HTTPError.transport(error)
-        }
-        if let http = resp as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
-            let body = String(data: data, encoding: .utf8)
-            throw HTTPError.status(http.statusCode, body: body)
-        }
-        do {
-            return try JSONDecoder().decode(T.self, from: data)
-        } catch {
-            throw HTTPError.decoding(error)
-        }
-    }
+    public static func isReadAccessToken(_ s: String) -> Bool { TMDBService.isReadAccessToken(s) }
 }

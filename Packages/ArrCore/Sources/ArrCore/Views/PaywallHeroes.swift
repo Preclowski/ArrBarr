@@ -46,11 +46,9 @@ private struct HeroCard<Content: View>: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
-                .strokeBorder(Color.primary.opacity(0.06))
-        )
+        // Glass brings its own rim, so the hand-drawn hairline that used to
+        // sit on the material is gone with it.
+        .glassEffect(.regular, in: .rect(cornerRadius: Tokens.Radius.panel, style: .continuous))
     }
 }
 

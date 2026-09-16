@@ -33,7 +33,7 @@ import Foundation
 ///
 /// Pure `Codable` value type with no side effects — the view model owns the
 /// per-arr notify toggle, banner dispatch, and persistence.
-struct QueueNotificationTracker: Codable, Equatable {
+nonisolated struct QueueNotificationTracker: Codable, Equatable {
     /// Per-arr remembered keys, oldest-first. Keyed by `Source.rawValue` so the
     /// dictionary encodes as a plain keyed JSON object. A missing entry means
     /// "this arr has never had a successful fetch" and drives the silent seed.

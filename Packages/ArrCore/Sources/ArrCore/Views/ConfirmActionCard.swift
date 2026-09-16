@@ -279,10 +279,9 @@ public struct ModalConfirmOverlay: View {
                 onConfirm: onConfirm,
                 onCancel: onCancel
             )
-            .background(
-                RoundedRectangle(cornerRadius: Tokens.Radius.panel, style: .continuous)
-                    .fill(.regularMaterial)
-            )
+            // Real Liquid Glass, not a material: the panel floats over the
+            // list and should refract it, which a blurred grey plate cannot do.
+            .glassEffect(.regular, in: .rect(cornerRadius: Tokens.Radius.panel, style: .continuous))
             .shadow(color: .black.opacity(0.30), radius: 16, y: -2)
             .padding(.horizontal, 14)
             .padding(.bottom, 14)

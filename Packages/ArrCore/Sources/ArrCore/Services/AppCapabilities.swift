@@ -8,7 +8,7 @@ import os
 /// not propagate it to local SwiftPM packages, so `#if APPSTORE` inside ArrCore
 /// is always false. Instead the app target sets `isAppStore` at launch and the
 /// package branches on this runtime value.
-public enum AppCapabilities {
+nonisolated public enum AppCapabilities {
     private static let logger = Logger(category: "AppCapabilities")
 
     /// True in App Store builds. Set once by the app target at launch via
