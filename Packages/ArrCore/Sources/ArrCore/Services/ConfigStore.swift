@@ -143,8 +143,9 @@ public final class ConfigStore: ObservableObject {
     /// By-title queue grouping: off / collapsed (default) / expanded — see
     /// `QueueTitleGroupingMode`. Collapsed vs expanded only sets the default
     /// disclosure state of the groups.
-    @Published public var queueTitleGrouping: QueueTitleGroupingMode = .collapsed
-    @Published public var collapsedArrs: Set<String> = []
+    // `queueTitleGrouping` and `collapsedArrs` moved to `QueueUIState` — an
+    // `@Observable` model, so collapsing a queue section no longer invalidates
+    // every view that observes this store.
     @Published public var tonightHours: Int = 168
     /// How many "This week" rows stay visible without expanding.
     /// 0 = all (no Show more/less at all).
@@ -181,8 +182,8 @@ public final class ConfigStore: ObservableObject {
     /// Bearer token for the MCP server. Backed by the Keychain (the secret never
     /// lives in UserDefaults); this property mirrors it for the Settings UI.
     @Published public var mcpAuthToken: String = MCPTokenStore.read() ?? ""
-    /// Live server status, pushed in by the app (`MCPServerController`). Not persisted.
-    @Published public var mcpServerStatus: MCPServerStatus = .stopped
+    // Live server status moved to `MCPServerStatusModel` — see that file for
+    // why a lifecycle push should not invalidate every observer of this store.
     /// Tool names the user has switched OFF. Empty = every catalog tool is
     /// exposed (the sensible default), so we only have to store the opt-outs.
     @Published public var mcpDisabledTools: Set<String> = []
@@ -333,8 +334,6 @@ public final class ConfigStore: ObservableObject {
     private static let arrOrderKey = "ArrBarr.arrOrder"
     private static let showTonightKey = "ArrBarr.showTonight"
     private static let showNeedsYouKey = "ArrBarr.showNeedsYou"
-    private static let queueTitleGroupingKey = "ArrBarr.queueTitleGrouping"
-    private static let collapsedArrsKey = "ArrBarr.collapsedArrs"
     private static let tonightHoursKey = "ArrBarr.tonightHours"
     private static let tonightVisibleCountKey = "ArrBarr.tonightVisibleCount"
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
@@ -495,10 +494,6 @@ public final class ConfigStore: ObservableObject {
         self.showWarnings = false
         self.appearance = "system"
         #endif
-        self.queueTitleGrouping = QueueTitleGroupingMode(
-            rawValue: defaults.string(forKey: Self.queueTitleGroupingKey) ?? ""
-        ) ?? .collapsed
-        self.collapsedArrs = Set(defaults.stringArray(forKey: Self.collapsedArrsKey) ?? [])
         // Hard-coded to 7 days (168h). Old stored values from when the
         // picker was UI-exposed are ignored — users get the new
         // default regardless.
@@ -611,12 +606,6 @@ public final class ConfigStore: ObservableObject {
         $showWarnings.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
         }.store(in: &cancellables)
-        $queueTitleGrouping.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val.rawValue, forKey: Self.queueTitleGroupingKey)
-        }.store(in: &cancellables)
-        $collapsedArrs.dropFirst().sink { [weak self] val in
-            self?.defaults.set(Array(val), forKey: Self.collapsedArrsKey)
-        }.store(in: &cancellables)
         $tonightHours.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.tonightHoursKey)
         }.store(in: &cancellables)
@@ -728,6 +717,9 @@ public final class ConfigStore: ObservableObject {
         secrets = Self.makeDefaultSecretStore(defaults: target)
         applyValues(from: target)
         setupSinks()
+        // The queue's own state follows the suite too — otherwise the demo
+        // toggle leaves it reading the real profile.
+        QueueUIState.shared.use(target)
     }
 
     /// Reload all published values from the current backing store without
@@ -839,20 +831,6 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
-    public func toggleCollapsed(_ key: String) {
-        if collapsedArrs.contains(key) {
-            collapsedArrs.remove(key)
-        } else {
-            collapsedArrs.insert(key)
-        }
-    }
-
-    public func isCollapsed(_ key: String) -> Bool {
-        collapsedArrs.contains(key)
-    }
-
-    public func toggleCollapsed(_ arr: QueueItem.Source) { toggleCollapsed(arr.rawValue) }
-    public func isCollapsed(_ arr: QueueItem.Source) -> Bool { isCollapsed(arr.rawValue) }
 
     public func update(_ kind: ServiceKind, with config: ServiceConfig) {
         switch kind {

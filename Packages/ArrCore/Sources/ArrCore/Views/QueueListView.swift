@@ -15,6 +15,11 @@ import AppKit  // NSEvent.modifierFlags — ⌘-click detection on macOS.
 struct QueueListView: View {
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
+    /// The queue's own view state. Read straight off the shared model rather
+    /// than through the environment: it is a singleton either way, and this
+    /// keeps the widget / hosting-view boundaries that already re-inject
+    /// `configStore` by hand out of it.
+    private var queueUI: QueueUIState { .shared }
 
     let onShowDetail: (QueueItem) -> Void
     /// macOS opens the arr's queue page in the browser; iOS (nil) drills into
@@ -511,7 +516,7 @@ struct QueueListView: View {
         // problem. The two get different chrome below.
         let isUnreachable = viewModel.lastUnreachable.contains(source)
         // Offline sections stay collapsible (chevron + tap), unlike a genuine error.
-        let collapsed = (arrError == nil || isUnreachable) && configStore.isCollapsed(source)
+        let collapsed = (arrError == nil || isUnreachable) && queueUI.isCollapsed(source)
         // Header + rows as plain List rows (no Section wrapper). Same inset and
         // mechanism as the Needs-you / Next-week headers → chevrons line up.
         sectionHeader(source, error: arrError, isUnreachable: isUnreachable, collapsed: collapsed)
@@ -710,7 +715,7 @@ struct QueueListView: View {
             showChevron: error == nil || isUnreachable,
             onToggle: {
                 guard error == nil || isUnreachable else { return }
-                withAnimation(.smooth(duration: 0.22)) { configStore.toggleCollapsed(source) }
+                withAnimation(.smooth(duration: 0.22)) { queueUI.toggleCollapsed(source) }
             }
         ) {
             if isUnreachable {
@@ -738,13 +743,13 @@ struct QueueListView: View {
     /// header chevron lines up with the others.
     @ViewBuilder
     private func needsYouSection() -> some View {
-        let collapsed = configStore.isCollapsed(ConfigStore.needsYouOrderKey)
+        let collapsed = queueUI.isCollapsed(ConfigStore.needsYouOrderKey)
         NeedsYouHeader(
             count: viewModel.needsYou.count,
             isCollapsed: collapsed,
             onToggle: {
                 withAnimation(.smooth(duration: 0.22)) {
-                    configStore.toggleCollapsed(ConfigStore.needsYouOrderKey)
+                    queueUI.toggleCollapsed(ConfigStore.needsYouOrderKey)
                 }
             }
         )
@@ -781,7 +786,7 @@ struct QueueListView: View {
         let limit = configStore.tonightVisibleCount
         let visible = (viewModel.tonightExpanded || limit == 0) ? items : Array(items.prefix(limit))
         let overflow = items.count - visible.count
-        let collapsed = configStore.isCollapsed(ConfigStore.tonightOrderKey)
+        let collapsed = queueUI.isCollapsed(ConfigStore.tonightOrderKey)
         QueueHeaderRow(
             icon: AnyView(
                 Image(systemName: "calendar")
@@ -792,7 +797,7 @@ struct QueueListView: View {
             collapsed: collapsed,
             onToggle: {
                 withAnimation(.smooth(duration: 0.22)) {
-                    configStore.toggleCollapsed(ConfigStore.tonightOrderKey)
+                    queueUI.toggleCollapsed(ConfigStore.tonightOrderKey)
                 }
             }
         )
@@ -1009,7 +1014,7 @@ struct QueueListView: View {
     /// (`queueTitleGrouping` setting; `off` keeps the flat list).
     private func displayRows(for source: QueueItem.Source) -> [QueueDisplayRow] {
         let base = entries(for: source)
-        guard configStore.queueTitleGrouping != .off else {
+        guard queueUI.queueTitleGrouping != .off else {
             return base.map { .entry($0) }
         }
         return QueueGrouping.groupByTitle(base)
@@ -1017,7 +1022,7 @@ struct QueueListView: View {
 
     /// Disclosure state = the mode's default XOR "user toggled this one".
     private func isGroupExpanded(_ group: QueueTitleGroup) -> Bool {
-        let defaultExpanded = configStore.queueTitleGrouping == .expanded
+        let defaultExpanded = queueUI.queueTitleGrouping == .expanded
         return toggledTitleGroups.contains(group.id) ? !defaultExpanded : defaultExpanded
     }
 

@@ -217,7 +217,14 @@ extension KVSyncCoordinator {
         let coord = KVSyncCoordinator(
             defaults: group,
             kv: NSUbiquitousKeyValueStore.default,
-            reload: { ConfigStore.shared.reloadFromDefaults() })
+            reload: {
+                ConfigStore.shared.reloadFromDefaults()
+                // The queue's two settings are on the allow-list but no longer
+                // live on ConfigStore — without this an inbound iCloud change
+                // to grouping or collapse state sat in the suite unread until
+                // the next launch.
+                QueueUIState.shared.reloadFromDefaults()
+            })
         _shared = coord
         if KeychainSecretStore.syncEnabled(in: group) {
             coord.start()

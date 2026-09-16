@@ -219,7 +219,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func wireMCPServer() {
         Task {
             await mcpController.setStatusHandler { [weak self] status in
-                Task { @MainActor in self?.configStore.mcpServerStatus = MCPServerStatus(status) }
+                Task { @MainActor in MCPServerStatusModel.shared.status = MCPServerStatus(status) }
             }
         }
         let cs = configStore
