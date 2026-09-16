@@ -256,10 +256,12 @@ public final class QueueViewModel {
             startBackgroundPolling()
             startAuxiliaryPolling()
 
-            // Registered here, not in the task below: the subscription must exist before the first import can land.
-            bootstrapCalendarInvalidation()
+            // Both run off `init`, never inside it. Reaching `configStore.gateway` from the initializer of a
+            // `static let` forces the gateway's lazy var while this view-model is still being created, and the app
+            // came up with no configured instances at all — no queue, no calendar, nothing fetched.
             Task { [weak self] in
                 await self?.bootstrapRealtime()
+                self?.bootstrapCalendarInvalidation()
             }
         }
 
@@ -379,7 +381,7 @@ public final class QueueViewModel {
     func bootstrapCalendarInvalidation() {
         let calendarTags = Set(QueueItem.Source.allCases.map { InvalidationTag.collection(.calendar, $0.instanceID) })
         // `addObserver` registers before it returns, unlike an `AsyncSequence` that only subscribes once its task
-        // runs — an invalidation arriving in that gap would be dropped, which is the whole bug this watches for.
+        // runs, so no invalidation slips through between the call and the first iteration.
         invalidationObserver = NotificationCenter.default.addObserver(
             of: configStore.gateway.kit.subject, for: Invalidated.self
         ) { [weak self] message in
