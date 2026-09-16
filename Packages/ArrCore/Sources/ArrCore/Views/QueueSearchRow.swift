@@ -30,11 +30,13 @@ public struct QueueSearchRow: View {
             // Arr identity + "In queue" status badge — section
             // headers were dropped, so each row carries its own
             // disposition signal directly in the title slot.
-            titleBadge: AnyView(HStack(spacing: 4) {
-                SourceGlyphChip(source: item.source)
-                InQueueBadge()
-            }),
-            onTap: onTap
+            onTap: onTap,
+            titleBadge: {
+                HStack(spacing: 4) {
+                    SourceGlyphChip(source: item.source)
+                    InQueueBadge()
+                }
+            }
         ) {
             Text(QueueSearchStatusLabel.label(for: item))
                 .scaledFont(size: 11, weight: .medium)

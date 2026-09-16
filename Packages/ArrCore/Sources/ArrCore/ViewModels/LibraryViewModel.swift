@@ -122,6 +122,23 @@ public final class LibraryViewModel {
     /// very body that is running.
     @ObservationIgnored private var sortCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
 
+    /// Filtered views and per-filter counts, memoized on the same terms as
+    /// `sortCache` and cleared with it. Both used to be recomputed inside
+    /// `body`: the status-filter counts walk EVERY entry once per filter (three
+    /// passes over ~3k records) and the visible list copies a filtered array of
+    /// them — cheap once, but the filter strip lives in the grid's safe area,
+    /// so it re-evaluates while the grid scrolls and that work landed on the
+    /// scrolling frames.
+    @ObservationIgnored private var filterCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
+    @ObservationIgnored private var countCache: [QueueItem.Source: [String: Int]] = [:]
+
+    /// Where the grid was scrolled to, per source — the id of the top-most
+    /// visible tile. Lives here because the tab view is torn down on every tab
+    /// switch, and `@ObservationIgnored` because the scroll view writes it on
+    /// every frame of a drag: an observed write there would invalidate the grid
+    /// it is scrolling.
+    @ObservationIgnored public var gridAnchor: [QueueItem.Source: LibraryEntry.ID] = [:]
+
     /// The `LibraryIndex` version each source's `entries` were unified from.
     /// The grid is a PROJECTION of the index, not a second cache: it re-unifies
     /// when — and only when — the index says its records changed. The old
@@ -142,6 +159,33 @@ public final class LibraryViewModel {
         if let hit = sortCache[source]?[cacheKey] { return hit }
         let out = (entries[source] ?? []).sorted(by: comparator)
         sortCache[source, default: [:]][cacheKey] = out
+        return out
+    }
+
+    /// `sorted` narrowed to one status filter, memoized per (source, key).
+    /// `cacheKey` must identify sort axis AND filter together.
+    public func visible(
+        _ source: QueueItem.Source,
+        cacheKey: String,
+        from sorted: [LibraryEntry],
+        where predicate: (LibraryEntry) -> Bool
+    ) -> [LibraryEntry] {
+        if let hit = filterCache[source]?[cacheKey] { return hit }
+        let out = sorted.filter(predicate)
+        filterCache[source, default: [:]][cacheKey] = out
+        return out
+    }
+
+    /// How many of `base` match one filter, memoized per (source, key).
+    public func count(
+        _ source: QueueItem.Source,
+        cacheKey: String,
+        over base: [LibraryEntry],
+        where predicate: (LibraryEntry) -> Bool
+    ) -> Int {
+        if let hit = countCache[source]?[cacheKey] { return hit }
+        let out = base.count(where: predicate)
+        countCache[source, default: [:]][cacheKey] = out
         return out
     }
 
@@ -214,6 +258,8 @@ public final class LibraryViewModel {
         // The default axis arrives already sorted, so the first Library visit
         // after a fetch renders without paying the sort inside body.
         sortCache[source] = ["title": projection.byTitle]
+        filterCache[source] = nil
+        countCache[source] = nil
         indexVersions[source] = await LibraryIndex.shared.version(for: source)
         Self.logAliasCoverage(projection.entries, source: source)
     }

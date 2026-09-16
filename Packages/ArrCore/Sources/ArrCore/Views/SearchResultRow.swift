@@ -45,8 +45,8 @@ public struct SearchResultRow: View {
             // library tag lives on the trailing edge with the other
             // ownership affordances — same placement as the queue /
             // upcoming rows, so every surface reads the same way.
-            titleBadge: AnyView(SourceGlyphChip(source: result.source)),
-            onTap: onTap
+            onTap: onTap,
+            titleBadge: { SourceGlyphChip(source: result.source) }
         ) {
             // Trailing edge carries only the ownership badge. The drill-in
             // affordance is the title chevron PosterMetadataRow already

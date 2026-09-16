@@ -174,9 +174,10 @@ public struct HistoryView: View {
 
     private func sectionTitle(_ bucket: HistoryItem.TimeBucket) -> String {
         let locale = configStore.currentLocale
-        let formatter = RelativeDateTimeFormatter()
-        formatter.locale = locale
-        formatter.unitsStyle = .full
+        // Shared, not built here: this runs per section header per body pass —
+        // i.e. while the list scrolls — and a formatter costs far more to
+        // allocate and configure than to use.
+        let formatter = CachedDateFormatters.relative(.full, locale: locale)
         switch bucket {
         case .hours(0): return AppLocalized.string("history.bucket.lastHour", locale: locale)
         case .hours(let hours): return formatter.localizedString(from: DateComponents(hour: -hours))
