@@ -11,17 +11,20 @@ import Foundation
 @MainActor
 struct QueueUIStateTests {
 
-    private func suite(_ name: String) -> UserDefaults {
-        let defaults = UserDefaults(suiteName: name)!
-        defaults.removePersistentDomain(forName: name)
-        return defaults
+    /// The house pattern (see `ConfigStoreTests`): a suite nobody else can
+    /// name, torn down in a `defer`. Wiping a FIXED domain up front — the first
+    /// version of this file — flushes cfprefsd for the whole process and was
+    /// enough to push the suite's timing-sensitive network tests over their
+    /// timeouts when they ran alongside.
+    private func makeDefaults() -> (UserDefaults, String) {
+        let name = "ArrBarrTests.\(UUID().uuidString)"
+        return (UserDefaults(suiteName: name)!, name)
     }
 
     @Test("Writes land on the same keys ConfigStore used")
     func writesUseTheSharedKeys() {
-        let name = "pl.incred.ArrBarr.tests.queueui.write"
-        let defaults = suite(name)
-        defer { defaults.removePersistentDomain(forName: name) }
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let state = QueueUIState(defaults: defaults)
         state.queueTitleGrouping = .expanded
@@ -33,9 +36,8 @@ struct QueueUIStateTests {
 
     @Test("A fresh instance reads what the previous one wrote")
     func roundTrips() {
-        let name = "pl.incred.ArrBarr.tests.queueui.roundtrip"
-        let defaults = suite(name)
-        defer { defaults.removePersistentDomain(forName: name) }
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let first = QueueUIState(defaults: defaults)
         first.queueTitleGrouping = .off
@@ -48,9 +50,8 @@ struct QueueUIStateTests {
 
     @Test("An inbound iCloud change is picked up by a reload")
     func reloadPicksUpExternalWrites() {
-        let name = "pl.incred.ArrBarr.tests.queueui.inbound"
-        let defaults = suite(name)
-        defer { defaults.removePersistentDomain(forName: name) }
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let state = QueueUIState(defaults: defaults)
         #expect(state.queueTitleGrouping == .collapsed)
@@ -66,17 +67,17 @@ struct QueueUIStateTests {
 
     @Test("A reload writes nothing back")
     func reloadDoesNotPersist() {
-        let name = "pl.incred.ArrBarr.tests.queueui.echo"
-        let defaults = suite(name)
-        defer { defaults.removePersistentDomain(forName: name) }
+        let (defaults, name) = makeDefaults()
+        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
 
         let state = QueueUIState(defaults: defaults)
         state.queueTitleGrouping = .expanded
-        // Clear the suite behind its back, then reload: the values reset to
+        // Clear the keys behind its back, then reload: the values reset to
         // their defaults, and a setter that persisted during a load would put
-        // the keys straight back — which through UserDefaults.didChangeNotification
+        // them straight back — which through UserDefaults.didChangeNotification
         // is an iCloud push echoing a change that came from iCloud.
-        defaults.removePersistentDomain(forName: name)
+        defaults.removeObject(forKey: "ArrBarr.queueTitleGrouping")
+        defaults.removeObject(forKey: "ArrBarr.collapsedArrs")
         state.reloadFromDefaults()
 
         #expect(state.queueTitleGrouping == .collapsed)
