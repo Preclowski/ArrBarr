@@ -57,9 +57,17 @@ public struct ChatView: View {
 
     @State private var clearHovered: Bool = false
 
-    /// Height the floating input bar (plus its padding, and the confirm card's
-    /// share) takes out of the surface. Both scroll branches reserve it.
+    /// Height the floating input bar takes out of the surface — it is a sibling
+    /// of the content, not a safe-area inset, so the content keeps clear of it
+    /// itself.
+    ///
+    /// The conversation reserves more than the bar measures: a confirm card can
+    /// appear above it, and the newest bubble must still land clear after
+    /// autoscroll. The empty state can't be gated by a tool call and has
+    /// nothing to autoscroll, so it reserves the bar and a margin — the 20pt
+    /// difference is a whole suggestion row.
     private static let inputBarReservation: CGFloat = 84
+    private static let emptyStateReservation: CGFloat = 64
 
     /// Two surfaces, not two branches inside one scroll view: a conversation
     /// scrolls, the empty state fits. `ViewThatFits` in the empty state can
@@ -106,7 +114,7 @@ public struct ChatView: View {
         // of this view rather than a safe-area inset. The empty
         // state fits itself into what is left (it has no scroll to
         // fall back on).
-        .padding(.bottom, Self.inputBarReservation)
+        .padding(.bottom, Self.emptyStateReservation)
         // Sample a few library posters for the Quiz deck on first
         // appearance; cached process-wide so re-entry is instant.
         .task {
