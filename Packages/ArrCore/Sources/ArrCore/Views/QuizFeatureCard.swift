@@ -94,6 +94,12 @@ public struct QuizFeatureCard: View {
                     Text("onboarding.swipeThroughPicksAdd.tooltip", bundle: .module)
                         .font(.system(size: 12.5))
                         .foregroundStyle(.secondary)
+                        // Keep the wrapped height: squeezed for space (a short
+                        // panel, the keyboard up) SwiftUI would rather truncate
+                        // this to one line than let the layout drop a
+                        // suggestion row, and a cut-off sentence is the worse
+                        // way to save 16pt.
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)
             }

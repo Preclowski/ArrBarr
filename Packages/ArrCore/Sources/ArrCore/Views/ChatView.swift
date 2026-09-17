@@ -61,49 +61,65 @@ public struct ChatView: View {
     /// share) takes out of the surface. Both scroll branches reserve it.
     private static let inputBarReservation: CGFloat = 84
 
+    /// Two surfaces, not two branches inside one scroll view: a conversation
+    /// scrolls, the empty state fits. `ViewThatFits` in the empty state can
+    /// only do its job when something proposes a real height to it, and a
+    /// ScrollView proposes infinity.
+    @ViewBuilder
     private var messages: some View {
+        if viewModel.messages.isEmpty && !viewModel.isThinking {
+            emptyState
+        } else {
+            conversation
+        }
+    }
+
+    private var emptyState: some View {
+        ChatEmptyStateView(
+            quizPosterURLs: quizPosterURLs,
+            locale: configStore.currentLocale,
+            onQuizStart: { kind, variant in
+                // Synthesised chat message that the LLM routes
+                // through `discover_in_quiz`. We name a SINGLE
+                // kind so the model opens one deck (it used to
+                // fire a movie session *and* a series session
+                // when the prompt said "movies and shows") and
+                // ask for a dozen-plus so the deck isn't thin.
+                // The variant only changes which pool the message
+                // asks for — the deck it opens is the same one.
+                //
+                // Resolve in the *in-app* language, not the process
+                // language — otherwise the sent message stays in the
+                // pre-switch language and the model answers the whole
+                // turn in it (see AppLocalized).
+                let prompt = AppLocalized.string(variant.promptKey(for: kind),
+                                                 locale: configStore.currentLocale)
+                Task { await viewModel.send(prompt) }
+            },
+            onSuggestionTap: { prompt in
+                draft = ""
+                Task { await viewModel.send(prompt) }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Clearance for the floating input bar, which is a sibling
+        // of this view rather than a safe-area inset. The empty
+        // state fits itself into what is left (it has no scroll to
+        // fall back on).
+        .padding(.bottom, Self.inputBarReservation)
+        // Sample a few library posters for the Quiz deck on first
+        // appearance; cached process-wide so re-entry is instant.
+        .task {
+            if quizPosterURLs.isEmpty {
+                quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
+            }
+        }
+    }
+
+    private var conversation: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if viewModel.messages.isEmpty && !viewModel.isThinking {
-                    ChatEmptyStateView(
-                        quizPosterURLs: quizPosterURLs,
-                        locale: configStore.currentLocale,
-                        onQuizStart: { kind, variant in
-                            // Synthesised chat message that the LLM routes
-                            // through `discover_in_quiz`. We name a SINGLE
-                            // kind so the model opens one deck (it used to
-                            // fire a movie session *and* a series session
-                            // when the prompt said "movies and shows") and
-                            // ask for a dozen-plus so the deck isn't thin.
-                            // The variant only changes which pool the message
-                            // asks for — the deck it opens is the same one.
-                            //
-                            // Resolve in the *in-app* language, not the process
-                            // language — otherwise the sent message stays in the
-                            // pre-switch language and the model answers the whole
-                            // turn in it (see AppLocalized).
-                            let prompt = AppLocalized.string(variant.promptKey(for: kind),
-                                                             locale: configStore.currentLocale)
-                            Task { await viewModel.send(prompt) }
-                        },
-                        onSuggestionTap: { prompt in
-                            draft = ""
-                            Task { await viewModel.send(prompt) }
-                        }
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 380)
-                    // The empty state needs the same clearance as the message
-                    // list: without it the last suggestion sits behind the
-                    // floating input bar.
-                    .padding(.bottom, Self.inputBarReservation)
-                    // Sample a few library posters for the Quiz deck on first
-                    // appearance; cached process-wide so re-entry is instant.
-                    .task {
-                        if quizPosterURLs.isEmpty {
-                            quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
-                        }
-                    }
-                } else {
+                Group {
                     // One person, one card per answer — see ChatPersonCardDedupe.
                     // Computed over the whole history rather than stored on the
                     // messages, because which card wins depends on tool calls

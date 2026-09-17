@@ -61,6 +61,8 @@ public struct ChatEmptyStateView: View {
     /// Which slot changes next — walking down the list rather than picking at
     /// random, so two neighbouring rows never swap in the same beat.
     @State private var nextSlot = 0
+    /// How many rows the fitted layout actually placed (see `suggestions`).
+    @State private var shownCount = visibleCount
     /// Rotation is motion for its own sake; anyone who has asked the system to
     /// stop that gets the first five and silence.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -78,23 +80,27 @@ public struct ChatEmptyStateView: View {
     }
 
     public var body: some View {
-        // No ScrollView of its own: the host's one already scrolls this, and a
-        // nested pair can't be told where the floating input bar ends — which
-        // is how the last suggestion came to sit behind it.
+        // Nothing here scrolls: the surface is a fixed panel, and a scroll bar
+        // under a five-item list reads as a mistake. What gives instead is the
+        // number of suggestions — `ViewThatFits` drops the ones there is no
+        // room for (see `suggestions`), so a short panel shows three and a tall
+        // one shows five, and neither has anything hidden below an edge.
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("chat.whatToWatchTonight.tooltip", bundle: .module)
                     .font(.system(size: 22, weight: .semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("chat.quizATipOr.tooltip", bundle: .module)
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(.top, 24)
+            .padding(.top, 20)
             .padding(.horizontal, 24)
 
             QuizFeatureCard(posterURLs: quizPosterURLs, onStart: onQuizStart)
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 16)
 
             HStack(spacing: 12) {
                 Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
@@ -105,30 +111,56 @@ public struct ChatEmptyStateView: View {
                 Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
             }
             .padding(.horizontal, 24)
-            .padding(.top, 28)
+            .padding(.top, 20)
 
-            VStack(spacing: 10) {
-                ForEach(visibleKeys, id: \.self) { key in
-                    SuggestionPromptRow(LocalizedStringKey(key)) {
-                        // Send the prompt in the in-app language so it
-                        // matches the chip's (env-locale) label — not the
-                        // process language, which lags until relaunch.
-                        onSuggestionTap(AppLocalized.string(key, locale: locale))
-                    }
-                    // Keyed by the suggestion, so a slot that changes is an
-                    // insertion and a removal SwiftUI can cross-fade —
-                    // without it the row is "the same view with new text"
-                    // and the label just pops.
-                    .id(key)
-                    .transition(.opacity.combined(with: .offset(y: 6)))
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
-            .padding(.bottom, 24)
-            .task { await rotate() }
+            suggestions
+
+            Spacer(minLength: 0)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .onAppear(perform: seed)
+        .task { await rotate() }
+    }
+
+    /// As many suggestions as the panel can actually show. The candidates are
+    /// measured for real, so a wrapped two-line row in German counts double
+    /// exactly as it should — which is why this isn't arithmetic over an
+    /// assumed row height.
+    @ViewBuilder
+    private var suggestions: some View {
+        ViewThatFits(in: .vertical) {
+            suggestionStack(5)
+            suggestionStack(4)
+            suggestionStack(3)
+            suggestionStack(2)
+            suggestionStack(1)
+        }
+    }
+
+    private func suggestionStack(_ count: Int) -> some View {
+        VStack(spacing: 10) {
+            ForEach(visibleKeys.prefix(count), id: \.self) { key in
+                SuggestionPromptRow(LocalizedStringKey(key)) {
+                    // Send the prompt in the in-app language so it
+                    // matches the chip's (env-locale) label — not the
+                    // process language, which lags until relaunch.
+                    onSuggestionTap(AppLocalized.string(key, locale: locale))
+                }
+                // Keyed by the suggestion, so a slot that changes is an
+                // insertion and a removal SwiftUI can cross-fade —
+                // without it the row is "the same view with new text"
+                // and the label just pops.
+                .id(key)
+                .transition(.opacity.combined(with: .offset(y: 6)))
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 16)
+        // Only the candidate that fits is ever placed, so this is the honest
+        // answer to "how many are on screen" — and the rotation needs it, or a
+        // beat lands on a row nobody can see.
+        .onAppear { shownCount = count }
     }
 
     /// Start from a different five each time the empty state is built —
@@ -148,10 +180,11 @@ public struct ChatEmptyStateView: View {
             guard !Task.isCancelled else { return }
             let onScreen = Set(visibleKeys)
             guard let incoming = Self.suggestionPool.filter({ !onScreen.contains($0) }).randomElement() else { return }
+            let slot = nextSlot % max(1, shownCount)
             withAnimation(.smooth(duration: 0.45)) {
-                visibleKeys[nextSlot] = incoming
+                visibleKeys[slot] = incoming
             }
-            nextSlot = (nextSlot + 1) % visibleKeys.count
+            nextSlot = (slot + 1) % max(1, shownCount)
         }
     }
 }
