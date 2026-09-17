@@ -2,7 +2,9 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-@Suite("DiscoverViewModel")
+// Serialised: the view models listen on the shared message bus now, so a test
+// that posts a quiz round would otherwise seed a neighbouring test's deck.
+@Suite("DiscoverViewModel", .serialized)
 @MainActor
 struct DiscoverViewModelTests {
 
@@ -11,6 +13,17 @@ struct DiscoverViewModelTests {
     private func freshVM() -> DiscoverViewModel {
         let suite = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
         return DiscoverViewModel(defaults: suite)
+    }
+
+    /// Polls for an asynchronously delivered message rather than sleeping a
+    /// fixed amount for it.
+    private func waitUntil(_ condition: () -> Bool, within: Duration = .seconds(2)) async throws {
+        let deadline = ContinuousClock.now + within
+        while ContinuousClock.now < deadline {
+            if condition() { return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        Issue.record("condition never became true")
     }
 
     private func makeItem(_ id: Int, _ origin: DiscoverItem.Origin) -> DiscoverItem {
@@ -190,5 +203,70 @@ struct DiscoverViewModelTests {
         let split = LocalToolBackend.splitAlreadyShown(round, shown: shown)
         #expect(split.fresh.map(\.dedupKey) == ["tmdb:3"])
         #expect(split.dropped.map(\.dedupKey) == ["tmdb:1", "tmdb:2"])
+    }
+
+    // MARK: - The deck is seeded by the message, not by a mounted surface
+
+    @Test("A quiz message seeds the deck with no surface listening")
+    func quizMessageSeedsTheDeckWithoutASurface() async throws {
+        // The regression: the host's `.onMessage` observer lives on a `.task`
+        // that the menu-bar panel tears down and restarts constantly, and an
+        // AsyncMessage posted into that gap is gone for good — the tool
+        // reported "opened the quiz with N picks" and the deck was never
+        // seeded. The view model listens for itself now, for the life of the
+        // process, so no surface has to be on screen at the right moment.
+        let vm = freshVM()
+        try await Task.sleep(for: .milliseconds(150))   // let the observer attach
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(
+            mood: "rainy", items: [makeItem(1, .llm), makeItem(2, .llm)], append: false))
+        try await waitUntil { vm.current != nil }
+
+        #expect(vm.current?.dedupKey == "tmdb:1")
+        #expect(vm.sessionTotal == 2)
+        #expect(vm.moodText == "rainy")
+        #expect(vm.isPresented, "the deck seeds AND asks to be shown")
+    }
+
+    @Test("Resuming with no picks reopens the live deck instead of wiping it")
+    func resumeWithoutPicksKeepsTheDeck() async throws {
+        // `QuizResumeCard` posts an empty, appending message purely to reopen
+        // the overlay. That used to miss `append && hasActiveSession` whenever
+        // the session had gone quiet and fall into `seed(items: [])`, which
+        // reset the deck — the user tapped "back to the quiz" and landed on an
+        // empty one.
+        let vm = freshVM()
+        vm.seed(items: [makeItem(1, .llm), makeItem(2, .llm)], mood: "rainy")
+        vm.isPresented = false
+
+        vm.open(mood: "rainy", items: [], append: true)
+
+        #expect(vm.current?.dedupKey == "tmdb:1")
+        #expect(vm.sessionTotal == 2)
+        #expect(vm.isPresented)
+    }
+
+    @Test("An empty message never resets a session, even without the append flag")
+    func emptyMessageNeverResetsTheSession() {
+        let vm = freshVM()
+        vm.seed(items: [makeItem(1, .llm)], mood: "rainy")
+        vm.open(mood: "something else", items: [], append: false)
+        #expect(vm.current?.dedupKey == "tmdb:1")
+        #expect(vm.moodText == "rainy")
+    }
+
+    @Test("An appended round extends a live session and replaces a dead one")
+    func appendExtendsLiveSessionAndReplacesDeadOne() {
+        let vm = freshVM()
+        vm.seed(items: [makeItem(1, .llm)], mood: "rainy")
+        vm.open(mood: "rainy", items: [makeItem(2, .llm)], append: true)
+        #expect(vm.sessionTotal == 2)
+        #expect(vm.queue.map(\.dedupKey) == ["tmdb:2"])
+
+        // Nothing swiped, nothing in the deck: an "append" from a model that
+        // lost track of the session is a new session, not an extension.
+        let cold = freshVM()
+        cold.open(mood: "loud", items: [makeItem(3, .llm)], append: true)
+        #expect(cold.current?.dedupKey == "tmdb:3")
+        #expect(cold.sessionTotal == 1)
     }
 }

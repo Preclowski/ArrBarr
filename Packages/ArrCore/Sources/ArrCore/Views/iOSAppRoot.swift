@@ -32,7 +32,6 @@ public struct iOSAppRoot: View {
     /// the same place `PopoverContentView` keeps them on macOS.
     @State private var chatHolder = ChatViewModelHolder()
     @State private var discoverViewModel = DiscoverViewModel.shared
-    @State private var showDiscoverOverlay = false
     @State private var quizAddResult: SearchResult?
     /// Which tab is on screen. `AppMessages.OpenDetail` is posted by surfaces that
     /// live in several stacks at once (library tiles, chat cards, Spotlight), and
@@ -143,25 +142,13 @@ public struct iOSAppRoot: View {
         .onChange(of: selectedTab) { _, _ in
             if !searchVM.isActive { searchPresented = false }
         }
-        // The `discover_in_quiz` chat tool and the resume card; `append` extends a live deck instead of replacing it.
-        .onMessage(AppMessages.OpenDiscoverQuiz.self) { message in
-            let (mood, items, append) = (message.mood, message.items, message.append)
-            let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
-                || !discoverViewModel.sessionSkipped.isEmpty
-                || discoverViewModel.current != nil
-                || !discoverViewModel.queue.isEmpty
-            if append && hasActiveSession {
-                discoverViewModel.extend(items: items)
-            } else {
-                discoverViewModel.seed(items: items, mood: mood)
-            }
-            showDiscoverOverlay = true
-        }
         // Swiping a not-in-library pick right asks for the add panel. macOS
         // hosts it in the popover; without this the whole "add" half of the
         // quiz — and chat's "add this missing title" cards — did nothing here.
         .onMessage(AppMessages.OpenSearchAdd.self) { quizAddResult = $0.result }
-        .fullScreenCover(isPresented: $showDiscoverOverlay) {
+        // The deck decides when it is on screen (`DiscoverViewModel.open`) —
+        // seeded by the `discover_in_quiz` tool or the chat resume card.
+        .fullScreenCover(isPresented: $discoverViewModel.isPresented) {
             DiscoverTabView(
                 viewModel: discoverViewModel,
                 llmAvailable: configStore.aiConfigured,
@@ -170,7 +157,7 @@ public struct iOSAppRoot: View {
                 // flag is what the deck should wait on.
                 moreInFlight: chatHolder.vm.isThinking,
                 isObscured: quizAddResult != nil,
-                onClose: { showDiscoverOverlay = false },
+                onClose: { discoverViewModel.isPresented = false },
                 onRequestMore: { _, _, _ in requestMoreQuizPicks() }
             )
             .environmentObject(configStore)
@@ -204,7 +191,7 @@ public struct iOSAppRoot: View {
         // steals it from the first — which is what blanked the picture on
         // rotation. While the deck is up, the deck's copy owns the clip.
         .trailerOverlay(key: Binding(
-            get: { showDiscoverOverlay ? nil : trailerSession.key },
+            get: { discoverViewModel.isPresented ? nil : trailerSession.key },
             set: { newValue in
                 if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
             }

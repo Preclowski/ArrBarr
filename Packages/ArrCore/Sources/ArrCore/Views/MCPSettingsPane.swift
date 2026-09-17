@@ -8,7 +8,7 @@ import AppKit
 /// Presents the MCP server config — enable, bind `host:port`, bearer-token auth,
 /// live status, and a per-tool opt-out list grouped by service. Controls are
 /// wired to `ConfigStore`; on macOS the app's `MCPServerController` starts/stops
-/// the real server in response and pushes status back into `mcpServerStatus`.
+/// the real server in response and pushes status into `MCPServerStatusModel`.
 struct MCPSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
 
@@ -61,7 +61,7 @@ struct MCPSettingsPane: View {
     // MARK: - Status
 
     @ViewBuilder private var statusRow: some View {
-        switch configStore.mcpServerStatus {
+        switch MCPServerStatusModel.shared.status {
         case .stopped:
             Label { Text("settings.stopped.button", bundle: .module) }
             icon: { Circle().fill(.gray).frame(width: 8, height: 8) }

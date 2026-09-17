@@ -19,6 +19,9 @@ public struct SettingsView: View {
     }
 
     @EnvironmentObject var configStore: ConfigStore
+    /// `@Bindable`: the queue's state is `@Observable`, so a binding comes
+    /// from here rather than from a `$`-projection on the store.
+    @Bindable var queueUI = QueueUIState.shared
     @ObservedObject private var storeManager = StoreManager.shared
     @State private var demoModeOn: Bool = DemoMode.isActive
     @State private var telemetryReport: String?
@@ -1175,7 +1178,7 @@ public struct SettingsView: View {
     /// bundle a title's ≥2 downloads under a collapsible header.
     private var queueGroupingSection: some View {
         Section {
-            Picker(selection: $configStore.queueTitleGrouping) {
+            Picker(selection: $queueUI.queueTitleGrouping) {
                 Text("settings.queueGrouping.off.option", bundle: .module)
                     .tag(QueueTitleGroupingMode.off)
                 Text("settings.queueGrouping.collapsed.option", bundle: .module)

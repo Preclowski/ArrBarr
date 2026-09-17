@@ -1,8 +1,11 @@
 import Foundation
+import OSLog
 import SwiftUI
 
 @Observable
 public final class DiscoverViewModel {
+
+    private static let log = Logger(category: "Quiz")
 
     public enum Source: Hashable, CaseIterable, Sendable {
         case tmdb, library, llm
@@ -20,10 +23,19 @@ public final class DiscoverViewModel {
         }
     }
     public private(set) var current: DiscoverItem?
-    /// Held for the view model's lifetime — the observer must outlive every
+    /// The deck wants to be on screen. Owned HERE rather than by each surface:
+    /// a quiz is seeded from a chat turn that runs for a minute, and the
+    /// surfaces that could catch the opening message come and go inside that
+    /// minute (the menu-bar panel tears its view tree down and rebuilds it
+    /// constantly, and it is gone entirely while the popover is shut). A
+    /// surface that reads this flag renders the right thing whenever it
+    /// happens to be built; one that has to *catch* the moment misses it.
+    public var isPresented: Bool = false
+    /// Held for the view model's lifetime — the observers must outlive every
     /// deck the user opens, and the view model itself lives as long as the
     /// Quiz does, so there is nothing to unregister early.
     private var addObserver: Task<Void, Never>?
+    private var openObserver: Task<Void, Never>?
     public private(set) var queue: [DiscoverItem] = []
     public var filter = DiscoverFilter()
     public var moodText: String = ""
@@ -109,10 +121,42 @@ public final class DiscoverViewModel {
                 self?.didAddToLibrary(foreignId: message.foreignId)
             }
         }
-
+        // Same reasoning, one level up: the deck itself is seeded here, not by
+        // whichever surface happened to be mounted when the tool finished.
+        openObserver = Task { [weak self] in
+            for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.OpenDiscoverQuiz.self) {
+                self?.open(mood: message.mood, items: message.items, append: message.append)
+            }
+        }
     }
 
-    isolated deinit { addObserver?.cancel() }
+    isolated deinit {
+        addObserver?.cancel()
+        openObserver?.cancel()
+    }
+
+    /// A quiz round landed: from `discover_in_quiz`, from the demo provider, or
+    /// from the resume card in chat (which carries no picks — it only wants the
+    /// deck back on screen).
+    public func open(mood: String, items: [DiscoverItem], append: Bool) {
+        if items.isEmpty {
+            // Never let an empty round touch the deck. This is the resume
+            // card's message, and seeding it reset the session the user was
+            // asking to return to.
+            Self.log.notice("quiz: reopening the deck, \(self.queue.count + (self.current == nil ? 0 : 1), privacy: .public) card(s) left")
+        } else if append && hasSession {
+            extend(items: items)
+        } else {
+            seed(items: items, mood: mood)
+        }
+        isPresented = true
+    }
+
+    /// Whether there is a session to return to or extend — cards still in hand,
+    /// or verdicts already given on this round.
+    public var hasSession: Bool {
+        current != nil || !queue.isEmpty || hasSessionEngagement
+    }
 
     /// The user finished adding the card they were on — drop it and move to the
     /// next. Not `skip()`: this title was a *pick* (already recorded by
@@ -160,6 +204,7 @@ public final class DiscoverViewModel {
             }
         }
         advanceIfNeeded()
+        Self.log.notice("quiz: deck seeded with \(self.queue.count + (self.current == nil ? 0 : 1), privacy: .public) of \(items.count, privacy: .public) picks")
     }
 
     /// Append more picks to the active session without resetting state.
@@ -176,6 +221,7 @@ public final class DiscoverViewModel {
         }
         sessionTotal += added
         advanceIfNeeded()
+        Self.log.notice("quiz: deck extended by \(added, privacy: .public) of \(items.count, privacy: .public) picks")
     }
 
     /// Every card this session has already put in front of the user — still

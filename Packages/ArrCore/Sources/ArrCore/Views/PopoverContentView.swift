@@ -51,10 +51,10 @@ public struct PopoverContentView: View {
     /// `arrbarr://person/…` link in an assistant reply. Detail surfaces own
     /// their own person destination; chat has none, so the root hosts this one.
     @State private var personRef: PersonRef?
-    /// Pending confirmation payload — set by `.onReceive` listening
-    /// for `AppMessages.ConfirmRequest`. Rendered as a panel-wide overlay
-    /// at the end of body.
-    @State private var pendingConfirm: PendingConfirm?
+    /// Pending confirmation, owned by `ConfirmCenter` so it survives this
+    /// surface being rebuilt (or never existing — see `NativeConfirmAlert`).
+    /// Rendered as a panel-wide overlay at the end of body.
+    @ObservedObject private var confirmCenter = ConfirmCenter.shared
     /// The search capsule's focus, owned here because ⌘N, the Add intent and
     /// the search intent all aim at it from outside any tab.
     @FocusState private var searchFieldFocused: Bool
@@ -64,12 +64,11 @@ public struct PopoverContentView: View {
     /// `SearchAddPanel` — back returns straight to chat instead of
     /// dropping the user on the Add tab they never asked to visit.
     @State private var searchAddFromChat = false
-    /// Discover/Quiz overlay state. The view-model survives across opens
-    /// (so accept/skip counters and the deck persist) and the overlay
-    /// flag is flipped by the `AppMessages.OpenDiscoverQuiz` notification
-    /// posted by the `discover_in_quiz` chat tool.
+    /// Discover/Quiz. The deck AND whether it is on screen live in the
+    /// view-model, which outlives this view: the panel rebuilds its tree
+    /// constantly and is gone entirely while the popover is shut, so a quiz
+    /// opened by a chat turn cannot depend on this surface catching a message.
     @State private var discoverViewModel = DiscoverViewModel.shared
-    @State private var showDiscoverOverlay = false
     /// The one live trailer — outlives this view (the popover rebuilds its
     /// content per open), so a playing clip is re-presented on reopen.
     @ObservedObject private var trailerSession = TrailerSession.shared
@@ -93,7 +92,7 @@ public struct PopoverContentView: View {
     /// An overlay is up, so the tab content behind it is parked — see the four
     /// modifiers at the call site.
     private var tabContentParked: Bool {
-        searchResult != nil || detailItem != nil || showDiscoverOverlay
+        searchResult != nil || detailItem != nil || discoverViewModel.isPresented
     }
 
     /// Same, one layer up: Discover parks under SearchAddPanel / DetailView but
@@ -196,6 +195,7 @@ public struct PopoverContentView: View {
             .appFontScale(configStore)
             .preferredColorScheme(configStore.preferredColorScheme)
             .onAppear {
+                confirmCenter.hasVisibleHost = true
                 searchViewModel.setup(store: configStore)
                 // Library-only search reads the Library tab's own cache.
                 searchViewModel.library = libraryViewModel
@@ -211,6 +211,9 @@ public struct PopoverContentView: View {
                 #endif
             }
             .onDisappear {
+                // Nothing left to draw the confirmation card: a request raised
+                // from here on gets the native alert instead of vanishing.
+                confirmCenter.hasVisibleHost = false
                 // Panel closed — drop back to the background cadence so we're
                 // not hammering the arrs every few seconds while hidden.
                 viewModel.stopForegroundPolling()
@@ -242,45 +245,7 @@ public struct PopoverContentView: View {
                 historySource = nil
                 focusInputForCurrentTab()
             }
-            .background {
-                // Hidden keyboard shortcut for cmd+, (Settings). cmd+N
-                // (Add) now lands on the Queue tab with the floating
-                // filter bar focused — same end-state as the old Add
-                // tab since search lives there now.
-                Button("", action: onOpenSettings)
-                    .keyboardShortcut(",", modifiers: .command)
-                    .opacity(0)
-                    .frame(width: 0, height: 0)
-                Button("") {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                        selectedTab = .queue
-                    }
-                    searchFieldFocused = true
-                }
-                .keyboardShortcut("n", modifiers: .command)
-                .opacity(0)
-                .frame(width: 0, height: 0)
-                // ⌘R — manual refresh. The popover (the primary surface) had
-                // no refresh affordance at all, so the only way to refresh was
-                // to wait for the next poll.
-                Button("") { Task { await viewModel.refresh() } }
-                    .keyboardShortcut("r", modifiers: .command)
-                    .opacity(0)
-                    .frame(width: 0, height: 0)
-                // ⌘1 / ⌘2 / ⌘3 — jump straight to a tab, the same numbering
-                // Safari / Finder / Mail use. Keyed off `visibleTabs`, NOT
-                // `Tab.allCases`, so the numbers always match the pills the
-                // user is looking at: with chat unavailable there is no third
-                // pill, and ⌘3 correctly does nothing rather than landing on a
-                // tab that isn't on screen. Capped at 9 — ⌘0 means something
-                // else everywhere.
-                ForEach(Array(visibleTabs.prefix(9).enumerated()), id: \.element) { index, tab in
-                    Button("") { selectTab(tab) }
-                        .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
-                        .opacity(0)
-                        .frame(width: 0, height: 0)
-                }
-            }
+            .background { hiddenShortcuts }
             // Search-to-add App Intent. The menu-bar popover can't be opened
             // programmatically, so this stages the query for whenever it opens.
             .onMessage(AppMessages.SearchQuery.self) { message in
@@ -325,23 +290,14 @@ public struct PopoverContentView: View {
                 searchAddFromChat = true
                 searchResult = message.result
             }
-            .onMessage(AppMessages.OpenDiscoverQuiz.self) { message in
-                let (mood, items, append) = (message.mood, message.items, message.append)
-                let hasActiveSession = !discoverViewModel.sessionMatched.isEmpty
-                    || !discoverViewModel.sessionSkipped.isEmpty
-                    || discoverViewModel.current != nil
-                    || !discoverViewModel.queue.isEmpty
-                if append && hasActiveSession {
-                    discoverViewModel.extend(items: items)
-                } else {
-                    discoverViewModel.seed(items: items, mood: mood)
-                }
+            // The quiz deck seeds itself (`DiscoverViewModel.open`); this
+            // surface only clears what the deck has to come up over.
+            .onChange(of: discoverViewModel.isPresented) { _, presented in
+                guard presented else { return }
                 searchResult = nil
                 detailItem = nil
                 historySource = nil
-                showDiscoverOverlay = true
             }
-            .onMessage(AppMessages.ConfirmRequest.self) { pendingConfirm = $0.payload }
             // The one trailer overlay for the whole surface, driven by the
             // shared session. Rendered up here — not inside DetailView /
             // SearchAddPanel / the Quiz, which merely start it — so a clip
@@ -356,18 +312,15 @@ public struct PopoverContentView: View {
                 }
             ))
             .overlay {
-                if let pending = pendingConfirm {
+                if let pending = confirmCenter.pending {
                     ModalConfirmOverlay(
-                        title: pending.title,
-                        message: pending.message ?? "",
-                        confirmLabelKey: pending.confirmLabel,
-                        cancelLabelKey: pending.cancelLabel,
+                        title: LocalizedStringKey(pending.title),
+                        message: LocalizedStringKey(pending.message ?? ""),
+                        confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
+                        cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
                         destructive: pending.isDestructive,
-                        onConfirm: {
-                            pending.onConfirm()
-                            pendingConfirm = nil
-                        },
-                        onCancel: { pendingConfirm = nil }
+                        onConfirm: { confirmCenter.confirm() },
+                        onCancel: { confirmCenter.cancel() }
                     )
                 }
             }
@@ -378,6 +331,49 @@ public struct PopoverContentView: View {
             // a dedicated NSWindow by AppDelegate (observing
             // StoreManager.gatedFeature). `storeManager` is still observed here
             // for the Chat-tab lock badge + gate.
+    }
+
+    /// Invisible buttons that exist only to carry ⌘ shortcuts. Lifted out of
+    /// `body` because that chain is already at the type-checker's limit.
+    @ViewBuilder
+    private var hiddenShortcuts: some View {
+        // Hidden keyboard shortcut for cmd+, (Settings). cmd+N
+        // (Add) now lands on the Queue tab with the floating
+        // filter bar focused — same end-state as the old Add
+        // tab since search lives there now.
+        Button("", action: onOpenSettings)
+            .keyboardShortcut(",", modifiers: .command)
+            .opacity(0)
+            .frame(width: 0, height: 0)
+        Button("") {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                selectedTab = .queue
+            }
+            searchFieldFocused = true
+        }
+        .keyboardShortcut("n", modifiers: .command)
+        .opacity(0)
+        .frame(width: 0, height: 0)
+        // ⌘R — manual refresh. The popover (the primary surface) had
+        // no refresh affordance at all, so the only way to refresh was
+        // to wait for the next poll.
+        Button("") { Task { await viewModel.refresh() } }
+            .keyboardShortcut("r", modifiers: .command)
+            .opacity(0)
+            .frame(width: 0, height: 0)
+        // ⌘1 / ⌘2 / ⌘3 — jump straight to a tab, the same numbering
+        // Safari / Finder / Mail use. Keyed off `visibleTabs`, NOT
+        // `Tab.allCases`, so the numbers always match the pills the
+        // user is looking at: with chat unavailable there is no third
+        // pill, and ⌘3 correctly does nothing rather than landing on a
+        // tab that isn't on screen. Capped at 9 — ⌘0 means something
+        // else everywhere.
+        ForEach(Array(visibleTabs.prefix(9).enumerated()), id: \.element) { index, tab in
+            Button("") { selectTab(tab) }
+                .keyboardShortcut(KeyEquivalent(Character("\(index + 1)")), modifiers: .command)
+                .opacity(0)
+                .frame(width: 0, height: 0)
+        }
     }
 
     private var mainContent: some View {
@@ -488,7 +484,7 @@ public struct PopoverContentView: View {
             .disabled(tabContentParked)
             .accessibilityHidden(tabContentParked)
 
-            if showDiscoverOverlay {
+            if discoverViewModel.isPresented {
                 DiscoverTabView(
                     viewModel: discoverViewModel,
                     llmAvailable: chatAvailable,
@@ -498,7 +494,7 @@ public struct PopoverContentView: View {
                     moreInFlight: chatHolder.vm.isThinking,
                     isObscured: discoverParked,
                     onClose: {
-                        withAnimation(.smooth(duration: 0.22)) { showDiscoverOverlay = false }
+                        withAnimation(.smooth(duration: 0.22)) { discoverViewModel.isPresented = false }
                     },
                     onRequestMore: { mood, kept, skipped in
                         requestMoreQuizPicks(mood: mood, kept: kept, skipped: skipped)
@@ -523,6 +519,10 @@ public struct PopoverContentView: View {
             }
 
         }
+        // The deck is opened by the view model (a chat turn can seed it while
+        // this surface is mid-rebuild), so the fade lives here rather than in a
+        // `withAnimation` around the flag.
+        .animation(.smooth(duration: 0.22), value: discoverViewModel.isPresented)
         .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             // Sonarr queue rows that target a specific episode skip the
