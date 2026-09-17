@@ -543,4 +543,3 @@ public struct ThinProgressBar: View {
     }
 }
 
-// `CustomFormatStrip` lives in `Chips.swift` now.

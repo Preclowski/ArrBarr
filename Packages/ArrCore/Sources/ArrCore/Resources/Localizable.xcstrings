@@ -7365,6 +7365,300 @@
         }
       }
     },
+    "chat.empty.suggest.bestUnwatched": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Das Beste, was ich habe und noch nicht gesehen habe"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best things I own but haven't watched"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lo mejor que tengo y aún no he visto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le meilleur de ma bibliothèque que je n’ai pas vu"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het beste dat ik heb maar nog niet zag"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Najlepsze z tego, co mam, a czego nie widziałem"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.bingeWeekend": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welche Serie lohnt sich fürs Wochenende?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which series is worth bingeing this weekend?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué serie merece una maratón este fin de semana?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelle série vaut le marathon ce week-end ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Welke serie is dit weekend een marathon waard?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Który serial nadaje się na weekendowy maraton?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.classic": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ein Klassiker, den ich längst kennen sollte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A classic I really should have seen by now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un clásico que ya debería haber visto"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un classique que je devrais avoir vu"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Een klassieker die ik eigenlijk moet kennen"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Klasyk, który wypada w końcu znać"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.diskSpace": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wie viel Speicherplatz ist noch frei?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How much disk space is left?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Cuánto espacio queda en disco?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Combien d’espace disque reste-t-il ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hoeveel schijfruimte is er nog?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ile miejsca zostało na dyskach?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.familyNight": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas für den Familienabend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something the whole family can watch tonight"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo para ver en familia esta noche"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un film à regarder en famille ce soir"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iets voor het hele gezin vanavond"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś na wieczór dla całej rodziny"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.likeBladeRunner": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas wie Blade Runner, nur neuer"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something like Blade Runner, but newer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo como Blade Runner, pero más nuevo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelque chose comme Blade Runner, mais plus récent"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iets als Blade Runner, maar nieuwer"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś jak Blade Runner, tylko nowszego"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.missingEpisodes": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bei welchen Serien fehlen mir Folgen?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Which of my series have episodes missing?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿A qué series mías les faltan episodios?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans quelles séries me manque-t-il des épisodes ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bij welke series ontbreken afleveringen?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W których serialach brakuje mi odcinków?"
+          }
+        }
+      }
+    },
     "chat.empty.suggest.personSwinton": {
       "extractionState": "manual",
       "comment": "Chat empty-state suggestion chip",
@@ -7449,6 +7743,174 @@
         }
       }
     },
+    "chat.empty.suggest.rainyEvening": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas Ruhiges, Stimmungsvolles für einen Regenabend"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something slow and moody for a rainy evening"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Algo lento y atmosférico para una noche de lluvia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quelque chose de lent et atmosphérique pour un soir de pluie"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iets traags en sfeervols voor een regenachtige avond"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś powolnego i nastrojowego na deszczowy wieczór"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.shortTonight": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Etwas Gutes unter 90 Minuten?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something good under 90 minutes?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Algo bueno de menos de 90 minutos?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un bon film de moins de 90 minutes ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Iets goeds onder de 90 minuten?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coś dobrego poniżej 90 minut?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.stuckQueue": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hängt etwas in der Warteschlange fest?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Is anything stuck in the queue?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Hay algo atascado en la cola?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Y a-t-il quelque chose de bloqué dans la file ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Staat er iets vast in de wachtrij?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czy coś zacięło się w kolejce?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.surpriseMe": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Überrasch mich mit etwas abseits meines Geschmacks"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surprise me with something outside my usual taste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sorpréndeme con algo fuera de mi gusto habitual"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surprends-moi avec quelque chose hors de mes goûts"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verras me met iets buiten mijn smaak"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zaskocz mnie czymś spoza moich gustów"
+          }
+        }
+      }
+    },
     "chat.empty.suggest.tasteMrRobot": {
       "extractionState": "manual",
       "comment": "Chat empty-state suggestion chip",
@@ -7487,6 +7949,48 @@
           "stringUnit": {
             "state": "translated",
             "value": "Stel iets voor zoals Mr. Robot?"
+          }
+        }
+      }
+    },
+    "chat.empty.suggest.thisWeek": {
+      "comment": "Chat empty-state suggestion — label AND the prompt sent",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Was erscheint diese Woche?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What lands this week?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué sale esta semana?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qu’est-ce qui sort cette semaine ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wat komt er deze week uit?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Co wychodzi w tym tygodniu?"
           }
         }
       }
@@ -7953,6 +8457,132 @@
         }
       }
     },
+    "chat.quizPrompt.movies.hiddenGems": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus weniger bekannten, hoch bewerteten Filmen, die ich nicht habe — Geheimtipps statt Blockbuster."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz of lesser-known, highly rated movies I don't have — deep cuts, no blockbusters."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con películas poco conocidas y muy valoradas que no tengo: nada de éxitos obvios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec des films méconnus et très bien notés que je n’ai pas — pas de blockbusters."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van minder bekende, hoog gewaardeerde films die ik niet heb — geen voor de hand liggende hits."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z mniej znanych, wysoko ocenianych filmów, których nie mam — żadnych oczywistych hitów."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.movies.inLibrary": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus den Filmen, die schon in meiner Mediathek sind — ein gutes Dutzend, das sich heute Abend lohnt."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz from the movies already in my library — a dozen-plus worth rewatching tonight."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con las películas que ya tengo en la biblioteca: una docena larga que merezca la pena esta noche."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec les films que j’ai déjà dans ma bibliothèque — une douzaine qui valent le coup ce soir."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van de films die al in mijn bibliotheek staan — een stuk of twaalf die vanavond de moeite waard zijn."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z filmów, które już mam w bibliotece — kilkanaście takich, które warto dziś obejrzeć."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.movies.rightNow": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus Filmen, die gerade im Kino laufen — ein gutes Dutzend, das ich noch nicht habe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz of movies currently in cinemas — a dozen-plus I don't have yet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con películas que están ahora en cines: una docena larga que todavía no tengo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec les films actuellement au cinéma — une douzaine que je n’ai pas encore."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van films die nu in de bioscoop draaien — een stuk of twaalf die ik nog niet heb."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z filmów, które teraz grają w kinach — kilkanaście, których jeszcze nie mam."
+          }
+        }
+      }
+    },
     "chat.quizPrompt.series": {
       "extractionState": "manual",
       "comment": "Prompt sent to the LLM when starting a quiz from the chat hero card",
@@ -7991,6 +8621,132 @@
           "stringUnit": {
             "state": "translated",
             "value": "Geef me een quiz met populaire series om doorheen te swipen — een tiental die ik nog niet in mijn bibliotheek heb."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.series.hiddenGems": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus weniger bekannten, hoch bewerteten Serien, die ich nicht habe — Geheimtipps statt Mainstream."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz of lesser-known, highly rated series I don't have — deep cuts, no obvious hits."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con series poco conocidas y muy valoradas que no tengo: nada de éxitos obvios."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec des séries méconnues et très bien notées que je n’ai pas — pas de succès évidents."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van minder bekende, hoog gewaardeerde series die ik niet heb — geen voor de hand liggende hits."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z mniej znanych, wysoko ocenianych seriali, których nie mam — żadnych oczywistych hitów."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.series.inLibrary": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus den Serien, die schon in meiner Mediathek sind — ein gutes Dutzend, das einen zweiten Blick wert ist."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz from the series already in my library — a dozen-plus worth picking up again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con las series que ya tengo en la biblioteca: una docena larga a la que merezca la pena volver."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec les séries que j’ai déjà dans ma bibliothèque — une douzaine qui méritent d’y revenir."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van de series die al in mijn bibliotheek staan — een stuk of twaalf om weer op te pakken."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z seriali, które już mam w bibliotece — kilkanaście takich, do których warto wrócić."
+          }
+        }
+      }
+    },
+    "chat.quizPrompt.series.rightNow": {
+      "comment": "Chat message sent by the quiz CTA",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach mir ein Quiz aus Serien, die gerade laufen — ein gutes Dutzend, das ich noch nicht habe."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Give me a quiz of series airing right now — a dozen-plus I don't have yet."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazme un quiz con series que se emiten ahora mismo: una docena larga que todavía no tengo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais-moi un quiz avec les séries diffusées en ce moment — une douzaine que je n’ai pas encore."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak een quiz van series die nu lopen — een stuk of twaalf die ik nog niet heb."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zrób mi quiz z seriali, które teraz lecą — kilkanaście, których jeszcze nie mam."
           }
         }
       }
@@ -29892,6 +30648,258 @@
         }
       },
       "comment": "Button in queue"
+    },
+    "quiz.variant.airingNow.button": {
+      "comment": "Quiz variant menu item (series)",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Läuft gerade"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Airing now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En emisión"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cours de diffusion"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loopt nu"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teraz na antenie"
+          }
+        }
+      }
+    },
+    "quiz.variant.hiddenGems.button": {
+      "comment": "Quiz variant menu item",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geheimtipps"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hidden gems"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Joyas ocultas"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pépites méconnues"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verborgen parels"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perełki"
+          }
+        }
+      }
+    },
+    "quiz.variant.inCinemas.button": {
+      "comment": "Quiz variant menu item (movies)",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jetzt im Kino"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In cinemas now"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ahora en cines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actuellement au cinéma"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nu in de bioscoop"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teraz w kinach"
+          }
+        }
+      }
+    },
+    "quiz.variant.inLibrary.button": {
+      "comment": "Quiz variant menu item",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aus meiner Mediathek"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From my library"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "De mi biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans ma bibliothèque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uit mijn bibliotheek"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Z mojej biblioteki"
+          }
+        }
+      }
+    },
+    "quiz.variant.more.label": {
+      "comment": "Accessibility label for the quiz split-button chevron",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Weitere Quiz-Varianten"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More quiz variants"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Más variantes del quiz"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres variantes du quiz"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meer quizvarianten"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Więcej wariantów quizu"
+          }
+        }
+      }
+    },
+    "quiz.variant.newToMe.button": {
+      "comment": "Quiz variant menu item",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noch nicht in der Mediathek"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New to me"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Que no tengo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Que je n’ai pas"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nog niet in mijn bibliotheek"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Których nie mam"
+          }
+        }
+      }
     },
     "search.searching.header": {
       "extractionState": "manual",

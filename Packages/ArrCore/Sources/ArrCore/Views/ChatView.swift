@@ -64,21 +64,22 @@ public struct ChatView: View {
                     ChatEmptyStateView(
                         quizPosterURLs: quizPosterURLs,
                         locale: configStore.currentLocale,
-                        onQuizStart: { kind in
+                        onQuizStart: { kind, variant in
                             // Synthesised chat message that the LLM routes
                             // through `discover_in_quiz`. We name a SINGLE
                             // kind so the model opens one deck (it used to
                             // fire a movie session *and* a series session
                             // when the prompt said "movies and shows") and
                             // ask for a dozen-plus so the deck isn't thin.
-                            let promptKey = kind == .movies
-                                ? "chat.quizPrompt.movies"
-                                : "chat.quizPrompt.series"
+                            // The variant only changes which pool the message
+                            // asks for — the deck it opens is the same one.
+                            //
                             // Resolve in the *in-app* language, not the process
                             // language — otherwise the sent message stays in the
                             // pre-switch language and the model answers the whole
                             // turn in it (see AppLocalized).
-                            let prompt = AppLocalized.string(promptKey, locale: configStore.currentLocale)
+                            let prompt = AppLocalized.string(variant.promptKey(for: kind),
+                                                             locale: configStore.currentLocale)
                             Task { await viewModel.send(prompt) }
                         },
                         onSuggestionTap: { prompt in

@@ -21,13 +21,63 @@ public struct QuizFeatureCard: View {
     /// separate sessions when the prompt says "movies and shows".
     public enum Kind { case movies, series }
 
-    public let onStart: (Kind) -> Void
+    /// Which pool the deck is drawn from. The button itself fires `.newToMe`
+    /// — the everyday case, and the one the card's subtitle promises; the
+    /// others hang off the chevron so the card stays a single decision until
+    /// somebody wants a different one.
+    public enum Variant: CaseIterable, Hashable, Sendable {
+        /// Titles the library doesn't have (the tool's `library_mode: "new"`).
+        case newToMe
+        /// Rediscovery: the deck comes out of the shelf they already own.
+        case inLibrary
+        /// What is on right now — in cinemas, or airing this season.
+        case rightNow
+        /// Well-reviewed, off the beaten track. No canon, no blockbusters.
+        case hiddenGems
+
+        /// Menu label. Only `rightNow` needs to know the kind — "In cinemas"
+        /// is nonsense for a series, and "Airing now" for a film.
+        public func labelKey(for kind: Kind) -> LocalizedStringKey {
+            switch self {
+            case .newToMe:    return "quiz.variant.newToMe.button"
+            case .inLibrary:  return "quiz.variant.inLibrary.button"
+            case .hiddenGems: return "quiz.variant.hiddenGems.button"
+            case .rightNow:
+                return kind == .movies ? "quiz.variant.inCinemas.button"
+                                       : "quiz.variant.airingNow.button"
+            }
+        }
+
+        /// Catalog key of the chat message this variant sends. Resolved by the
+        /// host in the in-app language (see `AppLocalized`), exactly like the
+        /// plain CTA.
+        public func promptKey(for kind: Kind) -> String {
+            let media = kind == .movies ? "movies" : "series"
+            switch self {
+            case .newToMe:    return "chat.quizPrompt.\(media)"
+            case .inLibrary:  return "chat.quizPrompt.\(media).inLibrary"
+            case .rightNow:   return "chat.quizPrompt.\(media).rightNow"
+            case .hiddenGems: return "chat.quizPrompt.\(media).hiddenGems"
+            }
+        }
+
+        func symbol(for kind: Kind) -> String {
+            switch self {
+            case .newToMe:    return "sparkles"
+            case .inLibrary:  return "books.vertical"
+            case .hiddenGems: return "diamond"
+            case .rightNow:   return kind == .movies ? "ticket" : "antenna.radiowaves.left.and.right"
+            }
+        }
+    }
+
+    public let onStart: (Kind, Variant) -> Void
     /// Poster URLs sampled from the user's library — render as a fanned deck
     /// on the left, telegraphing "swipe through *your* titles". Empty falls
     /// back to placeholder tiles so the layout is stable before posters load.
     public let posterURLs: [URL]
 
-    public init(posterURLs: [URL] = [], onStart: @escaping (Kind) -> Void) {
+    public init(posterURLs: [URL] = [], onStart: @escaping (Kind, Variant) -> Void) {
         self.posterURLs = posterURLs
         self.onStart = onStart
     }
@@ -67,23 +117,57 @@ public struct QuizFeatureCard: View {
         )
     }
 
+    /// Split control: the label starts the everyday quiz, the chevron opens the
+    /// other decks. One capsule, one hairline — two buttons side by side would
+    /// read as two separate decisions.
     @ViewBuilder
     private func ctaButton(_ kind: Kind, labelKey: LocalizedStringKey, symbol: String) -> some View {
-        Button { onStart(kind) } label: {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 12, weight: .semibold))
-                Text(labelKey, bundle: .module)
-                    .font(.system(size: 13, weight: .medium))
+        HStack(spacing: 0) {
+            Button { onStart(kind, .newToMe) } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: symbol)
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(labelKey, bundle: .module)
+                        .font(.system(size: 13, weight: .medium))
+                }
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .contentShape(Rectangle())
             }
-            .foregroundStyle(platformControlBackground)
-            .frame(maxWidth: .infinity, minHeight: 32)
-            .background(
-                RoundedRectangle(cornerRadius: Tokens.Radius.filterPill + 2, style: .continuous)
-                    .fill(Color.primary.opacity(0.9))
-            )
+            .buttonStyle(.plain)
+
+            Rectangle()
+                .fill(platformControlBackground.opacity(0.22))
+                .frame(width: 1, height: 18)
+
+            Menu {
+                ForEach(Variant.allCases, id: \.self) { variant in
+                    Button { onStart(kind, variant) } label: {
+                        Label {
+                            Text(variant.labelKey(for: kind), bundle: .module)
+                        } icon: {
+                            Image(systemName: variant.symbol(for: kind))
+                        }
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .semibold))
+                    .frame(width: 26, height: 32)
+                    .contentShape(Rectangle())
+            }
+            // `.button` + `.plain`, never `.borderlessButton`: that one
+            // re-renders the label with its own metrics and tint, and the
+            // chevron came out bigger and greyer than the label beside it.
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .accessibilityLabel(Text("quiz.variant.more.label", bundle: .module))
         }
-        .buttonStyle(.plain)
+        .foregroundStyle(platformControlBackground)
+        .background(
+            RoundedRectangle(cornerRadius: Tokens.Radius.filterPill + 2, style: .continuous)
+                .fill(Color.primary.opacity(0.9))
+        )
     }
 
     // MARK: - Fanned poster deck
