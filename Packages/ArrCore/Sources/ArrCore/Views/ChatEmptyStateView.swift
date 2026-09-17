@@ -65,7 +65,7 @@ public struct ChatEmptyStateView: View {
                 Text("chat.whatToWatchTonight.tooltip", bundle: .module)
                     .font(.system(size: 22, weight: .semibold))
                     .fixedSize(horizontal: false, vertical: true)
-                Text("chat.quizATipOr.tooltip", bundle: .module)
+                Text("chat.empty.subtitle", bundle: .module)
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -112,20 +112,22 @@ public struct ChatEmptyStateView: View {
     }
 
     private func suggestionStack(_ count: Int) -> some View {
+        let count = min(count, carousel.visible.count)
+        return
         VStack(spacing: 10) {
-            ForEach(carousel.visible.prefix(count), id: \.self) { key in
-                SuggestionPromptRow(LocalizedStringKey(key)) {
+            // Identity is the SLOT, not the suggestion: the rows are furniture
+            // and stay put, and the change happens inside them (see
+            // `SuggestionPromptRow`). Keyed by the suggestion instead, every
+            // rotation removed a row and inserted another one, which read as
+            // the whole pill sliding in.
+            ForEach(0..<count, id: \.self) { slot in
+                let key = carousel.visible[slot]
+                SuggestionPromptRow(key) {
                     // Send the prompt in the in-app language so it
                     // matches the chip's (env-locale) label — not the
                     // process language, which lags until relaunch.
                     onSuggestionTap(AppLocalized.string(key, locale: locale))
                 }
-                // Keyed by the suggestion, so a slot that changes is an
-                // insertion and a removal SwiftUI can cross-fade —
-                // without it the row is "the same view with new text"
-                // and the label just pops.
-                .id(key)
-                .transition(.opacity.combined(with: .offset(y: 6)))
             }
         }
         .padding(.horizontal, 20)

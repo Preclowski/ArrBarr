@@ -7365,6 +7365,48 @@
         }
       }
     },
+    "chat.empty.subtitle": {
+      "comment": "Chat welcome screen, under the greeting",
+      "extractionState": "manual",
+      "localizations": {
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sprich mit ihm wie mit einem Filmfreak, der alles gesehen hat — Trivia, Querverweise, was heute Abend läuft."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Talk to it like a film buff who's seen everything — trivia, connections, what to watch tonight."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Habla con él como con un cinéfilo que lo ha visto todo: curiosidades, conexiones y qué ver esta noche."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parle-lui comme à un cinéphile qui a tout vu — anecdotes, correspondances, quoi regarder ce soir."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Praat ermee als met een filmfreak die alles gezien heeft — weetjes, verbanden, wat je vanavond kijkt."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pogadaj jak z kinomaniakiem, który widział wszystko — ciekawostki, powiązania, co obejrzeć dziś wieczorem."
+          }
+        }
+      }
+    },
     "chat.empty.suggest.bestUnwatched": {
       "comment": "Chat empty-state suggestion — label AND the prompt sent",
       "extractionState": "manual",
@@ -8372,48 +8414,6 @@
         }
       },
       "comment": "Button in chat"
-    },
-    "chat.quizATipOr.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, a tip, or type a question."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, podpowiedź albo wpisz pytanie."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, ein Tipp oder eine eigene Frage."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, un consejo o escribe una pregunta."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, un conseil, ou tapez une question."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quiz, een tip of typ een vraag."
-          }
-        }
-      },
-      "comment": "Tooltip/description in chat"
     },
     "chat.quizPrompt.movies": {
       "extractionState": "manual",
