@@ -13,12 +13,6 @@ nonisolated public enum AppMessages {
         public let item: QueueItem
         public init(item: QueueItem) { self.item = item }
     }
-    /// A deep-tree view needs a confirmation modal; the host renders it at panel width.
-    public struct ConfirmRequest: NotificationCenter.AsyncMessage {
-        public typealias Subject = AppMessageBus
-        public let payload: PendingConfirm
-        public init(payload: PendingConfirm) { self.payload = payload }
-    }
     /// A successful "Test Connection": the queue refreshes so a just-saved key clears its banner.
     public struct ConfigValidated: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus

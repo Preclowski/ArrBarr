@@ -873,10 +873,8 @@ private struct DiscoverCardStackItem<G: Gesture>: View {
 
 // MARK: - Circular glass button
 
-/// A round, icon-only glass button that stays legible over arbitrary poster
-/// art. Same readable-glass recipe as `selectionModeBar` (ultra-thin material
-/// + white sheen + bright rim + shadow), shaped as a circle. Used for the
-/// swipe verdict buttons and the floating back button.
+/// A round, icon-only clear-glass button over the poster deck. Used for the
+/// swipe verdicts, the rewind and the trailer.
 private struct GlassCircleButton: View {
     /// SF Symbol name. Ignored when `assetName` is set.
     var systemName: String = ""
@@ -897,8 +895,7 @@ private struct GlassCircleButton: View {
             glyph
                 .frame(width: diameter, height: diameter)
                 .background(glassCircle)
-                .overlay(Circle().strokeBorder(Color.white.opacity(0.42), lineWidth: 0.75))
-                .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
+                .shadow(color: .black.opacity(0.22), radius: 8, y: 3)
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
@@ -929,11 +926,13 @@ private struct GlassCircleButton: View {
         }
     }
 
-    /// System glass. The hand-painted sheen gradient that used to fake the
-    /// highlight is gone — real glass lights its own edge.
+    /// The clear glass variant — the one meant for controls floating over
+    /// media. No tint, no painted rim: the poster stays the brightest thing on
+    /// screen and the button is only the shape the light bends through. The
+    /// card's own bottom scrim is the dimming layer clear glass asks for.
     private var glassCircle: some View {
         Circle()
             .fill(.clear)
-            .glassEffect(.regular.interactive(), in: .circle)
+            .glassEffect(.clear.interactive(), in: .circle)
     }
 }
