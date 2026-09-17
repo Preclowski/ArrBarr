@@ -617,10 +617,9 @@ struct QueueListView: View {
     private func requestGroupDeleteConfirm(_ group: QueueTitleGroup) {
         let items = group.allItems
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel \(group.downloadCount) downloads?",
+            title: "Remove \(group.downloadCount) downloads?",
             message: "This will remove every download of this title from the client.",
-            confirmLabel: "Cancel downloads",
-            cancelLabel: "Keep downloads",
+            confirmLabel: "Remove All",
             isDestructive: true,
             onConfirm: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
         ))

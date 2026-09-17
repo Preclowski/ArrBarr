@@ -99,10 +99,9 @@ public struct QueueRowView: View {
     /// labels truncate.
     private func requestDeleteConfirm() {
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel this download?",
+            title: "Remove this download?",
             message: "This will remove the download from the client.",
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: onDelete
         ))

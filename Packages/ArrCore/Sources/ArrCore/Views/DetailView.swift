@@ -563,10 +563,9 @@ public struct DetailView: View {
         // inside the panel so the panel keeps focus.
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
-            title: "Cancel this download?",
+            title: "Remove this download?",
             message: LocalizedStringKey("This will remove the download from the client."),
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: {
                 Task {

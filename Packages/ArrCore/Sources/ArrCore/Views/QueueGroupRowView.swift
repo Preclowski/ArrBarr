@@ -32,10 +32,9 @@ public struct QueueGroupRowView: View {
 
     private func requestDeleteConfirm() {
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel this download?",
+            title: "Remove this season pack?",
             message: "This will remove the season pack from the client.",
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: onDelete
         ))

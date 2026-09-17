@@ -308,10 +308,9 @@ public struct EpisodeDetailOverlay: View {
         // menu is already a deliberate two-step choice.)
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
-            title: "Cancel this download?",
+            title: "Remove this download?",
             message: LocalizedStringKey("This will remove the download from the client."),
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: {
                 if let q = queueItem { onDeleteEpisode?(q); onClose() }
