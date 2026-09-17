@@ -24,6 +24,15 @@ private struct ConfirmCenterHost: ViewModifier {
     /// inside a `MenuBarExtra` panel at all.
     private func presented(_ content: Content) -> some View {
         content
+            // An alert owns the surface while it is up. The scrim is only the
+            // visible half of that: without these, the rows underneath still
+            // took clicks, still lit their hover affordances, and still opened
+            // their long-hover tooltips — which, being floating windows, came
+            // up ON TOP of the alert asking about them.
+            .allowsHitTesting(center.pending == nil)
+            .disabled(center.pending != nil)
+            .accessibilityHidden(center.pending != nil)
+            .environment(\.suppressRowTooltip, center.pending != nil)
             .overlay {
                 if let pending = center.pending {
                     ConfirmAlertOverlay(
