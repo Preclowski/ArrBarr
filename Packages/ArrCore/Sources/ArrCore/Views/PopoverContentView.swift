@@ -51,10 +51,6 @@ public struct PopoverContentView: View {
     /// `arrbarr://person/…` link in an assistant reply. Detail surfaces own
     /// their own person destination; chat has none, so the root hosts this one.
     @State private var personRef: PersonRef?
-    /// Pending confirmation, owned by `ConfirmCenter` so it survives this
-    /// surface being rebuilt (or never existing — see `NativeConfirmAlert`).
-    /// Rendered as a panel-wide overlay at the end of body.
-    @ObservedObject private var confirmCenter = ConfirmCenter.shared
     /// The search capsule's focus, owned here because ⌘N, the Add intent and
     /// the search intent all aim at it from outside any tab.
     @FocusState private var searchFieldFocused: Bool
@@ -195,7 +191,6 @@ public struct PopoverContentView: View {
             .appFontScale(configStore)
             .preferredColorScheme(configStore.preferredColorScheme)
             .onAppear {
-                confirmCenter.hasVisibleHost = true
                 searchViewModel.setup(store: configStore)
                 // Library-only search reads the Library tab's own cache.
                 searchViewModel.library = libraryViewModel
@@ -211,9 +206,6 @@ public struct PopoverContentView: View {
                 #endif
             }
             .onDisappear {
-                // Nothing left to draw the confirmation card: a request raised
-                // from here on gets the native alert instead of vanishing.
-                confirmCenter.hasVisibleHost = false
                 // Panel closed — drop back to the background cadence so we're
                 // not hammering the arrs every few seconds while hidden.
                 viewModel.stopForegroundPolling()
@@ -311,19 +303,9 @@ public struct PopoverContentView: View {
                     if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
                 }
             ))
-            .overlay {
-                if let pending = confirmCenter.pending {
-                    ModalConfirmOverlay(
-                        title: LocalizedStringKey(pending.title),
-                        message: LocalizedStringKey(pending.message ?? ""),
-                        confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
-                        cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
-                        destructive: pending.isDestructive,
-                        onConfirm: { confirmCenter.confirm() },
-                        onCancel: { confirmCenter.cancel() }
-                    )
-                }
-            }
+            // Renders whatever confirmation is pending, and reports that this
+            // surface is here to render it.
+            .confirmCenterHost()
             // NOTE: the paywall is intentionally NOT presented here. This view
             // lives inside the MenuBarExtra panel, which auto-dismisses when it
             // resigns key (i.e. the instant StoreKit's purchase UI appears),

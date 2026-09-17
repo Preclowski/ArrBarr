@@ -13,7 +13,7 @@ public struct MediaEditRequest: Identifiable, Hashable {
 /// profile, availability / series type / metadata profile, root folder.
 ///
 /// macOS hosts the card in `MediaEditModalOverlay` (scrim + bottom card, the
-/// `ModalConfirmOverlay` pattern) so the detail view stays visible behind it;
+/// `ConfirmAlertOverlay` pattern) so the detail view stays visible behind it;
 /// iOS presents the same card as a native sheet. Neither is a navigation
 /// push — the detail surface never moves.
 struct MediaEditPanel: View {
@@ -522,7 +522,7 @@ struct MediaEditPanel: View {
 
 #if os(macOS)
 /// macOS host for the edit card: light scrim over the (still-visible) detail
-/// surface + the card pinned to the bottom — the `ModalConfirmOverlay`
+/// surface + the card pinned to the bottom — the `ConfirmAlertOverlay`
 /// pattern, because `.sheet` doesn't render inside a `MenuBarExtra` popover.
 struct MediaEditModalOverlay: View {
     let request: MediaEditRequest

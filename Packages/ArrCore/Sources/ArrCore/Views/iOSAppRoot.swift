@@ -146,6 +146,10 @@ public struct iOSAppRoot: View {
         // hosts it in the popover; without this the whole "add" half of the
         // quiz — and chat's "add this missing title" cards — did nothing here.
         .onMessage(AppMessages.OpenSearchAdd.self) { quizAddResult = $0.result }
+        // Queue rows raise their delete through `ConfirmCenter` on both
+        // platforms; without a host here the long-press "Remove from queue"
+        // asked a question nobody ever showed.
+        .confirmCenterHost()
         // The deck decides when it is on screen (`DiscoverViewModel.open`) —
         // seeded by the `discover_in_quiz` tool or the chat resume card.
         .fullScreenCover(isPresented: $discoverViewModel.isPresented) {

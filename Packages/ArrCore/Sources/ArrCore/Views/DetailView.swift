@@ -409,7 +409,7 @@ public struct DetailView: View {
             .accessibilityHidden(enlargedPoster != nil)
 
             // Edit modal — scrim + bottom form card OVER the still-visible
-            // detail (ModalConfirmOverlay pattern; `.sheet` doesn't render in
+            // detail (ConfirmAlertOverlay pattern; `.sheet` doesn't render in
             // a MenuBarExtra popover). Deliberately not a NavigationStack
             // push: that nudged the whole popover down by the collapsed nav
             // bar's height, which read as the window jumping.
