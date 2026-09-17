@@ -78,54 +78,55 @@ public struct ChatEmptyStateView: View {
     }
 
     public var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("chat.whatToWatchTonight.tooltip", bundle: .module)
-                        .font(.system(size: 22, weight: .semibold))
-                    Text("chat.quizATipOr.tooltip", bundle: .module)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 24)
-                .padding(.horizontal, 24)
-
-                QuizFeatureCard(posterURLs: quizPosterURLs, onStart: onQuizStart)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-
-                HStack(spacing: 12) {
-                    Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
-                    Text("chat.orAsk.button", bundle: .module)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.tertiary)
-                        .tracking(0.5)
-                    Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 28)
-
-                VStack(spacing: 10) {
-                    ForEach(visibleKeys, id: \.self) { key in
-                        SuggestionPromptRow(LocalizedStringKey(key)) {
-                            // Send the prompt in the in-app language so it
-                            // matches the chip's (env-locale) label — not the
-                            // process language, which lags until relaunch.
-                            onSuggestionTap(AppLocalized.string(key, locale: locale))
-                        }
-                        // Keyed by the suggestion, so a slot that changes is an
-                        // insertion and a removal SwiftUI can cross-fade —
-                        // without it the row is "the same view with new text"
-                        // and the label just pops.
-                        .id(key)
-                        .transition(.opacity.combined(with: .offset(y: 6)))
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 24)
-                .task { await rotate() }
+        // No ScrollView of its own: the host's one already scrolls this, and a
+        // nested pair can't be told where the floating input bar ends — which
+        // is how the last suggestion came to sit behind it.
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("chat.whatToWatchTonight.tooltip", bundle: .module)
+                    .font(.system(size: 22, weight: .semibold))
+                Text("chat.quizATipOr.tooltip", bundle: .module)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.secondary)
             }
+            .padding(.top, 24)
+            .padding(.horizontal, 24)
+
+            QuizFeatureCard(posterURLs: quizPosterURLs, onStart: onQuizStart)
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+            HStack(spacing: 12) {
+                Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
+                Text("chat.orAsk.button", bundle: .module)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .tracking(0.5)
+                Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 28)
+
+            VStack(spacing: 10) {
+                ForEach(visibleKeys, id: \.self) { key in
+                    SuggestionPromptRow(LocalizedStringKey(key)) {
+                        // Send the prompt in the in-app language so it
+                        // matches the chip's (env-locale) label — not the
+                        // process language, which lags until relaunch.
+                        onSuggestionTap(AppLocalized.string(key, locale: locale))
+                    }
+                    // Keyed by the suggestion, so a slot that changes is an
+                    // insertion and a removal SwiftUI can cross-fade —
+                    // without it the row is "the same view with new text"
+                    // and the label just pops.
+                    .id(key)
+                    .transition(.opacity.combined(with: .offset(y: 6)))
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 24)
+            .task { await rotate() }
         }
         .onAppear(perform: seed)
     }

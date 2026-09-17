@@ -57,6 +57,10 @@ public struct ChatView: View {
 
     @State private var clearHovered: Bool = false
 
+    /// Height the floating input bar (plus its padding, and the confirm card's
+    /// share) takes out of the surface. Both scroll branches reserve it.
+    private static let inputBarReservation: CGFloat = 84
+
     private var messages: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -88,6 +92,10 @@ public struct ChatView: View {
                         }
                     )
                     .frame(maxWidth: .infinity, minHeight: 380)
+                    // The empty state needs the same clearance as the message
+                    // list: without it the last suggestion sits behind the
+                    // floating input bar.
+                    .padding(.bottom, Self.inputBarReservation)
                     // Sample a few library posters for the Quiz deck on first
                     // appearance; cached process-wide so re-entry is instant.
                     .task {
@@ -122,7 +130,7 @@ public struct ChatView: View {
                         // autoscroll. Sized to clear the glass input bar +
                         // its bottom padding (56 was too short — the newest
                         // bubble landed behind the bar).
-                        Color.clear.frame(height: 84).id("chatBottom")
+                        Color.clear.frame(height: Self.inputBarReservation).id("chatBottom")
                     }
                     .environment(\.chatKnownLinkKeys, knownLinks)
                     .padding(.horizontal, 12)
