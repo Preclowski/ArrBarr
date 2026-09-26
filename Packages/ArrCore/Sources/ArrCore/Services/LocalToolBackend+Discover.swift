@@ -30,14 +30,16 @@ extension LocalToolBackend {
         quizStreamCloses = closes
 
         let partial = QuizArgumentsScanner.scan(text)
-        let picks = Self.suggestItems(.object(["items": .array(partial.items)]))
-        guard !picks.isEmpty,
-              let kind = partial.string("kind")?.lowercased(), kind == "movie" || kind == "series",
+        guard let kind = partial.string("kind")?.lowercased(), kind == "movie" || kind == "series",
               let mood = partial.string("mood")?.trimmingCharacters(in: .whitespacesAndNewlines),
               !mood.isEmpty else { return }
-        guard partial.string("source")?.lowercased() != "now" else { return }
         let libraryMode = Self.quizLibraryMode(partial.string("library_mode"))
         let append = partial.bool("append") ?? false
+        // A TMDB deck needs nothing more from the model: start it now and let
+        // whatever list the model still writes go unread.
+        let fromTMDB = partial.string("source")?.lowercased() == "now"
+        let picks = fromTMDB ? [] : Self.suggestItems(.object(["items": .array(partial.items)]))
+        guard fromTMDB ? tmdbEnabled : !picks.isEmpty else { return }
 
         if quizEarlyPipeline == nil {
             // A fresh deck replaces the session, so only start one early when
@@ -47,9 +49,15 @@ extension LocalToolBackend {
             }
             guard safe else { return }
             let pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append, mood: mood)
-            if quizEarlyPipeline == nil { quizEarlyPipeline = pipeline }
+            if quizEarlyPipeline == nil {
+                quizEarlyPipeline = pipeline
+                if fromTMDB {
+                    await pipeline.feed(await nowPicks(kind: kind), isFinal: true)
+                    return
+                }
+            }
         }
-        guard let pipeline = quizEarlyPipeline,
+        guard !fromTMDB, let pipeline = quizEarlyPipeline,
               pipeline.setup.kind == kind, pipeline.setup.libraryMode == libraryMode,
               pipeline.setup.append == append else { return }
         await pipeline.feed(picks)
@@ -636,7 +644,9 @@ extension LocalToolBackend {
     private func nowPicks(kind: String) async -> [QuizDeckPipeline.Pick] {
         let tmdb = TMDBClient(apiKey: tmdbApiKey)
         if kind == "movie" {
-            return ((try? await tmdb.moviesInCinemas()) ?? []).map { ($0.title, $0.year, $0.id) }
+            // The user's country, not the app language: "in cinemas" is a place.
+            let region = Locale.current.region?.identifier
+            return ((try? await tmdb.moviesInCinemas(region: region)) ?? []).map { ($0.title, $0.year, $0.id) }
         }
         return ((try? await tmdb.seriesOnAir()) ?? []).map { ($0.name, $0.year, $0.id) }
     }

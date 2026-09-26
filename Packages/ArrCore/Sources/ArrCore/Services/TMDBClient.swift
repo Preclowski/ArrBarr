@@ -412,25 +412,47 @@ nonisolated public struct TMDBClient: Sendable {
     }
 
     /// Theatrical releases of the last six weeks, most popular first — what a
-    /// model cannot know past its training cutoff.
-    public func moviesInCinemas(around date: Date = Date()) async throws -> [TMDBMovieSummary] {
-        let extra = [("primary_release_date.gte", Self.day(date, offset: -42)),
-                     ("primary_release_date.lte", Self.day(date, offset: 7)),
+    /// model cannot know past its training cutoff. With a region the dates are
+    /// that country's (a film opens in Warsaw weeks after LA); re-releases of
+    /// old films stay out either way.
+    public func moviesInCinemas(region: String?, around date: Date = Date()) async throws -> [TMDBMovieSummary] {
+        let dateField = region == nil ? "primary_release_date" : "release_date"
+        var extra = [("\(dateField).gte", Self.day(date, offset: -42)),
+                     ("\(dateField).lte", Self.day(date, offset: 7)),
                      ("with_release_type", "2|3")]
+        if let region {
+            extra += [("region", region), ("primary_release_date.gte", Self.day(date, offset: -365))]
+        }
+        let query = extra
         return try await twoPages { page in
-            try await self.read(TMDBDiscoverMovieResponse.self) { $0.discoverMovies(minVotes: 10, page: page, extra: extra) }.results
+            try await self.read(TMDBDiscoverMovieResponse.self) { $0.discoverMovies(minVotes: 10, page: page, extra: query) }.results
         }
     }
 
-    /// Series with an episode airing within a week either side of `date`.
+    /// Series in the middle of a fresh season: an episode within the last two
+    /// weeks or the next one, from a season that began at most 90 days ago.
+    /// "An episode this week" alone is every soap, talk show and 30-year-old
+    /// anime.
     public func seriesOnAir(around date: Date = Date()) async throws -> [TMDBTVSummary] {
-        // News, reality, soap and talk shows always have an episode this week.
-        let extra = [("air_date.gte", Self.day(date, offset: -7)),
+        let extra = [("air_date.gte", Self.day(date, offset: -14)),
                      ("air_date.lte", Self.day(date, offset: 7)),
-                     ("without_genres", "10763,10764,10766,10767")]
-        return try await twoPages { page in
+                     // Kids, news, reality, soap, talk.
+                     ("without_genres", "10762,10763,10764,10766,10767")]
+        let airing = try await twoPages { page in
             try await self.read(TMDBDiscoverTVResponse.self) { $0.discoverTV(minVotes: 10, page: page, extra: extra) }.results
         }
+        let fresh = await withTaskGroup(of: Int?.self) { group in
+            for show in airing {
+                group.addTask {
+                    let schedule = try? await self.read(TMDBTVSchedule.self, decoder: WireCodec.snakeCaseDecoder) { $0.tv(id: show.id) }
+                    return schedule?.isFreshSeason(around: date) == true ? show.id : nil
+                }
+            }
+            var ids = Set<Int>()
+            for await id in group { if let id { ids.insert(id) } }
+            return ids
+        }
+        return airing.filter { fresh.contains($0.id) }
     }
 
     private func twoPages<T>(_ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
@@ -504,6 +526,33 @@ nonisolated public struct TMDBMovieFacts: Codable, Sendable {
     public let budget: Int?
     public let revenue: Int?
     public let voteCount: Int?
+}
+
+/// The slice of `/tv/{id}` that says whether a season is under way.
+nonisolated public struct TMDBTVSchedule: Codable, Sendable {
+    public struct Episode: Codable, Sendable { public let airDate: String?; public let seasonNumber: Int? }
+    public struct Season: Codable, Sendable { public let airDate: String?; public let seasonNumber: Int? }
+    public let lastEpisodeToAir: Episode?
+    public let nextEpisodeToAir: Episode?
+    public let seasons: [Season]?
+
+    public init(lastEpisodeToAir: Episode?, nextEpisodeToAir: Episode?, seasons: [Season]?) {
+        self.lastEpisodeToAir = lastEpisodeToAir; self.nextEpisodeToAir = nextEpisodeToAir; self.seasons = seasons
+    }
+
+    /// The season of the episode airing around `date` premiered within 90 days.
+    public func isFreshSeason(around date: Date) -> Bool {
+        func day(_ offset: Int) -> String {
+            date.addingTimeInterval(TimeInterval(offset) * 86_400).formatted(.iso8601.year().month().day())
+        }
+        let current = [lastEpisodeToAir, nextEpisodeToAir].compactMap { $0 }.first { episode in
+            guard let aired = episode.airDate else { return false }
+            return aired >= day(-14) && aired <= day(7)
+        }
+        guard let number = current?.seasonNumber,
+              let premiere = seasons?.first(where: { $0.seasonNumber == number })?.airDate else { return false }
+        return premiere >= day(-90) && premiere <= day(7)
+    }
 }
 
 nonisolated public struct TMDBTVFacts: Codable, Sendable {
