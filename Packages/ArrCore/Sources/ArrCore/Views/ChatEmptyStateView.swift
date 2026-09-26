@@ -16,6 +16,7 @@ public struct ChatEmptyStateView: View {
     /// Poster URLs for the Quiz card deck — sampled from the user's library
     /// by the parent (see `LibraryPosterSampler`). Empty renders placeholders.
     public let quizPosterURLs: [URL]
+    public let quizVariants: [QuizFeatureCard.Variant]
     /// In-app language, so the prompt SENT for a tapped suggestion matches its
     /// visible chip after a live language switch. The chip label follows
     /// `environment(\.locale)`; the sent string must be resolved explicitly
@@ -44,11 +45,13 @@ public struct ChatEmptyStateView: View {
 
     public init(
         quizPosterURLs: [URL] = [],
+        quizVariants: [QuizFeatureCard.Variant] = QuizFeatureCard.Variant.allCases,
         locale: Locale = .current,
         onQuizStart: @escaping (QuizFeatureCard.Kind, QuizFeatureCard.Variant) -> Void,
         onSuggestionTap: @escaping (String) -> Void
     ) {
         self.quizPosterURLs = quizPosterURLs
+        self.quizVariants = quizVariants
         self.locale = locale
         self.onQuizStart = onQuizStart
         self.onSuggestionTap = onSuggestionTap
@@ -73,7 +76,7 @@ public struct ChatEmptyStateView: View {
             .padding(.top, 20)
             .padding(.horizontal, 24)
 
-            QuizFeatureCard(posterURLs: quizPosterURLs, onStart: onQuizStart)
+            QuizFeatureCard(posterURLs: quizPosterURLs, variants: quizVariants, onStart: onQuizStart)
                 .padding(.horizontal, 20)
                 .padding(.top, 16)
 

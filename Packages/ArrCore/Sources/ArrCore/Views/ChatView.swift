@@ -85,6 +85,11 @@ public struct ChatView: View {
     private var emptyState: some View {
         ChatEmptyStateView(
             quizPosterURLs: quizPosterURLs,
+            // "In cinemas" / "Airing now" come from TMDB; without a key the
+            // model could only answer from stale memory, so the deck isn't offered.
+            quizVariants: QuizFeatureCard.Variant.allCases.filter {
+                $0 != .rightNow || !configStore.tmdbApiKey.isEmpty
+            },
             locale: configStore.currentLocale,
             onQuizStart: { kind, variant in
                 // Synthesised chat message that the LLM routes

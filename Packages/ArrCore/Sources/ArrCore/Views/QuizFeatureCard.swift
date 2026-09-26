@@ -72,13 +72,17 @@ public struct QuizFeatureCard: View {
     }
 
     public let onStart: (Kind, Variant) -> Void
+    /// The decks this setup can deal — `rightNow` needs TMDB's live listings.
+    public let variants: [Variant]
     /// Poster URLs sampled from the user's library — render as a fanned deck
     /// on the left, telegraphing "swipe through *your* titles". Empty falls
     /// back to placeholder tiles so the layout is stable before posters load.
     public let posterURLs: [URL]
 
-    public init(posterURLs: [URL] = [], onStart: @escaping (Kind, Variant) -> Void) {
+    public init(posterURLs: [URL] = [], variants: [Variant] = Variant.allCases,
+                onStart: @escaping (Kind, Variant) -> Void) {
         self.posterURLs = posterURLs
+        self.variants = variants
         self.onStart = onStart
     }
 
@@ -146,7 +150,7 @@ public struct QuizFeatureCard: View {
                 .frame(width: 1, height: 18)
 
             Menu {
-                ForEach(Variant.allCases, id: \.self) { variant in
+                ForEach(variants, id: \.self) { variant in
                     Button { onStart(kind, variant) } label: {
                         Label {
                             Text(variant.labelKey(for: kind), bundle: .module)

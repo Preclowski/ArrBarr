@@ -22,6 +22,8 @@ actor QuizDeckPipeline {
     nonisolated struct Outcome: Sendable {
         let resolved: [DiscoverItem]
         let delivered: Set<String>
+        /// "Title (Year)" of every pick no lookup hit matched.
+        let unresolved: [String]
     }
 
     nonisolated let setup: Setup
@@ -64,7 +66,12 @@ actor QuizDeckPipeline {
             Task { await self.cancel() }
         }
         let resolved = (0..<picks.count).compactMap { results[$0] ?? nil }
-        return Outcome(resolved: resolved, delivered: delivered)
+        let unresolved = (0..<picks.count).compactMap { index -> String? in
+            guard case .some(.none) = results[index] else { return nil }
+            let pick = picks[index]
+            return pick.year.map { "\(pick.title) (\($0))" } ?? pick.title
+        }
+        return Outcome(resolved: resolved, delivered: delivered, unresolved: unresolved)
     }
 
     func cancel() {

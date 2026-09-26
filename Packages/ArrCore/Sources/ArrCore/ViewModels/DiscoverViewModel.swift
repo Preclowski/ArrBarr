@@ -267,6 +267,16 @@ public final class DiscoverViewModel {
     /// user as "no more cards" while a manual retry still finds picks).
     public var shownDedupKeys: Set<String> { seenKeys }
 
+    /// TMDB ids of this session's kept titles, newest first, capped at the
+    /// five anchors an appended round walks.
+    public func keptTMDBIds(kind: DiscoverItemKind) -> [Int] {
+        let ids = sessionMatched.reversed().filter { $0.kind == kind }.compactMap { item -> Int? in
+            if kind == .show { return item.result.tmdbTVId }
+            return item.result.externalId > 0 ? item.result.externalId : nil
+        }
+        return Array(ids.prefix(5))
+    }
+
     /// Skip the current card (>>) — records it as skipped for the
     /// engagement signal and advances to the next. This is the only action
     /// that advances the deck.

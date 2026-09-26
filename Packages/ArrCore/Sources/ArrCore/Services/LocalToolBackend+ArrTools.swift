@@ -80,9 +80,12 @@ extension LocalToolBackend {
                     do {
                         let query = Self.lookupTerm(title: item.title, year: item.year, tmdbId: item.tmdbId)
                         let hits = try await Self.searchWithYearAwareness(client: client, query: query)
-                        // Year-tagged match wins; otherwise top hit; otherwise nil.
-                        let match = item.year.flatMap { y in hits.first(where: { $0.year == y }) }
-                            ?? hits.first
+                        // An id ref is exact; a titled pick must BE one of the
+                        // hits, or it is reported missing rather than swapped.
+                        let match = item.tmdbId != nil ? hits.first : PickMatcher.bestIndex(
+                            title: item.title, year: item.year,
+                            in: hits.map { PickMatcher.Candidate(titles: [$0.title], year: $0.year, votes: $0.votes) }
+                        ).map { hits[$0] }
                         return (idx, .success(match))
                     } catch {
                         return (idx, .failure(error))

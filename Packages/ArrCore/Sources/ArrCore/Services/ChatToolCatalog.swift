@@ -647,7 +647,9 @@ nonisolated public enum ChatToolCatalog {
 
             Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
 
-            ARGUMENT ORDER: write `mood`, `kind`, `library_mode` and `append` FIRST and `items` LAST — cards start loading while you are still writing the list, but only once those are known.
+            ARGUMENT ORDER: write `mood`, `kind`, `library_mode`, `append` and `source` FIRST and `items` LAST — cards start loading while you are still writing the list, but only once those are known.
+
+            IN CINEMAS / AIRING NOW: for "currently in cinemas", "airing right now", "new this week" asks pass `source: "now"` and `items: []`. The deck then comes from TMDB's live listings — your training data cannot know today's releases, so never build such a deck from memory.
 
             Aim for a deck of 10–25 cards — enough to be worth swiping. That is the deck SIZE, not the list length: titles the user already owns are dropped here before the deck is built (with library_mode "new"), so send enough to survive that. A small library: 20 picks is 20 cards. A large one: send 40–60, because most of the canon will be dropped. Up to 60 are accepted. Include `year` whenever you can — it disambiguates remakes. All picks share one `kind`.
 
@@ -655,11 +657,11 @@ nonisolated public enum ChatToolCatalog {
 
             Pass `append: true` when the user asks for MORE picks continuing the current vibe — that extends the active deck instead of starting over. Size appended rounds so ~10-15 FRESH cards actually land after owned/shown/skipped filtering: send 25-40 picks per round, never a handful — a round that lands 2 cards just makes the user watch loading again two swipes later.
 
-            Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection. With library_mode "library" you may OMIT `items` entirely and pass `genre` / `startYear` / `endYear` instead: the deck is then drawn straight from their library snapshot (instant, watched titles excluded, top-rated pool with a random draw) — prefer that over inventing a list of titles they own.
+            Set `library_mode` from the user's intent: "new" (default) excludes titles already in their library; "library" fills the deck from titles they own — use it when they want to rediscover their collection. With library_mode "library" you may pass `items: []` and `genre` / `startYear` / `endYear` instead: the deck is then drawn straight from their library snapshot (instant, watched titles excluded, top-rated pool with a random draw) — prefer that over inventing a list of titles they own.
 
             Do NOT pre-check with `check_titles`: this tool already drops owned titles for you (library_mode "new"), so checking first is the same work twice. Just reach past the obvious — a 3000-film collection has Inception and The Empire Strikes Back — and send enough that plenty survives.
 
-            When the user asks for MORE picks following an active session, pass `anchor_tmdb_ids` containing the TMDB IDs of titles they kept — the backend will fetch TMDB's similar-to graph for those anchors and merge it with your curated picks for stronger relevance.
+            When the user asks for MORE picks following an active session, the backend already anchors the round on the titles they kept this session (TMDB's similar-to graph, merged after your curated picks). Pass `anchor_tmdb_ids` only to steer toward specific titles whose TMDB ids you hold.
 
             This is a single-shot session — there is no automatic top-up. When the user wants more, they'll ask explicitly via the chat.
 
@@ -678,7 +680,7 @@ nonisolated public enum ChatToolCatalog {
                     ]),
                     "items": .object([
                         "type": .string("array"),
-                        "description": .string("Ordered list of picks; order is preserved in the quiz deck."),
+                        "description": .string("Ordered list of picks; order is preserved in the quiz deck. Always present — [] only with library_mode 'library' or source 'now'."),
                         "items": .object([
                             "type": .string("object"),
                             "properties": .object([
@@ -719,15 +721,19 @@ nonisolated public enum ChatToolCatalog {
                         "type": .string("integer"),
                         "description": .string("library_mode 'library' only: inclusive upper bound on year for the library-drawn deck."),
                     ]),
+                    "source": .object([
+                        "type": .string("string"),
+                        "description": .string("'now' builds the deck from TMDB's live listings: movies in cinemas, or series airing this week. Omit for your own picks."),
+                    ]),
                     "anchor_tmdb_ids": .object([
                         "type": .string("array"),
-                        "description": .string("TMDB IDs of titles the user has kept (right-swiped) in the current session. When provided, the backend walks TMDB's recommendations graph for each anchor and merges those results with your curated picks. These MUST be TMDB ids — for series that is the tmdbTVId reported in tool output, NEVER a tvdbId. Pass this from the 'More picks' prompt context where the user's kept titles + their TMDB IDs are listed. Cap at 5 anchor IDs."),
+                        "description": .string("Optional TMDB IDs to anchor the round on. Append rounds already anchor on the session's kept titles, so pass this only to steer. These MUST be TMDB ids — for series that is the tmdbTVId reported in tool output, NEVER a tvdbId. Cap at 5."),
                         "items": .object([
                             "type": .string("integer"),
                         ]),
                     ]),
                 ]),
-                "required": .array([.string("mood"), .string("kind")]),
+                "required": .array([.string("mood"), .string("kind"), .string("items")]),
             ])
         ),
     ]
