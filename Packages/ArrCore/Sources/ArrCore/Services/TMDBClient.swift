@@ -411,6 +411,36 @@ nonisolated public struct TMDBClient: Sendable {
         return try await read(TMDBDiscoverTVResponse.self) { $0.discoverTV(sort: sortBy, minVotes: minVoteCount, extra: extra) }.results
     }
 
+    /// Theatrical releases of the last six weeks, most popular first — what a
+    /// model cannot know past its training cutoff.
+    public func moviesInCinemas(around date: Date = Date()) async throws -> [TMDBMovieSummary] {
+        let extra = [("primary_release_date.gte", Self.day(date, offset: -42)),
+                     ("primary_release_date.lte", Self.day(date, offset: 7)),
+                     ("with_release_type", "2|3")]
+        return try await twoPages { page in
+            try await self.read(TMDBDiscoverMovieResponse.self) { $0.discoverMovies(minVotes: 10, page: page, extra: extra) }.results
+        }
+    }
+
+    /// Series with an episode airing within a week either side of `date`.
+    public func seriesOnAir(around date: Date = Date()) async throws -> [TMDBTVSummary] {
+        let extra = [("air_date.gte", Self.day(date, offset: -7)),
+                     ("air_date.lte", Self.day(date, offset: 7))]
+        return try await twoPages { page in
+            try await self.read(TMDBDiscoverTVResponse.self) { $0.discoverTV(minVotes: 10, page: page, extra: extra) }.results
+        }
+    }
+
+    private func twoPages<T>(_ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
+        async let first = fetch(1)
+        async let second = try? fetch(2)
+        return try await first + (await second ?? [])
+    }
+
+    private static func day(_ date: Date, offset days: Int) -> String {
+        date.addingTimeInterval(TimeInterval(days) * 86_400).formatted(.iso8601.year().month().day())
+    }
+
     public func recommendedMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
         try await read(TMDBDiscoverMovieResponse.self) { $0.movieRecommendations(id: movieId, page: page) }.results
     }

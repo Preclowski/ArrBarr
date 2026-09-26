@@ -22,6 +22,16 @@ struct SwipeSignalStoreTests {
         #expect(!store.suppressedKeys(now: t0.addingTimeInterval(15 * 24 * 3600)).contains("tmdb:1"))
     }
 
+    @Test("A skipped show does not hide the movie that shares its number")
+    func suppressionIsPerMediaType() {
+        let store = freshStore()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        store.record(key: "tmdb:81189", title: "Breaking Bad", kind: .skipped, media: .show, now: t0)
+        store.record(key: "tmdb:81189", title: "Some Film", kind: .kept, media: .movie, now: t0)
+        #expect(store.suppressedKeys(media: .show, now: t0).contains("tmdb:81189"))
+        #expect(!store.suppressedKeys(media: .movie, now: t0).contains("tmdb:81189"))
+    }
+
     @Test("A second skip escalates the cooldown to 90 days")
     func repeatSkipEscalates() {
         let store = freshStore()

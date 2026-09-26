@@ -287,6 +287,10 @@ nonisolated public struct RadarrLookupRecord: Codable, Sendable {
     /// has nothing to match against and every row gets filtered out.
     var imdbId: String? = nil
     let title: String
+    /// Original-language and alternate titles: "Vidas Secas" is Radarr's
+    /// "Barren Lives", and the model may name either.
+    var originalTitle: String? = nil
+    var alternateTitles: [LookupAlternateTitle]? = nil
     let year: Int?
     let overview: String?
     let runtime: Int?
@@ -296,6 +300,10 @@ nonisolated public struct RadarrLookupRecord: Codable, Sendable {
     let certification: String?
     let studio: String?
     let status: String?
+}
+
+nonisolated public struct LookupAlternateTitle: Codable, Sendable, Equatable {
+    let title: String?
 }
 
 nonisolated public struct RadarrLookupRatings: Codable, Sendable, Equatable {
@@ -328,6 +336,7 @@ nonisolated public struct SonarrLookupRecord: Codable, Sendable {
     /// answers with whatever the string fuzzy-matches).
     var tmdbId: Int? = nil
     let title: String
+    var alternateTitles: [LookupAlternateTitle]? = nil
     let year: Int?
     let overview: String?
     let ratings: SonarrLookupRatings?

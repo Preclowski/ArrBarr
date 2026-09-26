@@ -69,11 +69,12 @@ struct QuizStreamingTests {
             try? await Task.sleep(for: .milliseconds(10 * (6 - id)))
             return id == 3 ? nil : item(id, owned: id == 2)
         }
-        let picks: [QuizDeckPipeline.Pick] = (1...5).map { (title: "T\($0)", year: nil, tmdbId: $0) }
+        let picks = (1...5).map { id -> QuizDeckPipeline.Pick in (title: "T" + String(id), year: nil, tmdbId: id) }
         await pipeline.feed(Array(picks.prefix(2)))
         await pipeline.feed(picks, isFinal: true)
         let outcome = await pipeline.finish()
         #expect(outcome.resolved.map(\.result.externalId) == [1, 2, 4, 5])
         #expect(outcome.delivered == ["tmdb:1", "tmdb:5"])
+        #expect(outcome.unresolved == ["T3"])
     }
 }

@@ -71,7 +71,9 @@ public final class SwipeSignalStore {
     public func record(key: String, title: String, kind: SwipeSignal.Kind,
                        media: SwipeSignal.Media? = nil, now: Date = Date()) {
         guard !key.isEmpty else { return }
-        if let idx = signals.firstIndex(where: { $0.key == key }) {
+        // A series key is its TVDB id, a movie key its TMDB id: the same number
+        // can name both, so a known media type keeps them apart.
+        if let idx = signals.firstIndex(where: { $0.key == key && Self.sameMedia($0.media, media) }) {
             var signal = signals[idx]
             switch (signal.kind, kind) {
             case (.veto, .skipped):
@@ -104,10 +106,18 @@ public final class SwipeSignalStore {
     // MARK: - Reads
 
     /// Keys the decks must not deal right now: active skip cooldowns + vetoes.
-    public func suppressedKeys(now: Date = Date()) -> Set<String> {
+    /// `media` limits the set to one type, so a skipped show can't hide the
+    /// movie whose TMDB id equals its TVDB id. Legacy untyped entries count
+    /// for every type.
+    public func suppressedKeys(media: SwipeSignal.Media? = nil, now: Date = Date()) -> Set<String> {
         Set(signals.compactMap { signal in
-            isSuppressed(signal, now: now) ? signal.key : nil
+            isSuppressed(signal, now: now) && Self.sameMedia(signal.media, media) ? signal.key : nil
         })
+    }
+
+    private static func sameMedia(_ a: SwipeSignal.Media?, _ b: SwipeSignal.Media?) -> Bool {
+        guard let a, let b else { return true }
+        return a == b
     }
 
     public func isSuppressed(_ key: String, now: Date = Date()) -> Bool {

@@ -35,6 +35,7 @@ extension LocalToolBackend {
               let kind = partial.string("kind")?.lowercased(), kind == "movie" || kind == "series",
               let mood = partial.string("mood")?.trimmingCharacters(in: .whitespacesAndNewlines),
               !mood.isEmpty else { return }
+        guard partial.string("source")?.lowercased() != "now" else { return }
         let libraryMode = Self.quizLibraryMode(partial.string("library_mode"))
         let append = partial.bool("append") ?? false
 
@@ -70,7 +71,8 @@ extension LocalToolBackend {
 
     private func makeQuizPipeline(kind: String, libraryMode: String, append: Bool, mood: String) async -> QuizDeckPipeline {
         let (shown, suppressed) = await MainActor.run {
-            (append ? DiscoverViewModel.shared.shownDedupKeys : [], SwipeSignalStore.shared.suppressedKeys())
+            (append ? DiscoverViewModel.shared.shownDedupKeys : [],
+             SwipeSignalStore.shared.suppressedKeys(media: Self.swipeMedia(kind)))
         }
         let setup = QuizDeckPipeline.Setup(kind: kind, libraryMode: libraryMode, append: append, mood: mood,
                                            shown: shown, suppressed: suppressed, delivers: !headlessSurface)
@@ -98,9 +100,18 @@ extension LocalToolBackend {
             if case .bool(let v) = dict["append"] { return v }
             return false
         }()
-        let items = Self.suggestItems(arguments)
+        var items = Self.suggestItems(arguments)
+        if Self.stringArg(arguments, key: "source").lowercased() == "now" {
+            guard tmdbEnabled else {
+                return ToolCallOutput(text: "ERROR: source 'now' needs TMDB, which isn't configured. Tell the user you can't see what is in cinemas or airing today — do NOT build this deck from memory, your training data predates it.")
+            }
+            items = await nowPicks(kind: kind)
+            guard !items.isEmpty else {
+                return ToolCallOutput(text: "TMDB lists nothing \(kind == "movie" ? "in cinemas" : "airing") right now. Tell the user; do not substitute older titles.")
+            }
+        }
         guard !items.isEmpty || libraryMode == "library" else {
-            return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?} (it is optional only with library_mode: 'library', where the deck fills from the library).")
+            return ToolCallOutput(text: "ERROR: 'items' must be a non-empty array of {title, year?} (it may be [] only with library_mode: 'library', where the deck fills from the library, or with source: 'now').")
         }
         // Over-sending is the point: owned picks are dropped below (library_mode
         // "new"), so a big library eats most of a canonical list. The lookups
@@ -108,7 +119,7 @@ extension LocalToolBackend {
         // takes to notice the deck came back empty and guess again.
         let capped = Array(items.prefix(60))
 
-        let anchorIds: [Int] = {
+        let explicitAnchors: [Int] = {
             if case .object(let dict) = arguments,
                case .array(let arr) = dict["anchor_tmdb_ids"] {
                 return arr.compactMap { v -> Int? in
@@ -118,6 +129,11 @@ extension LocalToolBackend {
             }
             return []
         }()
+        // "More like these" anchors on what the user kept this session; the
+        // model never has to relay ids it may not hold.
+        let anchorIds = explicitAnchors.isEmpty && append
+            ? await MainActor.run { DiscoverViewModel.shared.keptTMDBIds(kind: kind == "series" ? .show : .movie) }
+            : explicitAnchors
 
         // Two ways to a deck: an explicit pick list resolved through arr
         // lookups, or — library_mode "library" with no items — straight out
@@ -126,6 +142,7 @@ extension LocalToolBackend {
         var shown: Set<String> = []
         var suppressed: Set<String>?
         var delivered: Set<String> = []
+        var unresolved: [String] = []
         if capped.isEmpty && libraryMode == "library" {
             if append { shown = await MainActor.run { DiscoverViewModel.shared.shownDedupKeys } }
             resolved = await libraryDeckItems(kind: kind, arguments: arguments)
@@ -148,6 +165,7 @@ extension LocalToolBackend {
             let outcome = await pipeline.finish()
             resolved = outcome.resolved
             delivered = outcome.delivered
+            unresolved = outcome.unresolved
             shown = pipeline.setup.shown
             suppressed = pipeline.setup.suppressed
         }
@@ -170,12 +188,13 @@ extension LocalToolBackend {
                 let sizeNote = size.isEmpty ? "" : " (the library holds \(size))"
                 return ToolCallOutput(text: "All \(resolved.count) picks are already in the user's library\(sizeNote) — a library this size owns the obvious choices. You get AT MOST ONE corrective call: run check_titles with 25-40 candidates (deeper cuts, not the canon) in ONE call, then seed the quiz once with only the ones it reports as NOT in library. If that deck comes back small, it stays small — never a third attempt. Or pass library_mode: 'library' if they want to rediscover what they own.")
             }
-            return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
+            return ToolCallOutput(text: "None of those picks matched a \(kind == "movie" ? "Radarr" : "Sonarr") title\(Self.unresolvedNote(unresolved)) Check titles and years — or the kind — before retrying.")
         }
         return try await assembleDeck(label: label, kind: kind, append: append,
                                       libraryMode: libraryMode, anchorIds: anchorIds,
                                       filtered: filtered, shown: shown,
-                                      suppressed: suppressed, delivered: delivered)
+                                      suppressed: suppressed, delivered: delivered,
+                                      unresolved: unresolved)
     }
 
     /// The curated path: each {title, year?, tmdbId?} pick resolves through
@@ -196,12 +215,10 @@ extension LocalToolBackend {
         let radarrBase = radarr.baseURL
         let sonarrBase = sonarr.baseURL
         return { pick -> DiscoverItem? in
-            let term = Self.lookupTerm(title: pick.title, year: pick.year, tmdbId: pick.tmdbId)
             switch kind {
             case "movie":
-                guard radarrConfigured else { return nil }
-                let hits = (try? await radarrClient.lookupMovies(term: term)) ?? []
-                guard let first = hits.first else { return nil }
+                guard radarrConfigured,
+                      let first = await Self.matchedMovie(pick, client: radarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
                 let tmdbId = first.tmdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: radarrBase).0
@@ -229,9 +246,8 @@ extension LocalToolBackend {
                 return DiscoverItem(result: resultBase, action: .addToRadarr,
                                     originLabel: .llm, kind: .movie)
             case "series":
-                guard sonarrConfigured else { return nil }
-                let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
-                guard let first = hits.first else { return nil }
+                guard sonarrConfigured,
+                      let first = await Self.matchedSeries(pick, client: sonarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
                 let tvdbId = first.tvdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: sonarrBase).0
@@ -342,8 +358,9 @@ extension LocalToolBackend {
                               libraryMode: String, anchorIds: [Int],
                               filtered: [DiscoverItem], shown: Set<String>,
                               suppressed: Set<String>?,
-                              delivered: Set<String>) async throws -> ToolCallOutput {
-        var thinRoundNote = ""
+                              delivered: Set<String>,
+                              unresolved: [String]) async throws -> ToolCallOutput {
+        var thinRoundNote = unresolved.isEmpty ? "" : " \(unresolved.count) pick\(unresolved.count == 1 ? "" : "s") matched no \(kind == "movie" ? "Radarr" : "Sonarr") title and were left out\(Self.unresolvedNote(unresolved))"
 
         // Fetch TMDB Similar results for any kept-item anchors in parallel,
         // then merge them with the agent's curated picks.
@@ -370,7 +387,7 @@ extension LocalToolBackend {
         if let suppressed {
             suppressedKeys = suppressed
         } else {
-            suppressedKeys = await MainActor.run { SwipeSignalStore.shared.suppressedKeys() }
+            suppressedKeys = await MainActor.run { SwipeSignalStore.shared.suppressedKeys(media: Self.swipeMedia(kind)) }
         }
         let combined = merged.filter { !suppressedKeys.contains($0.dedupKey) }
         let suppressedCount = merged.count - combined.count
@@ -396,7 +413,7 @@ extension LocalToolBackend {
             if payload.count < 6 {
                 // Not worth another model round for the missing few — post
                 // what landed, but teach the NEXT round to arrive ~10 strong.
-                thinRoundNote = " Only \(payload.count) fresh card\(payload.count == 1 ? "" : "s") landed this round — next append send a bigger, deeper batch (25-40 picks) so top-ups arrive ~10 at a time."
+                thinRoundNote += " Only \(payload.count) fresh card\(payload.count == 1 ? "" : "s") landed this round — next append send a bigger, deeper batch (25-40 picks) so top-ups arrive ~10 at a time."
             }
         } else {
             payload = combined
@@ -418,6 +435,7 @@ extension LocalToolBackend {
             if suppressedCount > 0 {
                 text += "\n\(suppressedCount) more dropped — recently skipped by the user or marked not interested."
             }
+            text += thinRoundNote
             return ToolCallOutput(text: text)
         }
 
@@ -479,8 +497,7 @@ extension LocalToolBackend {
                         if kind == "movie" {
                             let summaries = try await tmdb.recommendedMovies(movieId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
-                                let term = s.year.map { "\(s.title) \($0)" } ?? s.title
-                                guard let first = (try? await radarrClient.lookupMovies(term: term))?.first else { return nil }
+                                guard let first = await Self.matchedMovie((s.title, s.year, s.id), client: radarrClient) else { return nil }
                                 let tmdbId = first.tmdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL).0
                                 let result = SearchResult(
@@ -506,8 +523,7 @@ extension LocalToolBackend {
                         } else {
                             let summaries = try await tmdb.recommendedTV(seriesId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
-                                let term = s.year.map { "\(s.name) \($0)" } ?? s.name
-                                guard let first = (try? await sonarrClient.lookupSeries(term: term))?.first else { return nil }
+                                guard let first = await Self.matchedSeries((s.name, s.year, s.id), client: sonarrClient) else { return nil }
                                 let tvdbId = first.tvdbId ?? 0
                                 let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL).0
                                 let result = SearchResult(
@@ -569,6 +585,70 @@ extension LocalToolBackend {
             }
         }
         return out
+    }
+
+    // MARK: - Pick resolution
+
+    /// An exact `tmdb:` ref is trusted only when the hit carries that id —
+    /// older Sonarr searches the literal text; otherwise the title decides.
+    nonisolated static func matchedMovie(_ pick: QuizDeckPipeline.Pick, client: RadarrClient) async -> RadarrLookupRecord? {
+        if let id = pick.tmdbId,
+           let hit = ((try? await client.lookupMovies(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
+            return hit
+        }
+        return await matchedHit(title: pick.title, year: pick.year,
+                                lookup: { (try? await client.lookupMovies(term: $0)) ?? [] },
+                                candidate: { hit in
+                                    PickMatcher.Candidate(titles: [hit.title, hit.originalTitle].compactMap { $0 }
+                                                            + (hit.alternateTitles ?? []).compactMap(\.title),
+                                                          year: hit.year, votes: hit.ratings?.tmdb?.votes)
+                                })
+    }
+
+    nonisolated static func matchedSeries(_ pick: QuizDeckPipeline.Pick, client: SonarrClient) async -> SonarrLookupRecord? {
+        if let id = pick.tmdbId,
+           let hit = ((try? await client.lookupSeries(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
+            return hit
+        }
+        return await matchedHit(title: pick.title, year: pick.year,
+                                lookup: { (try? await client.lookupSeries(term: $0)) ?? [] },
+                                candidate: { hit in
+                                    PickMatcher.Candidate(titles: [hit.title] + (hit.alternateTitles ?? []).compactMap(\.title),
+                                                          year: hit.year, votes: hit.ratings?.votes)
+                                })
+    }
+
+    /// "Title Year" first; when none of those hits is the pick, one retry on
+    /// the bare title — the arr's year parsing sometimes buries the right row.
+    nonisolated static func matchedHit<Hit>(title: String, year: Int?,
+                                            lookup: (String) async -> [Hit],
+                                            candidate: (Hit) -> PickMatcher.Candidate) async -> Hit? {
+        let hits = await lookup(lookupTerm(title: title, year: year, tmdbId: nil))
+        if let index = PickMatcher.bestIndex(title: title, year: year, in: hits.map(candidate)) {
+            return hits[index]
+        }
+        guard year != nil else { return nil }
+        let bare = await lookup(title)
+        return PickMatcher.bestIndex(title: title, year: year, in: bare.map(candidate)).map { bare[$0] }
+    }
+
+    /// Today's releases straight from TMDB, as picks carrying their ids.
+    private func nowPicks(kind: String) async -> [QuizDeckPipeline.Pick] {
+        let tmdb = TMDBClient(apiKey: tmdbApiKey)
+        if kind == "movie" {
+            return ((try? await tmdb.moviesInCinemas()) ?? []).map { ($0.title, $0.year, $0.id) }
+        }
+        return ((try? await tmdb.seriesOnAir()) ?? []).map { ($0.name, $0.year, $0.id) }
+    }
+
+    nonisolated static func swipeMedia(_ kind: String) -> SwipeSignal.Media {
+        kind == "series" ? .show : .movie
+    }
+
+    nonisolated static func unresolvedNote(_ labels: [String]) -> String {
+        guard !labels.isEmpty else { return "." }
+        let shown = labels.prefix(8).joined(separator: ", ")
+        return ": \(shown)\(labels.count > 8 ? ", …" : "")."
     }
 
 }
