@@ -52,7 +52,7 @@ nonisolated enum PickMatcher {
             guard !c.isEmpty else { continue }
             if c == p {
                 best = max(best, index == 0 ? 3 : 2)
-            } else if normalize(head(of: title)) == p {
+            } else if normalize(head(of: title)) == p || normalize(tail(of: title)) == p {
                 best = max(best, 1)          // "Asura" → "Asura: The City of Madness"
             } else if p.count > c.count, p.hasPrefix(c) || p.hasSuffix(c),
                       Double(c.count) / Double(p.count) >= 0.6 {
@@ -79,6 +79,13 @@ nonisolated enum PickMatcher {
 
     private static func stripDisambiguator(_ title: String) -> String {
         title.replacingOccurrences(of: #"\s*\((\d{4}|[A-Za-z]{2,3})\)\s*$"#, with: "", options: .regularExpression)
+    }
+
+    /// The title after a "Name: " prefix — "I Am Not Your Guru" is
+    /// "Tony Robbins: I Am Not Your Guru".
+    private static func tail(of title: String) -> String {
+        guard let range = title.range(of: ": ") else { return "" }
+        return String(title[range.upperBound...])
     }
 
     /// The title before a subtitle separator (": ", " - ", " – ", " (").

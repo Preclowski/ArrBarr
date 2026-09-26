@@ -424,8 +424,10 @@ nonisolated public struct TMDBClient: Sendable {
 
     /// Series with an episode airing within a week either side of `date`.
     public func seriesOnAir(around date: Date = Date()) async throws -> [TMDBTVSummary] {
+        // News, reality, soap and talk shows always have an episode this week.
         let extra = [("air_date.gte", Self.day(date, offset: -7)),
-                     ("air_date.lte", Self.day(date, offset: 7))]
+                     ("air_date.lte", Self.day(date, offset: 7)),
+                     ("without_genres", "10763,10764,10766,10767")]
         return try await twoPages { page in
             try await self.read(TMDBDiscoverTVResponse.self) { $0.discoverTV(minVotes: 10, page: page, extra: extra) }.results
         }

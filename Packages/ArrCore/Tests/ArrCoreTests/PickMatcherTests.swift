@@ -41,6 +41,8 @@ struct PickMatcherTests {
                                       in: [c("The Nightmare Before Christmas", 1993)]) == 0)
         #expect(PickMatcher.bestIndex(title: "Vidas Secas", year: 1963,
                                       in: [c("Barren Lives", 1963, alt: ["Vidas Secas"])]) == 0)
+        #expect(PickMatcher.bestIndex(title: "I Am Not Your Guru", year: nil,
+                                      in: [c("Tony Robbins: I Am Not Your Guru", 2016)]) == 0)
         #expect(PickMatcher.bestIndex(title: "Summer of Soul", year: nil,
                                       in: [c("Summer of Soul (...Or, When the Revolution Could Not Be Televised)", 2021)]) == 0)
     }
