@@ -225,12 +225,17 @@ public struct InlineConfirmCard: View {
     }
 }
 
-/// Modal confirmation — scrim + bottom-pinned sheet card. Distinct
-/// styling from the chat-inline `InlineConfirmCard` (which uses
-/// orange-tinted bg because it lives inside chat content): the modal
-/// gets a SOLID material card so it visually separates from whatever
-/// row / text it overlays.
-public struct ModalConfirmOverlay: View {
+/// The app's one confirmation alert: a dimming scrim and a centred card with a
+/// title, a sentence and the two answers. Every modal yes/no inside a surface
+/// renders through this — the queue's `ConfirmCenter` requests and the detail
+/// surfaces' `.inlineConfirm` — so a confirmation reads the same wherever it is
+/// raised, and no caller styles its own.
+///
+/// Deliberately plain: no orange shield (that belongs to `InlineConfirmCard`,
+/// which sits *inside* chat content and has to announce itself against the
+/// message flow). An alert already owns the screen; the destructive verb on the
+/// red button is the warning.
+public struct ConfirmAlertOverlay: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     let confirmLabelKey: LocalizedStringKey
@@ -258,34 +263,72 @@ public struct ModalConfirmOverlay: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .bottom) {
-            // Light scrim — just enough to lift the card off the content, not a
-            // heavy black-out (the card itself is solid, so it doesn't need one).
+        ZStack {
+            // Heavier than the old sheet's scrim: the card is small and sits in
+            // the middle of the content it interrupts, so the dimming is what
+            // separates them.
             Rectangle()
-                .fill(.black.opacity(0.20))
+                .fill(.black.opacity(0.32))
                 .contentShape(Rectangle())
                 .onTapGesture { onCancel() }
                 .ignoresSafeArea()
 
-            // Re-use the chat-tool-gate card, but give it a SOLID material
-            // backing here so the modal reads as opaque (the inline orange tint
-            // alone was see-through).
-            InlineConfirmCard(
-                title: title,
-                message: message,
-                confirmLabelKey: confirmLabelKey,
-                cancelLabelKey: cancelLabelKey,
-                destructive: destructive,
-                onConfirm: onConfirm,
-                onCancel: onCancel
-            )
-            // Real Liquid Glass, not a material: the panel floats over the
-            // list and should refract it, which a blurred grey plate cannot do.
-            .glassEffect(.regular, in: .rect(cornerRadius: Tokens.Radius.panel, style: .continuous))
-            .shadow(color: .black.opacity(0.30), radius: 16, y: -2)
-            .padding(.horizontal, 14)
-            .padding(.bottom, 14)
+            card
+                .frame(maxWidth: 270)
+                .padding(.horizontal, 24)
         }
-        .transition(.opacity.combined(with: .move(edge: .bottom)))
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+    }
+
+    private var card: some View {
+        // Laid out like the macOS 26 system alert — leading text, tinted rather
+        // than filled destructive answer — since the real one can't be used:
+        // dismissing it closes the MenuBarExtra panel underneath.
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(title, bundle: .module)
+                    .scaledFont(size: 13, weight: .bold)
+                Text(message, bundle: .module)
+                    .scaledFont(size: 13)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            HStack(spacing: 8) {
+                answerButton(cancelLabelKey, weight: .medium,
+                             foreground: .primary, background: Color.primary.opacity(0.1),
+                             action: onCancel)
+                    .keyboardShortcut(.escape, modifiers: [])
+                answerButton(confirmLabelKey, weight: .medium,
+                             foreground: destructive ? .red : .white,
+                             background: destructive ? Color.red.opacity(0.22) : Color.accentColor,
+                             action: onConfirm)
+                    .keyboardShortcut(.return, modifiers: [])
+            }
+        }
+        .padding(20)
+        // Real Liquid Glass, not a material: the alert floats over the list and
+        // should refract it, which a blurred grey plate cannot do.
+        .glassEffect(.regular, in: .rect(cornerRadius: 26, style: .continuous))
+        .shadow(color: .black.opacity(0.30), radius: 18, y: 4)
+    }
+
+    /// Equal-width capsules — an alert's two answers carry the same weight in
+    /// the layout even when one of them is the dangerous one.
+    private func answerButton(_ key: LocalizedStringKey, weight: Font.Weight,
+                              foreground: Color, background: Color,
+                              action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(key, bundle: .module)
+                .scaledFont(size: 13, weight: weight)
+                .foregroundStyle(foreground)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .background(background, in: Capsule())
     }
 }

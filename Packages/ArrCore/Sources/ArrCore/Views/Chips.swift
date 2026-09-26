@@ -7,8 +7,7 @@ import SwiftUI
 // file makes the visual language easier to keep in sync.
 
 /// Custom-format chips plus an optional score chip, wrapping with
-/// `TooltipFlowLayout`. Used inside tooltips and detail surfaces;
-/// for single-line strips with a fade-out, see `CustomFormatStrip`.
+/// `TooltipFlowLayout`. Used inside tooltips and detail surfaces.
 @ViewBuilder
 public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     if !tags.isEmpty || (score ?? 0) != 0 {
@@ -296,10 +295,15 @@ public struct TagChip: View {
         let strokeColor: Color = (color == .primary) ? .primary : color
         Text(text)
             .scaledFont(size: 9, weight: .medium)
-            .foregroundStyle(color == .primary ? AnyShapeStyle(.primary) : AnyShapeStyle(color))
+            // `Color.primary`, not the hierarchical `.primary` shape style: the
+            // latter resolves against the enclosing style, so a chip inside a
+            // secondary block (tooltip grids, detail sections — where most of
+            // these live) came out as dim as the prose around it. A tag is
+            // content, not commentary, so it carries its own weight.
+            .foregroundStyle(color == .primary ? Color.primary : color)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .chipOutline(strokeColor)
+            .chipOutline(strokeColor, opacity: 0.40)
     }
 }
 
@@ -355,73 +359,3 @@ public struct TooltipFlowLayout: Layout {
     }
 }
 
-/// Single-line custom-format strip with a fade-out gradient when
-/// chips overflow. Used by compact listing rows where wrapping would
-/// blow up the row height. Detail surfaces use the wrapping
-/// `customFormatChipStrip` instead.
-public struct CustomFormatStrip: View {
-    let formats: [String]
-    let score: Int
-    var help: String?
-    /// Right-edge fade. Set `false` when the row already paints its
-    /// own trailing gradient (e.g. the hover-action backdrop) —
-    /// stacking two fades reads as a doubled gradient.
-    var fadeTrailing: Bool
-
-    public init(formats: [String], score: Int, help: String? = nil,
-                fadeTrailing: Bool = true) {
-        self.formats = formats
-        self.score = score
-        self.help = help
-        self.fadeTrailing = fadeTrailing
-    }
-
-    public var body: some View {
-        let strip = Color.clear
-            .frame(height: 14)
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .leading) {
-                HStack(spacing: 4) {
-                    ForEach(formats, id: \.self) { cf in
-                        Text(cf)
-                            .scaledFont(size: 9, weight: .medium)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .chipOutline(.primary, opacity: 0.22)
-                    }
-                    if score != 0 {
-                        // Chip metrics, no stroke (see ScoreChip).
-                        ScoreChip(score: score)
-                    }
-                }
-                .fixedSize()
-            }
-            .clipped()
-
-        // Always mask with a gradient; when not fading, the stops are solid
-        // black end-to-end (a no-op mask). Keeps one concrete view type, so no
-        // AnyView erasure is needed for the ternary.
-        let view = strip.mask(
-            LinearGradient(
-                stops: fadeTrailing
-                    ? [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 0.85),
-                        .init(color: .clear, location: 1.0),
-                    ]
-                    : [
-                        .init(color: .black, location: 0),
-                        .init(color: .black, location: 1.0),
-                    ],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-        )
-
-        if let help {
-            view.help(Text(verbatim: help))
-        } else {
-            view
-        }
-    }
-}

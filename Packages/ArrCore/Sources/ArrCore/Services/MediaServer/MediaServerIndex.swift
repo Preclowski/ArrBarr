@@ -28,9 +28,21 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
     /// Enough to characterise taste, small enough not to dominate the prompt.
     public static let watchHistoryLimit = 40
 
+    /// How many plays the refresh actually asks for. Bigger than the Quiz's
+    /// slice because the tail is what marks individual episodes as watched,
+    /// and a week of TV is a lot of rows — the Quiz still sees only the
+    /// newest `watchHistoryLimit`.
+    private static let watchHistoryFetchLimit = 300
+
     private let lock = NSLock()
     private var byKey: [MediaServerExternalKey: MediaServerEntry] = [:]
     private var watchHistory: [MediaServerWatch] = []
+    /// Episodes the server has played, per series item id. A series is only
+    /// ever "watched" as a whole once every episode is, which is never true of
+    /// a show that is still airing — so the per-episode answer is the only one
+    /// an Upcoming row can use. Built from the same history call, so it costs
+    /// no extra request and reaches back as far as `watchHistoryFetchLimit`.
+    private var watchedEpisodesBySeries: [String: Set<SeasonEpisode>] = [:]
     /// Season posters per series item id, fetched lazily when a season screen
     /// opens rather than during the library sweep — one extra request per
     /// series the user actually looks at, instead of one per series on the
@@ -56,6 +68,27 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
     /// The media server's poster for a title, or nil to keep the arr's.
     public func posterURL(for keys: [MediaServerExternalKey]) -> URL? {
         entry(for: keys)?.posterURL
+    }
+
+    /// One episode's coordinates within its series.
+    public struct SeasonEpisode: Hashable, Sendable {
+        public let season: Int
+        public let episode: Int
+        public init(season: Int, episode: Int) {
+            self.season = season
+            self.episode = episode
+        }
+    }
+
+    /// Whether the server has played this particular episode. Falls back to
+    /// the title-level answer when the row carries no episode coordinates
+    /// (a movie, or a series row).
+    public func isWatched(_ keys: [MediaServerExternalKey], season: Int?, episode: Int?) -> Bool {
+        guard let season, let episode else { return isWatched(keys) }
+        guard let itemId = entry(for: keys)?.itemId else { return false }
+        lock.lock()
+        defer { lock.unlock() }
+        return watchedEpisodesBySeries[itemId]?.contains(SeasonEpisode(season: season, episode: episode)) ?? false
     }
 
     /// Whether the server has this title marked watched. Unknown titles are
@@ -142,7 +175,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             let entries = try await client.libraryIndex()
             // Watch history is a second, much smaller call, and a server that
             // answers the library but not the history should still get posters.
-            let history = (try? await client.recentlyWatched(limit: Self.watchHistoryLimit)) ?? []
+            let history = (try? await client.recentlyWatched(limit: Self.watchHistoryFetchLimit)) ?? []
 
             var map: [MediaServerExternalKey: MediaServerEntry] = [:]
             map.reserveCapacity(entries.count * 2)
@@ -156,9 +189,16 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
                 }
             }
 
+            var episodes: [String: Set<SeasonEpisode>] = [:]
+            for play in history {
+                guard let series = play.seriesItemId, let season = play.season, let episode = play.episode else { continue }
+                episodes[series, default: []].insert(SeasonEpisode(season: season, episode: episode))
+            }
+
             lock.withLock {
                 byKey = map
-                watchHistory = history
+                watchHistory = Array(history.prefix(Self.watchHistoryLimit))
+                watchedEpisodesBySeries = episodes
                 snapshotConfig = config
                 lastRefresh = Date()
             }
@@ -215,6 +255,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
     private func reset() {
         byKey.removeAll()
         seasonPostersByItem.removeAll()
+        watchedEpisodesBySeries.removeAll()
         watchHistory.removeAll()
         snapshotConfig = nil
         lastRefresh = nil

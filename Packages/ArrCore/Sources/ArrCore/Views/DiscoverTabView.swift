@@ -15,6 +15,7 @@ public struct DiscoverTabView: View {
     /// underneath the detail view.
     var isObscured: Bool = false
     let onClose: () -> Void
+    let onCancelLoading: () -> Void
     let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
 
     @State private var dragOffset: CGSize = .zero
@@ -71,6 +72,7 @@ public struct DiscoverTabView: View {
                 moreInFlight: Bool = false,
                 isObscured: Bool = false,
                 onClose: @escaping () -> Void,
+                onCancelLoading: @escaping () -> Void = {},
                 onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
@@ -78,11 +80,16 @@ public struct DiscoverTabView: View {
         self.moreInFlight = moreInFlight
         self.isObscured = isObscured
         self.onClose = onClose
+        self.onCancelLoading = onCancelLoading
         self.onRequestMore = onRequestMore
     }
 
     public var body: some View {
-        swipeSurface
+        if let phase = viewModel.loadPhase {
+            QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt, onCancel: onCancelLoading)
+        } else {
+            swipeSurface
+        }
     }
 
     // MARK: - Immersive swipe surface
@@ -647,7 +654,7 @@ public struct DiscoverTabView: View {
                 )
             )
         } else {
-            SearchAddRequest.post(item.result)
+            SearchAddRequest.post(item.result, origin: .quiz)
         }
     }
 
@@ -668,12 +675,13 @@ public struct DiscoverTabView: View {
         VStack(spacing: 10) {
             Spacer()
             if isLookingForMore {
-                ProgressView()
-                    .controlSize(.small)
+                LeaderSpinner()
                 Text("discover.lookingForMore.label", bundle: .module)
                     .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                WaitFactTicker(facts: WaitFacts.watching())
                     .padding(.horizontal, 24)
             } else {
                 Image(systemName: "rectangle.stack.fill")

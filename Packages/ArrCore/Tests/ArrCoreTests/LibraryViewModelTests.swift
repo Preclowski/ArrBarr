@@ -146,6 +146,35 @@ struct LibraryViewModelTests {
         #expect(vm.entries[.radarr]?.count == 1)
     }
 
+    @Test("A later session paints the saved grid before the arr answers")
+    func snapshotPaintsBeforeTheFetch() async {
+        LibraryVMStub.state.reset()
+        URLProtocol.registerClass(LibraryVMStub.self)
+        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+
+        let cfg = config(port: 17321)
+        await LibraryViewModel().loadIfNeeded(source: .radarr, config: cfg)
+        // No hit-count assertion: the cache-first paint may schedule a
+        // revalidating pass behind it, and whether that has landed by now is a
+        // race. What matters is the snapshot below.
+
+        // The snapshot is written off the caller's thread; wait for it rather
+        // than racing it.
+        for _ in 0..<40 where await LibrarySnapshotStore.load(.radarr, fingerprint: cfg.identityFingerprint) == nil {
+            try? await Task.sleep(nanoseconds: 25_000_000)
+        }
+
+        // A new session against an arr that is now DOWN: nothing can be
+        // fetched, and the grid must still come up off the saved projection
+        // rather than showing the error state.
+        LibraryVMStub.state.fail(port: 17321)
+        await LibraryIndex.shared.invalidate(.radarr)
+        let next = LibraryViewModel()
+        await next.loadIfNeeded(source: .radarr, config: cfg)
+        #expect(next.entries[.radarr]?.count == 1)
+        #expect(!next.loadFailed.contains(.radarr))
+    }
+
     @Test("An unreachable arr with nothing cached sets loadFailed")
     func unreachableSetsLoadFailed() async {
         // No stub registered for this host at all, so every request errors.

@@ -32,10 +32,9 @@ public struct QueueGroupRowView: View {
 
     private func requestDeleteConfirm() {
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel this download?",
+            title: "Remove this season pack?",
             message: "This will remove the season pack from the client.",
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: onDelete
         ))
@@ -74,6 +73,8 @@ public struct QueueGroupRowView: View {
                     fallbackSymbol: "tv"
                 )
             }
+            .posterMarks(watched: rep.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             // macOS: pause/resume on the poster (hover-revealed); no delete in
             // the list — same treatment as QueueRowView. Suppressed while
             // selecting — the poster is the checkbox then.

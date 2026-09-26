@@ -70,6 +70,11 @@ public actor LocalToolBackend: ToolBackend {
     /// retry resurfaces the same lone unowned survivor.
     var surfacedSuggestionIds: Set<String> = []
 
+    /// Deck being resolved from `discover_in_quiz` arguments the model is
+    /// still streaming; claimed by the tool call when it arrives.
+    var quizEarlyPipeline: QuizDeckPipeline?
+    var quizStreamCloses = 0
+
     /// True when this backend serves a caller with no ArrBarr UI in front of
     /// it (the MCP server): tools that would otherwise drive the app's own
     /// surfaces (opening the quiz overlay) return their data as text instead

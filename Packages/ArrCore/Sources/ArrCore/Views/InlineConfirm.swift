@@ -5,7 +5,7 @@ public extension View {
     ///
     /// On **iOS** this is a NATIVE `.confirmationDialog` (system action
     /// sheet) — the platform-correct way to confirm a destructive action.
-    /// On **macOS** it stays the bespoke `ModalConfirmOverlay`, because
+    /// On **macOS** it is the app's own `ConfirmAlertOverlay`, because
     /// `.confirmationDialog`/`.alert` do not render inside a `MenuBarExtra`
     /// popover (the window the whole app lives in there).
     ///
@@ -42,7 +42,7 @@ public extension View {
         #else
         return overlay {
             if isPresented.wrappedValue {
-                ModalConfirmOverlay(
+                ConfirmAlertOverlay(
                     title: title,
                     message: message,
                     confirmLabelKey: confirmLabel,

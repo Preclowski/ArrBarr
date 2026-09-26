@@ -250,6 +250,33 @@ public struct SettingsView: View {
         }
     }
 
+    /// Prowlarr, in one field pair: ArrBarr asks it exactly one question —
+    /// what an indexer is really called — so manual-search rows can name the
+    /// indexer the way the user named it rather than the way the sync did.
+    private var prowlarrSection: some View {
+        Section {
+            TextField(text: $configStore.prowlarr.baseURL,
+                      prompt: Text(verbatim: "http://192.168.1.10:9696")) {
+                Text("settings.url.label", bundle: .module)
+            }
+            .urlField()
+            SecureField(text: $configStore.prowlarr.apiKey,
+                        prompt: Text("settings.pasteYourApiKey.button", bundle: .module)) {
+                Text("settings.apiKey.button", bundle: .module)
+            }
+            .apiKeyField()
+            if configStore.prowlarr.isConfigured {
+                ApiKeyTestButton(test: { try await configStore.testProwlarr() })
+            }
+        } header: {
+            HStack(spacing: 6) {
+                Image(systemName: "magnifyingglass.circle")
+                    .accessibilityHidden(true)
+                Text(verbatim: "Prowlarr")
+            }
+        }
+    }
+
     #if os(macOS)
     private var aiPane: some View {
         Form {
@@ -623,6 +650,12 @@ public struct SettingsView: View {
                     Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
             }
+            // Prowlarr belongs with the managers it feeds, not with the
+            // discovery keys — but it isn't a queue source, so it sits below
+            // the roster instead of inside it.
+            if reorderable {
+                prowlarrSection
+            }
         }
         .formStyle(.grouped)
         .disabled(locked && !storeManager.isPro)
@@ -844,6 +877,9 @@ public struct SettingsView: View {
                 if reorderable {
                     Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
+            }
+            if reorderable {
+                prowlarrSection
             }
         }
         .navigationTitle(Text(title, bundle: .module))
@@ -1125,24 +1161,38 @@ public struct SettingsView: View {
     @ViewBuilder
     private var notificationSoundPicker: some View {
         #if os(macOS)
-        Picker(selection: $configStore.notificationSoundName) {
-            Text("settings.default.button", bundle: .module).tag("")
-            Text("search.none.button", bundle: .module).tag(ConfigStore.silentSoundName)
-            Divider()
-            ForEach(Self.systemSoundNames, id: \.self) { name in
-                Text(name).tag(name)
-            }
-        } label: {
+        // Play sits beside the popup, not beside the label: it acts on what the
+        // popup holds, and a glyph tucked under the row's title read as part
+        // of the title. Hence `LabeledContent` rather than the Picker's own
+        // label slot.
+        LabeledContent {
             HStack(spacing: 6) {
-                Text("settings.notificationSound.button", bundle: .module)
                 Button { Self.previewSound(named: configStore.notificationSoundName) } label: {
                     Image(systemName: "play.circle")
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                // Silence has nothing to play, and neither has "Default" —
+                // that one is whatever the system decides at delivery time.
+                .disabled(configStore.notificationSoundName.isEmpty
+                          || configStore.notificationSoundName == ConfigStore.silentSoundName)
                 .help(Text("settings.play.button", bundle: .module))
                 .accessibilityLabel(Text("settings.play.button", bundle: .module))
+
+                Picker(selection: $configStore.notificationSoundName) {
+                    Text("settings.default.button", bundle: .module).tag("")
+                    Text("search.none.button", bundle: .module).tag(ConfigStore.silentSoundName)
+                    Divider()
+                    ForEach(Self.systemSoundNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .labelsHidden()
             }
+        } label: {
+            Text("settings.notificationSound.button", bundle: .module)
         }
         .onChange(of: configStore.notificationSoundName) { _, newValue in
             Self.previewSound(named: newValue)

@@ -74,30 +74,32 @@ private enum SortMode: CaseIterable {
     /// `areInIncreasingOrder` ("title" is also the model's pre-warm key).
     var cacheKey: String { String(describing: self) }
 
-    /// The axis' comparator, handed to the view model's memoized sort.
-    /// Sorting used to happen inline in `visibleEntries` on every body
-    /// pass — ~20ms+ for a ~3k library on the localized title axis.
+    /// Every axis is defined ASCENDING; the view's one direction flag decides
+    /// which way it is actually read. That is what lets the direction survive
+    /// a change of axis — picking a different field re-sorts the same way, and
+    /// only picking the field you are already on reverses it.
+    ///
+    /// Sorting is handed to the view model's memoized sort; it used to happen
+    /// inline in `visibleEntries` on every body pass — ~20ms+ for a ~3k
+    /// library on the localized title axis.
     var areInIncreasingOrder: (LibraryEntry, LibraryEntry) -> Bool {
         switch self {
         case .title:
             return LibraryViewModel.titleAscending
         case .releaseDate:
-            // Newest first; undated entries sink to the end. Title breaks
-            // ties ascending — hence the flipped operands on the second
-            // element.
-            return { ($0.releaseSortKey, $1.title) > ($1.releaseSortKey, $0.title) }
+            // Undated entries sort as oldest, so they gather at one end
+            // instead of scattering. Title breaks ties, always ascending.
+            return { ($0.releaseSortKey, $0.title) < ($1.releaseSortKey, $1.title) }
         case .dateAdded:
-            // Most recently added first — "what did I just add" is the
-            // whole point of this axis.
-            return { ($0.dateAdded ?? .distantPast, $1.title) > ($1.dateAdded ?? .distantPast, $0.title) }
+            return { ($0.dateAdded ?? .distantPast, $0.title) < ($1.dateAdded ?? .distantPast, $1.title) }
         case .size:
-            return { $0.sizeOnDisk > $1.sizeOnDisk }
+            return { $0.sizeOnDisk < $1.sizeOnDisk }
         case .imdb:
-            return { ($0.ratingImdb ?? -1) > ($1.ratingImdb ?? -1) }
+            return { ($0.ratingImdb ?? -1) < ($1.ratingImdb ?? -1) }
         case .tmdb:
-            return { ($0.ratingTmdb ?? -1) > ($1.ratingTmdb ?? -1) }
+            return { ($0.ratingTmdb ?? -1) < ($1.ratingTmdb ?? -1) }
         case .rating:
-            return { ($0.ratingArr ?? -1) > ($1.ratingArr ?? -1) }
+            return { ($0.ratingArr ?? -1) < ($1.ratingArr ?? -1) }
         }
     }
 
@@ -114,34 +116,25 @@ private enum SortMode: CaseIterable {
         }
     }
 
-    /// What the menu row draws. The rating axes ARE services, so they wear
-    /// the service's own mark rather than a third identical star.
+    /// SF Symbol for the menu row.
     ///
-    /// The `-mono` assets, not the full-colour ones `RatingPill` uses: a
-    /// menu row is a monochrome context (SF Symbols on the rows above),
-    /// and the colour marks are filled artwork that can't be templated —
-    /// IMDb's is a plaque with the letters drawn on top, so its silhouette
-    /// is a solid blob. These are single-path silhouettes, so they tint
-    /// themselves like every other glyph in the menu.
-    enum Glyph {
-        case symbol(String)
-        /// Asset name in `ServiceIcons.xcassets`.
-        case brand(String)
-    }
-
-    /// `.rating` is whichever single score the source ships, so its mark
-    /// depends on the source: TVDB's for Sonarr, and a plain star for
-    /// Lidarr, whose score is its metadata provider's and wears no mark
-    /// we have.
-    func glyph(for source: QueueItem.Source) -> Glyph {
+    /// Plain `Image(systemName:)` and nothing else: a SwiftUI menu row takes
+    /// its icon from an actual `Image`, and the brand marks this used to draw
+    /// (a pre-sized `NSImage` wrapped in a view) were silently dropped — the
+    /// rows ended up with no icons at all. Brand marks live in the rating
+    /// pills anyway; a menu is a monochrome context.
+    ///
+    /// `.rating` is whichever single score the source ships, so it carries a
+    /// plain star: Sonarr's is TVDB's, Lidarr's its metadata provider's.
+    func symbolName(for source: QueueItem.Source) -> String {
         switch self {
-        case .title: return .symbol("textformat")
-        case .releaseDate: return .symbol("calendar")
-        case .dateAdded: return .symbol("tray.and.arrow.down")
-        case .size: return .symbol("internaldrive")
-        case .imdb: return .brand("rating-imdb-mono")
-        case .tmdb: return .brand("rating-tmdb-mono")
-        case .rating: return source == .sonarr ? .brand("rating-tvdb-mono") : .symbol("star")
+        case .title: return "textformat"
+        case .releaseDate: return "calendar"
+        case .dateAdded: return "tray.and.arrow.down"
+        case .size: return "internaldrive"
+        case .imdb: return "star.square"
+        case .tmdb: return "star.circle"
+        case .rating: return "star"
         }
     }
 
@@ -173,6 +166,10 @@ struct LibraryTabContent: View {
     @State private var sourceResolved = false
     @State private var statusFilter: StatusFilter = .all
     @State private var sort: SortMode = .title
+    /// Ascending or descending, for whichever axis is selected. Deliberately
+    /// NOT reset when the axis changes: switching fields keeps the direction
+    /// you are reading in, and only picking the selected field again flips it.
+    @State private var sortDescending = false
     /// Grid (covers) vs list (compact rows). Persisted — a layout preference,
     /// not per-session state like the filters above.
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
@@ -216,10 +213,19 @@ struct LibraryTabContent: View {
         // filtering a pre-sorted list preserves order, and the filters are
         // the cheap half (sub-ms even at ~3k entries; the localized title
         // sort was the ~20ms-per-body-pass hitch felt on tab entry).
-        let sorted = viewModel.sorted(source, cacheKey: sort.cacheKey, using: sort.areInIncreasingOrder)
+        // The direction is part of the key: the same axis read the other way
+        // is a different order, and serving the cached one would ignore the tap.
+        // Title-ascending must spell out to `LibraryViewModel.defaultSortCacheKey`
+        // — that is the order the projection is pre-warmed in.
+        let axisKey = "\(sort.cacheKey)|\(sortDescending ? "desc" : "asc")"
+        let ascending = sort.areInIncreasingOrder
+        let comparator: (LibraryEntry, LibraryEntry) -> Bool = sortDescending
+            ? { ascending($1, $0) }
+            : ascending
+        let sorted = viewModel.sorted(source, cacheKey: axisKey, using: comparator)
         // Memoized too: `surface` re-runs whenever anything around the grid
         // does, and re-filtering ~3k records copies the whole array each time.
-        return viewModel.visible(source, cacheKey: "\(sort.cacheKey)|\(statusFilter.cacheKey)",
+        return viewModel.visible(source, cacheKey: "\(axisKey)|\(statusFilter.cacheKey)",
                                  from: sorted) { matches($0, filter: statusFilter) }
     }
 
@@ -240,6 +246,7 @@ struct LibraryTabContent: View {
         .onChange(of: source) { _, _ in
             // A sort axis the new arr doesn't offer (IMDb on Sonarr) snaps
             // back to the default rather than silently sorting on nils.
+            // Direction survives the axis reset, same as a manual switch.
             if !SortMode.available(for: source).contains(sort) { sort = .title }
             Task { await load() }
         }
@@ -260,13 +267,8 @@ struct LibraryTabContent: View {
         switch phase {
         case .loading:
             ScrollView {
-                VStack(spacing: 10) {
-                    ProgressView().controlSize(.small)
-                    Text("queue.loading.button", bundle: .module)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
+                LoadingStateView()
+                    .frame(maxWidth: .infinity)
                 .padding(.vertical, 32)
             }
             .scrollBounceBehavior(.basedOnSize)
@@ -374,15 +376,14 @@ struct LibraryTabContent: View {
     /// system search field is open (`LibraryFilterStrip`); on macOS the host's
     /// takeover replaces this whole view, strip included.
     ///
-    /// The states cross-fade: the first visit to a source holds the spinner
-    /// while the library projects off the main actor, then the covers fade in
-    /// rather than popping in over a stalled frame.
+    /// The states swap without a transition. They used to cross-fade on a
+    /// `.id(phase)`, which re-identified the whole grid: re-entering the tab
+    /// with the library already cached still faded and slid the covers in, for
+    /// content that was there the entire time.
     private var surface: some View {
         let entries = visibleEntries
         let phase = phase(entries)
         return gridOrState(entries, phase: phase)
-            .id(phase)
-            .transition(.opacity)
             // Strip in the safe area: the covers scroll under it (and under
             // the tab bar above it) instead of starting below a hard line.
             .safeAreaBar(edge: .top, spacing: 0) {
@@ -392,10 +393,10 @@ struct LibraryTabContent: View {
                                      source: $source,
                                      statusFilter: $statusFilter,
                                      sort: $sort,
+                                     sortDescending: $sortDescending,
                                      viewModeRaw: $viewModeRaw)
                 }
             }
-            .animation(.easeOut(duration: 0.25), value: phase)
     }
 }
 
@@ -496,25 +497,10 @@ private struct LibraryTile: View {
                     )
                     .aspectRatio(entry.posterAspect, contentMode: .fit)
                 }
-                // Watched wedge in the corner the monitored bookmark doesn't
-                // use, clipped to the tile's radius so the fold follows the
-                // rounded corner. Overlay AND clip are attached only on a
-                // watched tile: an unconditional `clipShape` would put an extra
-                // render pass on every cover in the grid for a corner most of
-                // them don't draw.
-                .modifier(WatchedCorner(watched: entry.watched))
-                .overlay(alignment: .topTrailing) {
-                    // Monitored marker — the arr web UIs' bookmark language.
-                    // White glyph + soft shadow so it reads over any poster
-                    // art; unmonitored tiles are already dimmed wholesale.
-                    if entry.isMonitored {
-                        Image(systemName: "bookmark.fill")
-                            .scaledFont(size: 9, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.92))
-                            .shadow(color: .black.opacity(0.6), radius: 2)
-                            .padding(5)
-                    }
-                }
+                // Watched wedge with the monitored ribbon over it — the one
+                // corner treatment every cover in the app shares.
+                .posterMarks(watched: entry.watched, monitored: entry.isMonitored,
+                             cornerRadius: Tokens.Radius.card, ribbonWidth: 10)
                 Text(verbatim: entry.title)
                     .scaledFont(size: 11, weight: .semibold)
                     .lineLimit(1)
@@ -590,6 +576,10 @@ private struct LibraryListRow: View {
             posterSize: CGSize(width: 38 * entry.posterAspect, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: entry.source),
             posterFallbackSymbol: entry.source.symbol,
+            // Watched wedge only. No monitored ribbon on this row — the list
+            // already dims an unmonitored entry wholesale, and two marks on a
+            // 25pt thumbnail is one too many. The grid keeps both.
+            posterWatched: entry.watched,
             title: rowTitle,
             metadataSegments: metadataSegments,
             onTap: { entry.openDetail() },
@@ -599,29 +589,10 @@ private struct LibraryListRow: View {
             // a column down the list instead of starting at a different x on
             // every row (which is what pinning them to the title did). Its old
             // slot on the metadata line went to the file size.
-            HStack(spacing: 6) {
-                LibraryStatusChip(entry: entry)
-                MonitorBookmark(isMonitored: entry.isMonitored)
-            }
+            LibraryStatusChip(entry: entry)
         }
         .opacity(entry.state == .unmonitored ? 0.55 : 1)
         .libraryTooltip(entry: entry, apiKey: apiKey)
-    }
-}
-
-/// See the call site — conditional so untouched tiles keep their plain
-/// compositing.
-private struct WatchedCorner: ViewModifier {
-    let watched: Bool
-
-    func body(content: Content) -> some View {
-        if watched {
-            content
-                .overlay(alignment: .topLeading) { WatchedCornerBadge() }
-                .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-        } else {
-            content
-        }
     }
 }
 
@@ -836,6 +807,7 @@ private struct LibraryFilterBar: View {
     @Binding var source: QueueItem.Source
     @Binding var statusFilter: StatusFilter
     @Binding var sort: SortMode
+    @Binding var sortDescending: Bool
     @Binding var viewModeRaw: String
 
     private var viewMode: ViewMode { ViewMode(rawValue: viewModeRaw) ?? .grid }
@@ -868,27 +840,25 @@ private struct LibraryFilterBar: View {
 
     private var sourceMenu: some View {
         Menu {
-            ForEach(sources, id: \.self) { s in
-                Button { source = s } label: {
-                    Label {
-                        Text(verbatim: s.displayName)
-                    } icon: {
-                        // The arr's own mark rather than a generic film/tv
-                        // glyph. These assets ship as templates, so they tint
-                        // themselves and sit in the menu as monochrome as the
-                        // SF Symbols they replace.
-                        if s == source {
-                            Image(systemName: "checkmark")
-                        } else {
-                            MenuBrandIcon(asset: s.brandIconName, template: true)
-                        }
-                    }
+            // A `Picker`, not hand-built rows: the arr marks can't be trusted
+            // to draw inside a menu row (that is what left this list with
+            // generic film/tv glyphs that identified nothing), and the plain
+            // alternative — a row per arr with no icon — is exactly what an
+            // inline picker is. AppKit then owns the selection checkmark, so
+            // the active arr is marked the way every other macOS menu marks
+            // it. The trigger chip beside it still carries the real brand mark.
+            Picker(selection: $source) {
+                ForEach(sources, id: \.self) { s in
+                    Text(verbatim: s.displayName).tag(s)
                 }
+            } label: {
+                EmptyView()
             }
+            .pickerStyle(.inline)
         } label: {
             HStack(spacing: 4) {
                 // Trigger chip is an ordinary view, so the shared `ServiceIcon`
-                // works here — only the menu ROWS need the pre-sized variant.
+                // works here — it is the menu ROWS that can't keep artwork.
                 ServiceIcon(source: source, size: LibraryChrome.brandIcon)
                 Text(verbatim: source.displayName)
                     .scaledFont(size: LibraryChrome.label, weight: .semibold)
@@ -968,31 +938,33 @@ private struct LibraryFilterBar: View {
     /// SF Symbol or brand mark for one sort row — both monochrome, both
     /// tinted by the menu.
     @ViewBuilder
-    private func sortGlyph(_ glyph: SortMode.Glyph) -> some View {
-        switch glyph {
-        case .symbol(let name):
-            Image(systemName: name)
-        case .brand(let asset):
-            MenuBrandIcon(asset: asset, template: true)
-        }
-    }
-
     private var sortMenu: some View {
         Menu {
             ForEach(SortMode.available(for: source), id: \.self) { mode in
-                Button { sort = mode } label: {
+                Button {
+                    // Picking the axis you are already on reverses it; picking
+                    // a different one just changes the field.
+                    if sort == mode {
+                        sortDescending.toggle()
+                    } else {
+                        sort = mode
+                    }
+                } label: {
                     Label {
                         mode.label
                     } icon: {
-                        // Selection still wins the slot — a row that only
-                        // changed its glyph doesn't read as "this is the
-                        // active sort".
-                        if sort == mode {
-                            Image(systemName: "checkmark")
-                        } else {
-                            sortGlyph(mode.glyph(for: source))
-                        }
+                        // The active axis shows WHICH WAY it runs — selection
+                        // mark and direction in one glyph, which is what tells
+                        // the user a second tap did something.
+                        Image(systemName: sort == mode
+                              ? (sortDescending ? "arrow.down" : "arrow.up")
+                              : mode.symbolName(for: source))
                     }
+                    // Menu rows resolve `Label` at the container's label style,
+                    // and inside a `Menu` that can come out title-only — which
+                    // is why these rows drew their text and dropped every
+                    // glyph. Stated per row, so nothing above can take it back.
+                    .labelStyle(.titleAndIcon)
                 }
             }
         } label: {

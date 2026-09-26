@@ -6,12 +6,12 @@ import os
 /// per-arr library records (`RadarrLibraryRecord` & friends). Carries just
 /// what the grid renders plus the ids DetailView needs to refetch the full
 /// record on tap.
-public struct LibraryEntry: Identifiable, Equatable, Sendable {
+public struct LibraryEntry: Identifiable, Equatable, Sendable, Codable {
     /// Coarse ownership state driving the status chip. `partial` only
     /// occurs for multi-file media (Sonarr episodes, Lidarr tracks).
     /// `notAvailable` = monitored, nothing on disk, and nothing grabbable
     /// yet (Radarr: minimumAvailability not met; Sonarr: no aired episodes).
-    nonisolated public enum FileState: Sendable {
+    nonisolated public enum FileState: String, Sendable, Codable {
         case complete, partial, missing, notAvailable, unmonitored
     }
 
@@ -189,6 +189,13 @@ public final class LibraryViewModel {
         return out
     }
 
+    /// Cache key of the order the projection arrives in — title, ascending.
+    /// The Library tab builds the same string for that axis/direction pair;
+    /// if the two ever disagree, the first paint re-sorts a few thousand
+    /// titles inside `body`, which is exactly what the pre-warm exists to
+    /// avoid. Hence one constant, not two spellings.
+    public static let defaultSortCacheKey = "title|asc"
+
     /// The default (title) axis' comparator — lives on the model so the
     /// post-fetch pre-warm and the view's `.title` sort are one definition
     /// under one cache key.
@@ -196,16 +203,46 @@ public final class LibraryViewModel {
         a.title.localizedCaseInsensitiveCompare(b.title) == .orderedAscending
     }
 
+    /// Sources already revalidated against their arr in this session.
+    ///
+    /// The first visit of a session paints from MediaKit's on-disk store — the
+    /// records survive relaunches, and waiting on a 3000-title fetch to draw a
+    /// grid we already have was the loading state the user saw every launch —
+    /// and then refreshes behind the covers. Every visit after that is the
+    /// ordinary TTL path, so a stale shelf is never shown twice in a row.
+    @ObservationIgnored private var revalidated: Set<QueueItem.Source> = []
+
     /// Project `source`'s library into grid entries if the index moved under
     /// us (or we have nothing yet). `force` expires the index first, so ⌘R is
     /// a real refetch and not a re-unify of the same records.
     public func loadIfNeeded(source: QueueItem.Source, config: ServiceConfig, force: Bool = false) async {
+        // The cache-first pass is for painting only: an explicit refresh, and
+        // every later visit, asks the arr.
+        let revalidate = force || revalidated.contains(source)
         if force { await LibraryIndex.shared.invalidate(source) }
         let indexVersion = await LibraryIndex.shared.version(for: source)
         if !force, entries[source] != nil, indexVersions[source] == indexVersion {
             return
         }
+        // Paint the saved grid FIRST. Everything below — the store read, the
+        // decode of a few MB of arr records, the unify, the sort — happens
+        // behind a screen that already has covers on it.
+        if entries[source] == nil {
+            let snapshotStarted = Date()
+            if let saved = await LibrarySnapshotStore.load(source, fingerprint: config.identityFingerprint) {
+                // Stored in title order, so this is a decode and nothing else —
+                // the localized sort over a few thousand titles is most of what
+                // made the real projection take the best part of a second.
+                commit(saved, byTitle: saved, for: source, version: nil)
+                Self.log.notice("\(source.rawValue, privacy: .public) library painted from snapshot: \(saved.count, privacy: .public) titles in \(Int(Date().timeIntervalSince(snapshotStarted) * 1000), privacy: .public) ms")
+            }
+        }
         guard !loading.contains(source) else { return }
+        // Stage timings: the Library kept opening on a spinner and each fix
+        // addressed a different suspect, so the load now says where its time
+        // actually goes.
+        let started = Date()
+        func elapsed() -> Int { Int(Date().timeIntervalSince(started) * 1000) }
         loading.insert(source)
         loadFailed.remove(source)
         defer { loading.remove(source) }
@@ -213,30 +250,45 @@ public final class LibraryViewModel {
         // Profile names resolve qualityProfileId → "HD-1080p" for rows without
         // a file (and for Sonarr/Lidarr, which have no single file). One cheap
         // call. Failure degrades to no quality caption, not a failed load.
-        let profiles = await SearchClient.profileNameMap(config: config, source: source)
+        //
+        // The cache-first pass takes only what is already cached: this is one
+        // request, but it is a request, and it sat in front of a grid that was
+        // ready to draw. The revalidating pass right behind it fills the chips
+        // in.
+        let profiles = revalidate
+            ? await SearchClient.profileNameMap(config: config, source: source)
+            : await SearchClient.cachedProfileNameMap(config: config, source: source)
+        Self.log.notice("\(source.rawValue, privacy: .public) load: profiles in \(elapsed(), privacy: .public) ms (revalidate \(revalidate, privacy: .public))")
         let baseURL = config.baseURL
         let projection: Projection
         switch source {
         case .radarr:
-            let movies = await LibraryIndex.shared.movies(config: config)
+            let movies = await LibraryIndex.shared.movies(config: config, revalidate: revalidate)
             // Alternate titles are what let the filter find a film by its
             // Polish or German name. Best-effort, and only paid when the movie
             // list actually changed — reaching this line at all means the
             // index version moved.
-            let alts = await ServiceHandles.radarr(config: config).alternateTitleMap(for: movies)
+            // Same reasoning as the profiles above: alternate titles are a
+            // search nicety and cost their own request when Radarr doesn't
+            // inline them, so the first paint skips them entirely.
+            let alts = revalidate
+                ? await ServiceHandles.radarr(config: config).alternateTitleMap(for: movies)
+                : [:]
             projection = await Self.project {
                 Self.unify(movies, baseURL: baseURL, profiles: profiles, alternateTitles: alts)
             }
         case .sonarr:
-            let series = await LibraryIndex.shared.series(config: config)
+            let series = await LibraryIndex.shared.series(config: config, revalidate: revalidate)
             projection = await Self.project { Self.unify(series, baseURL: baseURL, profiles: profiles) }
         case .lidarr:
-            let artists = await LibraryIndex.shared.artists(config: config)
+            let artists = await LibraryIndex.shared.artists(config: config, revalidate: revalidate)
             projection = await Self.project { Self.unify(artists, baseURL: baseURL, profiles: profiles) }
         case .whisparr:
-            let movies = await LibraryIndex.shared.whisparrMovies(config: config)
+            let movies = await LibraryIndex.shared.whisparrMovies(config: config, revalidate: revalidate)
             projection = await Self.project { Self.unify(movies, baseURL: baseURL, profiles: profiles) }
         }
+
+        Self.log.notice("\(source.rawValue, privacy: .public) load: \(projection.entries.count, privacy: .public) entries projected in \(elapsed(), privacy: .public) ms")
 
         // The index swallows the error and hands back a stale snapshot — or,
         // when it has no snapshot that covers this config, NOTHING. So a failed
@@ -254,14 +306,38 @@ public final class LibraryViewModel {
             return
         }
 
-        entries[source] = projection.entries
+        commit(projection.entries, byTitle: projection.byTitle, for: source,
+               version: await LibraryIndex.shared.version(for: source))
+        LibrarySnapshotStore.save(projection.byTitle, source: source, fingerprint: config.identityFingerprint)
+        Self.logAliasCoverage(projection.entries, source: source)
+
+        // Painted from the store's old copy — now go ask the arr. The grid is
+        // already up, so this second pass re-projects under it (no spinner:
+        // `phase` only shows one while there is nothing to show). A first pass
+        // that went to the network is already current and gets no second one.
+        if !revalidate {
+            revalidated.insert(source)
+            if await LibraryIndex.shared.servedStaleSnapshot(source) {
+                Self.log.notice("\(source.rawValue, privacy: .public) library painted from the store — refreshing behind the grid")
+                Task { [weak self] in
+                    await self?.loadIfNeeded(source: source, config: config, force: true)
+                }
+            }
+        }
+    }
+
+    /// Publish a source's grid. `version` is the index version the entries
+    /// were unified from — nil for the snapshot paint, which is not a unify
+    /// and must not mark the index as already projected.
+    private func commit(_ entries: [LibraryEntry], byTitle: [LibraryEntry],
+                        for source: QueueItem.Source, version: Int?) {
+        self.entries[source] = entries
         // The default axis arrives already sorted, so the first Library visit
         // after a fetch renders without paying the sort inside body.
-        sortCache[source] = ["title": projection.byTitle]
+        sortCache[source] = [Self.defaultSortCacheKey: byTitle]
         filterCache[source] = nil
         countCache[source] = nil
-        indexVersions[source] = await LibraryIndex.shared.version(for: source)
-        Self.logAliasCoverage(projection.entries, source: source)
+        if let version { indexVersions[source] = version }
     }
 
     /// One source's unified entries plus their default (title) order.

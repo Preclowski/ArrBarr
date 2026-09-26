@@ -26,7 +26,16 @@ nonisolated public struct RadarrClient: ArrAPIClient {
     func fetchCredits(movieId: Int) async throws -> [ArrCore.ArrCredit] { try await read([ArrCore.ArrCredit].self) { $0.credits(movieID: movieId) } }
     func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
     func lookupMovies(term: String) async throws -> [RadarrLookupRecord] { try await read([RadarrLookupRecord].self) { $0.lookupMovies(term: term) } }
-    func fetchAllMovies() async throws -> [RadarrLibraryRecord] { try await read([RadarrLibraryRecord].self, policy: .mustRevalidate) { $0.movies() } }
+    /// `revalidate: false` serves whatever the on-disk store holds and says so
+    /// in `isStale`, refreshing behind the caller — what the Library's first
+    /// paint of a session wants.
+    func fetchAllMovies(revalidate: Bool = true) async throws -> [RadarrLibraryRecord] {
+        try await fetchAllMoviesFetched(revalidate: revalidate).value
+    }
+
+    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[RadarrLibraryRecord]> {
+        try await readCacheFirst([RadarrLibraryRecord].self, revalidate: revalidate) { $0.movies() }
+    }
 
     /// Inline alternate titles when the library carries them; otherwise the dedicated endpoint.
     func alternateTitleMap(for movies: [RadarrLibraryRecord]) async -> [Int: [String]] {

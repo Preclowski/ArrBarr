@@ -37,5 +37,14 @@ nonisolated public struct SonarrClient: ArrAPIClient {
         try await run { $0.setSeasonMonitored(seriesID: seriesId, season: seasonNumber, monitored) }
     }
     func lookupSeries(term: String) async throws -> [SonarrLookupRecord] { try await read([SonarrLookupRecord].self) { $0.lookupSeries(term: term) } }
-    func fetchAllSeries() async throws -> [SonarrLibraryRecord] { try await read([SonarrLibraryRecord].self, policy: .mustRevalidate) { $0.series() } }
+    /// `revalidate: false` serves whatever the on-disk store holds and says so
+    /// in `isStale`, refreshing behind the caller — what the Library's first
+    /// paint of a session wants.
+    func fetchAllSeries(revalidate: Bool = true) async throws -> [SonarrLibraryRecord] {
+        try await fetchAllSeriesFetched(revalidate: revalidate).value
+    }
+
+    func fetchAllSeriesFetched(revalidate: Bool = true) async throws -> Fetched<[SonarrLibraryRecord]> {
+        try await readCacheFirst([SonarrLibraryRecord].self, revalidate: revalidate) { $0.series() }
+    }
 }

@@ -61,6 +61,10 @@ public struct EpisodeQuickDetail: View {
     var onBack: () -> Void
 
     @State private var sonarrDetail: SonarrSeriesDetail?
+    /// Series cast for the episode screen — see `EpisodeDetailOverlay.cast`.
+    @State private var cast: [CastMember] = []
+    /// The series' quality-profile name, for the episode hero's chip.
+    @State private var profileName: String?
     @State private var fullEpisode: SonarrEpisodeDetail?
     @State private var episodeFileMap: [Int: SonarrEpisodeFile] = [:]
     @State private var loadError: String?
@@ -76,6 +80,8 @@ public struct EpisodeQuickDetail: View {
     /// Season drill-down — pushed when the user taps the hero's "Season N" link.
     /// Nests under THIS view (like `seriesPush`) so back returns to the episode.
     @State private var seasonPush: SeasonDrill?
+    /// Season art from the media server — what `SeasonDetailView` shows.
+    @State private var mediaServerSeasonPoster: URL?
     /// (season, episode) → episode id, rebuilt with `allEpisodes` in `load`.
     /// See `seasonQueueByEpisodeId`, which resolves queue rows to episodes on
     /// every body pass and can't afford a linear scan of a long series.
@@ -104,8 +110,8 @@ public struct EpisodeQuickDetail: View {
         EpisodeDetailOverlay(
             episode: displayEpisode,
             seriesTitle: sonarrDetail?.title ?? splitTitleAndYear(item.title).title,
-            posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
-            posterRequiresAuth: item.posterRequiresAuth,
+            posterURL: mediaServerSeasonPoster ?? seriesPosterURL,
+            posterRequiresAuth: mediaServerSeasonPoster == nil && item.posterRequiresAuth,
             apiKey: configStore.sonarr.apiKey,
             episodeFile: displayEpisode.episodeFileId.flatMap { episodeFileMap[$0] },
             queueItems: liveQueueItems,
@@ -128,6 +134,13 @@ public struct EpisodeQuickDetail: View {
                 )
             },
             seriesYear: sonarrDetail?.year ?? splitTitleAndYear(item.title).year,
+            cast: cast,
+            genres: sonarrDetail?.genres ?? [],
+            certification: sonarrDetail?.certification,
+            seriesTmdbId: sonarrDetail?.tmdbId,
+            seriesTvdbId: sonarrDetail?.tvdbId,
+            profileName: profileName,
+            mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
             isLoadingDetails: fullEpisode == nil && loadError == nil,
             // Live off `displayEpisode` (which tracks the `fullEpisode` state),
             // not a captured value — the stub carries `monitored: nil` so no
@@ -167,7 +180,7 @@ public struct EpisodeQuickDetail: View {
                 episodes: allEpisodes.filter { $0.seasonNumber == drill.seasonNumber },
                 queueByEpisodeId: seasonQueueByEpisodeId,
                 fileByEpisodeFileId: episodeFileMap,
-                seriesPosterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore) ?? item.posterURL,
+                seriesPosterURL: seriesPosterURL,
                 seriesPosterRequiresAuth: item.posterRequiresAuth,
                 seriesPosterAPIKey: configStore.sonarr.apiKey,
                 onBack: { seasonPush = nil },
@@ -199,6 +212,12 @@ public struct EpisodeQuickDetail: View {
             )
         }
         .task(id: item.id) { await load() }
+        .task(id: sonarrDetail?.id) {
+            let keys = sonarrDetail?.mediaServerKeys ?? []
+            guard !keys.isEmpty, let season = item.seasonNumber else { return }
+            await MediaServerIndex.shared.loadSeasonPosters(for: keys)
+            mediaServerSeasonPoster = MediaServerIndex.shared.seasonPosterURL(for: keys, season: season)
+        }
         // When the episode leaves the queue (import done / removed) while the
         // detail is open, refetch so the overlay swaps the stale download view
         // for the on-disk file (fresh `fullEpisode.hasFile` + episode-file map).
@@ -207,6 +226,13 @@ public struct EpisodeQuickDetail: View {
                 Task { await load() }
             }
         }
+    }
+
+    /// Resolved exactly as `DetailView` does — media-server artwork first — so
+    /// the same title can't wear two different crops depending on the entry point.
+    private var seriesPosterURL: URL? {
+        arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore,
+                     mediaServerKeys: sonarrDetail?.mediaServerKeys ?? []) ?? item.posterURL
     }
 
     /// Live queue rows pulled from the view model, mirroring `DetailView`. The
@@ -294,6 +320,11 @@ public struct EpisodeQuickDetail: View {
             let episodes = try await episodesReq
             let files = try await filesReq
             self.sonarrDetail = detail
+            cast = await CastProvider.seriesCredits(
+                tmdbId: detail.tmdbId, tvdbId: detail.tvdbId, configStore: configStore).cast
+            if let profileId = detail.qualityProfileId {
+                profileName = await SearchClient.profileNameMap(config: configStore.sonarr, source: .sonarr)[profileId]
+            }
             self.allEpisodes = episodes
             self.episodeIdBySlot = Dictionary(
                 episodes.compactMap { ep in

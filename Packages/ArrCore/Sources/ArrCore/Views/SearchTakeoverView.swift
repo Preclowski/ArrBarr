@@ -50,11 +50,6 @@ struct SearchTakeoverView<Surface: View>: View {
     }
 
     private var loadingIndicator: some View {
-        VStack(spacing: 10) {
-            ProgressView().controlSize(.small)
-            Text("queue.loading.button", bundle: .module)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
+        LoadingStateView()
     }
 }

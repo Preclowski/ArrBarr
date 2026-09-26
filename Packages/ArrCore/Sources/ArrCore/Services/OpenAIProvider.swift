@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
@@ -6,6 +7,7 @@ public struct OpenAIProvider: LLMProvider {
     /// Human-readable language the assistant should reply in by default
     /// (e.g. "Polish"). Sourced from the app's language setting.
     private let replyLanguage: String
+    private static let log = Logger(category: "Chat")
 
     public init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
         self.config = config
@@ -32,7 +34,7 @@ public struct OpenAIProvider: LLMProvider {
     }
 
     public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
-        let body = Self.buildRequestBody(
+        var body = Self.buildRequestBody(
             model: config.model,
             prompt: prompt,
             tools: tools,
@@ -44,6 +46,16 @@ public struct OpenAIProvider: LLMProvider {
             // generation itself) must not see the previous profile.
             tasteProfile: tools.isEmpty ? nil : TasteProfileStore.shared.promptBlock()
         )
+        body.stream = true
+        // Hidden reasoning is the quiz's whole wait: a flash model spent 77 s
+        // thinking before the first tool-call byte. Each host has its own
+        // switch; an unknown host gets none rather than a field it may reject.
+        let host = URL(string: config.baseURL)?.host?.lowercased() ?? ""
+        if host.hasSuffix("deepseek.com") {
+            body.thinking = .init(type: "disabled")
+        } else if host.hasSuffix("openrouter.ai") {
+            body.reasoning = .init(enabled: false)
+        }
         guard let url = URL(string: config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/")) + "/chat/completions") else {
             throw OpenAIError.empty
         }
@@ -61,31 +73,62 @@ public struct OpenAIProvider: LLMProvider {
         encoder.outputFormatting = .withoutEscapingSlashes
         req.httpBody = try encoder.encode(body)
 
-        let (data, response) = try await session.data(for: req)
+        let (bytes, response) = try await session.bytes(for: req)
         guard let http = response as? HTTPURLResponse else { throw OpenAIError.empty }
+
+        // One reader for both shapes: SSE `data:` lines feed the accumulator,
+        // anything else is kept as the plain JSON body (error payloads, and
+        // endpoints that ignore `stream`).
+        var stream = ChatCompletionStream()
+        var plainBody = ""
+        var loggedReasoning = false
+        var loggedAnswer = false
+        for try await line in bytes.lines {
+            guard line.hasPrefix("data:") else {
+                plainBody += line + "\n"
+                continue
+            }
+            let payload = line.dropFirst(5).trimmingCharacters(in: .whitespaces)
+            guard payload != "[DONE]", let data = payload.data(using: .utf8),
+                  let chunk = try? JSONDecoder().decode(ChatCompletionChunk.self, from: data) else { continue }
+            let delta = chunk.choices.first?.delta
+            if !loggedReasoning, delta?.reasoning_content?.isEmpty == false || delta?.reasoning?.isEmpty == false {
+                loggedReasoning = true
+                Self.log.notice("stream: model is reasoning")
+            }
+            if !loggedAnswer, delta?.content?.isEmpty == false || delta?.tool_calls?.isEmpty == false {
+                loggedAnswer = true
+                Self.log.notice("stream: first answer bytes")
+            }
+            for touched in stream.apply(chunk) {
+                ToolCallStreamContext.observer?(touched.name, touched.arguments)
+            }
+        }
         guard (200..<300).contains(http.statusCode) else {
-            let body = String(data: data, encoding: .utf8) ?? ""
-            throw OpenAIError.http(status: http.statusCode, body: body)
+            throw OpenAIError.http(status: http.statusCode, body: plainBody)
+        }
+        if stream.sawChunk {
+            return LLMResponse(text: stream.text, toolCalls: stream.toolCalls.map {
+                ToolCall(id: $0.id, name: $0.name, arguments: Self.decodeArguments($0.arguments))
+            }, toolResults: nil)
         }
         let decoded: ChatCompletionsResponse
         do {
-            decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: data)
+            decoded = try JSONDecoder().decode(ChatCompletionsResponse.self, from: Data(plainBody.utf8))
         } catch {
             throw OpenAIError.decoding(String(describing: error))
         }
         guard let choice = decoded.choices.first else { throw OpenAIError.empty }
-        let text = choice.message.content ?? ""
-        let toolCalls: [ToolCall] = (choice.message.tool_calls ?? []).map { call in
-            let argsValue: JSONValue
-            if let data = call.function.arguments.data(using: .utf8),
-               let v = try? JSONDecoder().decode(JSONValue.self, from: data) {
-                argsValue = v
-            } else {
-                argsValue = .object([:])
-            }
-            return ToolCall(id: call.id, name: call.function.name, arguments: argsValue)
+        let toolCalls = (choice.message.tool_calls ?? []).map { call in
+            ToolCall(id: call.id, name: call.function.name, arguments: Self.decodeArguments(call.function.arguments))
         }
-        return LLMResponse(text: text, toolCalls: toolCalls, toolResults: nil)
+        return LLMResponse(text: choice.message.content ?? "", toolCalls: toolCalls, toolResults: nil)
+    }
+
+    private static func decodeArguments(_ raw: String) -> JSONValue {
+        guard let data = raw.data(using: .utf8),
+              let value = try? JSONDecoder().decode(JSONValue.self, from: data) else { return .object([:]) }
+        return value
     }
 
     // MARK: - History window
@@ -269,6 +312,12 @@ public struct ChatCompletionsRequest: Encodable, Sendable {
     public let messages: [Message]
     public let tools: [Tool]?
     public let tool_choice: String?
+    public var stream: Bool? = nil
+    public var thinking: Thinking? = nil
+    public var reasoning: Reasoning? = nil
+
+    public struct Thinking: Encodable, Sendable { public let type: String }
+    public struct Reasoning: Encodable, Sendable { public let enabled: Bool }
 
     public struct Message: Encodable, Sendable {
         public let role: String
@@ -316,5 +365,84 @@ public struct ChatCompletionsResponse: Decodable, Sendable {
             public let name: String
             public let arguments: String
         }
+    }
+}
+
+/// Lets whoever runs a turn watch tool-call arguments while the model is still
+/// writing them. Called with the arguments accumulated so far.
+public enum ToolCallStreamContext {
+    @TaskLocal nonisolated public static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
+}
+
+nonisolated struct ChatCompletionChunk: Decodable, Sendable {
+    let choices: [Choice]
+    struct Choice: Decodable, Sendable {
+        let delta: Delta?
+    }
+    struct Delta: Decodable, Sendable {
+        let content: String?
+        let reasoning_content: String?
+        let reasoning: String?
+        let tool_calls: [ToolCallDelta]?
+
+        enum CodingKeys: String, CodingKey { case content, reasoning_content, reasoning, tool_calls }
+
+        // Reasoning fields vary by host (string here, object there); a shape
+        // we don't know must not cost us the chunk.
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            content = try c.decodeIfPresent(String.self, forKey: .content)
+            reasoning_content = try? c.decodeIfPresent(String.self, forKey: .reasoning_content)
+            reasoning = try? c.decodeIfPresent(String.self, forKey: .reasoning)
+            tool_calls = try c.decodeIfPresent([ToolCallDelta].self, forKey: .tool_calls)
+        }
+    }
+    struct ToolCallDelta: Decodable, Sendable {
+        let index: Int?
+        let id: String?
+        let function: Function?
+        struct Function: Decodable, Sendable {
+            let name: String?
+            let arguments: String?
+        }
+    }
+}
+
+/// Folds streamed chunks back into the message a non-streamed call returns.
+nonisolated struct ChatCompletionStream {
+    struct PendingCall {
+        var id: String?
+        var name = ""
+        var arguments = ""
+    }
+
+    private(set) var sawChunk = false
+    private(set) var text = ""
+    private var calls: [Int: PendingCall] = [:]
+
+    var toolCalls: [PendingCall] {
+        calls.keys.sorted().compactMap { calls[$0] }.filter { !$0.name.isEmpty }
+    }
+
+    /// Returns the calls whose arguments grew with this chunk.
+    mutating func apply(_ chunk: ChatCompletionChunk) -> [PendingCall] {
+        sawChunk = true
+        var touched: [PendingCall] = []
+        for choice in chunk.choices {
+            guard let delta = choice.delta else { continue }
+            if let content = delta.content { text += content }
+            for part in delta.tool_calls ?? [] {
+                let index = part.index ?? 0
+                var call = calls[index] ?? PendingCall()
+                if let id = part.id, !id.isEmpty { call.id = id }
+                if let name = part.function?.name, !name.isEmpty { call.name = name }
+                if let fragment = part.function?.arguments, !fragment.isEmpty {
+                    call.arguments += fragment
+                    if !call.name.isEmpty { touched.append(call) }
+                }
+                calls[index] = call
+            }
+        }
+        return touched
     }
 }

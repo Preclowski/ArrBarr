@@ -57,44 +57,81 @@ public struct ChatView: View {
 
     @State private var clearHovered: Bool = false
 
+    /// Height the floating input bar takes out of the surface — it is a sibling
+    /// of the content, not a safe-area inset, so the content keeps clear of it
+    /// itself.
+    ///
+    /// The conversation reserves more than the bar measures: a confirm card can
+    /// appear above it, and the newest bubble must still land clear after
+    /// autoscroll. The empty state can't be gated by a tool call and has
+    /// nothing to autoscroll, so it reserves the bar and a margin — the 20pt
+    /// difference is a whole suggestion row.
+    private static let inputBarReservation: CGFloat = 84
+    private static let emptyStateReservation: CGFloat = 64
+
+    /// Two surfaces, not two branches inside one scroll view: a conversation
+    /// scrolls, the empty state fits. `ViewThatFits` in the empty state can
+    /// only do its job when something proposes a real height to it, and a
+    /// ScrollView proposes infinity.
+    @ViewBuilder
     private var messages: some View {
+        if viewModel.messages.isEmpty && !viewModel.isThinking {
+            emptyState
+        } else {
+            conversation
+        }
+    }
+
+    private var emptyState: some View {
+        ChatEmptyStateView(
+            quizPosterURLs: quizPosterURLs,
+            locale: configStore.currentLocale,
+            onQuizStart: { kind, variant in
+                // Synthesised chat message that the LLM routes
+                // through `discover_in_quiz`. We name a SINGLE
+                // kind so the model opens one deck (it used to
+                // fire a movie session *and* a series session
+                // when the prompt said "movies and shows") and
+                // ask for a dozen-plus so the deck isn't thin.
+                // The variant only changes which pool the message
+                // asks for — the deck it opens is the same one.
+                //
+                // Resolve in the *in-app* language, not the process
+                // language — otherwise the sent message stays in the
+                // pre-switch language and the model answers the whole
+                // turn in it (see AppLocalized).
+                let prompt = AppLocalized.string(variant.promptKey(for: kind),
+                                                 locale: configStore.currentLocale)
+                DiscoverViewModel.shared.beginLoading()
+                Task {
+                    await viewModel.send(prompt)
+                    DiscoverViewModel.shared.endLoading()
+                }
+            },
+            onSuggestionTap: { prompt in
+                draft = ""
+                Task { await viewModel.send(prompt) }
+            }
+        )
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Clearance for the floating input bar, which is a sibling
+        // of this view rather than a safe-area inset. The empty
+        // state fits itself into what is left (it has no scroll to
+        // fall back on).
+        .padding(.bottom, Self.emptyStateReservation)
+        // Sample a few library posters for the Quiz deck on first
+        // appearance; cached process-wide so re-entry is instant.
+        .task {
+            if quizPosterURLs.isEmpty {
+                quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
+            }
+        }
+    }
+
+    private var conversation: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                if viewModel.messages.isEmpty && !viewModel.isThinking {
-                    ChatEmptyStateView(
-                        quizPosterURLs: quizPosterURLs,
-                        locale: configStore.currentLocale,
-                        onQuizStart: { kind in
-                            // Synthesised chat message that the LLM routes
-                            // through `discover_in_quiz`. We name a SINGLE
-                            // kind so the model opens one deck (it used to
-                            // fire a movie session *and* a series session
-                            // when the prompt said "movies and shows") and
-                            // ask for a dozen-plus so the deck isn't thin.
-                            let promptKey = kind == .movies
-                                ? "chat.quizPrompt.movies"
-                                : "chat.quizPrompt.series"
-                            // Resolve in the *in-app* language, not the process
-                            // language — otherwise the sent message stays in the
-                            // pre-switch language and the model answers the whole
-                            // turn in it (see AppLocalized).
-                            let prompt = AppLocalized.string(promptKey, locale: configStore.currentLocale)
-                            Task { await viewModel.send(prompt) }
-                        },
-                        onSuggestionTap: { prompt in
-                            draft = ""
-                            Task { await viewModel.send(prompt) }
-                        }
-                    )
-                    .frame(maxWidth: .infinity, minHeight: 380)
-                    // Sample a few library posters for the Quiz deck on first
-                    // appearance; cached process-wide so re-entry is instant.
-                    .task {
-                        if quizPosterURLs.isEmpty {
-                            quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
-                        }
-                    }
-                } else {
+                Group {
                     // One person, one card per answer — see ChatPersonCardDedupe.
                     // Computed over the whole history rather than stored on the
                     // messages, because which card wins depends on tool calls
@@ -121,7 +158,7 @@ public struct ChatView: View {
                         // autoscroll. Sized to clear the glass input bar +
                         // its bottom padding (56 was too short — the newest
                         // bubble landed behind the bar).
-                        Color.clear.frame(height: 84).id("chatBottom")
+                        Color.clear.frame(height: Self.inputBarReservation).id("chatBottom")
                     }
                     .environment(\.chatKnownLinkKeys, knownLinks)
                     .padding(.horizontal, 12)

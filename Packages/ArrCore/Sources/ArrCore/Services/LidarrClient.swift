@@ -25,7 +25,14 @@ nonisolated public struct LidarrClient: ArrAPIClient {
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail { try await read(LidarrAlbumDetail.self) { $0.album(id: id) } }
     func fetchTracks(albumId: Int) async throws -> [LidarrTrackDetail] { try await read([LidarrTrackDetail].self) { $0.tracks(albumID: albumId) } }
     func fetchArtistDetails(id: Int) async throws -> LidarrArtistDetail { try await read(LidarrArtistDetail.self) { $0.artist(id: id) } }
-    func fetchAllArtists() async throws -> [LidarrLibraryRecord] { (try? await read([LidarrLibraryRecord].self, policy: .mustRevalidate) { $0.artists() }) ?? [] }
+    /// See `RadarrClient.fetchAllMovies(revalidate:)`.
+    func fetchAllArtists(revalidate: Bool = true) async throws -> [LidarrLibraryRecord] {
+        (try? await fetchAllArtistsFetched(revalidate: revalidate).value) ?? []
+    }
+
+    func fetchAllArtistsFetched(revalidate: Bool = true) async throws -> Fetched<[LidarrLibraryRecord]> {
+        try await readCacheFirst([LidarrLibraryRecord].self, revalidate: revalidate) { $0.artists() }
+    }
     func fetchArtistAlbums(artistId: Int) async throws -> [LidarrAlbumListRecord] { try await read([LidarrAlbumListRecord].self) { $0.albums(artistID: artistId) } }
     func setAlbumMonitored(albumId: Int, monitored: Bool) async throws { try await run { $0.setAlbumMonitored(albumID: albumId, monitored) } }
     func setArtistMonitored(artistId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: artistId, monitored) } }

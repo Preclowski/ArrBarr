@@ -1,27 +1,36 @@
 import SwiftUI
 
 /// Manual / interactive search results for a library item (movie / episode /
-/// album) that isn't currently downloading. Pushed from the detail view's
-/// "Download" CTA. Lists indexer releases; tapping one grabs it.
+/// season / album) that isn't currently downloading. Pushed from the detail
+/// view's "Download" CTA. Lists indexer releases; a row expands into the
+/// detail that decides the grab.
 ///
-/// Row layout — two lines whose leading cells share a column, so the type
-/// badge sits directly above the age and the release name directly above its
-/// specs:
-///   (type)  Release file name
-///   age     quality  size ……………………………………………… score
-/// Hovering a row pops a card with the full release metadata.
+/// Row layout — three lines whose leading cells share a column, so the scope
+/// badge sits above the protocol chip and that above the age:
+///   (scope)   Release file name                         (state)
+///   (proto)   indexer · quality · size · seeders
+///   (age)     languages · flags · formats ……………… upgrade + score
+/// The third line is what makes a score arguable rather than oracular; the
+/// `View` menu drops it for users who'd rather see two more rows.
 struct ReleaseListView: View {
     let target: ManualSearchTarget
     /// The file the library already holds for this item, when it holds one.
     /// Present → the list is framed as an upgrade: a "current file" header over
-    /// the results, and each hover card compares its release against it instead
-    /// of listing specs in a vacuum. nil → the plain list (nothing on disk, or a
-    /// season pack, which replaces many files and so diffs against none).
+    /// the results, an upgrade glyph on every row, and a diff inside each
+    /// expanded release. nil → the plain list (nothing on disk, or a season
+    /// pack, which replaces many files and so diffs against none).
     ///
     /// Passed in rather than fetched here: the detail views that push this
     /// screen already have the file loaded (and it's the only source that works
     /// in demo mode, where the file endpoints return nil).
     var existing: UpgradeDiffView.Side?
+    /// Season searches have no single baseline — a pack replaces many files —
+    /// but their per-episode rows each have one. Keyed by episode number, so a
+    /// row for E04 diffs against E04's file the same way an episode search does.
+    var existingByEpisode: [Int: UpgradeDiffView.Side] = [:]
+    /// What the pusher knows about the title, for the cards shown while the
+    /// indexers answer.
+    var waitContext = WaitCardContext()
     let onBack: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
@@ -39,6 +48,27 @@ struct ReleaseListView: View {
     @State private var grabbed: Set<String> = []
     @State private var pendingGrab: Release?
     @State private var showGrabConfirm = false
+    /// The one release whose detail is open, by guid. One at a time: two open
+    /// rows in a 380pt popover is a scroll, not a comparison.
+    @State private var expanded: String?
+    @State private var scope: ScopeFilter = .all
+    @State private var sort: ReleaseSort = .rank
+    @State private var showRejected = false
+    /// Indexer id → the name a human gave it, through Prowlarr when it's
+    /// configured. Empty until it loads; the row falls back to the *arr's own
+    /// label, so nothing waits on this.
+    @State private var indexerNames: [Int: String] = [:]
+    /// Two lines instead of three — a preference, not a mode we push: the third
+    /// line carries the why behind every score, which is the whole point.
+    @AppStorage("manualSearch.compactRows") private var compactRows = false
+
+    /// What a season search can be narrowed to. Both kinds are legitimate ways
+    /// to fill a season, so the list shows everything by default.
+    private enum ScopeFilter { case all, packs, episodes }
+
+    /// The *arr hands the list back already ranked; the rest is the user
+    /// overriding that with the one dimension they care about today.
+    private enum ReleaseSort { case rank, score, seeders, size, age }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -57,6 +87,11 @@ struct ReleaseListView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                if !releases.isEmpty {
+                    Text(verbatim: "\(releases.count)")
+                        .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
+                        .foregroundStyle(.tertiary)
+                }
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -67,6 +102,7 @@ struct ReleaseListView: View {
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { viewMenu } }
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
@@ -83,7 +119,9 @@ struct ReleaseListView: View {
         .inlineConfirm(
             isPresented: $showGrabConfirm,
             title: "Download this release?",
-            message: "It will be sent to your download client.",
+            message: pendingGrab?.isRejected == true
+                ? "Your *arr rejected it — downloading anyway overrides that."
+                : "It will be sent to your download client.",
             confirmLabel: "Download",
             onConfirm: { grab(pendingGrab) }
         )
@@ -92,35 +130,141 @@ struct ReleaseListView: View {
     @ViewBuilder
     private var content: some View {
         if loading {
-            ProgressView()
-                .controlSize(.small)
+            WaitStories(context: waitContext)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if let loadError {
             statusState(symbol: "exclamationmark.triangle", text: Text(verbatim: loadError))
         } else if releases.isEmpty {
             statusState(symbol: "magnifyingglass", text: Text("No releases found", bundle: .module))
+        } else if visible.isEmpty {
+            // Results exist but none survive the filters — most often a season
+            // where every candidate was rejected. An empty scroll area under a
+            // filter bar reads as "the search found nothing", which is a lie.
+            VStack(spacing: 0) {
+                filterBar
+                statusState(symbol: "line.3.horizontal.decrease.circle",
+                            text: Text("Every result is filtered out.", bundle: .module))
+            }
         } else {
+            filterBar
             // Header sits OUTSIDE the ScrollView: it's the baseline every row
             // is read against, so scrolling to row 30 mustn't lose it.
             currentFileHeader
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(releases) { release in
-                        ReleaseRow(
-                            release: release,
-                            existing: existing,
-                            isGrabbing: grabbing.contains(release.guid),
-                            isGrabbed: grabbed.contains(release.guid)
-                        ) {
-                            pendingGrab = release
-                            showGrabConfirm = true
-                        }
-                        Divider().opacity(0.35)
+                    ForEach(visible) { release in
+                        row(release)
                     }
                 }
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    @ViewBuilder
+    private func row(_ release: Release) -> some View {
+        let isExpanded = expanded == release.guid
+        ReleaseRow(
+            release: release,
+            existing: baseline(for: release),
+            compact: compactRows,
+            indexerName: indexerName(for: release),
+            showScope: target.isSeasonSearch,
+            isExpanded: isExpanded,
+            isGrabbing: grabbing.contains(release.guid),
+            isGrabbed: grabbed.contains(release.guid)
+        ) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                expanded = isExpanded ? nil : release.guid
+            }
+        }
+        if isExpanded {
+            ReleaseDetail(release: release, existing: baseline(for: release),
+                          indexerName: indexerName(for: release), showsActions: true) {
+                pendingGrab = release
+                showGrabConfirm = true
+            }
+            .padding(.horizontal, 14)
+            .padding(.bottom, 10)
+            .background(Color.primary.opacity(0.04))
+        }
+        Divider().opacity(0.35)
+    }
+
+    /// Rejected releases need an override to grab and are rarely what's
+    /// wanted, so they're out of the list until this pill puts them back —
+    /// sunk to the bottom, with the *arr's reason where the formats were.
+    /// A pill rather than a section: it sits with the other filters, which is
+    /// what it is, and it doesn't push a header between the last row and the
+    /// end of the list.
+    @ViewBuilder
+    private var rejectedPill: some View {
+        let count = rejected.count
+        if count > 0 {
+            Button {
+                withAnimation(.easeInOut(duration: 0.15)) { showRejected.toggle() }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "nosign")
+                        .scaledFont(size: 9, weight: .semibold)
+                    Text(verbatim: "\(count)")
+                        .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
+                }
+                .foregroundStyle(showRejected ? Color.orange : Color.secondary)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 3)
+                .chipOutline(showRejected ? Color.orange : Color.secondary, opacity: showRejected ? 0.55 : 0.35)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help(Text("Rejected", bundle: .module))
+            .accessibilityLabel(Text("Rejected", bundle: .module))
+            .accessibilityValue(Text(verbatim: "\(count)"))
+        }
+    }
+
+    @ViewBuilder
+    private var filterBar: some View {
+        HStack(spacing: 8) {
+            if target.isSeasonSearch {
+                Picker(selection: $scope) {
+                    Text("All", bundle: .module).tag(ScopeFilter.all)
+                    Text("Packs", bundle: .module).tag(ScopeFilter.packs)
+                    Text("Episodes", bundle: .module).tag(ScopeFilter.episodes)
+                } label: { EmptyView() }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .controlSize(.small)
+            }
+            rejectedPill
+            Spacer(minLength: 0)
+            #if os(macOS)
+            viewMenu
+            #endif
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color.primary.opacity(0.04))
+        Divider().opacity(0.5)
+    }
+
+    private var viewMenu: some View {
+        Menu {
+            Picker(selection: $sort) {
+                Text("Rank", bundle: .module).tag(ReleaseSort.rank)
+                Text("Score", bundle: .module).tag(ReleaseSort.score)
+                Text("Seeders", bundle: .module).tag(ReleaseSort.seeders)
+                Text("Size", bundle: .module).tag(ReleaseSort.size)
+                Text("Age", bundle: .module).tag(ReleaseSort.age)
+            } label: { Text("Sort", bundle: .module) }
+            Divider()
+            Toggle(isOn: $compactRows) { Text("Compact rows", bundle: .module) }
+        } label: {
+            Label { Text("View", bundle: .module) } icon: { Image(systemName: "slider.horizontal.3") }
+                .scaledFont(size: 11, weight: .medium)
+        }
+        .menuStyle(.borderlessButton)
+        .fixedSize()
     }
 
     /// What the library already has, pinned above the results — without it a
@@ -167,6 +311,45 @@ struct ReleaseListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
+    private func indexerName(for release: Release) -> String? {
+        release.indexerId.flatMap { indexerNames[$0] } ?? release.indexerName
+    }
+
+    /// The file this release would replace: the screen's own baseline when it
+    /// has one, otherwise the file of the single episode this release carries.
+    private func baseline(for release: Release) -> UpgradeDiffView.Side? {
+        if let existing { return existing }
+        let numbers = release.episodeNumbers ?? []
+        guard numbers.count == 1, let number = numbers.first else { return nil }
+        return existingByEpisode[number]
+    }
+
+    // MARK: - Ordering
+
+    /// Accepted releases first, then — only when the pill is on — the rejected
+    /// ones, so revealing them never reorders the rows above.
+    private var visible: [Release] { accepted + (showRejected ? ordered(rejected) : []) }
+    private var accepted: [Release] { ordered(releases.filter { !$0.isRejected }) }
+    private var rejected: [Release] { releases.filter(\.isRejected) }
+
+    private func ordered(_ input: [Release]) -> [Release] {
+        let scoped = input.filter { release in
+            guard target.isSeasonSearch else { return true }
+            switch scope {
+            case .all: return true
+            case .packs: return release.fullSeason == true
+            case .episodes: return release.fullSeason != true
+            }
+        }
+        switch sort {
+        case .rank: return scoped
+        case .score: return scoped.sorted { ($0.customFormatScore ?? 0) > ($1.customFormatScore ?? 0) }
+        case .seeders: return scoped.sorted { ($0.seeders ?? -1) > ($1.seeders ?? -1) }
+        case .size: return scoped.sorted { $0.sizeBytes > $1.sizeBytes }
+        case .age: return scoped.sorted { ($0.ageHours ?? .greatestFiniteMagnitude) < ($1.ageHours ?? .greatestFiniteMagnitude) }
+        }
+    }
+
     // MARK: - Data
 
     private func makeClient() -> (any ArrAPIClient)? {
@@ -182,21 +365,15 @@ struct ReleaseListView: View {
             return
         }
         do {
-            let result = try await client.fetchReleases(query: target.query)
-            // Keep the arr's own ranking, but sink rejected releases to the
-            // bottom (they need an override to grab and are rarely what's wanted).
-            var ordered = result.filter { !$0.isRejected } + result.filter { $0.isRejected }
-            // A season search returns per-episode releases alongside the packs;
-            // for a whole-season download the user wants the packs, so show only
-            // those when any exist (also keeps the list short → no scroll jank
-            // from dozens of episode rows). Fall back to everything when the
-            // season genuinely has no pack.
-            if target.isSeasonSearch {
-                let packs = ordered.filter { $0.fullSeason == true }
-                if !packs.isEmpty { ordered = packs }
-            }
-            releases = ordered
+            releases = try await client.fetchReleases(query: target.query)
             loadedTargetId = target.id
+            // Names are reference data, cached across searches — this is a
+            // no-op after the first search of a session.
+            Task { indexerNames = await IndexerNames.shared.names(for: target.source, configStore: configStore) }
+            // A search where the *arr rejected everything is the normal case for
+            // a season that's already complete — hiding all of it would answer
+            // "search" with a blank screen, so the pill starts on instead.
+            showRejected = releases.allSatisfy(\.isRejected)
         } catch is CancellationError {
             // view went away mid-load — ignore
         } catch {
@@ -213,6 +390,9 @@ struct ReleaseListView: View {
                 await MainActor.run {
                     grabbing.remove(release.guid)
                     grabbed.insert(release.guid)
+                    // The detail did its job; collapsing returns the list to a
+                    // list, with the row's own tick carrying the outcome.
+                    withAnimation(.easeInOut(duration: 0.15)) { expanded = nil }
                 }
             } catch {
                 await MainActor.run {
@@ -226,12 +406,12 @@ struct ReleaseListView: View {
 
 // MARK: - Row
 
-/// The row's leading column — the type badge on line 1, the age on line 2.
+/// The row's leading column — scope on line 1, protocol on line 2, age on 3.
 ///
 /// Every cell reserves the width of the widest badge the list can produce
 /// ("Torrent") via a hidden ghost, so the column is *the same width on every
 /// row*: names and specs line up down the whole list, not just within one row's
-/// two lines. A per-row Grid (or measuring the real content) can't do that —
+/// lines. A per-row Grid (or measuring the real content) can't do that —
 /// each row would still size its own column, and a measured max would make the
 /// list shuffle sideways as wider rows scroll into view.
 private struct ReleaseLeadCell<Content: View>: View {
@@ -250,95 +430,45 @@ private struct ReleaseLeadCell<Content: View>: View {
 private struct ReleaseRow: View {
     let release: Release
     let existing: UpgradeDiffView.Side?
+    let compact: Bool
+    /// Resolved through Prowlarr when it's configured, the *arr's own label
+    /// otherwise — see `IndexerNames`.
+    let indexerName: String?
+    /// Season searches mix packs and episodes; every other search has one kind,
+    /// so the badge cell would say the same thing on every row.
+    let showScope: Bool
+    let isExpanded: Bool
     let isGrabbing: Bool
     let isGrabbed: Bool
-    let onGrab: () -> Void
+    let onTap: () -> Void
 
     @State private var hovering = false
     @State private var showPopover = false
     @State private var hoverTask: Task<Void, Never>?
 
     var body: some View {
-        Button(action: onGrab) {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 3) {
-                    // Line 1 — (type, coloured outline) | file name
-                    HStack(spacing: 8) {
-                        ReleaseLeadCell {
-                            TagChip(text: release.protocolLabel, color: release.isTorrent ? .green : .orange)
-                        }
-                        // Full-strength regardless of rejection. Dimming the
-                        // title made a rejected release read as less of a
-                        // release, when the name is the one thing the user
-                        // scans every row for — and with most rows rejected on
-                        // a typical search, the dimming stopped distinguishing
-                        // anything at all. The warning lives on the grab
-                        // button, which is what the rejection is actually about.
-                        Text(verbatim: release.title)
-                            .scaledFont(size: 12, weight: .medium)
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-                    }
-                    // Line 2 — age | quality  size …………………………… score
-                    HStack(spacing: 8) {
-                        // Age leads the metadata line: on a manual search it's
-                        // one of the things you actually pick on, and digging it
-                        // out of the hover card per row isn't picking.
-                        // Monospaced digits keep the column steady while
-                        // scrolling ("9d" next to "31d"). Always rendered, dash
-                        // and all — an omitted cell would slide the specs left
-                        // and break this row's alignment.
-                        let age = release.ageLabel ?? "—"
-                        ReleaseLeadCell {
-                            Text(verbatim: age)
-                                .scaledFont(size: 10, weight: .medium)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                                .accessibilityLabel(Text("Age", bundle: .module))
-                                .accessibilityValue(Text(verbatim: age))
-                        }
-                        HStack(spacing: 6) {
-                            if let quality = release.qualityName {
-                                Text(verbatim: quality)
-                                    .scaledFont(size: 10, weight: .medium)
-                                    .foregroundStyle(.secondary)
-                            }
-                            // Size rides along with quality rather than sitting
-                            // at the far edge: the two are read together ("1080p
-                            // for 4 GB?"), and a spec split across the row makes
-                            // that a saccade instead of a glance.
-                            Text(verbatim: ByteCountFormatter.string(fromByteCount: release.sizeBytes, countStyle: .file))
-                                .scaledFont(size: 10, weight: .medium)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                            Spacer(minLength: 8)
-                            if let score = release.customFormatScore {
-                                // Same weight as the age / quality / size cells
-                                // it shares the line with — the colour already
-                                // carries the emphasis, and bolding on top of it
-                                // made the score shout over the spec it belongs to.
-                                ScoreLabel(score: score, baseline: existing?.score, size: 10)
-                            }
-                        }
-                    }
-                }
-                grabIndicator
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 3) {
+                titleLine
+                specLine
+                if !compact { reasonLine }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isGrabbed ? Color.green.opacity(0.08) : Color.clear)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(isGrabbing || isGrabbed)
-        // Grabbing a release sends it straight to the download client — not
-        // something to discover by pressing an unlabelled row.
-        .accessibilityHint(Text("It will be sent to your download client.", bundle: .module))
+        .accessibilityHint(Text("Opens the release's details.", bundle: .module))
         #if os(macOS)
+        // Hover is an accelerator over the same detail the row expands into —
+        // a mouse can compare three releases without opening and closing three
+        // rows. It shows no actions: grabbing stays a deliberate expand.
         .onHover { isHovering in
             hovering = isHovering
             hoverTask?.cancel()
-            if isHovering {
+            if isHovering, !isExpanded {
                 hoverTask = Task { @MainActor in
                     try? await Task.sleep(nanoseconds: 400_000_000)
                     if !Task.isCancelled, hovering { showPopover = true }
@@ -348,84 +478,236 @@ private struct ReleaseRow: View {
             }
         }
         .popover(isPresented: $showPopover, arrowEdge: .trailing) {
-            ReleaseDetailPopover(release: release, existing: existing)
+            ReleaseDetail(release: release, existing: existing, indexerName: indexerName,
+                          showsActions: false, onGrab: {})
+                .padding(12)
+                .frame(width: 340)
                 .popoverBehavior(.applicationDefined)
         }
         #endif
     }
 
+    // Line 1 — scope badge | release name | state.
+    private var titleLine: some View {
+        HStack(spacing: 8) {
+            if showScope {
+                ReleaseLeadCell { scopeBadge }
+            }
+            // Full-strength regardless of rejection. Dimming the title made a
+            // rejected release read as less of a release, when the name is the
+            // one thing the user scans every row for.
+            Text(verbatim: release.shortTitle)
+                .scaledFont(size: 12, weight: .medium)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .truncationMode(.tail)
+            Spacer(minLength: 4)
+            state
+        }
+    }
+
+    // Line 2 — protocol | indexer · quality · size · seeders.
+    private var specLine: some View {
+        HStack(spacing: 8) {
+            ReleaseLeadCell {
+                TagChip(text: release.protocolLabel, color: release.isTorrent ? .green : .orange)
+            }
+            Text(verbatim: specs)
+                .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .truncationMode(.middle)
+            Spacer(minLength: 0)
+        }
+    }
+
+    // Line 3 — age | languages · flags · formats ……… upgrade + score.
+    private var reasonLine: some View {
+        HStack(spacing: 8) {
+            // Monospaced digits keep the column steady while scrolling ("9d"
+            // next to "31d"). Always rendered, dash and all — an omitted cell
+            // would slide the rest left and break the row's alignment.
+            let age = release.ageLabel ?? "—"
+            ReleaseLeadCell {
+                Text(verbatim: age)
+                    .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("Age", bundle: .module))
+                    .accessibilityValue(Text(verbatim: age))
+            }
+            if release.isRejected {
+                Text(verbatim: rejectionSummary)
+                    .scaledFont(size: 10, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            } else {
+                HStack(spacing: 5) {
+                    ForEach(reasons, id: \.text) { reason in
+                        Text(verbatim: reason.text)
+                            .scaledFont(size: 10, weight: .medium)
+                            .foregroundStyle(reason.color)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            Spacer(minLength: 8)
+            scoreCell
+        }
+    }
+
     @ViewBuilder
-    private var grabIndicator: some View {
+    private var scopeBadge: some View {
+        switch release.scope {
+        case .pack:
+            TagChip(text: String(localized: "release.scope.pack", bundle: .module), color: .purple)
+        case .episodes(let label):
+            TagChip(text: label, color: .blue)
+        case nil:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var state: some View {
         if isGrabbing {
             ProgressView().controlSize(.small)
                 .accessibilityLabel(Text("Sending to download client", bundle: .module))
         } else if isGrabbed {
             // Green tick is the only "this one is already on its way" cue.
-            Image(systemName: "checkmark.circle.fill")
-                .scaledFont(size: 18, weight: .regular)
+            Label { Text("Grabbed", bundle: .module) } icon: { Image(systemName: "checkmark.circle.fill") }
+                .scaledFont(size: 10, weight: .medium)
                 .foregroundStyle(.green)
-                .accessibilityLabel(Text("Sent to download client", bundle: .module))
         } else {
-            // Resting affordance duplicating the row's own action. Rejection
-            // badges THIS glyph rather than trailing the spec line: the warning
-            // is about what pressing the button will do (grab an override), so
-            // it belongs on the button, and the spec line stays specs only.
-            //
-            // Colour-wise it's a `LinkChevron`, not a status glyph: tertiary at
-            // rest, secondary while the row is hovered, and it stays that way
-            // when the release is rejected. The warning's colour belongs to the
-            // badge — bleeding it into the affordance would make the button
-            // itself read as a state.
-            Image(systemName: "arrow.down.circle")
-                .scaledFont(size: 18, weight: .regular)
+            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
                 .animation(.easeInOut(duration: 0.12), value: hovering)
-                .overlay(alignment: .bottomTrailing) {
-                    if release.isRejected {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .scaledFont(size: 9, weight: .semibold)
-                            .foregroundStyle(.orange)
-                            // Dark halo so the triangle reads where it overlaps
-                            // the circle's stroke, without a solid backing plate
-                            // that would need a per-appearance colour.
-                            .shadow(color: .black.opacity(0.6), radius: 1)
-                            .offset(x: 4, y: 3)
-                    }
-                }
-                // Decoration when there's nothing to warn about (the row itself
-                // is the labelled button); the badged state is the one thing
-                // here VoiceOver must not lose, so it keeps the old "Rejected".
-                .accessibilityHidden(!release.isRejected)
-                .accessibilityLabel(Text("Rejected", bundle: .module))
+                .accessibilityHidden(true)
         }
     }
+
+    /// Upgrade glyph then score. The glyph is the summary — the expanded diff
+    /// is the argument — and it only exists when there's a file to beat.
+    private var scoreCell: some View {
+        HStack(spacing: 3) {
+            upgradeGlyph
+            if let score = release.customFormatScore {
+                // Same weight as the cells it shares the line with — the colour
+                // already carries the emphasis.
+                ScoreLabel(score: score, baseline: existing?.score, size: 10)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var upgradeGlyph: some View {
+        switch release.upgrade(overQuality: existing?.quality, score: existing?.score) {
+        case .better:
+            glyph("arrowtriangle.up.fill", .green, Text("Upgrade", bundle: .module))
+        case .same:
+            glyph("equal", .secondary, Text("Same as what you have", bundle: .module))
+        case .worse:
+            glyph("arrowtriangle.down.fill", .red, Text("Downgrade", bundle: .module))
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private func glyph(_ name: String, _ color: Color, _ label: Text) -> some View {
+        Image(systemName: name)
+            .scaledFont(size: 8, weight: .semibold)
+            .foregroundStyle(color)
+            .accessibilityLabel(label)
+    }
+
+    /// indexer · quality · size · seeders / leechers — the cells that separate
+    /// two releases carrying the same name.
+    private var specs: String {
+        var parts: [String] = []
+        if let indexer = indexerName { parts.append(indexer) }
+        if let quality = release.qualityName { parts.append(quality) }
+        if release.sizeBytes > 0 {
+            parts.append(ByteCountFormatter.string(fromByteCount: release.sizeBytes, countStyle: .file))
+        }
+        if release.isTorrent {
+            parts.append("↑\(release.seeders ?? 0) ↓\(release.leechers ?? 0)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    /// Why the score is what it is, at row scale: languages worth mentioning,
+    /// indexer flags, then the release's custom formats — green for the ones
+    /// the file on disk doesn't have. Capped, with the remainder counted.
+    private var reasons: [(text: String, color: Color)] {
+        var out: [(text: String, color: Color)] = []
+        let languages = (release.languages ?? []).compactMap(\.name)
+        if languages.count > 1 || (languages.first.map { $0 != "English" } ?? false) {
+            out.append((languages.joined(separator: ", "), .secondary))
+        }
+        out += release.flagLabels.map { (text: $0, color: Color.green) }
+        let baseline = Set(existing?.formats ?? [])
+        let formats = (release.customFormats ?? []).compactMap(\.name)
+        out += formats.map { (text: $0, color: existing != nil && !baseline.contains($0) ? Color.green : Color.secondary) }
+        guard out.count > 4 else { return out }
+        return Array(out.prefix(3)) + [(text: "+\(out.count - 3)", color: .secondary)]
+    }
+
+    /// A short label for the first rejection, because the *arr's own sentence
+    /// ("Not an upgrade for existing episode file(s). Existing quality: …") is
+    /// a paragraph, and printing it on twenty rows makes the list look broken
+    /// rather than filtered. The full reasons live in the expanded detail.
+    private var rejectionSummary: String {
+        guard let first = release.rejections?.first else { return "" }
+        let text = first.lowercased()
+        let key: String.LocalizationValue?
+        switch true {
+        case text.contains("not an upgrade"): key = "rejection.notAnUpgrade"
+        case text.contains("already imported"), text.contains("already in"): key = "rejection.alreadyImported"
+        case text.contains("language"): key = "rejection.language"
+        case text.contains("blocklist"), text.contains("blacklist"): key = "rejection.blocklisted"
+        case text.contains("cutoff"): key = "rejection.cutoff"
+        case text.contains("size"): key = "rejection.size"
+        case text.contains("release group"): key = "rejection.releaseGroup"
+        case text.contains("quality"): key = "rejection.quality"
+        default: key = nil
+        }
+        guard let key else {
+            // Unmapped: the first clause only, so it still fits one line.
+            let clause = first.split(whereSeparator: { $0 == "." || $0 == ":" }).first.map(String.init) ?? first
+            return clause.count > 40 ? String(clause.prefix(38)) + "…" : clause
+        }
+        return String(localized: key, bundle: .module)
+    }
+
 }
 
-// MARK: - Hover detail card
+// MARK: - Detail
 
-private struct ReleaseDetailPopover: View {
+/// Everything about one release — the single detail surface. The row expands
+/// into it (with actions) on both platforms, and macOS hover shows the same
+/// view (without them) as an accelerator. Nothing about a release lives
+/// somewhere this view doesn't.
+private struct ReleaseDetail: View {
     let release: Release
     /// On-disk file to compare against, when the library has one — see
     /// `ReleaseListView.existing`.
     let existing: UpgradeDiffView.Side?
+    let indexerName: String?
+    let showsActions: Bool
+    let onGrab: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Title with the protocol chip on the trailing edge — the same
-            // header shape `QueueItemTooltip` uses (title left, badges pushed
-            // right, first-baseline aligned). The chip used to sit on its own
-            // line under the title, which read as a second heading and pushed
-            // the actual content down a row.
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(verbatim: release.title)
-                    .scaledFont(size: 12, weight: .semibold)
-                    .lineLimit(4)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 4)
-                TagChip(text: release.protocolLabel)
-            }
+            // The full, unshortened release name: the row prints the part that
+            // differs, this prints what you'd paste into an indexer.
+            Text(verbatim: release.title)
+                .scaledFont(size: 11, design: .monospaced)
+                .foregroundStyle(.primary)
+                .lineLimit(4)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
 
-            // With a file on disk the card leads with the diff — the same
+            // With a file on disk the detail leads with the diff — the same
             // current → incoming columns (and gained/lost format chips) the
             // queue's upgrade surfaces use, so "is this better than what I
             // have?" is answered before any of the release's own trivia. The
@@ -437,7 +719,7 @@ private struct ReleaseDetailPopover: View {
 
             VStack(alignment: .leading, spacing: 4) {
                 if existing == nil, let quality = release.qualityName { row("Quality", quality) }
-                if let indexer = release.indexer { row("Indexer", indexer) }
+                if let indexer = indexerName { row("Indexer", indexer) }
                 if existing == nil {
                     row("Size", ByteCountFormatter.string(fromByteCount: release.sizeBytes, countStyle: .file))
                 }
@@ -486,9 +768,43 @@ private struct ReleaseDetailPopover: View {
                     }
                 }
             }
+
+            if showsActions { actions }
         }
-        .padding(12)
-        .frame(width: 340)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 10) {
+            // Grabbing a rejected release is still just grabbing — the *arr's
+            // objection belongs in the confirmation, not in a second verb.
+            Button(action: onGrab) {
+                Label { Text("Download", bundle: .module) } icon: { Image(systemName: "arrow.down.circle") }
+                    .scaledFont(size: 11, weight: .medium)
+            }
+            .modifier(GlassProminentButtonStyle())
+            .controlSize(.small)
+            // The link is the indexer's own page for this release, so it says
+            // whose page it is — "Open in browser" named the browser, which the
+            // user already knows they have.
+            if let info = release.infoUrl, let url = URL(string: info) {
+                Link(destination: url) {
+                    Label {
+                        if let indexer = indexerName {
+                            Text("Open in \(indexer)", bundle: .module)
+                        } else {
+                            Text("Open in browser", bundle: .module)
+                        }
+                    } icon: {
+                        Image(systemName: "arrow.up.right.square")
+                    }
+                    .scaledFont(size: 11, weight: .medium)
+                }
+                .modifier(GlassButtonStyle())
+                .controlSize(.small)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 2)
     }
 
     private func row(_ label: LocalizedStringKey, _ value: String) -> some View {
@@ -518,7 +834,7 @@ private struct ReleaseDetailPopover: View {
 
 private extension Release {
     /// Compact indexer age — "3d" / "12h" / "<1h", `nil` when the arr didn't
-    /// report one. Shared by the row and the hover card so the same release
+    /// report one. Shared by the row and the detail so the same release
     /// can't read differently in the two places.
     var ageLabel: String? {
         guard let hours = ageHours else { return nil }

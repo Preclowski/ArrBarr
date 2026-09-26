@@ -23,6 +23,15 @@ nonisolated public struct WhisparrClient: ArrAPIClient {
     }
 
     func fetchMovieFile(movieId: Int) async throws -> ArrCore.ArrFile? { try await read([ArrCore.ArrFile].self) { $0.movieFiles([movieId]) }.first }
-    func fetchAllMovies() async throws -> [WhisparrLibraryRecord] { try await read([WhisparrLibraryRecord].self, policy: .mustRevalidate) { $0.movies() } }
+    /// `revalidate: false` serves whatever the on-disk store holds and says so
+    /// in `isStale`, refreshing behind the caller — what the Library's first
+    /// paint of a session wants.
+    func fetchAllMovies(revalidate: Bool = true) async throws -> [WhisparrLibraryRecord] {
+        try await fetchAllMoviesFetched(revalidate: revalidate).value
+    }
+
+    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[WhisparrLibraryRecord]> {
+        try await readCacheFirst([WhisparrLibraryRecord].self, revalidate: revalidate) { $0.movies() }
+    }
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail { try await read(RadarrMovieDetail.self) { $0.movie(id: id) } }
 }

@@ -86,7 +86,7 @@ public actor CapabilityProbe {
         switch instance.kind {
         case .radarr, .sonarr, .whisparr:
             return RequestPlan(instance: instance, operation: "fetchStatus", pathTemplate: "/api/v3/system/status", auth: .header("X-Api-Key"), priority: .background)
-        case .lidarr:
+        case .lidarr, .prowlarr:
             return RequestPlan(instance: instance, operation: "fetchStatus", pathTemplate: "/api/v1/system/status", auth: .header("X-Api-Key"), priority: .background)
         case .qbittorrent:
             return RequestPlan(instance: instance, operation: "fetchVersion", pathTemplate: "/api/v2/app/version", auth: .session, priority: .background)

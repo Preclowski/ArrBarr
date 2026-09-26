@@ -229,6 +229,9 @@ public final class ServiceGateway {
         return kit.mediaServer(configStore.mediaServer.kind.instanceID)
     }
     public nonisolated var tmdb: TMDBService { kit.tmdb }
+    public var prowlarr: ProwlarrService? {
+        configStore.prowlarr.isConfigured ? kit.prowlarr : nil
+    }
     public nonisolated var store: ResourceStore { kit.store }
     public nonisolated var engine: CompositionEngine { kit.engine }
     public nonisolated var events: EventHub { kit.events }
@@ -315,6 +318,11 @@ public final class ServiceGateway {
             guard let url = URL(string: draft.baseURL) else { continue }
             out.append(InstanceDescriptor(id: InstanceID(draft.kind.instanceID.kind, ordinal: index + 1), baseURL: url, enabled: true, generation: "draft"))
         }
+        let prowlarr = configStore.prowlarr
+        if !Self.isRunningTests, prowlarr.isConfigured, let url = URL(string: prowlarr.baseURL) {
+            out.append(InstanceDescriptor(id: InstanceID(.prowlarr), baseURL: url, enabled: true,
+                                          generation: SecretGenerations.generation(for: .prowlarrKey, in: configStore.defaultsForGateway)))
+        }
         let tmdbURL = URL(string: "https://api.themoviedb.org")!
         if !Self.isRunningTests, !configStore.tmdbApiKey.isEmpty {
             out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: tmdbURL, enabled: true,
@@ -329,7 +337,8 @@ public final class ServiceGateway {
     private func observe() {
         let services = Publishers.MergeMany(ServiceKind.allCases.map { configStore.publisher(for: $0).map { _ in () } })
         services
-            .merge(with: configStore.$mediaServer.map { _ in () }, configStore.$tmdbApiKey.map { _ in () })
+            .merge(with: configStore.$mediaServer.map { _ in () }, configStore.$tmdbApiKey.map { _ in () },
+                   configStore.$prowlarr.map { _ in () })
             .dropFirst()
             .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in Task { await self?.reconcile() } }
@@ -369,6 +378,11 @@ private struct ConfigCredentialProvider: CredentialProvider {
             guard server.isConfigured, let url = URL(string: server.baseURL) else { return nil }
             return Credentials(baseURL: url, material: .token(server.token),
                                generation: draft == nil ? SecretGenerations.generation(for: .mediaServerToken, in: defaults) : "draft")
+        case .prowlarr:
+            let config = configStore.prowlarr
+            guard config.isConfigured, let url = URL(string: config.baseURL) else { return nil }
+            return Credentials(baseURL: url, material: .apiKey(config.apiKey),
+                               generation: SecretGenerations.generation(for: .prowlarrKey, in: defaults))
         case .tmdb:
             let draft = configStore.gateway.adHocTMDBKey(for: instance)
             let key = draft ?? configStore.tmdbApiKey

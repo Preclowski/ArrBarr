@@ -2,15 +2,22 @@ import SwiftUI
 
 /// Build the colored rating chips for a SearchResult — same vocabulary
 /// as queue/search rows (IMDb yellow, RT red, MC green, ★ TMDB fallback).
-func discoverRatingChips(for result: SearchResult) -> [RatingChip] {
+func discoverRatingChips(for result: SearchResult, imdbId: String? = nil) -> [RatingChip] {
+    // `linkTitle` is what makes a pill clickable (see `RatingChip`): without it
+    // the factories build an inert chip, which is why the Quiz's scores opened
+    // nothing while the detail card's did.
+    let title = result.title
     var out: [RatingChip] = [
-        result.imdb.flatMap { RatingChip.imdb($0) },
-        result.rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0) },
-        result.metacritic.flatMap { RatingChip.metacritic($0) },
+        result.imdb.flatMap { RatingChip.imdb($0, linkTitle: title, imdbId: result.imdbId ?? imdbId) },
+        result.rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0, linkTitle: title) },
+        result.metacritic.flatMap { RatingChip.metacritic($0, linkTitle: title) },
     ].compactMap { $0 }
-    if result.imdb == nil, let r = result.rating,
-       let chip = result.source == .sonarr ? RatingChip.tvdb(r) : RatingChip.tmdb(r) {
-        out.append(chip)
+    if result.imdb == nil, let r = result.rating {
+        let id = result.externalId > 0 ? result.externalId : nil
+        let chip = result.source == .sonarr
+            ? RatingChip.tvdb(r, linkTitle: title, tvdbId: id)
+            : RatingChip.tmdb(r, linkTitle: title, tmdbId: id)
+        if let chip { out.append(chip) }
     }
     return out
 }
@@ -33,6 +40,14 @@ public struct DiscoverCardView: View {
     /// Resolved per poster URL, so the peek card has it in hand well before
     /// it reaches the top of the deck.
     @State private var posterTint: Color?
+    /// Director (movie) or creators (series) — the same byline the detail
+    /// card carries, in the same slot: under the ratings, above the synopsis.
+    @State private var directors: [CastMember] = []
+    /// Resolved for TMDB-sourced cards, which carry no IMDb id — see
+    /// `TMDBClient.movieIMDbId`. Until it lands the IMDb pill opens a title
+    /// search, which is what it did before.
+    @State private var resolvedIMDbId: String?
+    @EnvironmentObject private var configStore: ConfigStore
 
     public init(item: DiscoverItem,
                 dragOffset: CGSize = .zero,
@@ -42,6 +57,29 @@ public struct DiscoverCardView: View {
         self.dragOffset = dragOffset
         self.bottomInset = bottomInset
         self.onMore = onMore
+    }
+
+    /// Credits for the card on screen. `CastProvider` caches and coalesces per
+    /// title, so a card the user swipes back to costs nothing, and a title they
+    /// open in detail afterwards is already resolved.
+    private func loadCredits() async {
+        let result = item.result
+        switch item.kind {
+        case .movie:
+            let tmdbId = result.externalId > 0 ? result.externalId : Int(result.foreignId)
+            directors = await CastProvider.movieCredits(
+                radarrMovieId: result.inLibraryArrId,
+                tmdbId: tmdbId,
+                configStore: configStore).directors
+            if result.imdbId == nil, let tmdbId, tmdbId > 0, !configStore.tmdbApiKey.isEmpty {
+                resolvedIMDbId = try? await TMDBClient(apiKey: configStore.tmdbApiKey).movieIMDbId(movieId: tmdbId)
+            }
+        case .show:
+            directors = await CastProvider.seriesCredits(
+                tmdbId: result.tmdbTVId,
+                tvdbId: result.externalId > 0 ? result.externalId : nil,
+                configStore: configStore).directors
+        }
     }
 
     public var body: some View {
@@ -61,6 +99,10 @@ public struct DiscoverCardView: View {
                 )
                 .frame(width: w, height: h)
                 .clipped()
+                // Watched wedge only: a deck card carries no arr record, so
+                // there is no monitored flag to draw.
+                .posterMarks(watched: MediaServerIndex.shared.isWatched(item.result.mediaServerKeys),
+                             monitored: nil, cornerRadius: 0, ribbonWidth: 14)
 
                 // Bottom scrim — transparent at the top, opaque glass at the
                 // bottom — so text + buttons read over any artwork.
@@ -88,6 +130,7 @@ public struct DiscoverCardView: View {
             .task(id: item.result.posterURL) {
                 posterTint = await PosterTint.color(for: item.result.posterURL)
             }
+            .task(id: item.id) { await loadCredits() }
         }
     }
 
@@ -112,12 +155,16 @@ public struct DiscoverCardView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            let chips = discoverRatingChips(for: item.result)
+            let chips = discoverRatingChips(for: item.result, imdbId: resolvedIMDbId)
             if !chips.isEmpty {
                 HStack(spacing: 5) {
                     ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                 }
             }
+            // Byline between the ratings and the synopsis, exactly where the
+            // detail card puts it (see `MediaHeaderCard`).
+            DirectedByLine(people: directors,
+                           labelKey: item.kind == .show ? "detail.createdBy.label" : "detail.directedBy.label")
             if let overview = item.result.overview, !overview.isEmpty {
                 Text(overview)
                     .scaledFont(size: 12)

@@ -50,10 +50,9 @@ struct QueueTitleGroupRowView: View {
 
     private func requestDeleteAllConfirm() {
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel \(group.downloadCount) downloads?",
+            title: "Remove \(group.downloadCount) downloads?",
             message: "This will remove every download of this title from the client.",
-            confirmLabel: "Cancel downloads",
-            cancelLabel: "Keep downloads",
+            confirmLabel: "Remove All",
             isDestructive: true,
             onConfirm: onDeleteAll
         ))
@@ -76,6 +75,8 @@ struct QueueTitleGroupRowView: View {
                     fallbackSymbol: rep.source.symbol
                 )
             }
+            .posterMarks(watched: rep.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {

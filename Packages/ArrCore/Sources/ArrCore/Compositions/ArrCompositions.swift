@@ -65,6 +65,17 @@ nonisolated enum ArrCompositions {
             slug = slug ?? r.album?.foreignAlbumId
         }
 
+        // Same ids the artwork override keys on: the cached meta when the
+        // loader resolved the entity, the wire record otherwise.
+        let mediaServerKeys: [MediaServerExternalKey] = {
+            if let cached, !cached.mediaServerKeys.isEmpty { return cached.mediaServerKeys }
+            switch source {
+            case .radarr: return keys(movie: r.movie)
+            case .sonarr: return keys(series: r.series)
+            case .whisparr, .lidarr: return []
+            }
+        }()
+
         let representative = source == .lidarr ? existing.max { ($0.size ?? 0) < ($1.size ?? 0) } : existing.first
         let existingSize: Int64? = source == .lidarr
             ? (existing.reduce(Int64(0)) { $0 + ($1.size ?? 0) }).nonZero
@@ -104,6 +115,9 @@ nonisolated enum ArrCompositions {
             entityId: entityID,
             posterURL: poster,
             posterRequiresAuth: posterAuth,
+            // Per episode for Sonarr rows, per title for the rest (the
+            // coordinates are nil there and the lookup falls back).
+            watched: MediaServerIndex.shared.isWatched(mediaServerKeys, season: seasonNumber, episode: episodeNumber),
             statusMessages: flatten(r.statusMessages)
         )
     }

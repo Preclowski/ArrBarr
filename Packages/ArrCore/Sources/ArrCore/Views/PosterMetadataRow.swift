@@ -11,7 +11,7 @@ import SwiftUI
 /// plus the same hover-tint background. Diverged by ~2pt on padding /
 /// spacing across iterations and the user noticed; pulling it into one
 /// place keeps them in lock-step from now on.
-public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingAccessory: View>: View {
+public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: View, TrailingAccessory: View>: View {
     let posterURL: URL?
     let posterAPIKey: String?
     /// Every caller so far is a list row at 26×38, comfortably inside the icon
@@ -24,6 +24,11 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
     /// SF Symbol shown when the poster URL fails to load. Empty string
     /// (or whatever `RemotePoster` treats as missing) skips the fallback.
     let posterFallbackSymbol: String
+    /// Corner marks on the thumbnail — the media server's watched wedge and
+    /// the arr's monitored ribbon. `posterMonitored` is `nil` on rows that
+    /// don't know the flag (a search hit, an upcoming episode).
+    let posterWatched: Bool
+    let posterMonitored: Bool?
     /// Already-formatted title — callers compose `Title (Year)` themselves
     /// since the year-suffix rule differs (movies have year, episodes
     /// don't).
@@ -47,6 +52,9 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
     /// chip). Rendered before the text segments, no separator dot — the
     /// chip's own outline already sets it apart.
     @ViewBuilder let metadataBadge: () -> MetadataBadge
+    /// Same, for the SECOND metadata line — the Upcoming row's rating chip
+    /// leads the line the score used to sit inside as text.
+    @ViewBuilder let metadataBadge2: () -> MetadataBadge2
     /// Right-hand accessory. Pass `EmptyView()` if you don't want one.
     let trailing: () -> TrailingAccessory
     let onTap: () -> Void
@@ -62,6 +70,8 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
         posterCornerRadius: CGFloat = 3,
         posterBlurred: Bool,
         posterFallbackSymbol: String = "",
+        posterWatched: Bool = false,
+        posterMonitored: Bool? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -70,6 +80,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
         onTap: @escaping () -> Void,
         @ViewBuilder titleBadge: @escaping () -> TitleBadge,
         @ViewBuilder metadataBadge: @escaping () -> MetadataBadge,
+        @ViewBuilder metadataBadge2: @escaping () -> MetadataBadge2,
         @ViewBuilder trailing: @escaping () -> TrailingAccessory
     ) {
         self.posterURL = posterURL
@@ -79,12 +90,15 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
         self.posterCornerRadius = posterCornerRadius
         self.posterBlurred = posterBlurred
         self.posterFallbackSymbol = posterFallbackSymbol
+        self.posterWatched = posterWatched
+        self.posterMonitored = posterMonitored
         self.title = title
         self.metadataSegments = metadataSegments
         self.metadataSegmentColors = metadataSegmentColors
         self.metadataSegments2 = metadataSegments2
         self.titleBadge = titleBadge
         self.metadataBadge = metadataBadge
+        self.metadataBadge2 = metadataBadge2
         self.disabled = disabled
         self.onTap = onTap
         self.trailing = trailing
@@ -120,6 +134,11 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
                     fallbackSymbol: posterFallbackSymbol
                 )
             }
+            // Sized off the thumbnail's width so a 26pt list poster gets a
+            // ribbon in proportion to the grid tile's.
+            .posterMarks(watched: posterWatched, monitored: posterMonitored,
+                         cornerRadius: posterCornerRadius,
+                         ribbonWidth: max(5, posterSize.width * 0.2))
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 5) {
@@ -142,9 +161,12 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
                     }
                     .scaledFont(size: 10)
                 }
-                if !metadataSegments2.isEmpty {
-                    metadataLine(metadataSegments2, colors: [])
-                        .scaledFont(size: 10)
+                if hasMetadataBadge2 || !metadataSegments2.isEmpty {
+                    HStack(spacing: 5) {
+                        metadataBadge2()
+                        metadataLine(metadataSegments2, colors: [])
+                    }
+                    .scaledFont(size: 10)
                 }
             }
 
@@ -160,6 +182,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
     /// off an optional: the badge is a generic view now, and a row without one
     /// is spelled `EmptyView` at compile time.
     private var hasMetadataBadge: Bool { MetadataBadge.self != EmptyView.self }
+    private var hasMetadataBadge2: Bool { MetadataBadge2.self != EmptyView.self }
 
     @ViewBuilder
     private func metadataLine(_ segments: [String], colors: [Color?]) -> some View {
@@ -189,7 +212,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, TrailingA
 // subtree — which is what type erasure costs in a scrolling list. Most rows
 // carry no badge at all, hence these: the generic parameter is pinned to
 // `EmptyView` and the argument disappears from the call site.
-public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
+public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -198,6 +221,8 @@ public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge 
         posterCornerRadius: CGFloat = 3,
         posterBlurred: Bool,
         posterFallbackSymbol: String = "",
+        posterWatched: Bool = false,
+        posterMonitored: Bool? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -209,14 +234,16 @@ public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge 
         self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  posterWatched: posterWatched, posterMonitored: posterMonitored,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
-                  titleBadge: { EmptyView() }, metadataBadge: { EmptyView() }, trailing: trailing)
+                  titleBadge: { EmptyView() }, metadataBadge: { EmptyView() },
+                  metadataBadge2: { EmptyView() }, trailing: trailing)
     }
 }
 
-public extension PosterMetadataRow where MetadataBadge == EmptyView {
+public extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -225,6 +252,8 @@ public extension PosterMetadataRow where MetadataBadge == EmptyView {
         posterCornerRadius: CGFloat = 3,
         posterBlurred: Bool,
         posterFallbackSymbol: String = "",
+        posterWatched: Bool = false,
+        posterMonitored: Bool? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -237,14 +266,16 @@ public extension PosterMetadataRow where MetadataBadge == EmptyView {
         self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  posterWatched: posterWatched, posterMonitored: posterMonitored,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
-                  titleBadge: titleBadge, metadataBadge: { EmptyView() }, trailing: trailing)
+                  titleBadge: titleBadge, metadataBadge: { EmptyView() },
+                  metadataBadge2: { EmptyView() }, trailing: trailing)
     }
 }
 
-public extension PosterMetadataRow where TitleBadge == EmptyView {
+public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -253,6 +284,8 @@ public extension PosterMetadataRow where TitleBadge == EmptyView {
         posterCornerRadius: CGFloat = 3,
         posterBlurred: Bool,
         posterFallbackSymbol: String = "",
+        posterWatched: Bool = false,
+        posterMonitored: Bool? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -265,9 +298,45 @@ public extension PosterMetadataRow where TitleBadge == EmptyView {
         self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  posterWatched: posterWatched, posterMonitored: posterMonitored,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
-                  titleBadge: { EmptyView() }, metadataBadge: metadataBadge, trailing: trailing)
+                  titleBadge: { EmptyView() }, metadataBadge: metadataBadge,
+                  metadataBadge2: { EmptyView() }, trailing: trailing)
+    }
+}
+
+
+public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
+    /// Rows whose only chip leads the SECOND metadata line (Upcoming's score).
+    init(
+        posterURL: URL?,
+        posterAPIKey: String?,
+        posterTier: PosterTier = .icon,
+        posterSize: CGSize,
+        posterCornerRadius: CGFloat = 3,
+        posterBlurred: Bool,
+        posterFallbackSymbol: String = "",
+        posterWatched: Bool = false,
+        posterMonitored: Bool? = nil,
+        title: String,
+        metadataSegments: [String],
+        metadataSegmentColors: [Color?] = [],
+        metadataSegments2: [String] = [],
+        disabled: Bool = false,
+        onTap: @escaping () -> Void,
+        @ViewBuilder metadataBadge2: @escaping () -> MetadataBadge2,
+        @ViewBuilder trailing: @escaping () -> TrailingAccessory
+    ) {
+        self.init(posterURL: posterURL, posterAPIKey: posterAPIKey, posterTier: posterTier,
+                  posterSize: posterSize, posterCornerRadius: posterCornerRadius,
+                  posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
+                  posterWatched: posterWatched, posterMonitored: posterMonitored,
+                  title: title, metadataSegments: metadataSegments,
+                  metadataSegmentColors: metadataSegmentColors,
+                  metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
+                  titleBadge: { EmptyView() }, metadataBadge: { EmptyView() },
+                  metadataBadge2: metadataBadge2, trailing: trailing)
     }
 }

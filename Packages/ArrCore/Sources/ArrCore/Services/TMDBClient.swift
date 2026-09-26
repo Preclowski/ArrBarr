@@ -168,15 +168,31 @@ nonisolated public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identi
     public let id: Int
     public let name: String
     public let profilePath: String?
-    /// For cast: the character name. For crew: nil.
+    /// For cast: the character name. For crew: nil. **Movies only** — the
+    /// series endpoint is `/aggregate_credits`, which puts the character in
+    /// `roles` instead and leaves this absent; read `characterName`, not this.
     public let character: String?
+    /// `/tv/{id}/aggregate_credits`: one entry per part the person played,
+    /// newest role first. A series regular has one; a soap actor has several.
+    public let roles: [Role]?
+
+    nonisolated public struct Role: Codable, Sendable, Equatable {
+        public let character: String?
+        public let episode_count: Int?
+    }
+
+    /// The part this person plays, whichever endpoint the credit came from.
+    public var characterName: String? {
+        if let character, !character.isEmpty { return character }
+        return roles?.first(where: { !($0.character ?? "").isEmpty })?.character
+    }
     /// For crew: the job (e.g., "Director"). For cast: nil.
     public let job: String?
     /// For crew: the department (e.g., "Directing"). For cast: nil.
     public let department: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, name, character, job, department
+        case id, name, character, roles, job, department
         case profilePath = "profile_path"
     }
 
@@ -189,6 +205,17 @@ nonisolated public struct TMDBCreditPerson: Codable, Sendable, Equatable, Identi
 /// have their own), so the creator is the credit that plays the director's
 /// role for a show. The entries carry the same id/name/profile fields as a
 /// credit person, so they decode into the same type.
+/// `/tv/{id}/season/{n}/episode/{n}` — the rating and nothing else.
+/// `/movie/{id}` — just the external id.
+nonisolated public struct TMDBMovieIDs: Codable, Sendable {
+    public let imdbId: String?
+}
+
+nonisolated public struct TMDBEpisodeRating: Codable, Sendable {
+    public let voteAverage: Double?
+    public let voteCount: Int?
+}
+
 nonisolated public struct TMDBTVCreatedByResponse: Codable, Sendable {
     public let created_by: [TMDBCreditPerson]?
 }
@@ -328,6 +355,18 @@ nonisolated public struct TMDBClient: Sendable {
     public func searchPerson(query: String) async throws -> [TMDBPerson] { try await read(TMDBPagedPeople.self) { $0.searchPerson(query: query) }.results }
     public func movieCredits(movieId: Int) async throws -> TMDBCredits { try await read(TMDBCredits.self) { $0.movieCredits(id: movieId) } }
     public func tvCredits(tvId: Int) async throws -> TMDBCredits { try await read(TMDBCredits.self) { $0.tvCredits(id: tvId) } }
+
+    /// One episode's TMDB score. `nil` when the episode is unrated (TMDB sends
+    /// `0` for that, which is not a rating).
+    public func episodeRating(tvId: Int, season: Int, episode: Int) async throws -> (value: Double, votes: Int)? {
+        let record = try await read(TMDBEpisodeRating.self, decoder: WireCodec.snakeCaseDecoder) {
+            $0.tvEpisode(id: tvId, season: season, episode: episode)
+        }
+        guard let value = record.voteAverage, value > 0 else { return nil }
+        return (value, record.voteCount ?? 0)
+    }
+    public func movieFacts(movieId: Int) async throws -> TMDBMovieFacts { try await read(TMDBMovieFacts.self, decoder: WireCodec.snakeCaseDecoder) { $0.movie(id: movieId) } }
+    public func tvFacts(tvId: Int) async throws -> TMDBTVFacts { try await read(TMDBTVFacts.self, decoder: WireCodec.snakeCaseDecoder) { $0.tv(id: tvId) } }
     public func tvCreators(tvId: Int) async throws -> [TMDBCreditPerson] { try await read(TMDBTVCreatedByResponse.self) { $0.tv(id: tvId) }.created_by ?? [] }
 
     public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? { try await read(MediaKit.TMDBFind.self, decoder: WireCodec.snakeCaseDecoder) { $0.find(tvdbID: tvdbId) }.tvResults.first?.id }
@@ -384,6 +423,16 @@ nonisolated public struct TMDBClient: Sendable {
     public func tvVideos(tvId: Int) async throws -> [TMDBVideo] { try await read(VideoEnvelope.self) { $0.tvVideos(id: tvId) }.results }
     nonisolated private struct VideoEnvelope: Codable, Sendable { let results: [TMDBVideo] }
 
+    /// The film's IMDb id (`tt…`), off the same `/movie/{id}` payload the
+    /// country line already reads — so when the detail view has been open this
+    /// is a cache hit, and when it hasn't it is one archival request. TMDB
+    /// rows (the Quiz deck, a person's filmography) carry no IMDb id of their
+    /// own; without this their IMDb pill can only open a title search.
+    public func movieIMDbId(movieId: Int) async throws -> String? {
+        let id = try await read(TMDBMovieIDs.self, decoder: WireCodec.snakeCaseDecoder) { $0.movie(id: movieId) }.imdbId
+        return (id?.isEmpty == false) ? id : nil
+    }
+
     public func movieCountries(movieId: Int) async throws -> [String] {
         Self.codes(from: try await read(TMDBCountries.self) { $0.movie(id: movieId) }, preferOrigin: false)
     }
@@ -413,4 +462,22 @@ nonisolated public struct TMDBClient: Sendable {
     }
 
     public static func isReadAccessToken(_ s: String) -> Bool { TMDBService.isReadAccessToken(s) }
+}
+
+// MARK: - Wait-card facts (subset of /movie and /tv details)
+
+nonisolated public struct TMDBMovieFacts: Codable, Sendable {
+    public let tagline: String?
+    public let originalTitle: String?
+    public let budget: Int?
+    public let revenue: Int?
+    public let voteCount: Int?
+}
+
+nonisolated public struct TMDBTVFacts: Codable, Sendable {
+    public let tagline: String?
+    public let originalName: String?
+    public let numberOfSeasons: Int?
+    public let numberOfEpisodes: Int?
+    public let status: String?
 }

@@ -107,6 +107,9 @@ public final class ConfigStore: ObservableObject {
     /// `NotificationCoalescer` for how it maps to a `UNNotificationSound`.
     @Published public var notificationSoundName: String = ""
     @Published public var blurWhisparrPosters: Bool = true
+    /// Draw the media server's watched mark on covers. On by default; off for
+    /// anyone who reads a played corner as clutter rather than as information.
+    @Published public var showWatchedIndicator: Bool = true
     /// App Store builds gate enabling Whisparr behind an 18+ confirmation.
     /// Once the user confirms, this stays `true` and they aren't asked again.
     @Published public var whisparrAgeConfirmed: Bool = false
@@ -162,6 +165,12 @@ public final class ConfigStore: ObservableObject {
     /// tool catalog appends those tools so the LLM can search by actor /
     /// genre / decade.
     @Published public var tmdbApiKey: String = ""
+
+    /// Prowlarr, purely as a name service: the *arrs report an indexer as
+    /// "NZBgeek (Prowlarr)" or whatever the sync template says, and Prowlarr is
+    /// the only place that knows what the user actually called it. Optional —
+    /// without it the list falls back to the arr's own spelling.
+    @Published public var prowlarr: ServiceConfig = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 
     /// The one media server (Plex / Jellyfin / Emby) ArrBarr reads artwork and
     /// watch state from. Disabled by default — the whole feature is opt-in.
@@ -322,6 +331,7 @@ public final class ConfigStore: ObservableObject {
     /// Sentinel value stored in `notificationSoundName` to mean "play no sound".
     public static let silentSoundName = "__none__"
     private static let blurWhisparrPostersKey = "ArrBarr.blurWhisparrPosters"
+    private static let showWatchedIndicatorKey = "ArrBarr.showWatchedIndicator"
     private static let whisparrAgeConfirmedKey = "ArrBarr.whisparrAgeConfirmed"
     private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
@@ -343,6 +353,7 @@ public final class ConfigStore: ObservableObject {
     nonisolated static let openaiConfigKey = "ArrBarr.openai"
     nonisolated static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
     nonisolated static let mediaServerKey = "ArrBarr.mediaServer"
+    nonisolated static let prowlarrKey = "ArrBarr.prowlarr"
     private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
@@ -459,6 +470,7 @@ public final class ConfigStore: ObservableObject {
         self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : true
         self.notificationSoundName = defaults.string(forKey: Self.notificationSoundNameKey) ?? ""
         self.blurWhisparrPosters = defaults.object(forKey: Self.blurWhisparrPostersKey) != nil ? defaults.bool(forKey: Self.blurWhisparrPostersKey) : true
+        self.showWatchedIndicator = defaults.object(forKey: Self.showWatchedIndicatorKey) != nil ? defaults.bool(forKey: Self.showWatchedIndicatorKey) : true
         self.whisparrAgeConfirmed = defaults.bool(forKey: Self.whisparrAgeConfirmedKey)
         // `defaults.double(forKey:)` returns 0.0 when the key isn't set,
         // which we treat as "use the default 1.0". Validating against
@@ -527,6 +539,11 @@ public final class ConfigStore: ObservableObject {
             self.mediaServer = .empty
         }
         self.mediaServer.token = secrets.read(.mediaServerToken) ?? self.mediaServer.token
+        if let data = defaults.data(forKey: Self.prowlarrKey),
+           let cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data) {
+            self.prowlarr = cfg
+        }
+        self.prowlarr.apiKey = secrets.read(.prowlarrKey) ?? self.prowlarr.apiKey
         MediaServerPosterAccess.shared.update(self.mediaServer)
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
@@ -565,6 +582,9 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $whisparrAgeConfirmed.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.whisparrAgeConfirmedKey)
+        }.store(in: &cancellables)
+        $showWatchedIndicator.dropFirst().sink { [weak self] val in
+            self?.defaults.set(val, forKey: Self.showWatchedIndicatorKey)
         }.store(in: &cancellables)
         $blurWhisparrPosters.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.blurWhisparrPostersKey)
@@ -655,6 +675,17 @@ public final class ConfigStore: ObservableObject {
         $tmdbApiKey.dropFirst().sink { [weak self] val in
             self?.setOrDelete(val, for: .tmdbKey)
             self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
+        }.store(in: &cancellables)
+        $prowlarr.dropFirst().sink { [weak self] cfg in
+            guard let self else { return }
+            // Names resolved through the old server would outlive it otherwise.
+            IndexerNames.shared.invalidate()
+            self.setOrDelete(cfg.apiKey, for: .prowlarrKey)
+            var stripped = cfg
+            stripped.apiKey = ""
+            if let data = try? JSONEncoder().encode(stripped) {
+                self.defaults.set(data, forKey: Self.prowlarrKey)
+            }
         }.store(in: &cancellables)
         $mediaServer.dropFirst().sink { [weak self] cfg in
             guard let self else { return }
@@ -750,6 +781,13 @@ public final class ConfigStore: ObservableObject {
     /// `true` when the user has supplied a TMDB v3 API key. Drives whether the
     /// discovery chat tools are advertised to the LLM.
     public var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
+
+    /// Settings' "Test connection" for Prowlarr — throws when the server can't
+    /// be reached or the key is refused.
+    public func testProwlarr() async throws {
+        guard let service = gateway.prowlarr else { throw ProwlarrNotConfigured() }
+        _ = try await gateway.store.read(service.status(), policy: .mustRevalidate).value
+    }
 
     /// Lookup the matching `ServiceConfig` for an arr `Source`. Replaces the
     /// four-way switch that several views and view-models duplicate when they
@@ -1056,4 +1094,10 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
+}
+
+
+/// Thrown by `ConfigStore.testProwlarr()` when there's nothing to test yet.
+nonisolated struct ProwlarrNotConfigured: LocalizedError {
+    var errorDescription: String? { String(localized: "Service not configured", bundle: .module) }
 }

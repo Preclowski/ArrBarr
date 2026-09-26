@@ -81,19 +81,18 @@ struct EpisodeRow: View {
     /// flag shouldn't make every episode look switched off.
     private var isMonitored: Bool { episode.monitored ?? true }
 
-    /// Title colour. Inverted from the previous "missing pops"
-    /// scheme — on-disk episodes (the user's library, ready to
-    /// watch) get the brightest treatment now, and every other
-    /// state derives from there:
-    ///   - on-disk           → `.primary`              (full white, "available")
-    ///   - missing-aired     → `.primary.opacity(0.75)` (subtle dim, "not here yet")
-    ///   - not-aired         → `.tertiary`             (most dim, scheduled future)
-    ///   - active download   → `status.tint`           (status colour for live state)
+    /// Title colour: the download's status colour while something is
+    /// happening, full strength otherwise.
+    ///
+    /// The four-way fade this used to be (on-disk bright, missing dimmed,
+    /// not-aired dimmer) keyed on values that arrive at different times —
+    /// `hasFile`, the live queue item, the air date — so the same list read
+    /// dimmed on one launch and bright on the next, for no reason the user
+    /// could see. Air date, file state and download state are all spoken by
+    /// the row's own glyphs and labels; the title stays legible.
     private func episodeTitleStyle(aired: Bool) -> AnyShapeStyle {
-        if !aired { return AnyShapeStyle(HierarchicalShapeStyle.tertiary) }
         if let q = queueItem { return AnyShapeStyle(q.status.tint) }
-        if episode.hasFile == true { return AnyShapeStyle(Color.primary) }
-        return AnyShapeStyle(Color.primary.opacity(0.75))
+        return AnyShapeStyle(Color.primary)
     }
 
     public var body: some View {
@@ -104,12 +103,6 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
-                // Leading state column — same place, same glyph as the season
-                // rows one screen up, so "monitored" is read (and flipped) in
-                // one spot per screen. The bookmark itself is an overlay (see
-                // below); this reserves its column.
-                Color.clear
-                    .frame(width: 11, height: 12)
                 // Everything except the state glyph dims together when the
                 // episode is unmonitored — same wash the season row uses.
                 // Dimming only the title left the `S02E04` code reading
@@ -178,14 +171,24 @@ struct EpisodeRow: View {
                         .foregroundStyle(.tertiary)
                 }
                 }
-                // Applied ON TOP of the existing style resolution rather than
-                // as another branch inside `episodeTitleStyle` — a monitored
-                // episode renders byte-for-byte as before.
-                .opacity(isMonitored ? 1 : 0.55)
-                stateIndicator(aired: aired)
-                    .frame(width: 14, height: 14, alignment: .center)
+                // State glyph and the monitored toggle's column, tight against
+                // each other and against the row's trailing edge: with the
+                // row's own spacing between them the bookmark sat ~20pt in and
+                // read as a right margin on the whole list.
+                HStack(spacing: 0) {
+                    stateIndicator(aired: aired)
+                        .frame(width: 14, height: 14, alignment: .center)
+                    // Reserves the glyph's width (the overlay below draws it);
+                    // the hit area is wider and simply hangs over the state
+                    // glyph, which is inert.
+                    Color.clear
+                        .frame(width: 11, height: 12)
+                }
             }
-            .padding(.horizontal, 6)
+            // No horizontal inset: the row lines up with the section header
+            // above it and with every other list in the app (the season rows
+            // one screen up carry their own padding because they paint a
+            // progress fill behind it; these don't).
             .padding(.vertical, 4)
             .contentShape(Rectangle())
         }
@@ -196,9 +199,9 @@ struct EpisodeRow: View {
         // Outside the row Button, not inside its label — a Button nested in a
         // Button's label doesn't reliably win the tap, and the row itself opens
         // the episode.
-        .overlay(alignment: .leading) {
-            MonitorRowToggle(isMonitored: isMonitored, entity: .episode, onToggle: onToggleMonitored)
-                .padding(.leading, 6)
+        .overlay(alignment: .trailing) {
+            MonitorRowToggle(isMonitored: isMonitored, entity: .episode,
+                             alignment: .trailing, onToggle: onToggleMonitored)
         }
         // The dim + glyph are visual-only; VoiceOver gets the state as the
         // row's value so it reads "S02E04, Title, Not monitored, button".

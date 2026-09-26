@@ -40,8 +40,7 @@ struct SearchHost<Content: View>: View {
                     surface
                         .padding(.vertical, 8)
                     if searchAvailable, searchVM.isSearching, !searchVM.hasResults {
-                        ProgressView()
-                            .controlSize(.small)
+                        LoadingStateView(label: nil)
                             .padding(.vertical, 16)
                     }
                 }

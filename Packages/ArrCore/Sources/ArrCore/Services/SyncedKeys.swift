@@ -10,6 +10,7 @@ public enum SyncedKeys {
             "ArrBarr.notifyRadarr", "ArrBarr.notifySonarr", "ArrBarr.notifyLidarr",
             "ArrBarr.notificationSoundName",
             "ArrBarr.blurWhisparrPosters", "ArrBarr.whisparrAgeConfirmed",
+            "ArrBarr.showWatchedIndicator",
             "ArrBarr.aiKnowsAboutWhisparr",
             "ArrBarr.arrOrder", "ArrBarr.showTonight", "ArrBarr.showNeedsYou",
             "ArrBarr.tonightVisibleCount",

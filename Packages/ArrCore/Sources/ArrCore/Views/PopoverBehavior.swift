@@ -43,9 +43,7 @@ public extension View {
         @ViewBuilder content: @escaping () -> Content
     ) -> some View {
         #if os(macOS)
-        popover(isPresented: isPresented, arrowEdge: arrowEdge) {
-            content().popoverBehavior(.applicationDefined)
-        }
+        modifier(TooltipPopover(isPresented: isPresented, arrowEdge: arrowEdge, tooltip: content))
         #else
         // iOS has no hover — SwiftUI would render this as a modal sheet,
         // which is wrong UX for a tooltip. Tap on the row already opens
@@ -54,6 +52,30 @@ public extension View {
         #endif
     }
 }
+
+#if os(macOS)
+private struct TooltipPopover<TooltipContent: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    let arrowEdge: Edge
+    @ViewBuilder let tooltip: () -> TooltipContent
+    /// A tooltip is a floating window: it outranks whatever is drawn over the
+    /// row, so a modal alert has to be able to shut it up. Gating the binding
+    /// (rather than only the hover timers that set it) closes one that is
+    /// already on screen and blocks any that resolve while it is suppressed.
+    @Environment(\.suppressRowTooltip) private var suppressed
+
+    func body(content: Content) -> some View {
+        content
+            .popover(isPresented: Binding(get: { isPresented && !suppressed },
+                                          set: { isPresented = $0 }),
+                     arrowEdge: arrowEdge) {
+                tooltip().popoverBehavior(.applicationDefined)
+            }
+            // Keep the row's own state honest, so hover-out doesn't re-open it.
+            .onChange(of: suppressed) { _, now in if now { isPresented = false } }
+    }
+}
+#endif
 
 #if os(macOS)
 

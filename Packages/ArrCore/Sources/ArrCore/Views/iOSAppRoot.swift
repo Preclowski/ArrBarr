@@ -33,7 +33,7 @@ public struct iOSAppRoot: View {
     @State private var chatHolder = ChatViewModelHolder()
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var quizAddResult: SearchResult?
-    /// Which tab is on screen. `AppMessages.OpenDetail` is posted by surfaces that
+    /// Which tab is on screen. `DetailRouter` is published to by surfaces that
     /// live in several stacks at once (library tiles, chat cards, Spotlight), and
     /// every stack that listens would push its own copy — leaving a stale detail
     /// waiting behind the tabs the user never looked at. Listeners check this.
@@ -145,7 +145,11 @@ public struct iOSAppRoot: View {
         // Swiping a not-in-library pick right asks for the add panel. macOS
         // hosts it in the popover; without this the whole "add" half of the
         // quiz — and chat's "add this missing title" cards — did nothing here.
-        .onMessage(AppMessages.OpenSearchAdd.self) { quizAddResult = $0.result }
+        .onSearchAddRequest { result, _ in quizAddResult = result }
+        // Queue rows raise their delete through `ConfirmCenter` on both
+        // platforms; without a host here the long-press "Remove from queue"
+        // asked a question nobody ever showed.
+        .confirmCenterHost()
         // The deck decides when it is on screen (`DiscoverViewModel.open`) —
         // seeded by the `discover_in_quiz` tool or the chat resume card.
         .fullScreenCover(isPresented: $discoverViewModel.isPresented) {
@@ -158,6 +162,10 @@ public struct iOSAppRoot: View {
                 moreInFlight: chatHolder.vm.isThinking,
                 isObscured: quizAddResult != nil,
                 onClose: { discoverViewModel.isPresented = false },
+                onCancelLoading: {
+                    chatHolder.vm.cancelTurn()
+                    discoverViewModel.endLoading()
+                },
                 onRequestMore: { _, _, _ in requestMoreQuizPicks() }
             )
             .environmentObject(configStore)
@@ -316,11 +324,11 @@ private struct QueueTab: View {
         .navigationDestination(item: $historySource) { source in
             HistoryTab(viewModel: viewModel, initialSource: source)
         }
-        // In-library search hits route through DetailRequest — listen for it
+        // In-library search hits route through `DetailRouter` — listen for it
         // here so they push the detail (Upcoming tab does the same).
-        .onMessage(AppMessages.OpenDetail.self) { message in
+        .onDetailRequest { item in
             guard isActive else { return }
-            detailItem = message.item
+            detailItem = item
         }
     }
 
@@ -505,9 +513,9 @@ private struct LibraryTab: View {
         // Library tiles open through `DetailRequest.post`, same as queue rows.
         // Without this the tap posted into a tab that wasn't listening and
         // nothing happened.
-        .onMessage(AppMessages.OpenDetail.self) { message in
+        .onDetailRequest { item in
             guard isActive else { return }
-            detailItem = message.item
+            detailItem = item
         }
     }
 }
@@ -555,12 +563,11 @@ private struct UpcomingTab: View {
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
-        // UpcomingRowView's `openDetail()` posts a DetailRequest
-        // notification — wire it to push DetailView, same pattern as
-        // MainWindowView on macOS.
-        .onMessage(AppMessages.OpenDetail.self) { message in
+        // UpcomingRowView's `openDetail()` publishes on `DetailRouter` —
+        // wire it to push DetailView, same pattern as the macOS panel.
+        .onDetailRequest { item in
             guard isActive else { return }
-            detailItem = message.item
+            detailItem = item
         }
     }
 

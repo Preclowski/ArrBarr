@@ -51,10 +51,6 @@ public struct PopoverContentView: View {
     /// `arrbarr://person/…` link in an assistant reply. Detail surfaces own
     /// their own person destination; chat has none, so the root hosts this one.
     @State private var personRef: PersonRef?
-    /// Pending confirmation, owned by `ConfirmCenter` so it survives this
-    /// surface being rebuilt (or never existing — see `NativeConfirmAlert`).
-    /// Rendered as a panel-wide overlay at the end of body.
-    @ObservedObject private var confirmCenter = ConfirmCenter.shared
     /// The search capsule's focus, owned here because ⌘N, the Add intent and
     /// the search intent all aim at it from outside any tab.
     @FocusState private var searchFieldFocused: Bool
@@ -195,7 +191,6 @@ public struct PopoverContentView: View {
             .appFontScale(configStore)
             .preferredColorScheme(configStore.preferredColorScheme)
             .onAppear {
-                confirmCenter.hasVisibleHost = true
                 searchViewModel.setup(store: configStore)
                 // Library-only search reads the Library tab's own cache.
                 searchViewModel.library = libraryViewModel
@@ -211,9 +206,6 @@ public struct PopoverContentView: View {
                 #endif
             }
             .onDisappear {
-                // Nothing left to draw the confirmation card: a request raised
-                // from here on gets the native alert instead of vanishing.
-                confirmCenter.hasVisibleHost = false
                 // Panel closed — drop back to the background cadence so we're
                 // not hammering the arrs every few seconds while hidden.
                 viewModel.stopForegroundPolling()
@@ -253,8 +245,7 @@ public struct PopoverContentView: View {
                 // The `didSet` runs the search; there is nothing to mirror.
                 searchViewModel.query = message.query
             }
-            .onMessage(AppMessages.OpenDetail.self) { message in
-                let item = message.item
+            .onDetailRequest { item in
                 searchResult = nil
                 historySource = nil
                 if detailItem == nil {
@@ -280,15 +271,14 @@ public struct PopoverContentView: View {
                 detailItem = nil
                 personRef = message.ref
             }
-            .onMessage(AppMessages.OpenSearchAdd.self) { message in
-                // Chat tap-to-add — show the SearchAddPanel overlay
-                // pre-loaded with the result. `searchAddFromChat` lets
-                // Back return straight to chat instead of dropping the
-                // user on the Add tab.
+            .onSearchAddRequest { result, origin in
+                // Tap-to-add from chat, the quiz deck or a search hit. Back
+                // returns to chat only for the chat origin; a quiz card comes
+                // back to the deck, which stays parked under the panel.
                 historySource = nil
                 detailItem = nil
-                searchAddFromChat = true
-                searchResult = message.result
+                searchAddFromChat = origin == .chat
+                searchResult = result
             }
             // The quiz deck seeds itself (`DiscoverViewModel.open`); this
             // surface only clears what the deck has to come up over.
@@ -311,19 +301,9 @@ public struct PopoverContentView: View {
                     if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
                 }
             ))
-            .overlay {
-                if let pending = confirmCenter.pending {
-                    ModalConfirmOverlay(
-                        title: LocalizedStringKey(pending.title),
-                        message: LocalizedStringKey(pending.message ?? ""),
-                        confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
-                        cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
-                        destructive: pending.isDestructive,
-                        onConfirm: { confirmCenter.confirm() },
-                        onCancel: { confirmCenter.cancel() }
-                    )
-                }
-            }
+            // Renders whatever confirmation is pending, and reports that this
+            // surface is here to render it.
+            .confirmCenterHost()
             // NOTE: the paywall is intentionally NOT presented here. This view
             // lives inside the MenuBarExtra panel, which auto-dismisses when it
             // resigns key (i.e. the instant StoreKit's purchase UI appears),
@@ -405,7 +385,7 @@ public struct PopoverContentView: View {
                         source: historySource,
                         viewModel: viewModel,
                         // Pushed onto this stack directly rather than through
-                        // `AppMessages.OpenDetail`, whose handler drops the history
+                        // `DetailRouter`, whose handler drops the history
                         // surface — Back has to land here, not on the queue.
                         onOpenDetail: { item in
                             withAnimation(.smooth(duration: 0.22)) { detailItem = item }
@@ -496,6 +476,10 @@ public struct PopoverContentView: View {
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { discoverViewModel.isPresented = false }
                     },
+                    onCancelLoading: {
+                        chatHolder.vm.cancelTurn()
+                        discoverViewModel.endLoading()
+                    },
                     onRequestMore: { mood, kept, skipped in
                         requestMoreQuizPicks(mood: mood, kept: kept, skipped: skipped)
                     }
@@ -562,12 +546,11 @@ public struct PopoverContentView: View {
         // like real glass anyway, so it's gone — arrow + frame stay
         // visually consistent.
         //
-        // One step lighter than the backdrop the system hands us. A *white*
-        // wash, deliberately — the popover's text is vibrant, i.e. it blends
-        // with whatever sits behind it, so lifting the surface lifts the
-        // `.secondary` / `.tertiary` labels with it. (The earlier black wash
-        // did the opposite and buried the section headers.)
-        .background(Color.white.opacity(0.06))
+        // One step DARKER than the backdrop the system hands us. This was a
+        // white wash — meant to lift the vibrant `.secondary` labels with the
+        // surface — but the panel read as washed out; the labels that needed
+        // the lift are `.primary` now anyway.
+        .background(Color.black.opacity(0.10))
     }
 
     /// Modal-feeling overlay for the result detail. Shown whenever

@@ -47,8 +47,7 @@ public struct AddDownloadView: View {
             payloadSummary
 
             if loading {
-                ProgressView()
-                    .controlSize(.small)
+                LoadingStateView(label: nil)
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.vertical, 24)
             } else if arrs.isEmpty {

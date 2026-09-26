@@ -99,10 +99,9 @@ public struct QueueRowView: View {
     /// labels truncate.
     private func requestDeleteConfirm() {
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel this download?",
+            title: "Remove this download?",
             message: "This will remove the download from the client.",
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: onDelete
         ))
@@ -148,6 +147,10 @@ public struct QueueRowView: View {
                     fallbackSymbol: item.source.symbol
                 )
             }
+            // Before the hover / selection overlays: the wedge is part of the
+            // artwork, those are chrome drawn over it.
+            .posterMarks(watched: item.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             // macOS: pause/resume lives ON the poster (hover-revealed). The row
             // has no delete button — cancelling a download is intentionally out
             // of the glanceable queue list. Suppressed while selecting — the
@@ -544,4 +547,3 @@ public struct ThinProgressBar: View {
     }
 }
 
-// `CustomFormatStrip` lives in `Chips.swift` now.

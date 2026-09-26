@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// One cached copy of the Radarr / Sonarr / Lidarr / Whisparr libraries,
 /// shared by every tool that needs to know what the user owns.
@@ -42,10 +43,13 @@ public actor LibraryIndex {
     /// config: a caller whose server changed mid-fetch would otherwise adopt
     /// the old server's records and `commit` them under the new fingerprint,
     /// where they'd read as fresh for a whole `ttl`.
-    private var movieFetch: (fingerprint: String, task: Task<[RadarrLibraryRecord]?, Never>)?
-    private var seriesFetch: (fingerprint: String, task: Task<[SonarrLibraryRecord]?, Never>)?
-    private var artistFetch: (fingerprint: String, task: Task<[LidarrLibraryRecord]?, Never>)?
-    private var whisparrFetch: (fingerprint: String, task: Task<[WhisparrLibraryRecord]?, Never>)?
+    ///
+    /// `revalidate` rides along for the same reason: a caller that asked the arr
+    /// must not adopt the answer of a fetch that only read the disk cache.
+    private var movieFetch: (fingerprint: String, revalidate: Bool, task: Task<[RadarrLibraryRecord]?, Never>)?
+    private var seriesFetch: (fingerprint: String, revalidate: Bool, task: Task<[SonarrLibraryRecord]?, Never>)?
+    private var artistFetch: (fingerprint: String, revalidate: Bool, task: Task<[LidarrLibraryRecord]?, Never>)?
+    private var whisparrFetch: (fingerprint: String, revalidate: Bool, task: Task<[WhisparrLibraryRecord]?, Never>)?
 
     /// Monotonic per-source counter, bumped on every fresh commit and every
     /// invalidate. `LibraryViewModel` unifies against it: same version means
@@ -57,6 +61,12 @@ public actor LibraryIndex {
     /// "the arr is unreachable" from "the library is genuinely empty" — the
     /// Library tab's error state depends on the difference.
     private var failedSources: Set<QueueItem.Source> = []
+    /// Sources whose last commit came off the on-disk store rather than the
+    /// arr. The Library paints that answer and then asks again — but only when
+    /// this says the answer was old; a read that already went to the network
+    /// must not be repeated.
+    private var servedStale: Set<QueueItem.Source> = []
+    private static let log = Logger(category: "LibraryIndex")
 
     init() {}
 
@@ -68,21 +78,30 @@ public actor LibraryIndex {
         failedSources.contains(source)
     }
 
+    /// See `servedStale`.
+    public func servedStaleSnapshot(_ source: QueueItem.Source) -> Bool {
+        servedStale.contains(source)
+    }
+
     // MARK: - Reads
 
-    public func movies(config: ServiceConfig) async -> [RadarrLibraryRecord] {
+    public func movies(config: ServiceConfig, revalidate: Bool = true) async -> [RadarrLibraryRecord] {
         guard config.isConfigured else { return [] }
         let fingerprint = config.identityFingerprint
         if let slot = movieSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            Self.log.notice("radarr records: in-memory snapshot")
             return slot.records
         }
-        if let inFlight = movieFetch, inFlight.fingerprint == fingerprint {
+        if let inFlight = movieFetch, inFlight.fingerprint == fingerprint, inFlight.revalidate == revalidate {
             return commit(await inFlight.task.value, for: .radarr, into: &movieSlot, fingerprint: fingerprint)
         }
-        let task = Task<[RadarrLibraryRecord]?, Never> {
-            try? await RadarrClient(config: config).fetchAllMovies()
+        let task = Task<[RadarrLibraryRecord]?, Never> { [weak self] in
+            guard let fetched = try? await RadarrClient(config: config).fetchAllMoviesFetched(revalidate: revalidate) else { return nil }
+            await self?.note(stale: fetched.isStale, for: .radarr)
+            Self.log.notice("radarr records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
+            return fetched.value
         }
-        movieFetch = (fingerprint, task)
+        movieFetch = (fingerprint, revalidate, task)
         let records = await task.value
         if movieFetch?.fingerprint == fingerprint { movieFetch = nil }
         let out = commit(records, for: .radarr, into: &movieSlot, fingerprint: fingerprint)
@@ -90,19 +109,23 @@ public actor LibraryIndex {
         return out
     }
 
-    public func series(config: ServiceConfig) async -> [SonarrLibraryRecord] {
+    public func series(config: ServiceConfig, revalidate: Bool = true) async -> [SonarrLibraryRecord] {
         guard config.isConfigured else { return [] }
         let fingerprint = config.identityFingerprint
         if let slot = seriesSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            Self.log.notice("sonarr records: in-memory snapshot")
             return slot.records
         }
-        if let inFlight = seriesFetch, inFlight.fingerprint == fingerprint {
+        if let inFlight = seriesFetch, inFlight.fingerprint == fingerprint, inFlight.revalidate == revalidate {
             return commit(await inFlight.task.value, for: .sonarr, into: &seriesSlot, fingerprint: fingerprint)
         }
-        let task = Task<[SonarrLibraryRecord]?, Never> {
-            try? await SonarrClient(config: config).fetchAllSeries()
+        let task = Task<[SonarrLibraryRecord]?, Never> { [weak self] in
+            guard let fetched = try? await SonarrClient(config: config).fetchAllSeriesFetched(revalidate: revalidate) else { return nil }
+            await self?.note(stale: fetched.isStale, for: .sonarr)
+            Self.log.notice("sonarr records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
+            return fetched.value
         }
-        seriesFetch = (fingerprint, task)
+        seriesFetch = (fingerprint, revalidate, task)
         let records = await task.value
         if seriesFetch?.fingerprint == fingerprint { seriesFetch = nil }
         let out = commit(records, for: .sonarr, into: &seriesSlot, fingerprint: fingerprint)
@@ -113,41 +136,54 @@ public actor LibraryIndex {
     /// Lidarr artists. Same slot / in-flight / TTL / keep-stale-on-failure
     /// rules as movies and series — the Library grid and search ownership now
     /// read the artist list from here instead of fetching it twice.
-    public func artists(config: ServiceConfig) async -> [LidarrLibraryRecord] {
+    public func artists(config: ServiceConfig, revalidate: Bool = true) async -> [LidarrLibraryRecord] {
         guard config.isConfigured else { return [] }
         let fingerprint = config.identityFingerprint
         if let slot = artistSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            Self.log.notice("lidarr records: in-memory snapshot")
             return slot.records
         }
-        if let inFlight = artistFetch, inFlight.fingerprint == fingerprint {
+        if let inFlight = artistFetch, inFlight.fingerprint == fingerprint, inFlight.revalidate == revalidate {
             return commit(await inFlight.task.value, for: .lidarr, into: &artistSlot, fingerprint: fingerprint)
         }
-        let task = Task<[LidarrLibraryRecord]?, Never> {
-            try? await LidarrClient(config: config).fetchAllArtists()
+        let task = Task<[LidarrLibraryRecord]?, Never> { [weak self] in
+            guard let fetched = try? await LidarrClient(config: config).fetchAllArtistsFetched(revalidate: revalidate) else { return nil }
+            await self?.note(stale: fetched.isStale, for: .lidarr)
+            Self.log.notice("lidarr records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
+            return fetched.value
         }
-        artistFetch = (fingerprint, task)
+        artistFetch = (fingerprint, revalidate, task)
         let records = await task.value
         if artistFetch?.fingerprint == fingerprint { artistFetch = nil }
         return commit(records, for: .lidarr, into: &artistSlot, fingerprint: fingerprint)
     }
 
     /// Whisparr scenes/movies — same rules again.
-    public func whisparrMovies(config: ServiceConfig) async -> [WhisparrLibraryRecord] {
+    public func whisparrMovies(config: ServiceConfig, revalidate: Bool = true) async -> [WhisparrLibraryRecord] {
         guard config.isConfigured else { return [] }
         let fingerprint = config.identityFingerprint
         if let slot = whisparrSlot, slot.fingerprint == fingerprint, Self.isFresh(slot.fetchedAt) {
+            Self.log.notice("whisparr records: in-memory snapshot")
             return slot.records
         }
-        if let inFlight = whisparrFetch, inFlight.fingerprint == fingerprint {
+        if let inFlight = whisparrFetch, inFlight.fingerprint == fingerprint, inFlight.revalidate == revalidate {
             return commit(await inFlight.task.value, for: .whisparr, into: &whisparrSlot, fingerprint: fingerprint)
         }
-        let task = Task<[WhisparrLibraryRecord]?, Never> {
-            try? await WhisparrClient(config: config).fetchAllMovies()
+        let task = Task<[WhisparrLibraryRecord]?, Never> { [weak self] in
+            guard let fetched = try? await WhisparrClient(config: config).fetchAllMoviesFetched(revalidate: revalidate) else { return nil }
+            await self?.note(stale: fetched.isStale, for: .whisparr)
+            Self.log.notice("whisparr records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
+            return fetched.value
         }
-        whisparrFetch = (fingerprint, task)
+        whisparrFetch = (fingerprint, revalidate, task)
         let records = await task.value
         if whisparrFetch?.fingerprint == fingerprint { whisparrFetch = nil }
         return commit(records, for: .whisparr, into: &whisparrSlot, fingerprint: fingerprint)
+    }
+
+    /// Whether the records a fetch just produced were the store's old copy.
+    private func note(stale: Bool, for source: QueueItem.Source) {
+        if stale { servedStale.insert(source) } else { servedStale.remove(source) }
     }
 
     /// One commit rule for all four sources.

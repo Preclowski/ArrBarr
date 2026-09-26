@@ -100,12 +100,23 @@ nonisolated public struct MediaServerWatch: Sendable, Equatable {
     public let year: Int?
     public let kind: MediaServerItemKind
     public let watchedAt: Date?
+    /// Episodes only: which series item the play belongs to, and where in it.
+    /// The index turns these into the per-episode watched marks the Upcoming
+    /// rows draw — a series is never "watched" while it is still airing, so
+    /// the title-level flag says nothing about tonight's episode.
+    public let seriesItemId: String?
+    public let season: Int?
+    public let episode: Int?
 
-    public init(title: String, year: Int?, kind: MediaServerItemKind, watchedAt: Date?) {
+    public init(title: String, year: Int?, kind: MediaServerItemKind, watchedAt: Date?,
+                seriesItemId: String? = nil, season: Int? = nil, episode: Int? = nil) {
         self.title = title
         self.year = year
         self.kind = kind
         self.watchedAt = watchedAt
+        self.seriesItemId = seriesItemId
+        self.season = season
+        self.episode = episode
     }
 }
 

@@ -57,4 +57,13 @@ struct LibraryMemoizationTests {
         #expect(vm.count(.radarr, cacheKey: "all", over: rows) { _ in true } == 2)
         #expect(vm.count(.radarr, cacheKey: "missing", over: rows) { $0.state == .missing } == 1)
     }
+
+    /// The grid asks for "<axis>|<direction>"; the projection is pre-warmed
+    /// under the title-ascending key. If those two strings drift apart the
+    /// first paint re-sorts the whole library inside `body` — invisible in
+    /// review, very visible on a 3000-title shelf.
+    @Test("The pre-warmed order is the one the default sort asks for")
+    func preWarmKeyMatchesTheDefaultAxis() {
+        #expect(LibraryViewModel.defaultSortCacheKey == "title|asc")
+    }
 }

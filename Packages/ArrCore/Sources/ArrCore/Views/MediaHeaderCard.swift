@@ -141,6 +141,11 @@ public struct MediaHeaderCard: View {
     var runtime: Int?
     var network: String?
     var certification: String?
+    /// Extra metadata segments appended to the runtime · network · rating row.
+    /// The episode header's air date rides here — it has no other slot, and a
+    /// second hand-rolled metadata line is exactly the drift this card exists
+    /// to prevent.
+    var extraMetadata: [String] = []
     /// Country of production, as ISO 3166-1 alpha-2 codes — rendered as
     /// locale-localized names in the metadata row. Codes rather than names so
     /// the row follows a live language switch (see `AppLocalized`).
@@ -177,6 +182,12 @@ public struct MediaHeaderCard: View {
     /// monitored bookmark's home on the detail surfaces. Opposite corner from
     /// `posterBadge` so the two never collide.
     var posterCornerAction: AnyView?
+    /// Rendered in the right column ABOVE the title. The episode header's
+    /// series / season drill-in links live here — context that belongs beside
+    /// the poster, not under the card.
+    var aboveTitle: AnyView?
+    /// Watched wedge on the hero artwork — see `posterMarks`.
+    var watched: Bool = false
     /// Hides the title + year line. DetailView sets this when the
     /// NavigationStack toolbar carries `Title (Year)` so the hero card
     /// doesn't duplicate it. Tooltips / popovers keep the in-card title
@@ -210,6 +221,7 @@ public struct MediaHeaderCard: View {
         runtime: Int? = nil,
         network: String? = nil,
         certification: String? = nil,
+        extraMetadata: [String] = [],
         countries: [String] = [],
         genres: [String] = [],
         ratings: [RatingChip] = [],
@@ -225,6 +237,8 @@ public struct MediaHeaderCard: View {
         onPosterTap: ((URL?) -> Void)? = nil,
         posterBadge: AnyView? = nil,
         posterCornerAction: AnyView? = nil,
+        aboveTitle: AnyView? = nil,
+        watched: Bool = false,
         showTitle: Bool = true,
         metadataLoading: Bool = false,
         directedBy: [CastMember] = [],
@@ -237,6 +251,7 @@ public struct MediaHeaderCard: View {
         self.runtime = runtime
         self.network = network
         self.certification = certification
+        self.extraMetadata = extraMetadata
         self.countries = countries
         self.genres = genres
         self.ratings = ratings
@@ -252,6 +267,8 @@ public struct MediaHeaderCard: View {
         self.onPosterTap = onPosterTap
         self.posterBadge = posterBadge
         self.posterCornerAction = posterCornerAction
+        self.aboveTitle = aboveTitle
+        self.watched = watched
         self.showTitle = showTitle
         self.metadataLoading = metadataLoading
         self.directedBy = directedBy
@@ -265,11 +282,22 @@ public struct MediaHeaderCard: View {
         HStack(alignment: .top, spacing: 12) {
             posterView(width: posterWidth, height: posterHeight)
             VStack(alignment: .leading, spacing: 4) {
+                if let aboveTitle {
+                    aboveTitle
+                }
                 if showTitle {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        titleWithYear
-                            .scaledFont(size: 15, weight: .semibold)
-                            .lineLimit(3)
+                        // An empty title while the record is still loading gets
+                        // the same skeleton treatment as the rows below it,
+                        // instead of a blank line that jumps when the name
+                        // lands.
+                        if title.isEmpty && metadataLoading {
+                            SkeletonBar(width: 180, height: 15)
+                        } else {
+                            titleWithYear
+                                .scaledFont(size: 15, weight: .semibold)
+                                .lineLimit(3)
+                        }
                         if let titleBadge {
                             titleBadge
                         }
@@ -355,6 +383,7 @@ public struct MediaHeaderCard: View {
             || (network.map { !$0.isEmpty } ?? false)
             || (certification.map { !$0.isEmpty } ?? false)
             || !countries.isEmpty
+            || !extraMetadata.isEmpty
     }
 
     private func posterView(width: CGFloat, height: CGFloat) -> some View {
@@ -365,6 +394,7 @@ public struct MediaHeaderCard: View {
             fallbackSymbol: fallbackSymbol,
             blurred: blurred,
             cornerAction: posterCornerAction,
+            watched: watched,
             badge: posterBadge,
             onTap: onPosterTap
         )
@@ -376,48 +406,7 @@ public struct MediaHeaderCard: View {
     /// anyway, and those show creators instead.
     @ViewBuilder
     private var directedByLine: some View {
-        HStack(spacing: 4) {
-            Text(directedByKey, bundle: .module)
-                .foregroundStyle(.secondary)
-            ForEach(Array(directedBy.prefix(2).enumerated()), id: \.element.id) { idx, person in
-                if idx > 0 {
-                    Text(verbatim: "&").foregroundStyle(.secondary)
-                }
-                creditName(person)
-            }
-            Spacer(minLength: 0)
-        }
-        .scaledFont(size: 11)
-    }
-
-    /// One credited name. Tappable (→ their filmography) when the host wired a
-    /// handler and the credit carries a TMDB id; plain text otherwise — an
-    /// id-less credit has no page to open.
-    @ViewBuilder
-    private func creditName(_ person: CastMember) -> some View {
-        if let onTapPerson, person.tmdbPersonId != nil {
-            Button { onTapPerson(person) } label: {
-                HStack(spacing: 2) {
-                    Text(verbatim: person.name)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                    LinkChevron(size: 8)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            #if os(macOS)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
-            #endif
-        } else {
-            Text(verbatim: person.name)
-                .fontWeight(.semibold)
-                .lineLimit(1)
-                .truncationMode(.tail)
-        }
+        DirectedByLine(people: directedBy, labelKey: directedByKey, onTapPerson: onTapPerson)
     }
 
     /// Metadata row under the genres: runtime · network · certification ·
@@ -435,7 +424,7 @@ public struct MediaHeaderCard: View {
             network.flatMap { $0.isEmpty ? nil : $0 },
             certification.flatMap { $0.isEmpty ? nil : $0 },
             countryNames.isEmpty ? nil : countryNames.joined(separator: " / "),
-        ].compactMap { $0 }
+        ].compactMap { $0 } + extraMetadata
         TooltipFlowLayout(spacing: 6) {
             ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
                 HStack(spacing: 6) {

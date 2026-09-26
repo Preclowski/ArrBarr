@@ -86,6 +86,13 @@ public final class SearchOptionsCache {
     /// An empty result is never cached. `/qualityprofile` failures collapse to
     /// `[]` upstream, and remembering that for 15 minutes would turn one
     /// timeout into a quarter-hour of blank profile chips.
+    /// What is already cached, without asking the arr. The Library's first
+    /// paint of a session uses this: profile chips are garnish, and waiting on
+    /// `/qualityprofile` to draw a grid we already hold was half the spinner.
+    public func cachedQualityProfiles(config: ServiceConfig, source: QueueItem.Source) -> [QualityProfile] {
+        Self.fresh(profileSlots[Self.key(source: source, config: config)]) ?? []
+    }
+
     public func qualityProfiles(
         config: ServiceConfig,
         source: QueueItem.Source,

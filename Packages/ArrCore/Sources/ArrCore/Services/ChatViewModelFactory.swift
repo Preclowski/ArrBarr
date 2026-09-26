@@ -24,7 +24,7 @@ public enum ChatViewModelFactory {
         appLanguage: String = "system"
     ) -> ChatViewModel {
         let replyLanguage = replyLanguageName(appLanguage: appLanguage)
-        let backend: ToolBackend = LocalToolBackend(
+        let backend = LocalToolBackend(
             sonarr: sonarr, radarr: radarr, lidarr: lidarr,
             whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr,
             tmdbApiKey: tmdbApiKey, downloadClients: downloadClients,
@@ -98,7 +98,12 @@ public enum ChatViewModelFactory {
         let vm = ChatViewModel(
             provider: provider,
             tools: llmTools,
-            invokeTool: invoke
+            invokeTool: invoke,
+            onToolCallStream: { name, arguments in
+                guard name == "discover_in_quiz" else { return }
+                Task { await backend.quizArgumentsStreamed(arguments) }
+            },
+            onTurnEnded: { Task { await backend.chatTurnEnded() } }
         )
         vmRef = vm
         return vm

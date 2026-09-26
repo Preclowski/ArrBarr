@@ -176,6 +176,12 @@ public struct ServarrService: Sendable {
         return command("grabQueueItem", invalidates: [tag(.queue)]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
+    /// The arr's own indexer definitions — how a release's `indexerId` is
+    /// turned into something a human recognises.
+    public func indexers() -> Resource<[ArrIndexerDefinition]> {
+        .json(plan("indexers", path: "/indexer"), tags: [tag(.profiles)], freshness: .reference, ttl: .seconds(3600))
+    }
+
     public func grabRelease(guid: String, indexerID: Int) -> Command {
         let p = plan("grabRelease", method: "POST", path: "/release", body: try! RequestBuilder.json(["guid": JSONValue.string(guid), "indexerId": .number(Double(indexerID))]), timeout: .seconds(120))
         return command("grabRelease", invalidates: [tag(.queue)]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }

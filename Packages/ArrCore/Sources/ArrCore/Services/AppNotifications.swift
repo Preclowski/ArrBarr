@@ -1,4 +1,5 @@
 import Foundation
+import os
 
 /// The subject every in-app message is posted for; there is one bus, so observers watch the type.
 public final class AppMessageBus: Sendable { private init() {} }
@@ -6,13 +7,6 @@ public final class AppMessageBus: Sendable { private init() {} }
 /// Typed messages between surfaces (a chat card, an intent, a deep-tree row) and the hosts that react to them:
 /// the popover on macOS, the tab roots on iOS. Delivered asynchronously, observed with `onMessage`.
 nonisolated public enum AppMessages {
-    /// A result card in chat, a library tile or a queue search hit was tapped: the host pushes `DetailView`.
-    /// The item is usually synthetic, carrying just what the detail needs to fetch the record.
-    public struct OpenDetail: NotificationCenter.AsyncMessage {
-        public typealias Subject = AppMessageBus
-        public let item: QueueItem
-        public init(item: QueueItem) { self.item = item }
-    }
     /// A successful "Test Connection": the queue refreshes so a just-saved key clears its banner.
     public struct ConfigValidated: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
@@ -29,12 +23,6 @@ nonisolated public enum AppMessages {
         public typealias Subject = AppMessageBus
         public let query: String
         public init(query: String) { self.query = query }
-    }
-    /// A not-in-library result was tapped or swiped right: open the add panel with it.
-    public struct OpenSearchAdd: NotificationCenter.AsyncMessage {
-        public typealias Subject = AppMessageBus
-        public let result: SearchResult
-        public init(result: SearchResult) { self.result = result }
     }
     /// The `discover_in_quiz` tool or the resume card: open the quiz with these picks (`append` extends a live deck).
     public struct OpenDiscoverQuiz: NotificationCenter.AsyncMessage {
@@ -71,15 +59,23 @@ public enum DetailRequest {
     /// external identity, which is a different thing and not
     /// interchangeable with the internal id without a library-map
     /// lookup. See `tap(_:)` below for the router that uses both.
+    /// `seasonNumber` / `episodeNumber` make it an EPISODE lookup: the hosts
+    /// route a Sonarr item that carries them to the episode screen (macOS) or
+    /// let `DetailView` auto-drill to it (iOS), instead of stopping at the
+    /// series. The Upcoming rows pass them so tapping tonight's episode opens
+    /// that episode.
     public static func syntheticItem(
         source: QueueItem.Source,
         entityId: Int,
         title: String,
         posterURL: URL? = nil,
-        posterRequiresAuth: Bool = true
+        posterRequiresAuth: Bool = true,
+        seasonNumber: Int? = nil,
+        episodeNumber: Int? = nil
     ) -> QueueItem {
         QueueItem(
-            id: "detail-lookup-\(source.rawValue)-\(entityId)",
+            id: "detail-lookup-\(source.rawValue)-\(entityId)"
+                + (episodeNumber.map { "-s\(seasonNumber ?? 0)e\($0)" } ?? ""),
             source: source,
             arrQueueId: 0,
             downloadId: nil,
@@ -87,6 +83,8 @@ public enum DetailRequest {
             downloadClient: nil,
             title: title,
             subtitle: nil,
+            seasonNumber: seasonNumber,
+            episodeNumber: episodeNumber,
             status: .unknown,
             progress: 0,
             sizeTotal: 0,
@@ -141,7 +139,12 @@ public enum DetailRequest {
         )
     }
 
-    public static func post(_ item: QueueItem) { AppMessages.post(AppMessages.OpenDetail(item: item)) }
+    private static let log = Logger(category: "detail")
+
+    public static func post(_ item: QueueItem) {
+        log.notice("open detail: \(item.source.rawValue, privacy: .public) #\(item.entityId ?? 0, privacy: .public)")
+        DetailRouter.shared.open(item)
+    }
 
     /// The one place that knows "a Lidarr ARTIST is not a Lidarr ALBUM".
     ///
@@ -180,9 +183,9 @@ public enum DetailRequest {
     /// In library → drill into DetailView via the arr-internal id.
     /// Not in library → open SearchAddPanel with the search result so
     /// the user gets the same hero card + form as the `+` flow.
-    public static func tap(_ result: SearchResult) {
+    public static func tap(_ result: SearchResult, addOrigin: SearchAddRouter.Origin = .search) {
         guard let arrId = result.inLibraryArrId else {
-            SearchAddRequest.post(result)
+            SearchAddRequest.post(result, origin: addOrigin)
             return
         }
         // Library-side rows came through `fetchLibraryOwnership`, which
@@ -217,5 +220,7 @@ public enum PersonRequest {
 }
 
 public enum SearchAddRequest {
-    public static func post(_ result: SearchResult) { AppMessages.post(AppMessages.OpenSearchAdd(result: result)) }
+    public static func post(_ result: SearchResult, origin: SearchAddRouter.Origin = .search) {
+        SearchAddRouter.shared.open(result, origin: origin)
+    }
 }

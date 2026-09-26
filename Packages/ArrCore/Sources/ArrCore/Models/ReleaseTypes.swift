@@ -26,8 +26,16 @@ nonisolated public struct Release: Codable, Identifiable, Sendable {
     public let infoUrl: String?
     /// Sonarr-only: true when the release is a full-season pack (not a single
     /// episode). The `/release?seriesId&seasonNumber` endpoint returns both, so
-    /// ReleaseListView prefers packs for a season search.
+    /// ReleaseListView tags each row with what it actually covers.
     public let fullSeason: Bool?
+    /// Sonarr-only: the season this release belongs to, and the episodes it
+    /// carries (empty / absent on a pack). Drives the row's scope badge.
+    public let seasonNumber: Int?
+    public let episodeNumbers: [Int]?
+    /// Indexer flags (freeleech and friends). Sonarr v4 sends names; older
+    /// builds send a bitfield, which we decode to nothing rather than guess at
+    /// a mapping — a wrong "Freeleech" badge is worse than none.
+    public let indexerFlags: [String]?
 
     public var id: String { guid }
 
@@ -44,7 +52,33 @@ nonisolated public struct Release: Codable, Identifiable, Sendable {
         case proto = "protocol"
         case customFormatScore, customFormats, quality, languages
         case releaseGroup, ageHours, publishDate, rejected, rejections, infoUrl
-        case fullSeason
+        case fullSeason, seasonNumber, episodeNumbers, indexerFlags
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        guid = try c.decode(String.self, forKey: .guid)
+        title = try c.decode(String.self, forKey: .title)
+        indexer = try c.decodeIfPresent(String.self, forKey: .indexer)
+        indexerId = try c.decodeIfPresent(Int.self, forKey: .indexerId)
+        size = try c.decodeIfPresent(Int64.self, forKey: .size)
+        seeders = try c.decodeIfPresent(Int.self, forKey: .seeders)
+        leechers = try c.decodeIfPresent(Int.self, forKey: .leechers)
+        proto = try c.decodeIfPresent(String.self, forKey: .proto)
+        customFormatScore = try c.decodeIfPresent(Int.self, forKey: .customFormatScore)
+        customFormats = try c.decodeIfPresent([NamedRef].self, forKey: .customFormats)
+        quality = try c.decodeIfPresent(QualityContainer.self, forKey: .quality)
+        languages = try c.decodeIfPresent([NamedRef].self, forKey: .languages)
+        releaseGroup = try c.decodeIfPresent(String.self, forKey: .releaseGroup)
+        ageHours = try c.decodeIfPresent(Double.self, forKey: .ageHours)
+        publishDate = try c.decodeIfPresent(String.self, forKey: .publishDate)
+        rejected = try c.decodeIfPresent(Bool.self, forKey: .rejected)
+        rejections = try c.decodeIfPresent([String].self, forKey: .rejections)
+        infoUrl = try c.decodeIfPresent(String.self, forKey: .infoUrl)
+        fullSeason = try c.decodeIfPresent(Bool.self, forKey: .fullSeason)
+        seasonNumber = try c.decodeIfPresent(Int.self, forKey: .seasonNumber)
+        episodeNumbers = try c.decodeIfPresent([Int].self, forKey: .episodeNumbers)
+        indexerFlags = try? c.decodeIfPresent([String].self, forKey: .indexerFlags)
     }
 
     nonisolated public struct QualityContainer: Codable, Sendable {
@@ -54,6 +88,82 @@ nonisolated public struct Release: Codable, Identifiable, Sendable {
     nonisolated public struct NamedRef: Codable, Sendable {
         public let name: String?
     }
+}
+
+/// Row-level answers the manual-search list needs from a release: what the
+/// file covers, what to print as its name, and whether it beats what's on disk.
+nonisolated public extension Release {
+    /// How a release relates to the file already in the library.
+    enum Upgrade: Sendable { case better, same, worse }
+
+    /// What one release covers. `.episodes` carries its own already-formatted
+    /// label ("E04", "E01–05"); `.pack` is localised by the view.
+    enum Scope: Sendable, Equatable { case pack, episodes(String) }
+
+    /// nil when the search has no such axis — a movie, or a single episode.
+    var scope: Scope? {
+        if fullSeason == true { return .pack }
+        let numbers = (episodeNumbers ?? []).sorted()
+        guard let first = numbers.first, let last = numbers.last else { return nil }
+        let start = String(format: "E%02d", first)
+        return .episodes(first == last ? start : start + "–" + String(format: "%02d", last))
+    }
+
+    /// The release name minus the leading series name and `SxxExx` marker —
+    /// both already on screen (the header and the scope badge), and both
+    /// eating the width where the tokens that actually differ live. Falls back
+    /// to the raw title whenever the marker isn't where we expect it.
+    var shortTitle: String {
+        guard let marker = title.range(of: "[Ss][0-9]{1,3}([Ee][0-9]{1,4})*(-?[Ee][0-9]{1,4})*",
+                                       options: .regularExpression) else { return title }
+        let rest = title[marker.upperBound...].drop { $0 == "." || $0 == " " || $0 == "_" || $0 == "-" }
+        return rest.count >= 8 ? String(rest) : title
+    }
+
+    /// Vertical resolution parsed out of a quality name ("WEBDL-1080p" → 1080),
+    /// which is how the *arrs rank one quality above another.
+    static func resolution(of qualityName: String?) -> Int? {
+        guard let name = qualityName,
+              let range = name.range(of: "[0-9]{3,4}(?=[pi])", options: .regularExpression)
+        else { return nil }
+        return Int(name[range])
+    }
+
+    /// Resolution first, then custom-format score — the two dimensions the user
+    /// can see on the row. Callers pass the on-disk file's quality and score;
+    /// nil in means nothing to compare against, so nil out.
+    func upgrade(overQuality quality: String?, score: Int?) -> Upgrade? {
+        guard quality != nil || score != nil else { return nil }
+        if let mine = Release.resolution(of: qualityName),
+           let theirs = Release.resolution(of: quality), mine != theirs {
+            return mine > theirs ? .better : .worse
+        }
+        let mineScore = customFormatScore ?? 0
+        let theirScore = score ?? 0
+        if mineScore == theirScore { return .same }
+        return mineScore > theirScore ? .better : .worse
+    }
+
+    /// The indexer's name as a human would say it. Indexers synced from
+    /// Prowlarr arrive in the *arr named "NZBgeek (Prowlarr)" — the suffix says
+    /// how the *arr learned about it, which is nobody's business on a button.
+    var indexerName: String? {
+        guard let indexer, !indexer.isEmpty else { return nil }
+        return Release.strippingProwlarrSuffix(indexer)
+    }
+
+    /// The fallback spelling when Prowlarr can't be asked: the *arr's label
+    /// without the one suffix we can remove without guessing.
+    static func strippingProwlarrSuffix(_ name: String) -> String {
+        guard let suffix = name.range(of: " (Prowlarr)", options: [.caseInsensitive, .backwards, .anchored],
+                                      range: name.index(name.endIndex, offsetBy: -min(11, name.count))..<name.endIndex)
+        else { return name }
+        return String(name[name.startIndex..<suffix.lowerBound])
+    }
+
+    /// Indexer flags worth a badge. Only the name form is trusted — see the
+    /// property's note.
+    var flagLabels: [String] { (indexerFlags ?? []).filter { !$0.isEmpty } }
 }
 
 /// Identifies what to run a manual search for. Drives `ReleaseListView` —
@@ -76,7 +186,7 @@ nonisolated public struct ManualSearchTarget: Identifiable, Hashable, Sendable {
 
     /// True for a whole-season search (seriesId + seasonNumber, no episodeId).
     /// The same `/release` endpoint also returns per-episode releases, so
-    /// ReleaseListView uses this to prefer the season packs.
+    /// ReleaseListView offers a packs-only filter for these.
     public var isSeasonSearch: Bool {
         query.contains { $0.name == "seasonNumber" }
     }

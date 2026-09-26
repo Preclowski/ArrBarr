@@ -31,6 +31,16 @@ public final class DiscoverViewModel {
     /// surface that reads this flag renders the right thing whenever it
     /// happens to be built; one that has to *catch* the moment misses it.
     public var isPresented: Bool = false
+
+    public enum LoadPhase: Equatable, Sendable {
+        case askingModel
+        /// `totalIsFinal` is false while the model is still streaming picks.
+        case resolving(done: Int, total: Int, totalIsFinal: Bool)
+    }
+    /// Non-nil from the moment a fresh deck is requested until its first card
+    /// lands (or the attempt ends without one).
+    public private(set) var loadPhase: LoadPhase?
+    public private(set) var loadStartedAt: Date?
     /// Held for the view model's lifetime — the observers must outlive every
     /// deck the user opens, and the view model itself lives as long as the
     /// Quiz does, so there is nothing to unregister early.
@@ -149,7 +159,33 @@ public final class DiscoverViewModel {
         } else {
             seed(items: items, mood: mood)
         }
+        if !items.isEmpty {
+            loadPhase = nil
+            loadStartedAt = nil
+        }
         isPresented = true
+    }
+
+    /// A fresh deck is on its way: put the overlay up now rather than when
+    /// the last lookup returns.
+    public func beginLoading() {
+        if loadPhase == nil { loadStartedAt = Date() }
+        loadPhase = loadPhase ?? .askingModel
+        isPresented = true
+    }
+
+    public func noteResolving(done: Int, total: Int, totalIsFinal: Bool) {
+        guard loadPhase != nil else { return }
+        loadPhase = .resolving(done: done, total: total, totalIsFinal: totalIsFinal)
+    }
+
+    /// The attempt is over. With no deck to show, the overlay steps aside so
+    /// the chat's explanation is what the user sees.
+    public func endLoading() {
+        guard loadPhase != nil else { return }
+        loadPhase = nil
+        loadStartedAt = nil
+        if !hasSession { isPresented = false }
     }
 
     /// Whether there is a session to return to or extend — cards still in hand,

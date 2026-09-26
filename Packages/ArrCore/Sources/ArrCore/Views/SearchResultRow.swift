@@ -39,6 +39,10 @@ public struct SearchResultRow: View {
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,
+            // Watch state comes from the media server's index, matched on the
+            // row's own provider ids — a lookup hit carries no arr record, so
+            // there is no monitored flag to draw.
+            posterWatched: MediaServerIndex.shared.isWatched(result.mediaServerKeys),
             title: titleWithYear,
             metadataSegments: metadataSegments,
             // Title slot: arr identity ("Sonarr"/"Radarr") only. The

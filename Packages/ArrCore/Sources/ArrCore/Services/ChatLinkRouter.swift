@@ -85,7 +85,7 @@ public enum ChatLinkRouter {
                 \(source.rawValue, privacy: .public) "\(result.title, privacy: .private)" \
                 (\(result.year.map(String.init) ?? "—", privacy: .public))
                 """)
-            DetailRequest.tap(owned.map(result.withLibraryOwnership) ?? result)
+            DetailRequest.tap(owned.map(result.withLibraryOwnership) ?? result, addOrigin: .chat)
             return
         }
         // Nothing resolved: the id was wrong, or the arr that owns this kind of

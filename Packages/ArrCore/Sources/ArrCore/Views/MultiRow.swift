@@ -32,10 +32,9 @@ struct MultiRow: View {
         // from the MenuBarExtra panel, which auto-dismisses it. The listener
         // lives in PopoverContentView, which only exists on macOS…
         ConfirmCenter.request(PendingConfirm(
-            title: "Cancel this download?",
+            title: "Remove this download?",
             message: "This will remove the download from the client.",
-            confirmLabel: "Cancel download",
-            cancelLabel: "Keep download",
+            confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: onDelete ?? {}
         ))
@@ -117,14 +116,14 @@ struct MultiRow: View {
         }
         #if os(iOS)
         .confirmationDialog(
-            Text("queue.cancelThisDownload.tooltip", bundle: .module),
+            Text("Remove this download?", bundle: .module),
             isPresented: $showDeleteConfirm,
             titleVisibility: .visible
         ) {
             Button(role: .destructive) { onDelete?() } label: {
-                Text("queue.cancelDownload.button", bundle: .module)
+                Text("Remove", bundle: .module)
             }
-            Button(role: .cancel) {} label: { Text("queue.keepDownload.button", bundle: .module) }
+            Button(role: .cancel) {} label: { Text("Cancel", bundle: .module) }
         } message: {
             Text("This will remove the download from the client.", bundle: .module)
         }

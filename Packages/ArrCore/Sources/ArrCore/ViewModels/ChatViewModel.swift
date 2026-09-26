@@ -17,6 +17,9 @@ public final class ChatViewModel {
     /// tool is pending. Resume value is `JSONValue?`: confirmed args
     /// to proceed, or nil = cancel.
     private var pendingResume: CheckedContinuation<JSONValue?, Never>?
+    private let onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)?
+    private let onTurnEnded: (@Sendable () -> Void)?
+    private var turnTask: Task<Void, Never>?
 
     /// Never logs a prompt, a reply or a tool argument — all three are the
     /// user's own words. What it records is that a turn happened, which
@@ -28,7 +31,11 @@ public final class ChatViewModel {
 
     public init(provider: LLMProvider,
                 tools: [LLMTool],
-                invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput) {
+                invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
+                onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
+                onTurnEnded: (@Sendable () -> Void)? = nil) {
+        self.onToolCallStream = onToolCallStream
+        self.onTurnEnded = onTurnEnded
         self.provider = provider
         self.tools = tools
         self.invokeTool = invokeTool
@@ -39,7 +46,18 @@ public final class ChatViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(ChatMessage(role: .user, content: trimmed))
-        await runLoop(prompt: trimmed)
+        let task = Task { await runLoop(prompt: trimmed) }
+        turnTask = task
+        await task.value
+        turnTask = nil
+        onTurnEnded?()
+    }
+
+    /// Stops the running turn. Ignored while a confirm card is up — that gate
+    /// resolves through its own buttons.
+    public func cancelTurn() {
+        guard pendingResume == nil else { return }
+        turnTask?.cancel()
     }
 
     /// Wipe the conversation. Refuses while a destructive-tool gate is
@@ -89,6 +107,12 @@ public final class ChatViewModel {
         return result
     }
 
+    private func timedRound(_ body: () async throws -> LLMResponse) async rethrows -> LLMResponse {
+        let state = AppSignpost.chat.beginInterval("llm round")
+        defer { AppSignpost.chat.endInterval("llm round", state) }
+        return try await body()
+    }
+
     private func runLoop(prompt: String) async {
         isThinking = true
         defer { isThinking = false }
@@ -102,7 +126,12 @@ public final class ChatViewModel {
             while let p = nextPrompt, roundsLeft > 0 {
                 roundsLeft -= 1
                 Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
-                let response = try await provider.respond(prompt: p, tools: tools, history: messages)
+                let response = try await timedRound {
+                    try await ToolCallStreamContext.$observer.withValue(onToolCallStream) {
+                        try await provider.respond(prompt: p, tools: tools, history: messages)
+                    }
+                }
+                try Task.checkCancellation()
 
                 // --- Pre-executed path (e.g. FoundationModelsProvider) ---
                 // The provider already ran the tools inside its session; toolResults is non-nil.
@@ -224,6 +253,8 @@ public final class ChatViewModel {
                 lastError = "Reached the maximum number of tool-call rounds."
                 messages.append(ChatMessage(role: .assistant, content: "Sorry — I got stuck in a loop and stopped."))
             }
+        } catch where Task.isCancelled {
+            Self.log.notice("turn cancelled by the user")
         } catch {
             // The user sees `error.localizedDescription` in a bubble and
             // nothing else. Keep that half public (it is a provider's own
