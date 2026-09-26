@@ -115,13 +115,16 @@ public struct MediaServerService: Sendable {
                 return (try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: data).MediaContainer.Metadata ?? []).compactMap { m in
                     guard let key = m.ratingKey, let kind = Self.kind(m.type) ?? (m.type == "episode" ? .episode : nil) else { return nil }
                     return MediaServerHistoryRow(itemID: key, ids: ExternalIDParsing.plexGuids((m.Guid ?? []).map(\.id), kind: kind), kind: kind,
-                                                 title: m.grandparentTitle ?? m.title ?? "", viewedAt: Date(timeIntervalSince1970: TimeInterval(m.viewedAt ?? 0)))
+                                                 title: m.grandparentTitle ?? m.title ?? "", viewedAt: Date(timeIntervalSince1970: TimeInterval(m.viewedAt ?? 0)),
+                                                 seriesItemID: m.grandparentRatingKey ?? m.grandparentKey.map { String($0.split(separator: "/").last ?? "") },
+                                                 season: m.parentIndex, episode: m.index)
                 }
             }
             return try WireCodec.decoder.decode(JellyfinItems.self, from: data).Items.compactMap { i in
                 let kind: MediaKind = i.itemType == "Episode" ? .episode : Self.kind(i.itemType) ?? .movie
                 return MediaServerHistoryRow(itemID: i.Id, ids: ExternalIDParsing.jellyfinProviderIDs(i.ProviderIds ?? [:], kind: kind == .episode ? .series : kind), kind: kind,
-                                             title: i.SeriesName ?? i.Name ?? "", viewedAt: i.UserData?.LastPlayedDate.flatMap { try? Date($0, strategy: WireCodec.iso8601Fractional) } ?? Date(timeIntervalSince1970: 0))
+                                             title: i.SeriesName ?? i.Name ?? "", viewedAt: i.UserData?.LastPlayedDate.flatMap { try? Date($0, strategy: WireCodec.iso8601Fractional) } ?? Date(timeIntervalSince1970: 0),
+                                             seriesItemID: i.SeriesId, season: i.ParentIndexNumber, episode: i.IndexNumber)
             }
         }, harvest: { rows in
             rows.filter { $0.kind != .episode }.flatMap { r in r.ids.map { Crosswalk(from: .server(instance, r.itemID), to: $0, kind: r.kind, confidence: .asserted, source: .mediaServerGuid, fetchedAt: Date()) } }

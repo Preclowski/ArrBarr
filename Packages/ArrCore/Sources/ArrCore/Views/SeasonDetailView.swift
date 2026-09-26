@@ -60,6 +60,10 @@ struct SeasonDetailView: View {
     /// Same series-level country the series view shows — a cache hit in
     /// `CountryProvider` when the user drilled in from there.
     @State private var countries: [String] = []
+    /// Series cast, loaded once per series for the episode screens below.
+    @State private var cast: [CastMember] = []
+    /// The series' quality-profile name, for the episode hero's chip.
+    @State private var profileName: String?
 
     /// Season art when the media server has it, series art otherwise. Every
     /// poster on this screen goes through here so the header, the lightbox and
@@ -178,6 +182,17 @@ struct SeasonDetailView: View {
             countries = await CountryProvider.seriesCountries(
                 tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
         }
+        // For the episode screens pushed from here. `CastProvider` coalesces
+        // and caches per title, so coming from the series detail this is a
+        // cache hit and costs nothing.
+        .task(id: drill.seriesId) {
+            cast = await CastProvider.seriesCredits(
+                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore).cast
+        }
+        .task(id: sonarrDetail?.qualityProfileId) {
+            guard let id = sonarrDetail?.qualityProfileId else { return }
+            profileName = await SearchClient.profileNameMap(config: configStore.sonarr, source: .sonarr)[id]
+        }
         .task(id: drill.seriesId) {
             let keys = sonarrDetail?.mediaServerKeys ?? []
             guard !keys.isEmpty else { return }
@@ -205,6 +220,13 @@ struct SeasonDetailView: View {
                 // Tapping the hero's season link pops back to this season view.
                 onTapSeason: { selectedEpisode = nil },
                 seriesYear: drill.seriesYear,
+                cast: cast,
+                genres: sonarrDetail?.genres ?? [],
+                certification: sonarrDetail?.certification,
+                seriesTmdbId: sonarrDetail?.tmdbId,
+                seriesTvdbId: sonarrDetail?.tvdbId,
+                profileName: profileName,
+                mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
                 // Re-read from the live array rather than the pushed `ep`
                 // snapshot, which is frozen at tap time.
                 monitored: episodes.first { $0.id == ep.id }?.monitored,
@@ -212,7 +234,11 @@ struct SeasonDetailView: View {
             )
         }
         .navigationDestination(item: $manualSearchTarget) { wrapper in
-            ReleaseListView(target: wrapper.target, onBack: { manualSearchTarget = nil })
+            ReleaseListView(target: wrapper.target,
+                            existingByEpisode: existingFileByEpisodeNumber,
+                            waitContext: WaitCardContext(series: sonarrDetail, seriesYear: drill.seriesYear,
+                                                         cast: cast, posterURL: posterURL),
+                            onBack: { manualSearchTarget = nil })
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
@@ -226,6 +252,19 @@ struct SeasonDetailView: View {
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
+    }
+
+    /// What each episode already has on disk, keyed by episode number — the
+    /// baseline a single-episode row in the manual search diffs against. A pack
+    /// replaces many files, so it keeps no baseline of its own.
+    private var existingFileByEpisodeNumber: [Int: UpgradeDiffView.Side] {
+        var out: [Int: UpgradeDiffView.Side] = [:]
+        for episode in episodes {
+            guard let number = episode.episodeNumber,
+                  let file = episode.episodeFileId.flatMap({ fileByEpisodeFileId[$0] }) else { continue }
+            out[number] = UpgradeDiffView.side(episodeFile: file)
+        }
+        return out
     }
 
     /// The season's Search choice, in the header cluster (same component the
@@ -270,9 +309,14 @@ struct SeasonDetailView: View {
         }
     }
 
+    /// Sonarr's series score is TVDB's — the chip wears that name and mark,
+    /// same as the series detail one screen up. It used to read "Rating",
+    /// which named no source at all.
     private var ratings: [RatingChip] {
         guard let v = sonarrDetail?.ratings?.value else { return [] }
-        return [RatingChip.plain(v, votes: sonarrDetail?.ratings?.votes)].compactMap { $0 }
+        return [RatingChip.tvdb(v, linkTitle: drill.seriesTitle,
+                                tvdbId: sonarrDetail?.tvdbId,
+                                votes: sonarrDetail?.ratings?.votes)].compactMap { $0 }
     }
 
     /// Same hero card as the series view — poster + overview + metadata. Title is

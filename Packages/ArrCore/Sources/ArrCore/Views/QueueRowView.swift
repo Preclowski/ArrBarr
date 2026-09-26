@@ -147,6 +147,10 @@ public struct QueueRowView: View {
                     fallbackSymbol: item.source.symbol
                 )
             }
+            // Before the hover / selection overlays: the wedge is part of the
+            // artwork, those are chrome drawn over it.
+            .posterMarks(watched: item.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             // macOS: pause/resume lives ON the poster (hover-revealed). The row
             // has no delete button — cancelling a download is intentionally out
             // of the glanceable queue list. Suppressed while selecting — the

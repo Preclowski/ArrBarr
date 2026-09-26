@@ -8,6 +8,77 @@ import Foundation
 extension LocalToolBackend {
 
     func discoverInQuiz(_ arguments: JSONValue) async throws -> ToolCallOutput {
+        let signpost = AppSignpost.quiz
+        let state = signpost.beginInterval("discover_in_quiz")
+        defer { signpost.endInterval("discover_in_quiz", state) }
+        let early = quizEarlyPipeline
+        quizEarlyPipeline = nil
+        let output = try await buildQuizDeck(arguments, early: early)
+        if !headlessSurface {
+            await MainActor.run { DiscoverViewModel.shared.endLoading() }
+        }
+        return output
+    }
+
+    /// Called with the accumulated `discover_in_quiz` arguments while the model
+    /// is still writing them, so lookups (and the first cards) start before
+    /// the tool call itself arrives.
+    public func quizArgumentsStreamed(_ text: String) async {
+        guard !headlessSurface else { return }
+        let closes = text.utf8.reduce(0) { $1 == UInt8(ascii: "}") ? $0 + 1 : $0 }
+        guard closes > quizStreamCloses else { return }
+        quizStreamCloses = closes
+
+        let partial = QuizArgumentsScanner.scan(text)
+        let picks = Self.suggestItems(.object(["items": .array(partial.items)]))
+        guard !picks.isEmpty,
+              let kind = partial.string("kind")?.lowercased(), kind == "movie" || kind == "series",
+              let mood = partial.string("mood")?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !mood.isEmpty else { return }
+        let libraryMode = Self.quizLibraryMode(partial.string("library_mode"))
+        let append = partial.bool("append") ?? false
+
+        if quizEarlyPipeline == nil {
+            // A fresh deck replaces the session, so only start one early when
+            // that is certainly what was asked for.
+            let safe = await MainActor.run {
+                append || DiscoverViewModel.shared.loadPhase != nil || !DiscoverViewModel.shared.hasSession
+            }
+            guard safe else { return }
+            let pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append, mood: mood)
+            if quizEarlyPipeline == nil { quizEarlyPipeline = pipeline }
+        }
+        guard let pipeline = quizEarlyPipeline,
+              pipeline.setup.kind == kind, pipeline.setup.libraryMode == libraryMode,
+              pipeline.setup.append == append else { return }
+        await pipeline.feed(picks)
+    }
+
+    /// The chat turn is over; a streamed deck the tool never claimed is dead.
+    public func chatTurnEnded() async {
+        quizStreamCloses = 0
+        await quizEarlyPipeline?.cancel()
+        quizEarlyPipeline = nil
+    }
+
+    nonisolated static func quizLibraryMode(_ raw: String?) -> String {
+        switch raw?.lowercased() {
+        case "library", "many": return "library"   // "many" = legacy alias
+        default: return "new"
+        }
+    }
+
+    private func makeQuizPipeline(kind: String, libraryMode: String, append: Bool, mood: String) async -> QuizDeckPipeline {
+        let (shown, suppressed) = await MainActor.run {
+            (append ? DiscoverViewModel.shared.shownDedupKeys : [], SwipeSignalStore.shared.suppressedKeys())
+        }
+        let setup = QuizDeckPipeline.Setup(kind: kind, libraryMode: libraryMode, append: append, mood: mood,
+                                           shown: shown, suppressed: suppressed, delivers: !headlessSurface)
+        return QuizDeckPipeline(setup: setup, resolve: curatedPickResolver(kind: kind))
+    }
+
+    private func buildQuizDeck(_ arguments: JSONValue, early: QuizDeckPipeline?) async throws -> ToolCallOutput {
+        defer { Task { await early?.cancel() } }
         guard case .object(let dict) = arguments else {
             return ToolCallOutput(text: "ERROR: discover_in_quiz needs an object payload.")
         }
@@ -22,16 +93,10 @@ extension LocalToolBackend {
         guard kind == "movie" || kind == "series" else {
             return ToolCallOutput(text: "ERROR: 'kind' must be 'movie' or 'series'.")
         }
-        let libraryMode: String = {
-            if case .object(let dict) = arguments,
-               case .string(let v) = dict["library_mode"] {
-                switch v.lowercased() {
-                case "library", "many": return "library"   // "many" = legacy alias
-                case "new", "none", "few": return "new"    // legacy aliases
-                default: break
-                }
-            }
-            return "new"
+        let libraryMode = Self.quizLibraryMode(Self.stringArg(arguments, key: "library_mode"))
+        let append: Bool = {
+            if case .bool(let v) = dict["append"] { return v }
+            return false
         }()
         let items = Self.suggestItems(arguments)
         guard !items.isEmpty || libraryMode == "library" else {
@@ -58,13 +123,33 @@ extension LocalToolBackend {
         // lookups, or — library_mode "library" with no items — straight out
         // of the cached library snapshot, zero HTTP.
         let resolved: [DiscoverItem]
+        var shown: Set<String> = []
+        var suppressed: Set<String>?
+        var delivered: Set<String> = []
         if capped.isEmpty && libraryMode == "library" {
+            if append { shown = await MainActor.run { DiscoverViewModel.shared.shownDedupKeys } }
             resolved = await libraryDeckItems(kind: kind, arguments: arguments)
             if resolved.isEmpty {
                 return ToolCallOutput(text: "No library titles match that filter (or everything matching was already watched). Loosen the genre/year filter, or pass explicit items.")
             }
         } else {
-            resolved = await resolveCuratedPicks(capped, kind: kind)
+            let pipeline: QuizDeckPipeline
+            if let early, early.setup.kind == kind, early.setup.libraryMode == libraryMode,
+               early.setup.append == append {
+                pipeline = early
+            } else {
+                await early?.cancel()
+                if !append && !headlessSurface {
+                    await MainActor.run { DiscoverViewModel.shared.beginLoading() }
+                }
+                pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append, mood: label)
+            }
+            await pipeline.feed(capped, isFinal: true)
+            let outcome = await pipeline.finish()
+            resolved = outcome.resolved
+            delivered = outcome.delivered
+            shown = pipeline.setup.shown
+            suppressed = pipeline.setup.suppressed
         }
 
         let filtered: [DiscoverItem]
@@ -87,38 +172,37 @@ extension LocalToolBackend {
             }
             return ToolCallOutput(text: "Couldn't resolve any of those picks through \(kind == "movie" ? "Radarr" : "Sonarr") lookup. Try other titles or check the service config.")
         }
-        return try await assembleDeck(arguments: arguments, label: label, kind: kind,
+        return try await assembleDeck(label: label, kind: kind, append: append,
                                       libraryMode: libraryMode, anchorIds: anchorIds,
-                                      resolved: resolved, filtered: filtered)
+                                      filtered: filtered, shown: shown,
+                                      suppressed: suppressed, delivered: delivered)
     }
 
     /// The curated path: each {title, year?, tmdbId?} pick resolves through
     /// the arr lookup (bounded fan-out), cross-referenced against the library
     /// map so owned picks open detail instead of the add flow.
-    private func resolveCuratedPicks(
-        _ capped: [(title: String, year: Int?, tmdbId: Int?)], kind: String
-    ) async -> [DiscoverItem] {
+    private func curatedPickResolver(kind: String) -> @Sendable (QuizDeckPipeline.Pick) async -> DiscoverItem? {
         // Library map fetched in parallel with the per-pick lookups (mirrors
         // suggest_titles). Owned picks get inLibraryArrId set and
         // originLabel=.library so the matched-list sections them under
         // "In library" with an openDetail tap instead of an add flow.
-        async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
-            ? sonarrLibraryByTVDBId()
-            : radarrLibraryByTMDBId()
+        let libraryMapFetch = Task { [self] () -> [Int: LibraryOwnership] in
+            kind == "series" ? await sonarrLibraryByTVDBId() : await radarrLibraryByTMDBId()
+        }
         let radarrClient = RadarrClient(config: radarr)
         let sonarrClient = SonarrClient(config: sonarr)
-        let libraryMap = await libraryMapFetch
         let radarrConfigured = radarr.isConfigured
         let sonarrConfigured = sonarr.isConfigured
         let radarrBase = radarr.baseURL
         let sonarrBase = sonarr.baseURL
-        return await ParallelResolve.orderedMap(capped, width: 8) { pick -> DiscoverItem? in
+        return { pick -> DiscoverItem? in
             let term = Self.lookupTerm(title: pick.title, year: pick.year, tmdbId: pick.tmdbId)
             switch kind {
             case "movie":
                 guard radarrConfigured else { return nil }
                 let hits = (try? await radarrClient.lookupMovies(term: term)) ?? []
                 guard let first = hits.first else { return nil }
+                let libraryMap = await libraryMapFetch.value
                 let tmdbId = first.tmdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: radarrBase).0
                 let resultBase = SearchResult(
@@ -148,6 +232,7 @@ extension LocalToolBackend {
                 guard sonarrConfigured else { return nil }
                 let hits = (try? await sonarrClient.lookupSeries(term: term)) ?? []
                 guard let first = hits.first else { return nil }
+                let libraryMap = await libraryMapFetch.value
                 let tvdbId = first.tvdbId ?? 0
                 let poster = (first.images ?? []).posterURL(baseURL: sonarrBase).0
                 let resultBase = SearchResult(
@@ -174,7 +259,7 @@ extension LocalToolBackend {
                                     originLabel: .llm, kind: .show)
             default: return nil
             }
-        }.compactMap { $0 }
+        }
     }
 
     /// Zero-HTTP deck: filter and rank the cached library snapshot, then draw
@@ -250,17 +335,14 @@ extension LocalToolBackend {
         Array(ranked.prefix(pool).shuffled().prefix(deck))
     }
 
-    private func assembleDeck(arguments: JSONValue, label: String, kind: String,
+    /// `shown` / `suppressed` / `delivered` come from the pipeline when one ran:
+    /// the deck may already hold some of these cards, and `shown` must predate
+    /// them or an appended round would count its own cards as repeats.
+    private func assembleDeck(label: String, kind: String, append: Bool,
                               libraryMode: String, anchorIds: [Int],
-                              resolved: [DiscoverItem],
-                              filtered: [DiscoverItem]) async throws -> ToolCallOutput {
-        let append: Bool = {
-            if case .object(let dict) = arguments,
-               case .bool(let v) = dict["append"] {
-                return v
-            }
-            return false
-        }()
+                              filtered: [DiscoverItem], shown: Set<String>,
+                              suppressed: Set<String>?,
+                              delivered: Set<String>) async throws -> ToolCallOutput {
         var thinRoundNote = ""
 
         // Fetch TMDB Similar results for any kept-item anchors in parallel,
@@ -284,7 +366,12 @@ extension LocalToolBackend {
         // Persistent swipe memory: titles on an active skip cooldown (or
         // vetoed) stay out of every new deck. Reported to the model so a
         // heavily-suppressed round doesn't read as a resolution failure.
-        let suppressedKeys = await MainActor.run { SwipeSignalStore.shared.suppressedKeys() }
+        let suppressedKeys: Set<String>
+        if let suppressed {
+            suppressedKeys = suppressed
+        } else {
+            suppressedKeys = await MainActor.run { SwipeSignalStore.shared.suppressedKeys() }
+        }
         let combined = merged.filter { !suppressedKeys.contains($0.dedupKey) }
         let suppressedCount = merged.count - combined.count
         if combined.isEmpty {
@@ -300,7 +387,6 @@ extension LocalToolBackend {
         // and lets it try different titles inside the same turn.
         let payload: [DiscoverItem]
         if append {
-            let shown = await MainActor.run { DiscoverViewModel.shared.shownDedupKeys }
             let split = Self.splitAlreadyShown(combined, shown: shown)
             if split.fresh.isEmpty {
                 let repeats = split.dropped.prefix(10).map(titleYearLabel).joined(separator: ", ")
@@ -335,7 +421,11 @@ extension LocalToolBackend {
             return ToolCallOutput(text: text)
         }
 
-        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: label, items: payload, append: append))
+        let undelivered = payload.filter { !delivered.contains($0.dedupKey) }
+        if !undelivered.isEmpty {
+            AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: label, items: undelivered,
+                                                          append: append || !delivered.isEmpty))
+        }
         let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }
         let curatedCount = payload.filter { curatedKeys.contains($0.dedupKey) }.count
         var summary = "Opened Discover quiz with \(payload.count) picks for: \(label) (\(curatedCount) curated + \(payload.count - curatedCount) similar)"

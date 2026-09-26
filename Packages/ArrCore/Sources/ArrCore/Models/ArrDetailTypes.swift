@@ -68,6 +68,9 @@ nonisolated public struct SonarrSeriesDetail: Codable, Sendable {
     let runtime: Int?
     let ratings: SonarrDetailRatings?
     let network: String?
+    /// Age rating ("TV-MA", "16"). Sonarr ships it on `/series/{id}`; the
+    /// episode hero shows the series' one, since an episode has none of its own.
+    var certification: String? = nil
     let status: String?
     let images: [ArrImage]?
     let titleSlug: String?

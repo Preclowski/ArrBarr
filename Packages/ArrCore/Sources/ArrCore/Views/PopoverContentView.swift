@@ -245,8 +245,7 @@ public struct PopoverContentView: View {
                 // The `didSet` runs the search; there is nothing to mirror.
                 searchViewModel.query = message.query
             }
-            .onMessage(AppMessages.OpenDetail.self) { message in
-                let item = message.item
+            .onDetailRequest { item in
                 searchResult = nil
                 historySource = nil
                 if detailItem == nil {
@@ -272,15 +271,14 @@ public struct PopoverContentView: View {
                 detailItem = nil
                 personRef = message.ref
             }
-            .onMessage(AppMessages.OpenSearchAdd.self) { message in
-                // Chat tap-to-add — show the SearchAddPanel overlay
-                // pre-loaded with the result. `searchAddFromChat` lets
-                // Back return straight to chat instead of dropping the
-                // user on the Add tab.
+            .onSearchAddRequest { result, origin in
+                // Tap-to-add from chat, the quiz deck or a search hit. Back
+                // returns to chat only for the chat origin; a quiz card comes
+                // back to the deck, which stays parked under the panel.
                 historySource = nil
                 detailItem = nil
-                searchAddFromChat = true
-                searchResult = message.result
+                searchAddFromChat = origin == .chat
+                searchResult = result
             }
             // The quiz deck seeds itself (`DiscoverViewModel.open`); this
             // surface only clears what the deck has to come up over.
@@ -387,7 +385,7 @@ public struct PopoverContentView: View {
                         source: historySource,
                         viewModel: viewModel,
                         // Pushed onto this stack directly rather than through
-                        // `AppMessages.OpenDetail`, whose handler drops the history
+                        // `DetailRouter`, whose handler drops the history
                         // surface — Back has to land here, not on the queue.
                         onOpenDetail: { item in
                             withAnimation(.smooth(duration: 0.22)) { detailItem = item }
@@ -478,6 +476,10 @@ public struct PopoverContentView: View {
                     onClose: {
                         withAnimation(.smooth(duration: 0.22)) { discoverViewModel.isPresented = false }
                     },
+                    onCancelLoading: {
+                        chatHolder.vm.cancelTurn()
+                        discoverViewModel.endLoading()
+                    },
                     onRequestMore: { mood, kept, skipped in
                         requestMoreQuizPicks(mood: mood, kept: kept, skipped: skipped)
                     }
@@ -544,12 +546,11 @@ public struct PopoverContentView: View {
         // like real glass anyway, so it's gone — arrow + frame stay
         // visually consistent.
         //
-        // One step lighter than the backdrop the system hands us. A *white*
-        // wash, deliberately — the popover's text is vibrant, i.e. it blends
-        // with whatever sits behind it, so lifting the surface lifts the
-        // `.secondary` / `.tertiary` labels with it. (The earlier black wash
-        // did the opposite and buried the section headers.)
-        .background(Color.white.opacity(0.06))
+        // One step DARKER than the backdrop the system hands us. This was a
+        // white wash — meant to lift the vibrant `.secondary` labels with the
+        // surface — but the panel read as washed out; the labels that needed
+        // the lift are `.primary` now anyway.
+        .background(Color.black.opacity(0.10))
     }
 
     /// Modal-feeling overlay for the result detail. Shown whenever

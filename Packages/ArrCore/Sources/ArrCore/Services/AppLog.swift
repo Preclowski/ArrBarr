@@ -78,4 +78,6 @@ nonisolated public extension URL {
 nonisolated public enum AppSignpost {
     public static let queue = OSSignposter(subsystem: AppLog.subsystem, category: "QueueFetch")
     public static let posters = OSSignposter(subsystem: AppLog.subsystem, category: "PosterStore")
+    public static let chat = OSSignposter(subsystem: AppLog.subsystem, category: "Chat")
+    public static let quiz = OSSignposter(subsystem: AppLog.subsystem, category: "Quiz")
 }

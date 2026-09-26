@@ -38,6 +38,37 @@ extension ArrAPIClient {
         return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority).value
     }
 
+    /// Cache-first read for the big library lists: the stored row when there
+    /// is one, the arr otherwise.
+    ///
+    /// `.cacheOnly` rather than `.staleWhileRevalidate`, because the rows we
+    /// want are exactly the ones SWR refuses: an import event marks the
+    /// library tag changed (`stale_at` in the past), and from then on the
+    /// store treats the row as known-stale and goes to the network — which is
+    /// why the Library still opened on a spinner every launch. Serving it is
+    /// safe here ONLY because the caller follows a stale answer with a real
+    /// fetch (see `LibraryViewModel.loadIfNeeded`); `isStale` says when.
+    func readCacheFirst<T: Codable & Sendable, V>(_ type: T.Type, revalidate: Bool,
+                                                  _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<T> {
+        if !revalidate, let cached = try? await readFetched(type, policy: .cacheOnly, make) {
+            return cached
+        }
+        return try await readFetched(type, policy: .mustRevalidate, make)
+    }
+
+    /// As `read`, but keeping the store's verdict on what it handed back.
+    /// `isStale` is the one bit callers act on: it means "this is an old row,
+    /// ask again when you can" — the Library's first paint of a session does
+    /// exactly that, and must not ask twice when the read already went out.
+    func readFetched<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
+                                               priority: RequestPriority = .interactive,
+                                               _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<T> {
+        let context = try await context()
+        let template = make(context.service)
+        let resource = Resource<T>.json(template.plan, tags: template.tags, freshness: template.freshness, ttl: template.ttl)
+        return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority)
+    }
+
     @discardableResult
     func run(_ make: (ServarrService) -> Command) async throws -> CommandReceipt {
         let context = try await context()
@@ -71,6 +102,7 @@ extension ArrAPIClient {
     }
 
     func fetchCustomFormats() async throws -> [ArrCore.ArrCustomFormatDetail] { try await read([ArrCore.ArrCustomFormatDetail].self) { $0.customFormats() } }
+    func fetchIndexers() async throws -> [MediaKit.ArrIndexerDefinition] { try await read([MediaKit.ArrIndexerDefinition].self) { $0.indexers() } }
     func fetchQualityProfiles() async throws -> [ArrCore.ArrQualityProfile] { try await read([ArrCore.ArrQualityProfile].self) { $0.qualityProfiles() } }
     func fetchHealth() async throws -> [ArrHealthRecord] { try await read([ArrHealthRecord].self, policy: .mustRevalidate) { $0.health() } }
     func fetchDiskSpace() async throws -> [DiskSpace] { try await read([DiskSpace].self) { $0.diskSpace() } }

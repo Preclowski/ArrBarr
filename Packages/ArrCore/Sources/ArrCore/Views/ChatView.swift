@@ -102,7 +102,11 @@ public struct ChatView: View {
                 // turn in it (see AppLocalized).
                 let prompt = AppLocalized.string(variant.promptKey(for: kind),
                                                  locale: configStore.currentLocale)
-                Task { await viewModel.send(prompt) }
+                DiscoverViewModel.shared.beginLoading()
+                Task {
+                    await viewModel.send(prompt)
+                    DiscoverViewModel.shared.endLoading()
+                }
             },
             onSuggestionTap: { prompt in
                 draft = ""

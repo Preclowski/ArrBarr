@@ -53,6 +53,65 @@ struct CastRow: View {
 /// reveals a rich tooltip (bio / age / birthplace) fetched lazily through
 /// `PersonStore` — the hover gate means sweeping the cursor across the strip
 /// doesn't fire a fetch per head.
+/// "Directed by NAME" / "Created by NAME" — the byline that sits above a
+/// synopsis. Lives here rather than inside `MediaHeaderCard` because the Quiz
+/// card shows the same credit in the same slot, and two copies of a two-line
+/// layout is how the two surfaces drifted apart everywhere else.
+struct DirectedByLine: View {
+    let people: [CastMember]
+    var labelKey: LocalizedStringKey = "detail.directedBy.label"
+    /// Tappable names when the host can push a person view; plain text in the
+    /// Quiz deck, where a card is a swipe target, not a page of links.
+    var onTapPerson: ((CastMember) -> Void)? = nil
+
+    var body: some View {
+        if !people.isEmpty {
+            HStack(spacing: 4) {
+                Text(labelKey, bundle: .module)
+                    .foregroundStyle(.secondary)
+                ForEach(Array(people.prefix(2).enumerated()), id: \.element.id) { idx, person in
+                    if idx > 0 {
+                        Text(verbatim: "&").foregroundStyle(.secondary)
+                    }
+                    creditName(person)
+                }
+                Spacer(minLength: 0)
+            }
+            .scaledFont(size: 11)
+        }
+    }
+
+    /// One credited name. Tappable (→ their filmography) when the host wired a
+    /// handler and the credit carries a TMDB id; plain text otherwise — an
+    /// id-less credit has no page to open.
+    @ViewBuilder
+    private func creditName(_ person: CastMember) -> some View {
+        if let onTapPerson, person.tmdbPersonId != nil {
+            Button { onTapPerson(person) } label: {
+                HStack(spacing: 2) {
+                    Text(verbatim: person.name)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    LinkChevron(size: 8)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            #if os(macOS)
+            .onHover { hovering in
+                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+            }
+            #endif
+        } else {
+            Text(verbatim: person.name)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+                .truncationMode(.tail)
+        }
+    }
+}
+
 private struct CastTile: View {
     let person: CastMember
     var onTapPerson: ((CastMember) -> Void)?
@@ -217,7 +276,7 @@ nonisolated extension CastMember {
     /// `/credit` endpoint).
     static func from(tmdbCast cast: [TMDBCreditPerson]) -> [CastMember] {
         cast.map { p in
-            CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.character,
+            CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.characterName,
                        imageURL: p.posterURL, tmdbPersonId: p.id)
         }
     }

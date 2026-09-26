@@ -88,6 +88,12 @@ import Testing
         #expect(sessions.count >= 0)
         let history = try await step("history") { try await kit.store.read(plex.watchHistory()).value }
         #expect(history.count > 0)
+        // Episodes carry where they sit in their series: that, not the
+        // title-level flag, is what marks an Upcoming row as already watched.
+        let playedEpisode = history.first { $0.kind == .episode }
+        #expect(playedEpisode?.season != nil)
+        #expect(playedEpisode?.episode != nil)
+        #expect(playedEpisode?.seriesItemID?.isEmpty == false)
         let qb = QBittorrentService(instance: InstanceID(.qbittorrent), capabilities: kit.capabilities)
         let tasks = try await step("qb tasks") { try await qb.fetchTasks(ids: [], pipeline: kit.pipeline) }
         #expect(tasks.count > 0)

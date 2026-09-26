@@ -43,6 +43,24 @@ public struct MediaServerHistoryRow: Sendable, Hashable, Codable {
     public let kind: MediaKind
     public let title: String
     public let viewedAt: Date
+    /// Episodes only: the SERIES this play belongs to, and where in it. An
+    /// episode's own provider ids are the episode's, which no arr record can
+    /// be matched against — the series item id can, via the library index.
+    public var seriesItemID: String?
+    public var season: Int?
+    public var episode: Int?
+
+    public init(itemID: String, ids: Set<MediaID>, kind: MediaKind, title: String, viewedAt: Date,
+                seriesItemID: String? = nil, season: Int? = nil, episode: Int? = nil) {
+        self.itemID = itemID
+        self.ids = ids
+        self.kind = kind
+        self.title = title
+        self.viewedAt = viewedAt
+        self.seriesItemID = seriesItemID
+        self.season = season
+        self.episode = episode
+    }
 }
 
 public struct MediaServerIdentity: Sendable, Hashable, Codable {
@@ -79,6 +97,12 @@ struct PlexMetadata: Decodable {
     let duration: Int?
     let grandparentTitle: String?
     let grandparentThumb: String?
+    let grandparentRatingKey: String?
+    /// "/library/metadata/<id>" — history rows ship this instead of
+    /// `grandparentRatingKey`, and it is the only route from a played episode
+    /// back to its series.
+    let grandparentKey: String?
+    let parentIndex: Int?
     let leafCount: Int?
     let viewedLeafCount: Int?
     let index: Int?
@@ -103,8 +127,13 @@ struct JellyfinItem: Decodable {
     let ImageTags: [String: String]?
     let UserData: UserData?
     let SeriesName: String?
+    let SeriesId: String?
     let IndexNumber: Int?
-    enum CodingKeys: String, CodingKey { case Id, Name, itemType = "Type", ProductionYear, ProviderIds, ImageTags, UserData, SeriesName, IndexNumber }
+    let ParentIndexNumber: Int?
+    enum CodingKeys: String, CodingKey {
+        case Id, Name, itemType = "Type", ProductionYear, ProviderIds, ImageTags, UserData
+        case SeriesName, SeriesId, IndexNumber, ParentIndexNumber
+    }
 }
 
 struct JellyfinSession: Decodable {

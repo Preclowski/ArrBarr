@@ -57,6 +57,24 @@ public struct EpisodeDetailOverlay: View {
     /// Optional series year for the nav-bar title (`Series (2019) · S03E04`).
     /// Falls back to bare `Series · S03E04` when unknown.
     let seriesYear: Int?
+    /// Series facts the episode hero borrows — an episode has no genres or age
+    /// rating of its own, and the movie hero shows both.
+    var genres: [String] = []
+    var certification: String? = nil
+    /// The series' TMDB / TVDB ids, for the episode's own TMDB score.
+    var seriesTmdbId: Int? = nil
+    var seriesTvdbId: Int? = nil
+    /// The series' assigned quality profile, drawn beside the state chips —
+    /// the same `ProfileChip` the movie hero carries. The series owns the
+    /// profile, so whoever fetched the series record resolves the name.
+    var profileName: String? = nil
+    /// Provider ids of the SERIES, for the media server's watch state. Empty
+    /// when the host didn't resolve them — the wedge then simply stays off.
+    var mediaServerKeys: [MediaServerExternalKey] = []
+    /// The SERIES cast (TMDB has no per-episode credits worth the extra call).
+    /// Handed down by whoever already loaded it, so opening an episode from a
+    /// series the user was just looking at costs nothing.
+    var cast: [CastMember] = []
     /// URL of the arr's web UI for the active queue item — surfaced
     /// as a CTA on the warning banner. Most `statusMessages` are only
     /// actionable inside the arr's own UI (manual import, blocklist,
@@ -99,6 +117,14 @@ public struct EpisodeDetailOverlay: View {
     /// parent DetailView's `ManualSearchTarget` destination in the same stack
     /// (SwiftUI ignores all but the root-most destination for a given type).
     @State private var manualSearchTarget: EpisodeReleaseSearch?
+    /// Pushed from a cast head. Owned here: this overlay is its own stack
+    /// entry, so the host's person destination sits below it and never shows.
+    @State private var personRef: PersonRef?
+    /// TMDB's score for THIS episode — the only per-episode rating there is.
+    @State private var episodeRating: EpisodeRatingProvider.Rating?
+    /// Only for the TMDB key behind the episode rating; every other input to
+    /// this view is handed down by its host.
+    @EnvironmentObject private var configStore: ConfigStore
     /// The detached NSWindow draws no NavigationStack chevron, so we render our
     /// own back header there (mirrors DetailView) — otherwise the episode detail
     /// is a navigation trap with no way back.
@@ -151,6 +177,13 @@ public struct EpisodeDetailOverlay: View {
         onTapSeries: (() -> Void)? = nil,
         onTapSeason: (() -> Void)? = nil,
         seriesYear: Int? = nil,
+        cast: [CastMember] = [],
+        genres: [String] = [],
+        certification: String? = nil,
+        seriesTmdbId: Int? = nil,
+        seriesTvdbId: Int? = nil,
+        profileName: String? = nil,
+        mediaServerKeys: [MediaServerExternalKey] = [],
         isLoadingDetails: Bool = false,
         monitored: Bool? = nil,
         onToggleMonitored: ((Bool) async -> Void)? = nil
@@ -172,6 +205,13 @@ public struct EpisodeDetailOverlay: View {
         self.onTapSeries = onTapSeries
         self.onTapSeason = onTapSeason
         self.seriesYear = seriesYear
+        self.cast = cast
+        self.genres = genres
+        self.certification = certification
+        self.seriesTmdbId = seriesTmdbId
+        self.seriesTvdbId = seriesTvdbId
+        self.profileName = profileName
+        self.mediaServerKeys = mediaServerKeys
         self.isLoadingDetails = isLoadingDetails
         self.monitored = monitored
         self.onToggleMonitored = onToggleMonitored
@@ -248,9 +288,17 @@ public struct EpisodeDetailOverlay: View {
         )
         // Manual-search ("Download") drill-down — releases for this episode,
         // diffed against the episode file on disk when there is one.
+        .task(id: episode.id) {
+            episodeRating = await EpisodeRatingProvider.rating(
+                tmdbId: seriesTmdbId, tvdbId: seriesTvdbId,
+                season: episode.seasonNumber, episode: episode.episodeNumber,
+                configStore: configStore)
+        }
+        .personDestination($personRef)
         .navigationDestination(item: $manualSearchTarget) { wrapper in
             ReleaseListView(target: wrapper.target,
                             existing: episodeFile.map(UpgradeDiffView.side(episodeFile:)),
+                            waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL),
                             onBack: { manualSearchTarget = nil })
         }
         #if os(iOS)
@@ -417,127 +465,144 @@ public struct EpisodeDetailOverlay: View {
         .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
     }
 
+    /// Episode name, or a dash once we know there isn't one. While the full
+    /// record is still loading the card skeletons it (empty title +
+    /// `metadataLoading`).
+    private var episodeHeroTitle: String {
+        if let title = episode.title, !title.isEmpty { return title }
+        return isLoadingDetails ? "" : "—"
+    }
+
+    /// The episode's own TMDB score, as the app's one rating pill. Empty until
+    /// it lands (or forever, without a TMDB key) — the card then simply has no
+    /// rating row, exactly as before.
+    private var ratingChips: [RatingChip] {
+        guard let episodeRating else { return [] }
+        return [RatingChip.tmdb(episodeRating.value, votes: episodeRating.votes)].compactMap { $0 }
+    }
+
+    private var airDateText: String? {
+        episode.airDateUtc.flatMap(parseArrDate).map { Self.airFormatter.string(from: $0) }
+    }
+
+    /// Chips above the title: on disk, and "not aired yet" when that is the
+    /// news.
+    @ViewBuilder
+    private var heroBadges: some View {
+        HStack(spacing: 4) {
+            if let profileName { ProfileChip(name: profileName) }
+            if episode.hasFile == true {
+                LibraryStateBadge(isDownloaded: true)
+            }
+            if !hasAired {
+                Text("detail.unaired.button", bundle: .module)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(Color.orange)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 1)
+                    .chipOutline(.orange)
+            }
+        }
+    }
+
+    /// Has the media server played THIS episode? (Series-level watch state
+    /// says nothing about one episode — see `MediaServerIndex.isWatched`.)
+    private var isWatched: Bool {
+        MediaServerIndex.shared.isWatched(mediaServerKeys,
+                                          season: episode.seasonNumber,
+                                          episode: episode.episodeNumber)
+    }
+
+    /// Everything that sits ABOVE the episode name: the state chips, then the
+    /// series and season drill-ins. Not `titleBadge` — that slot renders in
+    /// the title's own line, which put "Downloaded" next to the episode name.
+    /// Either link can be absent: opened from inside the series there is
+    /// nothing to drill to.
+    @ViewBuilder
+    private var seriesContextLinks: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            heroBadges
+            if let onTapSeries {
+                Button(action: onTapSeries) {
+                    HStack(spacing: 4) {
+                        Text(seriesTitleWithYear)
+                            .scaledFont(size: 12, weight: .medium)
+                            .lineLimit(2)
+                            // The series name is a heading, not chrome:
+                            // `.secondary` over the popover's vibrant backdrop
+                            // read as half-faded.
+                            .foregroundStyle(.primary)
+                        LinkChevron(size: 9)
+                            .accessibilityHidden(true)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+                .linkRowHover()
+            }
+            if let onTapSeason {
+                Button(action: onTapSeason) {
+                    HStack(spacing: 4) {
+                        Text(verbatim: seasonLabel)
+                            .scaledFont(size: 12, weight: .medium)
+                            .lineLimit(1)
+                        LinkChevron(size: 9)
+                            .accessibilityHidden(true)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .linkRowHover()
+            } else if onTapSeries == nil {
+                Text(verbatim: seasonLabel)
+                    .scaledFont(size: 12, weight: .medium)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                // Shared hero component (110×165, 6pt corner, blur wrap) so
-                // episode detail looks like every other detail surface in the
-                // app instead of a custom one-off card.
-                //
-                // Self-contained lightbox: this overlay is a NavigationStack
-                // push, so a host-owned lightbox (DetailView's) renders
-                // BELOW it and never shows. Tapping raises our own
-                // `enlargedPoster` overlay instead — works in both the
-                // from-queue (EpisodeQuickDetail) and from-series flows.
-                DetailHeroPoster(
-                    url: posterURL,
-                    apiKey: posterRequiresAuth ? apiKey : nil,
-                    size: CGSize(width: 110, height: 165),
-                    fallbackSymbol: "tv",
-                    cornerAction: AnyView(monitorPosterToggle),
-                    onTap: { url in
-                        withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
-                    }
-                )
-                VStack(alignment: .leading, spacing: 6) {
-                    // Library chip up top (title-level fact) — moved here
-                    // from beside the existing-file banner, matching the
-                    // movie/album heroes.
-                    if episode.hasFile == true {
-                        LibraryStateBadge(isDownloaded: true)
-                    }
-                    // Series title (with year) shows in content as a
-                    // drill-in link — the episode's series context. Only
-                    // when `onTapSeries` is set (episode opened straight
-                    // from queue, series not yet in the stack); when
-                    // opened from inside the series there's nothing to
-                    // drill to, so it's dropped.
-                    if let onTapSeries {
-                        Button(action: onTapSeries) {
-                            HStack(spacing: 4) {
-                                Text(seriesTitleWithYear)
-                                    .scaledFont(size: 12, weight: .medium)
-                                    .lineLimit(2)
-                                LinkChevron(size: 9)
-                                    .accessibilityHidden(true)
-                            }
-                            .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        // Series-link chevron brightens when the cursor
-                        // is over the title button, not just the glyph.
-                        .linkRowHover()
-                    }
-                    // Season context — drill to it (from the queue) or back to
-                    // it (from the season list). The nav bar now shows only
-                    // "Episode N", so the season lives here as a chevron link.
-                    if let onTapSeason {
-                        Button(action: onTapSeason) {
-                            HStack(spacing: 4) {
-                                Text(verbatim: seasonLabel)
-                                    .scaledFont(size: 12, weight: .medium)
-                                    .lineLimit(1)
-                                LinkChevron(size: 9)
-                                    .accessibilityHidden(true)
-                            }
-                            .foregroundStyle(.secondary)
-                        }
-                        .buttonStyle(.plain)
-                        .linkRowHover()
-                    } else {
-                        Text(verbatim: seasonLabel)
-                            .scaledFont(size: 12, weight: .medium)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    }
-                    // SxxExx moved to the nav-bar title. "Unaired" only
-                    // renders when relevant — no empty row left behind.
-                    if !hasAired {
-                        Text("detail.unaired.button", bundle: .module)
-                            .scaledFont(size: 9, weight: .semibold)
-                            .foregroundStyle(Color.orange)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .overlay(RoundedRectangle(cornerRadius: Tokens.Radius.chip).stroke(Color.orange.opacity(0.30), lineWidth: 0.75))
-                    }
-                    // Episode name as the in-content hero, under the
-                    // series link. The season/episode number lives in the
-                    // nav-bar header now.
-                    if let title = episode.title, !title.isEmpty {
-                        Text(title)
-                            .scaledFont(size: 17, weight: .semibold)
-                            .lineLimit(3)
-                    } else if isLoadingDetails {
-                        SkeletonBar(width: 200, height: 18)
-                    } else {
-                        Text(verbatim: "—")
-                            .scaledFont(size: 17, weight: .semibold)
-                    }
-                    // Runtime · air date on a single line (mirrors the movie /
-                    // series hero's metadata row); the synopsis follows below.
-                    let metaSegments: [String] = [
-                        (episode.runtime ?? 0) > 0 ? "\(episode.runtime!) min" : nil,
-                        episode.airDateUtc.flatMap(parseArrDate)
-                            .map { EpisodeDetailOverlay.airFormatter.string(from: $0) },
-                    ].compactMap { $0 }
-                    if !metaSegments.isEmpty {
-                        HStack(spacing: 6) {
-                            ForEach(Array(metaSegments.enumerated()), id: \.offset) { idx, seg in
-                                if idx > 0 { SeparatorDot() }
-                                Text(verbatim: seg)
-                            }
-                        }
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                    }
-                    if let overview = episode.overview, !overview.isEmpty {
-                        ExpandableOverview(text: overview)
-                    } else if isLoadingDetails {
-                        SkeletonLines(count: 3)
-                    }
-                }
-                Spacer(minLength: 0)
+            // The SAME hero every other detail surface draws (movie, series,
+            // season, album). This screen used to hand-roll its own — poster,
+            // title, metadata line and synopsis all re-implemented — which is
+            // where the drift came from: a different poster tier and crop
+            // between the season screen and this one, a 17pt title against
+            // everyone else's 15pt, and no skeletons while the episode loaded.
+            MediaHeaderCard(
+                title: episodeHeroTitle,
+                runtime: episode.runtime,
+                certification: certification,
+                extraMetadata: airDateText.map { [$0] } ?? [],
+                genres: genres,
+                ratings: ratingChips,
+                overview: episode.overview,
+                posterURL: posterURL,
+                posterRequiresAuth: posterRequiresAuth,
+                apiKey: apiKey,
+                fallbackSymbol: "tv",
+                // Spelled out rather than defaulted: the series, season and
+                // episode heroes must draw their artwork identically, and a
+                // default is one edit away from disagreeing.
+                posterAspect: 2.0 / 3.0,
+                blurred: false,
+                onPosterTap: { url in
+                    withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
+                },
+                posterCornerAction: AnyView(monitorPosterToggle),
+                // Series / season context stays where it was: above the
+                // episode name, in the column beside the poster.
+                aboveTitle: AnyView(seriesContextLinks),
+                watched: isWatched,
+                metadataLoading: isLoadingDetails
+            )
+
+            if !cast.isEmpty {
+                CastRow(cast: cast, onTapPerson: { member in
+                    if let ref = PersonRef(castMember: member) { personRef = ref }
+                })
             }
 
             // Combined file view — three modes:
@@ -660,9 +725,11 @@ public struct EpisodeDetailOverlay: View {
         // identical chrome.
         let existingTags = (existing.customFormats ?? []).map(\.name)
         VStack(alignment: .leading, spacing: 6) {
+            DownloadingSectionHeader(item: q)
             DownloadProgressCard(
                 item: q,
                 showHeader: true,
+                showStatusRow: false,
                 existingOverride: DownloadProgressCard.ExistingFileSnapshot(
                     quality: existing.quality?.name,
                     size: existing.size,
@@ -696,7 +763,8 @@ public struct EpisodeDetailOverlay: View {
     @ViewBuilder
     private func queueFileSection(_ q: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true)
+            DownloadingSectionHeader(item: q)
+            DownloadProgressCard(item: q, showUpgradeDiff: false, showHeader: true, showStatusRow: false)
             if !q.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,

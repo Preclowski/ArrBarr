@@ -647,6 +647,8 @@ nonisolated public enum ChatToolCatalog {
 
             Pass `mood` as a short user-facing label describing the set ("cozy 90s comedy", "feel-good documentaries"). This shows as the breadcrumb chip in the overlay and the resume card in chat.
 
+            ARGUMENT ORDER: write `mood`, `kind`, `library_mode` and `append` FIRST and `items` LAST — cards start loading while you are still writing the list, but only once those are known.
+
             Aim for a deck of 10–25 cards — enough to be worth swiping. That is the deck SIZE, not the list length: titles the user already owns are dropped here before the deck is built (with library_mode "new"), so send enough to survive that. A small library: 20 picks is 20 cards. A large one: send 40–60, because most of the canon will be dropped. Up to 60 are accepted. Include `year` whenever you can — it disambiguates remakes. All picks share one `kind`.
 
             ONE DECK PER REQUEST — never call this tool twice in one turn. Once a call reports "Opened Discover quiz", that deck IS the answer: a small deck (picks dropped as owned or recently skipped) is still the deck, and rebuilding it opens duplicate sessions and reads as a loop. The single exception: when the tool says EVERY pick was already owned, you get one corrective call seeded from a check_titles-verified list — one, never a third.

@@ -69,7 +69,7 @@ struct DownloadSection: View {
             // the two sections read as symmetric siblings. The multi-item
             // variant keeps its own "In queue · N downloads" header line.
             VStack(alignment: .leading, spacing: 6) {
-                DetailSectionHeader("Downloading")
+                DownloadingSectionHeader(item: focused)
                 singleItemBlock(focused)
             }
         } else {
@@ -98,7 +98,8 @@ struct DownloadSection: View {
             // that sat outside the card — the `└─` pattern matches
             // every other surface (queue tooltip, episode tooltip)
             // and the user only needs to read one diff format.
-            DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true)
+            // Status chips are up on the section header now.
+            DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true, showStatusRow: false)
             // No quality · time · size · client meta line under the
             // card — the card carries quality / size / score and the
             // client in its own header. Repeating those tokens below

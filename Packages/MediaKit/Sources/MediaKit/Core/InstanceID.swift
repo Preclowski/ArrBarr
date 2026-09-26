@@ -5,8 +5,9 @@ public enum InstanceKind: String, Sendable, Codable, CaseIterable, Hashable {
     case qbittorrent, transmission, deluge, rtorrent, sabnzbd, nzbget
     case plex, jellyfin, emby
     case tmdb
+    case prowlarr
 
-    public enum Family: Sendable, Hashable { case servarr, download, mediaServer, metadata }
+    public enum Family: Sendable, Hashable { case servarr, download, mediaServer, metadata, indexerManager }
 
     public var family: Family {
         switch self {
@@ -14,6 +15,7 @@ public enum InstanceKind: String, Sendable, Codable, CaseIterable, Hashable {
         case .qbittorrent, .transmission, .deluge, .rtorrent, .sabnzbd, .nzbget: .download
         case .plex, .jellyfin, .emby: .mediaServer
         case .tmdb: .metadata
+        case .prowlarr: .indexerManager
         }
     }
 }

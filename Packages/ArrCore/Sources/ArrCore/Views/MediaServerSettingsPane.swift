@@ -258,6 +258,9 @@ struct MediaServerSettingsPane: View {
                     Text("settings.lastUpdated.label", bundle: .module)
                 }
             }
+            Toggle(isOn: $configStore.showWatchedIndicator) {
+                Text("settings.showWatchedIndicator.label", bundle: .module)
+            }
             Button { runReindex() } label: {
                 Label { Text("settings.refreshNow.button", bundle: .module) } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
             }

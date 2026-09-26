@@ -26,6 +26,11 @@ public struct DownloadProgressCard: View {
     /// the bar. Queue-row variants set `false` because the row
     /// already shows status info inline above the card.
     let showHeader: Bool
+    /// The status pill + Upgrade badge + client capsule that open the header.
+    /// Detail surfaces hand that row to the "Downloading" section header
+    /// instead (see `DownloadingSectionHeader`), so they switch it off here
+    /// while keeping the spec grid the header block also renders.
+    let showStatusRow: Bool
     /// Queue-row variant: inline `quality · size · score` next to
     /// the status pill instead of on its own row. Keeps the compact
     /// list dense. Detail surfaces stay false (spec gets its own
@@ -58,6 +63,7 @@ public struct DownloadProgressCard: View {
         progressOverride: Double? = nil,
         showUpgradeDiff: Bool = true,
         showHeader: Bool = false,
+        showStatusRow: Bool = true,
         compactSpec: Bool = false,
         existingOverride: ExistingFileSnapshot? = nil
     ) {
@@ -65,6 +71,7 @@ public struct DownloadProgressCard: View {
         self.progressOverride = progressOverride
         self.showUpgradeDiff = showUpgradeDiff
         self.showHeader = showHeader
+        self.showStatusRow = showStatusRow
         self.compactSpec = compactSpec
         self.existingOverride = existingOverride
     }
@@ -101,22 +108,15 @@ public struct DownloadProgressCard: View {
             // bar. The detail variant (`!compactSpec`) has no bar — its diff
             // grid is part of this header block.
             if showHeader {
-                HStack(spacing: 6) {
-                    StatusIconLabel(status: item.status)
-                    // Compact queue rows carry the badge on their title line
-                    // (no room here next to status + client + spec); detail
-                    // surfaces show it in this header.
-                    if !compactSpec {
-                        MediaBadgeCluster(isUpgrade: item.isUpgrade)
-                    }
-                    if let client = item.downloadClient {
-                        DownloadClientLabel(name: client)
-                    }
-                    Spacer(minLength: 6)
-                    // List variant always shows the inline spec —
-                    // upgrade context lives in detail (one screen up).
-                    if compactSpec {
-                        inlineSpec
+                if showStatusRow {
+                    HStack(spacing: 6) {
+                        DownloadStatusCluster(item: item, showUpgradeBadge: !compactSpec)
+                        Spacer(minLength: 6)
+                        // List variant always shows the inline spec —
+                        // upgrade context lives in detail (one screen up).
+                        if compactSpec {
+                            inlineSpec
+                        }
                     }
                 }
                 if !compactSpec {
@@ -246,5 +246,56 @@ public struct DownloadProgressCard: View {
         (effectiveExistingQuality.map { !$0.isEmpty } ?? false)
             || (effectiveExistingSize ?? 0) > 0
             || (effectiveExistingScore ?? 0) != 0
+    }
+}
+
+
+/// Status pill, Upgrade badge and download client — the three chips that say
+/// what is happening to a download right now. Lives here rather than inside
+/// `DownloadProgressCard`'s header because the detail surfaces put the same
+/// cluster on their "Downloading" section header instead.
+public struct DownloadStatusCluster: View {
+    let item: QueueItem
+    var showUpgradeBadge: Bool = true
+
+    public init(item: QueueItem, showUpgradeBadge: Bool = true) {
+        self.item = item
+        self.showUpgradeBadge = showUpgradeBadge
+    }
+
+    public var body: some View {
+        HStack(spacing: 6) {
+            StatusIconLabel(status: item.status)
+            if showUpgradeBadge {
+                MediaBadgeCluster(isUpgrade: item.isUpgrade)
+            }
+            if let client = item.downloadClient {
+                DownloadClientLabel(name: client)
+            }
+        }
+    }
+}
+
+/// "Downloading" with the live status chips on its trailing edge. The one
+/// header for an active download, shared by the movie detail and the episode
+/// detail — the episode one had no header at all before.
+public struct DownloadingSectionHeader: View {
+    let item: QueueItem
+
+    public init(item: QueueItem) { self.item = item }
+
+    public var body: some View {
+        HStack(spacing: 8) {
+            DetailSectionHeader("Downloading")
+                // The header gives way, never the chips: a status word wrapped
+                // onto a second line inside its own capsule is the break the
+                // user saw. The title truncates instead.
+                .lineLimit(1)
+                .layoutPriority(-1)
+            Spacer(minLength: 6)
+            DownloadStatusCluster(item: item)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+        }
     }
 }

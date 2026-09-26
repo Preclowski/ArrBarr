@@ -87,6 +87,10 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
 
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
+    /// The connected media server says this title has been played. Resolved at
+    /// composition time (the same provider ids that pick the artwork), because
+    /// a row carries no ids of its own.
+    public let watched: Bool
 
     /// Flattened user-facing warning lines from the arr's
     /// `statusMessages` payload. Populated only when status is
@@ -113,6 +117,7 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         contentSlug: String?,
         entityId: Int? = nil,
         posterURL: URL? = nil, posterRequiresAuth: Bool = false,
+        watched: Bool = false,
         statusMessages: [String] = []
     ) {
         self.id = id; self.source = source; self.arrQueueId = arrQueueId
@@ -132,6 +137,7 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         self.existingSize = existingSize
         self.existingFileName = existingFileName
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
+        self.watched = watched
         self.statusMessages = statusMessages
     }
 
@@ -170,6 +176,7 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
             existingFileName: existingFileName,
             contentSlug: contentSlug, entityId: entityId,
             posterURL: posterURL, posterRequiresAuth: posterRequiresAuth,
+            watched: watched,
             statusMessages: statusMessages
         )
     }

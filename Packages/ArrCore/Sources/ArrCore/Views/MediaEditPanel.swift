@@ -78,7 +78,7 @@ struct MediaEditPanel: View {
         NavigationStack {
             Group {
                 if loading {
-                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    LoadingStateView(label: nil).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if let err = loadError {
                     LoadErrorLine(message: err).padding()
                 } else {
@@ -239,8 +239,7 @@ struct MediaEditPanel: View {
             .padding(.horizontal, 14)
 
             if loading {
-                ProgressView()
-                    .controlSize(.small)
+                LoadingStateView(label: nil)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 20)
             } else if let err = loadError {

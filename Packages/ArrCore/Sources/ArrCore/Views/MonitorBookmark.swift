@@ -68,17 +68,15 @@ public struct MonitorBookmark: View {
     }
 }
 
-/// Detail-header variant: the same toggle pinned to the poster's top-right
+/// Detail-header variant: the same toggle pinned to the poster's top-LEFT
 /// corner, over the artwork, so the monitored flag sits on the thing it
-/// describes instead of in a row of chrome.
+/// describes instead of in a row of chrome — and in the same corner as the
+/// watched wedge, which is the one place both marks now live.
 ///
-/// Artwork is arbitrary — a black poster and a white one both happen — so the
-/// glyph can't rely on the material underneath. No plate behind it (a chip in
-/// the corner reads as chrome bolted onto the art); contrast comes from the
-/// mark itself: white body, with a tight black halo plus a softer spread under
-/// it. The halo is what draws it on a white poster, the white body is what
-/// draws it on a black one. Same trick as `TrailerPosterBadge`, which is bare
-/// on the artwork for the same reason.
+/// Drawn as `MonitorRibbon`, flush with the artwork's top edge. Artwork is
+/// arbitrary — a black poster and a white one both happen — so the mark can't
+/// rely on the material underneath; the ribbon's own shadows do that job (see
+/// `MonitorRibbon`).
 public struct MonitorPosterToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
@@ -122,7 +120,7 @@ public struct MonitorPosterToggle: View {
                 plate
             }
         }
-        .padding(6)
+        .padding(.leading, 5)
         .help(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityValue(
@@ -131,23 +129,14 @@ public struct MonitorPosterToggle: View {
         )
     }
 
+    private static let ribbonWidth: CGFloat = 12
+
     private var plate: some View {
-        Image(systemName: isMonitored ? "bookmark.fill" : "bookmark")
-            .scaledFont(size: 14, weight: .semibold)
-            .foregroundStyle(.white)
-            // Two passes: the tight one is the outline that keeps the glyph
-            // off a white poster, the soft one lifts it off a busy one.
-            .shadow(color: .black.opacity(0.75), radius: 1)
-            .shadow(color: .black.opacity(0.45), radius: 3, y: 1)
-            // Unmonitored sits back a touch — still legible, clearly the
-            // "off" state next to the solid filled glyph.
-            .opacity(isMonitored ? 1 : 0.85)
-            // Trailing-aligned inside the hit area: a bookmark is far narrower
-            // than the 22pt square, so centering it left the mark ~6pt shy of
-            // the trailer badge's right edge below. The glyph now sits flush
-            // against the padding, matching that badge's 6pt inset; the hit
-            // area still extends left of it.
-            .frame(width: 22, height: 22, alignment: .trailing)
+        // Hit area larger than the ribbon (a 12pt strip is unhittable on a
+        // phone), top-leading aligned so the mark itself stays flush with the
+        // artwork's corner.
+        MonitorRibbon(width: Self.ribbonWidth, filled: isMonitored)
+            .frame(width: 26, height: 30, alignment: .topLeading)
             .contentShape(Rectangle())
     }
 }
@@ -167,15 +156,21 @@ public struct MonitorRowToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
     var size: CGFloat
+    /// Which edge of the hit area the glyph sits on. Rows that put the toggle
+    /// on their trailing edge pass `.trailing`, so the mark lands against the
+    /// row's edge instead of leaving a gap that reads as a margin.
+    var alignment: Alignment = .leading
     let onToggle: ((Bool) async -> Void)?
 
     @State private var inFlight = false
 
     public init(isMonitored: Bool, entity: MonitorEntity, size: CGFloat = 10,
+                alignment: Alignment = .leading,
                 onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
         self.entity = entity
         self.size = size
+        self.alignment = alignment
         self.onToggle = onToggle
     }
 
@@ -223,7 +218,7 @@ public struct MonitorRowToggle: View {
 
     private var glyph: some View {
         MonitorBookmark(isMonitored: isMonitored, size: size)
-            .frame(width: 16, height: 20, alignment: .leading)
+            .frame(width: 16, height: 20, alignment: alignment)
             .contentShape(Rectangle())
     }
 }

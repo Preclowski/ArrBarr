@@ -121,6 +121,8 @@ public final class MediaStack: Sendable {
 
     public var tmdb: TMDBService { TMDBService(capabilities: capabilities) }
 
+    public var prowlarr: ProwlarrService { ProwlarrService() }
+
     // MARK: - Live streams
 
     public func liveQueue(instances: [InstanceID]) -> LiveStream<ArrQueueRecord> {

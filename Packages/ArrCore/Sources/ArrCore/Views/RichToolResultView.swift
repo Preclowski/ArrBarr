@@ -330,7 +330,7 @@ private struct SearchResultCard: View {
     /// the same hero card + form they'd see if they'd reached the result via
     /// the `+` search flow — SearchAddPanel is the single source of truth.
     private func handleTap() {
-        DetailRequest.tap(result)
+        DetailRequest.tap(result, addOrigin: .chat)
     }
 }
 

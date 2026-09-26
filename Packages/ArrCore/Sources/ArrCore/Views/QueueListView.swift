@@ -501,6 +501,11 @@ struct QueueListView: View {
 
     // MARK: - Sections
 
+    /// How far a stale arr's rows sit back. Enough to read as "not live" next
+    /// to a section that answered, not so far that the titles stop being
+    /// legible — the queue is still what the user came to look at.
+    private static let staleRowOpacity: Double = 0.5
+
     @ViewBuilder
     private func arrSection(_ source: QueueItem.Source) -> some View {
         let arrError = viewModel.error(for: source)
@@ -593,6 +598,10 @@ struct QueueListView: View {
             }
         )
         .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
+        // A stale arr's rows are last-known state, not live state: dim them so
+        // that reads at a glance, instead of leaving them looking as current as
+        // the sections that did answer.
+        .opacity(isStale ? Self.staleRowOpacity : 1)
         #if os(iOS)
         header
             .plainQueueRow()
@@ -641,6 +650,8 @@ struct QueueListView: View {
             // on, so block their right-click menu (and poster control) even when
             // only THIS arr is down — the List-level value only covers all-arrs.
             .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
+            // See `titleGroupHeader`: last-known rows read as dimmed.
+            .opacity(isStale ? Self.staleRowOpacity : 1)
             // Members of an expanded title group keep the list's shared
             // leading edge; the child marker is a bare 24pt TRAILING inset —
             // the rows end short of the right edge, under the header's
@@ -871,7 +882,7 @@ struct QueueListView: View {
 
     /// Sends the tonight-banner item into the detail pipeline — a synthetic
     /// `QueueItem` posted via `DetailRequest`, picked up by the popover's
-    /// `AppMessages.OpenDetail` listener (same shape as `UpcomingRowView.openDetail`).
+    /// `DetailRouter` observer (same shape as `UpcomingRowView.openDetail`).
     private func openUpcomingDetail(_ item: UpcomingItem) {
         guard let entityId = item.entityId else { return }
         DetailRequest.post(

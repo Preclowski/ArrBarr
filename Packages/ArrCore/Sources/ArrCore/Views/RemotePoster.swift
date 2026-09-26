@@ -44,8 +44,11 @@ public struct DetailHeroPoster: View {
     var size: CGSize
     var fallbackSymbol: String
     var blurred: Bool
-    /// Top-right, over the artwork — the monitored bookmark's home.
+    /// Top-left, over the artwork — the monitored ribbon's home, tucked into
+    /// the same corner as the watched wedge.
     var cornerAction: AnyView?
+    /// The media server says this title has been played.
+    var watched: Bool = false
     /// Bottom-right, over the artwork — the trailer badge's home.
     var badge: AnyView?
     /// Raises the host's lightbox. `nil` renders the poster inert; a nil `url`
@@ -64,6 +67,7 @@ public struct DetailHeroPoster: View {
         fallbackSymbol: String = "film",
         blurred: Bool = false,
         cornerAction: AnyView? = nil,
+        watched: Bool = false,
         badge: AnyView? = nil,
         onTap: ((URL?) -> Void)? = nil
     ) {
@@ -73,14 +77,19 @@ public struct DetailHeroPoster: View {
         self.fallbackSymbol = fallbackSymbol
         self.blurred = blurred
         self.cornerAction = cornerAction
+        self.watched = watched
         self.badge = badge
         self.onTap = onTap
     }
 
     public var body: some View {
         artwork
+            // `monitored: nil` — the ribbon here is the interactive toggle the
+            // host hands down as `cornerAction`, not a drawn-on marker.
+            .posterMarks(watched: watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.card, ribbonWidth: 12)
             .overlay(alignment: .bottomTrailing) { badge }
-            .overlay(alignment: .topTrailing) { cornerAction }
+            .overlay(alignment: .topLeading) { cornerAction }
     }
 
     @ViewBuilder
@@ -91,7 +100,8 @@ public struct DetailHeroPoster: View {
                 apiKey: apiKey,
                 size: size,
                 cornerRadius: Tokens.Radius.card,
-                fallbackSymbol: fallbackSymbol
+                fallbackSymbol: fallbackSymbol,
+                fitsContent: true
             )
         }
         if let onTap {
@@ -136,6 +146,15 @@ public struct DetailHeroPoster: View {
     }
 }
 
+/// `.scaledToFit()` / `.scaledToFill()` as a modifier, so the two branches
+/// don't fork the whole image expression.
+private struct PosterContentMode: ViewModifier {
+    let fits: Bool
+    func body(content: Content) -> some View {
+        if fits { content.scaledToFit() } else { content.scaledToFill() }
+    }
+}
+
 public struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
@@ -153,6 +172,12 @@ public struct RemotePoster: View {
     /// rectangle (`maxWidth/Height: .infinity`) instead of clamping to
     /// `size`. Default `false` preserves all existing call-site behaviour.
     var fill: Bool = false
+    /// Fit the whole image inside `size` instead of cropping it to fill.
+    /// Detail heroes use this: their artwork is usually 2:3 (where fit and
+    /// fill are identical), but an episode still, a square cover or a
+    /// media-server season thumb is NOT, and cropping a hero poster is the
+    /// one place that reads as a bug rather than as a thumbnail.
+    var fitsContent: Bool = false
     /// Opt-in: show a spinner while the image is in flight instead of the
     /// fallback symbol. Off by default so existing call sites are unchanged;
     /// used where load latency is visible (e.g. the Quiz card's poster deck).
@@ -168,7 +193,7 @@ public struct RemotePoster: View {
                 Image(platformImage: image)
                     .resizable()
                     .interpolation(.medium)
-                    .scaledToFill()
+                    .modifier(PosterContentMode(fits: fitsContent && !nearlyFillsFrame(image)))
             } else {
                 ZStack {
                     // A styled "blank poster" instead of a flat grey box: a
@@ -207,6 +232,15 @@ public struct RemotePoster: View {
         .task(id: PosterRequest(url: url, tier: tier)) {
             await load()
         }
+    }
+
+    /// A TVDB poster is 680×1000, not 2:3 — fitting it leaves hairline bars
+    /// above and below. Within this tolerance the crop is a percent or two per
+    /// edge and invisible; past it (a still, a square cover) fitting wins.
+    private func nearlyFillsFrame(_ image: PlatformImage) -> Bool {
+        guard image.size.height > 0, size.height > 0 else { return false }
+        let ratio = (image.size.width / image.size.height) / (size.width / size.height)
+        return abs(ratio - 1) < 0.08
     }
 
     private func load() async {

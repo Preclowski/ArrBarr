@@ -38,14 +38,7 @@ struct QueueTabContent: View {
         }
     }
 
-    private var loadingIndicator: some View {
-        VStack(spacing: 10) {
-            ProgressView().controlSize(.small)
-            Text("queue.loading.button", bundle: .module)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-    }
+    private var loadingIndicator: some View { LoadingStateView() }
 
     private func openNeedsYouQueue(_ needs: NeedsYouItem) {
         // Non-arr connection issues (download client / AI) have no arr queue

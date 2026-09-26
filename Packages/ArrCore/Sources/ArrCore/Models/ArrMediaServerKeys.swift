@@ -48,6 +48,17 @@ nonisolated public extension SonarrLibraryRecord {
     }
 }
 
+nonisolated public extension UpcomingItem {
+    /// Calendar entries carry the ids their arr embeds: TMDB for movies,
+    /// TVDB for series. Music has neither.
+    var mediaServerKeys: [MediaServerExternalKey] {
+        var keys: [MediaServerExternalKey] = []
+        if let tvdbId, tvdbId > 0 { keys.append(.tvdb(tvdbId)) }
+        if let tmdbId, tmdbId > 0 { keys.append(.tmdb(tmdbId)) }
+        return keys
+    }
+}
+
 nonisolated public extension SearchResult {
     /// A lookup result's ids, in the form the media-server index is keyed by.
     /// Radarr results carry a TMDB id in `externalId`, Sonarr results a TVDB

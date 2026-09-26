@@ -68,6 +68,12 @@ public actor SearchClient {
         return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 
+    /// Profiles already in hand, no request. See `cachedQualityProfiles`.
+    nonisolated static func cachedProfileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
+        let profiles = await SearchOptionsCache.shared.cachedQualityProfiles(config: config, source: source)
+        return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    }
+
     func fetchQualityProfiles() async throws -> [QualityProfile] { (try? await client.read([QualityProfile].self) { $0.qualityProfiles() }) ?? [] }
     func fetchMetadataProfiles() async throws -> [MetadataProfile] { (try? await client.read([MetadataProfile].self) { $0.metadataProfiles() }) ?? [] }
     func fetchRootFolders() async throws -> [RootFolder] { (try? await client.read([RootFolder].self) { $0.rootFolders() }) ?? [] }

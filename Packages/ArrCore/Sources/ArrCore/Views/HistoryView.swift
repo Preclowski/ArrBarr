@@ -85,11 +85,8 @@ public struct HistoryView: View {
             // of pinning a 28pt top margin under the header — that read
             // as a "dead zone" when the back button was the only thing
             // anchoring the eye to the top.
-            VStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("queue.loading.button", bundle: .module).font(.subheadline).foregroundStyle(.secondary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            LoadingStateView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else if feed.items.isEmpty, let error = feed.error {
             Label(error, systemImage: "exclamationmark.triangle.fill")
                 .scaledFont(size: 11)

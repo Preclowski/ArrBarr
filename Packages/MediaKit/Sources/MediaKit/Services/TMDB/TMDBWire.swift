@@ -74,6 +74,13 @@ public struct TMDBPersonCredits<Item: Codable & Sendable & Hashable>: Codable, S
     public let crew: [Item]?
 }
 
+/// `/tv/{id}/season/{n}/episode/{n}` — only what a rating needs.
+public struct TMDBEpisode: Codable, Sendable, Equatable, Hashable {
+    public let id: Int?
+    public let voteAverage: Double?
+    public let voteCount: Int?
+}
+
 public struct TMDBVideo: Codable, Sendable, Equatable, Hashable {
     public let key: String
     public let site: String?

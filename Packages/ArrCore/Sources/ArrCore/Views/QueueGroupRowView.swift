@@ -73,6 +73,8 @@ public struct QueueGroupRowView: View {
                     fallbackSymbol: "tv"
                 )
             }
+            .posterMarks(watched: rep.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             // macOS: pause/resume on the poster (hover-revealed); no delete in
             // the list — same treatment as QueueRowView. Suppressed while
             // selecting — the poster is the checkbox then.

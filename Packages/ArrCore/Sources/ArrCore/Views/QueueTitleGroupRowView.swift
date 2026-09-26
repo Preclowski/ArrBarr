@@ -75,6 +75,8 @@ struct QueueTitleGroupRowView: View {
                     fallbackSymbol: rep.source.symbol
                 )
             }
+            .posterMarks(watched: rep.watched, monitored: nil,
+                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {

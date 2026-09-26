@@ -65,11 +65,23 @@ public struct UpcomingRowView: View {
             posterSize: posterSize,
             posterBlurred: configStore.shouldBlurPoster(for: item.source),
             posterFallbackSymbol: item.source.symbol,
+            // A calendar entry is always monitored — the arr wouldn't list it
+            // otherwise — so only the watched wedge has anything to say here.
+            // Asked per EPISODE for Sonarr rows: a show that is still airing is
+            // never watched as a whole, so the title-level answer was always no.
+            posterWatched: MediaServerIndex.shared.isWatched(item.mediaServerKeys,
+                                                            season: item.seasonNumber,
+                                                            episode: item.episodeNumber),
             title: item.title,
             metadataSegments: episodeSegments,
             metadataSegments2: ratingSegments,
             disabled: item.entityId == nil,
-            onTap: openDetail
+            onTap: openDetail,
+            // Third line, at its start: the score leads the release-type /
+            // runtime line it used to sit inside as text.
+            metadataBadge2: {
+                if let ratingChip { RatingPill(chip: ratingChip) }
+            }
         ) {
             HStack(spacing: 6) {
                 if item.hasFile {
@@ -109,28 +121,26 @@ public struct UpcomingRowView: View {
             String(localized: "%lld tracks", bundle: .module), count)
     }
 
-    /// Release type / IMDb / runtime — the rating line below the episode line.
-    /// airDate is deliberately omitted: the list groups by day with the date as
-    /// a section header, so repeating it per row would just be noise.
+    /// Release type / runtime — the second line. The score moved off it into
+    /// the chip beside it (`ratingChip`); airDate is deliberately omitted, as
+    /// the list groups by day with the date as a section header.
     private var ratingSegments: [String] {
         [
             item.releaseTypeText(locale: configStore.currentLocale),
-            ratingSegment,
             item.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
         ].compactMap { $0 }
     }
 
-    /// Rating text for the row — TVDB for series; movies IMDb with a TMDB
-    /// fallback (unreleased titles usually only have a TMDB score yet).
-    /// Same source/fallback order the tooltip's rating pill uses.
-    private var ratingSegment: String? {
-        // Zero = not rated yet — hidden, same rule as the pill factories.
+    /// The row's score as the app's one rating chip — TVDB for series, IMDb
+    /// with a TMDB fallback for movies (an unreleased title usually only has a
+    /// TMDB score yet). Same source order the tooltip's pill uses; unlinked,
+    /// like every other chip inside a list row.
+    private var ratingChip: RatingChip? {
         if item.source == .sonarr {
-            return item.imdb.flatMap { $0 > 0 ? String(format: "TVDB %.1f", $0) : nil }
+            return item.imdb.flatMap { RatingChip.tvdb($0) }
         }
-        if let v = item.imdb, v > 0 { return String(format: "IMDb %.1f", v) }
-        if let v = item.tmdb, v > 0 { return String(format: "TMDB %.1f", v) }
-        return nil
+        if let chip = item.imdb.flatMap({ RatingChip.imdb($0) }) { return chip }
+        return item.tmdb.flatMap { RatingChip.tmdb($0) }
     }
 
     private func openDetail() {
@@ -138,12 +148,16 @@ public struct UpcomingRowView: View {
         // If this title is already downloading/importing, open the LIVE queue
         // item's detail — it carries the real status + the file being grabbed,
         // whereas a synthetic "upcoming" shell reads as unknown/new with no file.
-        // Movies only: a series' entityId (seriesId) maps to many episodes, so we
-        // can't pick the right queue row here.
-        if item.source == .radarr || item.source == .whisparr,
-           let active = QueueViewModel.shared.items(for: item.source)
-            .first(where: { $0.entityId == entityId }) {
-            DetailRequest.post(active)
+        // A series' entityId maps to many episodes, so the series rows match on
+        // the episode's own coordinates rather than on the series alone.
+        let live = QueueViewModel.shared.items(for: item.source).first { queued in
+            guard queued.entityId == entityId else { return false }
+            guard item.source == .sonarr else { return true }
+            return queued.seasonNumber == item.seasonNumber
+                && queued.episodeNumber == item.episodeNumber
+        }
+        if let live {
+            DetailRequest.post(live)
             return
         }
         DetailRequest.post(
@@ -152,7 +166,10 @@ public struct UpcomingRowView: View {
                 entityId: entityId,
                 title: item.title,
                 posterURL: item.posterURL,
-                posterRequiresAuth: item.posterRequiresAuth
+                posterRequiresAuth: item.posterRequiresAuth,
+                // A calendar row IS an episode — open that, not its series.
+                seasonNumber: item.seasonNumber,
+                episodeNumber: item.episodeNumber
             )
         )
     }

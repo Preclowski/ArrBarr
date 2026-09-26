@@ -84,7 +84,9 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         let (gateway, service) = try await context()
         return try await gateway.store.read(service.watchHistory(limit: limit)).value.compactMap { row in
             guard !row.title.isEmpty else { return nil }
-            return MediaServerWatch(title: row.title, year: nil, kind: row.kind == .movie ? .movie : .show, watchedAt: row.viewedAt)
+            return MediaServerWatch(title: row.title, year: nil, kind: row.kind == .movie ? .movie : .show,
+                                    watchedAt: row.viewedAt, seriesItemId: row.seriesItemID,
+                                    season: row.season, episode: row.episode)
         }
     }
 

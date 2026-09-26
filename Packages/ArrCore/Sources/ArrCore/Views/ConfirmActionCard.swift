@@ -274,40 +274,44 @@ public struct ConfirmAlertOverlay: View {
                 .ignoresSafeArea()
 
             card
-                .frame(maxWidth: 300)
+                .frame(maxWidth: 270)
                 .padding(.horizontal, 24)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
     }
 
     private var card: some View {
-        VStack(spacing: 14) {
-            VStack(spacing: 6) {
+        // Laid out like the macOS 26 system alert — leading text, tinted rather
+        // than filled destructive answer — since the real one can't be used:
+        // dismissing it closes the MenuBarExtra panel underneath.
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(title, bundle: .module)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.primary)
+                    .scaledFont(size: 13, weight: .bold)
                 Text(message, bundle: .module)
-                    .scaledFont(size: 12.5)
-                    .foregroundStyle(.secondary)
+                    .scaledFont(size: 13)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .multilineTextAlignment(.center)
+            .foregroundStyle(.primary)
+            .multilineTextAlignment(.leading)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             HStack(spacing: 8) {
                 answerButton(cancelLabelKey, weight: .medium,
-                             foreground: .primary, background: Color.primary.opacity(0.08),
+                             foreground: .primary, background: Color.primary.opacity(0.1),
                              action: onCancel)
                     .keyboardShortcut(.escape, modifiers: [])
-                answerButton(confirmLabelKey, weight: .semibold,
-                             foreground: .white, background: destructive ? Color.red : Color.accentColor,
+                answerButton(confirmLabelKey, weight: .medium,
+                             foreground: destructive ? .red : .white,
+                             background: destructive ? Color.red.opacity(0.22) : Color.accentColor,
                              action: onConfirm)
                     .keyboardShortcut(.return, modifiers: [])
             }
         }
-        .padding(18)
+        .padding(20)
         // Real Liquid Glass, not a material: the alert floats over the list and
         // should refract it, which a blurred grey plate cannot do.
-        .glassEffect(.regular, in: .rect(cornerRadius: Tokens.Radius.panel, style: .continuous))
+        .glassEffect(.regular, in: .rect(cornerRadius: 26, style: .continuous))
         .shadow(color: .black.opacity(0.30), radius: 18, y: 4)
     }
 
@@ -318,10 +322,10 @@ public struct ConfirmAlertOverlay: View {
                               action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(key, bundle: .module)
-                .scaledFont(size: 12.5, weight: weight)
+                .scaledFont(size: 13, weight: weight)
                 .foregroundStyle(foreground)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 7)
+                .padding(.vertical, 8)
                 .contentShape(Capsule())
         }
         .buttonStyle(.plain)

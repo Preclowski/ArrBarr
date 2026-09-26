@@ -11,6 +11,7 @@ import os
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var settingsWindow: NSWindow?
+    private var aboutWindow: NSWindow?
     private var welcomeWindow: NSWindow?
     private var paywallWindow: NSWindow?
     /// The add-download window, and the batches still waiting for it. See
@@ -515,72 +516,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - About
 
-    /// Native macOS About window. The standard panel renders the app icon,
-    /// name, version and copyright automatically; we supply a `.credits`
-    /// attributed string for the "Made by" line plus the clickable links
-    /// (GitHub / Website / Privacy Policy / icon attribution) that used to
-    /// live in the Settings footer.
+    /// Our own About window — see `AboutView` for why the system panel went.
+    /// Hosted like Settings and the paywall: a real `NSWindow`, so it survives
+    /// the menu-bar panel closing the moment focus moves.
     func showAbout() {
-        var options: [NSApplication.AboutPanelOptionKey: Any] = [
-            .credits: Self.aboutCredits
-        ]
-        // The standard panel's default icon comes from Launch Services, which
-        // can serve a stale cached icon. Load the current compiled AppIcon
-        // straight from the asset catalog so the panel always matches the
-        // shipped icon.
-        if let icon = NSImage(named: "AppIcon") {
-            options[.applicationIcon] = icon
+        if let win = aboutWindow {
+            win.makeKeyAndOrderFront(nil)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
-        NSApp.orderFrontStandardAboutPanel(options: options)
+        let hosting = NSHostingController(rootView: AboutView().environmentObject(configStore))
+        let win = NSWindow(contentViewController: hosting)
+        win.title = String(localized: "settings.about.button", bundle: .arrCore)
+        // No resize: the content is a fixed-width column, and a resizable
+        // About window is a window with nothing to do with the extra space.
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isReleasedWhenClosed = false
+        win.center()
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification, object: win, queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in self?.aboutWindow = nil }
+        }
+
+        aboutWindow = win
+        win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-    }
-
-    private static var aboutCredits: NSAttributedString {
-        let bundle = Bundle.arrCore
-        let result = NSMutableAttributedString()
-
-        func appendLine(_ title: String, _ urlString: String) {
-            let attrs: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 12, weight: .medium),
-                .link: URL(string: urlString)!,
-            ]
-            result.append(NSAttributedString(string: title + "\n", attributes: attrs))
-        }
-        func appendPlain(_ text: String, size: CGFloat = 11, color: NSColor = .secondaryLabelColor) {
-            result.append(NSAttributedString(string: text, attributes: [
-                .font: NSFont.systemFont(ofSize: size),
-                .foregroundColor: color,
-            ]))
-        }
-
-        appendPlain(String(localized: "Made by 🥨", bundle: bundle) + "\n\n", size: 12, color: .labelColor)
-        // Order: app first, then privacy, then source.
-        appendLine(String(localized: "Website", bundle: bundle), "https://arrbarr.app")
-        appendLine(String(localized: "Privacy Policy", bundle: bundle), "https://arrbarr.app/privacy")
-        appendLine("GitHub", "https://github.com/Preclowski/ArrBarr")
-        appendPlain("\n")
-        result.append(NSAttributedString(string: "Dashboard Icons · CC BY 4.0", attributes: [
-            .font: NSFont.systemFont(ofSize: 10),
-            .link: URL(string: "https://dashboardicons.com")!,
-        ]))
-        // TMDB's API terms require this disclaimer wherever their data is
-        // surfaced. Verbatim and untranslated: it is a licence notice, not
-        // UI copy.
-        appendPlain("\n")
-        result.append(NSAttributedString(string: "TMDB", attributes: [
-            .font: NSFont.systemFont(ofSize: 10),
-            .link: URL(string: "https://www.themoviedb.org")!,
-        ]))
-        appendPlain("\nThis product uses TMDB and the TMDB APIs but is not\n"
-                    + "endorsed, certified, or otherwise approved by TMDB.", size: 9)
-
-        // Centre everything so the credits read as a tidy block under the
-        // auto-rendered icon / name / version.
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = .center
-        paragraph.paragraphSpacing = 3
-        result.addAttribute(.paragraphStyle, value: paragraph, range: NSRange(location: 0, length: result.length))
-        return result
     }
 
     // MARK: - Settings

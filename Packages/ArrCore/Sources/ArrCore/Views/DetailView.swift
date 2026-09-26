@@ -550,6 +550,8 @@ public struct DetailView: View {
         .navigationDestination(item: $manualSearchTarget) { target in
             ReleaseListView(target: target,
                             existing: manualSearchExistingFile,
+                            existingByEpisode: manualSearchEpisodeFiles(for: target),
+                            waitContext: manualSearchContext,
                             onBack: { manualSearchTarget = nil })
         }
         // "Show history" — this record's events only, titled after it.
@@ -791,6 +793,12 @@ public struct DetailView: View {
     /// baseline `ReleaseListView` diffs its candidates against. Movies only: a
     /// Lidarr album is many track files with no single "current" one, and a
     /// Sonarr series doesn't open manual search from this level at all.
+    private var manualSearchContext: WaitCardContext {
+        WaitCardContext(movie: radarrDetail, series: sonarrDetail, album: lidarrAlbum,
+                        cast: cast, directors: directors, posterURL: item.posterURL,
+                        posterApiKey: item.posterRequiresAuth ? arrAPIKey(for: item, in: configStore) : nil)
+    }
+
     private var manualSearchExistingFile: UpgradeDiffView.Side? {
         switch item.source {
         case .radarr, .whisparr:
@@ -802,6 +810,22 @@ public struct DetailView: View {
         case .sonarr, .lidarr:
             return nil
         }
+    }
+
+    /// What each episode of the searched season already has on disk, keyed by
+    /// episode number. A season search has no single baseline — a pack replaces
+    /// many files — but its per-episode rows each diff against their own file.
+    private func manualSearchEpisodeFiles(for target: ManualSearchTarget) -> [Int: UpgradeDiffView.Side] {
+        guard item.source == .sonarr,
+              let season = target.query.first(where: { $0.name == "seasonNumber" })?.value.flatMap(Int.init)
+        else { return [:] }
+        var out: [Int: UpgradeDiffView.Side] = [:]
+        for episode in sonarrEpisodes where episode.seasonNumber == season {
+            guard let number = episode.episodeNumber,
+                  let file = episode.episodeFileId.flatMap({ sonarrEpisodeFiles[$0] }) else { continue }
+            out[number] = UpgradeDiffView.side(episodeFile: file)
+        }
+        return out
     }
 
     /// Fire the server-side sweep and drive the CTA's state machine:
@@ -1128,12 +1152,13 @@ public struct DetailView: View {
     /// Series hero's title badges — assigned profile + how much is on disk.
     private var seriesTitleBadge: AnyView? {
         guard sonarrDetail != nil || qualityProfileName != nil else { return nil }
-        let counts = seriesEpisodeCounts
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
-            if sonarrDetail != nil {
-                MediaStateChip(state: seriesFileState, have: counts.have, total: counts.total,
-                               locale: configStore.currentLocale)
+            // No have/total here: the season rows below already carry the count
+            // per season, which is the number you can act on. A partial series
+            // has nothing to say in one word, so it shows no chip at all.
+            if sonarrDetail != nil, seriesFileState != .partial {
+                MediaStateChip(state: seriesFileState, locale: configStore.currentLocale)
             }
         })
     }
@@ -1310,6 +1335,7 @@ public struct DetailView: View {
             },
             posterBadge: trailerBadge,
             posterCornerAction: monitorPosterToggle,
+            watched: isWatched,
             // Title + year live in the nav-bar title now; hero hides
             // its in-card title to avoid duplication.
             showTitle: false,
@@ -1319,6 +1345,14 @@ public struct DetailView: View {
             directedByKey: directedByKey,
             onTapPerson: openPerson
         )
+    }
+
+    /// Has the media server played this title? Asked of the fetched record's
+    /// own provider ids, with the queue row's precomputed answer as the
+    /// fallback for the frame before the record lands.
+    private var isWatched: Bool {
+        let keys = radarrDetail?.mediaServerKeys ?? sonarrDetail?.mediaServerKeys ?? []
+        return keys.isEmpty ? item.watched : MediaServerIndex.shared.isWatched(keys)
     }
 
     // MARK: - Loading

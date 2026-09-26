@@ -102,7 +102,8 @@ nonisolated public enum WidgetDataStore {
         return ProcessInfo.processInfo.arguments.contains { $0.contains(".xctest") }
     }
 
-    private static func testSnapshotDirectory() -> URL? {
+    /// Shared with `LibrarySnapshotStore`, which needs the same redirection.
+    static func testSnapshotDirectory() -> URL? {
         if let explicit = snapshotDirectoryOverrideForTesting { return explicit }
         snapshotLock.lock()
         defer { snapshotLock.unlock() }
