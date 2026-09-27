@@ -104,19 +104,11 @@ nonisolated public enum PosterTier: String, Sendable, CaseIterable {
     /// a 185-pixel image. Swapping to a size the URL already has is a no-op,
     /// so an `original` URL stays untouched.
     /// The server-side resize a media server is asked for; `.full` keeps the original.
-    fileprivate var artworkTier: ArtworkTier? {
+    fileprivate var artworkTier: ArtworkTier {
         switch self {
-        case .icon: return .icon
-        case .card: return .card
-        case .full: return nil
-        }
-    }
-
-    fileprivate var tmdbSize: String? {
-        switch self {
-        case .icon: return "w185"
-        case .card: return "w780"
-        case .full: return "original"
+        case .icon: .icon
+        case .card: .card
+        case .full: .full
         }
     }
 }
@@ -363,15 +355,10 @@ public actor PosterStore {
     /// changing variants never orphans what we already stored.
     nonisolated static func sourceURL(for url: URL, tier: PosterTier, artwork: ArtworkReference? = nil) -> URL? {
         switch url.host {
-        case "image.tmdb.org":
-            // /t/p/<size>/<file> — the size segment is the only part to swap.
-            guard let size = tier.tmdbSize,
-                  var comps = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
-            var parts = comps.path.split(separator: "/", omittingEmptySubsequences: false).map(String.init)
-            guard parts.count >= 5, parts[1] == "t", parts[2] == "p", parts[3] != size else { return nil }
-            parts[3] = size
-            comps.path = parts.joined(separator: "/")
-            return comps.url
+        case TMDBService.imageBase.host:
+            guard let reference = TMDBService.artwork(cdnURL: url, kind: .poster) else { return nil }
+            let sized = reference.sized(tier.artworkTier).url
+            return sized == url ? nil : sized
         case "artworks.thetvdb.com":
             // …/<name>.jpg → …/<name>_t.jpg. Only the icon tier: `_t` is a
             // thumbnail, too small to stand in for a card.
@@ -385,8 +372,8 @@ public actor PosterStore {
         default:
             // Plex / Jellyfin / Emby resize on request; their artwork reference
             // knows how, and only the media server index hands one out.
-            guard let artwork, let size = tier.artworkTier else { return nil }
-            let sized = artwork.sized(size).url
+            guard let artwork else { return nil }
+            let sized = artwork.sized(tier.artworkTier).url
             return sized == url ? nil : sized
         }
     }
@@ -420,7 +407,8 @@ public actor PosterStore {
         defer { signpost.endInterval("poster download", state) }
 
         var request = URLRequest(url: url)
-        let arrs = await ServiceGateway.resolve().kit.registry.all.filter { $0.id.kind.family == .servarr }.map(\.baseURL)
+        let gateway = await ServiceGateway.resolve()
+        let arrs = gateway.arrBaseURLs
         if let apiKey = Self.arrKey(apiKey, for: url, artwork: artwork, arrs: arrs) {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
         }
@@ -428,7 +416,7 @@ public actor PosterStore {
         // persisted with the poster URL and hashed into the cache key. The
         // reference carries a credential ref that MediaKit resolves per request.
         if let artwork {
-            for (field, value) in await ServiceGateway.resolve().kit.artworkHeaders(for: artwork).dictionary {
+            for (field, value) in await gateway.artworkHeaders(for: artwork) {
                 request.setValue(value, forHTTPHeaderField: field)
             }
         }

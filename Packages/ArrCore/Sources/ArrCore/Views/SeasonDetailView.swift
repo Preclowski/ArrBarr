@@ -286,7 +286,7 @@ struct SeasonDetailView: View {
     /// `Series · S02E04` — what the release list titles an episode search with,
     /// matching the episode screen's own nav title.
     private func episodeSearchTitle(_ ep: ArrEpisode) -> String {
-        let code = String(format: "S%02dE%02d", drill.seasonNumber, ep.episodeNumber ?? 0)
+        let code = EpisodeCode.string(season: drill.seasonNumber, episode: ep.episodeNumber ?? 0)
         return "\(drill.seriesTitle) · \(code)"
     }
 

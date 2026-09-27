@@ -28,7 +28,7 @@ struct UpcomingHoverTooltip: ViewModifier {
     }
 
     private var apiKey: String? {
-        configStore.serviceConfig(for: item.source).apiKey
+        configStore.config(for: item.source).apiKey
     }
 
     /// The live queue row for THIS calendar entry, if one is downloading.
@@ -182,7 +182,7 @@ public struct UpcomingRowView: View {
     }
 
     private var apiKeyForSource: String? {
-        configStore.serviceConfig(for: item.source).apiKey
+        configStore.config(for: item.source).apiKey
     }
 
 }

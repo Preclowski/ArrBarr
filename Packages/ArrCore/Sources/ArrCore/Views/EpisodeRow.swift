@@ -61,9 +61,7 @@ struct EpisodeRow: View {
     /// `S02E04`-style episode identifier rendered on the trailing
     /// edge. Same format the tooltip header uses.
     private var episodeCode: String {
-        String(format: "S%02dE%02d",
-               episode.seasonNumber ?? 0,
-               episode.episodeNumber ?? 0)
+        EpisodeCode.string(season: episode.seasonNumber ?? 0, episode: episode.episodeNumber ?? 0)
     }
     /// Read once per body pass — the list re-renders on every queue tick.
     private var airDate: Date? { episode.airDateUtc.flatMap(parseArrDate) }

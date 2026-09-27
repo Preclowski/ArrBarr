@@ -323,7 +323,7 @@ public struct QueueRowView: View {
     }
 
     private var apiKeyForSource: String? {
-        configStore.serviceConfig(for: item.source).apiKey
+        configStore.config(for: item.source).apiKey
     }
 
     // MARK: - Actions

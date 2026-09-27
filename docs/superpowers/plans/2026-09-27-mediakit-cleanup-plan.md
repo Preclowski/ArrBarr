@@ -55,35 +55,39 @@ Same for `seriesDetails`, `album(id:)`, `movies()/series()/artists()`, lookups, 
 
 ## Phase C — one implementation per concern (DRY)
 
-- [ ] Poster URL: one function over MediaKit `ArrImage` + media-server override (today `ArrCompositions.posterURL`
+- [x] Poster URL: one function over MediaKit `ArrImage` + media-server override (today `ArrCompositions.posterURL`
       = `Array<ArrImage>.posterURL` line for line, plus wrappers in `DetailViewHelpers:37`, `SearchClient:155`,
       `RichToolResultView:351,426`); Lidarr "cover, then artist poster" fallback written 6× → one helper.
-- [ ] Media-server keys: one derivation on MediaKit types (today `ArrCompositions.keys` + `ArrMediaServerKeys.swift`
+- [x] Media-server keys: one derivation on MediaKit types (today `ArrCompositions.keys` + `ArrMediaServerKeys.swift`
       extensions + inline in `SearchClient:166,177`, `LocalToolBackend+Discover:230,256,499,525`, `WaitCards:170`;
       already drifted: Discover's Sonarr drops `.tmdbSeries`, `SonarrSeriesDetail` lacks the `> 0` guard).
-- [ ] One arr facade: `fetchQueue/fetchCalendar/fetchAll…/setMonitored/serviceName` are identical across
+- [x] One arr facade: `fetchQueue/fetchCalendar/fetchAll…/setMonitored/serviceName` are identical across
       `Radarr/Sonarr/Lidarr/WhisparrClient` (Lidarr's `fetchAll` drifted to `try? ?? []`); switches rebuilding
       clients by source (`SearchClient:13-18`, `ServiceHandles:7-37`, `LocalToolBackend+ArrTools:184,275-292,769,884`).
-- [ ] Clients from `ConfigStore` facades everywhere: 17 services and ~50 tool sites construct clients ad hoc
+- [x] Clients from `ConfigStore` facades everywhere: 17 services and ~50 tool sites construct clients ad hoc
       (`CastProvider`, `CountryProvider`, `TrailerProvider`, `EpisodeRatingProvider`, `LibraryPosterSampler`,
       `SpotlightIndexer:207`, `ChatLinkRouter:70`, `PersonStore`, `LibraryIndex`, `UpcomingService`,
       `LibrarySummaryService`, `DownloadDropService`, `MediaServerIndex`, `ConnectionHealthMonitor`,
       `ConfigStore:771`, `LocalToolBackend*`), and the view-models' saved-config `ServiceHandles`
       (`SearchViewModel:162-174,381` with its `configSignature` workaround, `LibraryViewModel:279`, `ServerStatusModel:58`).
-- [ ] Lookup record → `SearchResult`: one mapper (`SearchClient.unify*` copied in `LocalToolBackend+Discover:229-275,
+- [x] Lookup record → `SearchResult`: one mapper (`SearchClient.unify*` copied in `LocalToolBackend+Discover:229-275,
       497-539`, library variants `:301-340`).
-- [ ] TMDB id from TVDB id: one helper (`CastProvider:75`, `TrailerProvider:36`, `CountryProvider:29`,
+- [x] TMDB id from TVDB id: one helper (`CastProvider:75`, `TrailerProvider:36`, `CountryProvider:29`,
       `EpisodeRatingProvider:25`); drop pass-through wrappers.
-- [ ] Upcoming fetch/merge/sort: one path (`QueueAggregator:223-242`, `UpcomingService:10-54`,
+- [x] Upcoming fetch/merge/sort: one path (`QueueAggregator:223-242`, `UpcomingService:10-54`,
       `LocalToolBackend+ArrTools:735-767`; cutoffs differ).
 - [x] Endpoint knowledge back into MediaKit (done in B): `ArrAPIClient.getRawObject:84`, `updateLibraryRecord:122-135`
       (= `ServarrService.readModifyWrite`), `postCommand:150` (untyped body), `fetchReleases` plan edits `:99-101`,
       `TMDBClient:386` plan edit; `MediaServerFacade.nowPlaying:84` bypasses the store (→ `liveSessions` or a resource).
-- [ ] Artwork sizing: `PosterStore.sourceURL:366-374` and `TMDBClient.imageURL:514` redo `ArtworkReference.tmdbCDN`;
+- [x] Artwork sizing: `PosterStore.sourceURL:366-374` and `TMDBClient.imageURL:514` redo `ArtworkReference.tmdbCDN`;
       `PosterStore` stops reaching into `gateway.kit` (`:423,431`) through a gateway method.
-- [ ] Small: `"S%02dE%02d"` ×6 → one formatter; `formatLibrary` vs `libraryText`; `ConfigStore.serviceConfig(for:)`
+- [x] Small: `"S%02dE%02d"` ×6 → one formatter; `formatLibrary` vs `libraryText`; `ConfigStore.serviceConfig(for:)`
       ⊂ `config(for:)`; `ConfigStore.mediaServerClient` = `ServiceHandles.mediaServer`; shared arr helpers out of
       `RadarrClient.swift:55-138`.
+- Notes: key-parameterised services (`PersonStore`, `SeriesIdentityResolver`, `LibraryIndex`, `LibrarySummaryService`,
+  the connection probes) still build a client from the config they are handed — that is the one factory, not a copy.
+  `MediaServerIndex` and `ArrQueueLoader` keep their own queue-gateway fan-out; the widget, the calendar tool and the
+  queue share `UpcomingService.curate` (cutoff: start of today).
 
 ## Phase D — MediaKit: wire it or delete it
 

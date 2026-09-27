@@ -99,10 +99,22 @@ public struct TMDBService: Sendable {
     }
 
     /// `image.tmdb.org` never carries a credential.
-    public func artwork(path: String?, kind: ArtworkReference.Kind) -> ArtworkReference? {
+    public static func artwork(path: String?, kind: ArtworkReference.Kind) -> ArtworkReference? {
         guard let path, !path.isEmpty else { return nil }
         let normalized = path.hasPrefix("/") ? path : "/" + path
-        return ArtworkReference(url: Self.imageBase.appendingPathComponent("t/p/original" + normalized), sizing: .tmdbCDN(path: normalized), kind: kind)
+        return ArtworkReference(url: imageURL(path: normalized, size: "original")!, sizing: .tmdbCDN(path: normalized), kind: kind)
+    }
+
+    /// A CDN url at any size (`/t/p/<size>/<file>`, as the arrs hand them out), so it can be re-sized.
+    public static func artwork(cdnURL url: URL, kind: ArtworkReference.Kind) -> ArtworkReference? {
+        let parts = url.path.split(separator: "/", omittingEmptySubsequences: false)
+        guard url.host == imageBase.host, parts.count >= 5, parts[1] == "t", parts[2] == "p" else { return nil }
+        return ArtworkReference(url: url, sizing: .tmdbCDN(path: "/" + parts[4...].joined(separator: "/")), kind: kind)
+    }
+
+    public static func imageURL(path: String?, size: String) -> URL? {
+        guard let path, !path.isEmpty else { return nil }
+        return URL(string: "t/p/\(size)\(path.hasPrefix("/") ? path : "/" + path)", relativeTo: imageBase)?.absoluteURL
     }
 
     /// v4 read access tokens are JWTs; v3 keys are 32 hex characters.

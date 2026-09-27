@@ -452,7 +452,7 @@ public final class NotificationCoalescer {
     /// for a poster the rest of the app already holds.
     private func posterAPIKey(for item: QueueItem) -> String? {
         guard item.posterRequiresAuth else { return nil }
-        return configStore.serviceConfig(for: item.source).apiKey
+        return configStore.config(for: item.source).apiKey
     }
 
     /// Maps the user's `notificationSoundName` preference onto a
@@ -601,11 +601,7 @@ public final class NotificationCoalescer {
     /// episode coordinates at all — a movie or an album, where the title line
     /// already names the thing completely.
     static func episodeCode(for item: QueueItem) -> String? {
-        guard let season = item.seasonNumber else { return nil }
-        guard let episode = item.episodeNumber else {
-            return String(format: "S%02d", season)
-        }
-        return String(format: "S%02dE%02d", season, episode)
+        item.seasonNumber.map { EpisodeCode.string(season: $0, episode: item.episodeNumber) }
     }
 
     /// `+60 → +720`, and only for an upgrade that actually knows what it is

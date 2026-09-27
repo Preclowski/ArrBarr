@@ -335,7 +335,7 @@ public struct HistoryRowView: View {
     }
 
     private var apiKey: String? {
-        item.posterRequiresAuth ? configStore.serviceConfig(for: item.source).apiKey : nil
+        item.posterRequiresAuth ? configStore.config(for: item.source).apiKey : nil
     }
 }
 

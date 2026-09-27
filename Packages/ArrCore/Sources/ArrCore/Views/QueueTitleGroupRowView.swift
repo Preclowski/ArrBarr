@@ -68,7 +68,7 @@ struct QueueTitleGroupRowView: View {
             PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
                 RemotePoster(
                     url: rep.posterURL,
-                    apiKey: rep.posterRequiresAuth ? configStore.serviceConfig(for: rep.source).apiKey : nil,
+                    apiKey: rep.posterRequiresAuth ? configStore.config(for: rep.source).apiKey : nil,
                     tier: .icon,
                     size: posterSize,
                     cornerRadius: Tokens.Radius.chip,

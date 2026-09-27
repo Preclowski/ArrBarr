@@ -46,8 +46,7 @@ nonisolated enum ArrCompositions {
                 if let ep = r.episode, let s = ep.seasonNumber, let n = ep.episodeNumber {
                     seasonNumber = s; episodeNumber = n
                     episodeTitle = ep.title?.isEmpty == false ? ep.title : nil
-                    let code = String(format: "S%02dE%02d", s, n)
-                    subtitle = episodeTitle.map { "\(code) · \($0)" } ?? code
+                    subtitle = EpisodeCode.line(season: s, episode: n, title: episodeTitle)
                 }
             }
             if poster == nil { (poster, posterAuth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []) }
@@ -166,8 +165,7 @@ nonisolated enum ArrCompositions {
             let base = r.series?.title ?? "Unknown"
             var subtitle: String?
             if let s = r.seasonNumber, let e = r.episodeNumber {
-                let code = String(format: "S%02dE%02d", s, e)
-                subtitle = (r.title?.isEmpty == false) ? "\(code) · \(r.title!)" : code
+                subtitle = EpisodeCode.line(season: s, episode: e, title: r.title)
             }
             let (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? [])
             return UpcomingItem(
@@ -211,8 +209,7 @@ nonisolated enum ArrCompositions {
         case .sonarr:
             title = r.series?.title ?? title
             if let ep = r.episode, let s = ep.seasonNumber, let e = ep.episodeNumber {
-                let code = String(format: "S%02dE%02d", s, e)
-                subtitle = (ep.title?.isEmpty == false) ? "\(code) · \(ep.title!)" : code
+                subtitle = EpisodeCode.line(season: s, episode: e, title: ep.title)
                 if eventType == .imported || eventType == .grabbed, let batch = r.downloadId ?? r.sourceTitle {
                     groupHint = .init(key: "\(batch)|s\(s)", collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), s))
                 }

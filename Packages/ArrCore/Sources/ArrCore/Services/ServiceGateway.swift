@@ -68,6 +68,14 @@ public final class ServiceGateway {
     /// Consumers await this before their first read so the registry is populated.
     public func ready() async { await startTask?.value }
 
+    /// The registered arrs' base URLs: the only places an arr key may be sent.
+    nonisolated var arrBaseURLs: [URL] { kit.registry.all.filter { $0.id.kind.family == .servarr }.map(\.baseURL) }
+
+    /// The headers a media-server artwork reference resolves to, per request.
+    nonisolated func artworkHeaders(for reference: ArtworkReference) async -> [String: String] {
+        await kit.artworkHeaders(for: reference).dictionary
+    }
+
     /// The gateway for values built without one: the shared profile's, created on first use. A test process
     /// gets an empty profile instead, so nothing reaches the owner's services from a test.
     public static func resolve() async -> ServiceGateway {

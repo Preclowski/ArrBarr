@@ -300,8 +300,5 @@ nonisolated public struct TMDBClient: Sendable {
     public func movieCountries(movieId: Int) async throws -> [String] { try await movieDetails(movieId: movieId).countryCodes(preferOrigin: false) }
     public func tvCountries(tvId: Int) async throws -> [String] { try await tvDetails(tvId: tvId).countryCodes(preferOrigin: true) }
 
-    public static func imageURL(path: String?, size: String = "w342") -> URL? {
-        guard let path, !path.isEmpty else { return nil }
-        return URL(string: "https://image.tmdb.org/t/p/\(size)\(path)")
-    }
+    public static func imageURL(path: String?, size: String = "w342") -> URL? { TMDBService.imageURL(path: path, size: size) }
 }

@@ -150,9 +150,9 @@ struct ConfigStoreTests {
         store.update(.radarr, with: radarrConfig)
         store.update(.sonarr, with: sonarrConfig)
 
-        #expect(store.config(for: .radarr) == radarrConfig)
-        #expect(store.config(for: .sonarr) == sonarrConfig)
-        #expect(store.config(for: .radarr) != sonarrConfig)
+        #expect(store.config(for: ServiceKind.radarr) == radarrConfig)
+        #expect(store.config(for: ServiceKind.sonarr) == sonarrConfig)
+        #expect(store.config(for: ServiceKind.radarr) != sonarrConfig)
     }
 
     @Test("update(:with:) sets all nine service kinds")

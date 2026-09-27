@@ -770,17 +770,7 @@ public final class ConfigStore: ObservableObject {
         _ = try await ProwlarrClient().testConnection()
     }
 
-    /// Lookup the matching `ServiceConfig` for an arr `Source`. Replaces the
-    /// four-way switch that several views and view-models duplicate when they
-    /// need to pull the poster auth key, base URL, etc.
-    public func serviceConfig(for source: QueueItem.Source) -> ServiceConfig {
-        switch source {
-        case .radarr:   return radarr
-        case .sonarr:   return sonarr
-        case .lidarr:   return lidarr
-        case .whisparr: return whisparr
-        }
-    }
+    public func config(for source: QueueItem.Source) -> ServiceConfig { config(for: source.serviceKind) }
 
     /// True when posters from this source should render blurred (currently
     /// only Whisparr, gated by `blurWhisparrPosters`). Eight or so views

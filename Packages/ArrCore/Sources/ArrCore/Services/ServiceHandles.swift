@@ -20,8 +20,6 @@ nonisolated public enum ServiceHandles {
 
     public static func tmdb(apiKey: String) -> TMDBClient { TMDBClient(apiKey: apiKey) }
 
-    public static func mediaServer(config: MediaServerConfig) -> MediaServerClient? { MediaServerClientFactory.make(config: config) }
-
     /// One round trip proving a draft works: the arr's version, or the download client's greeting.
     public static func testConnection(_ kind: ServiceKind, config: ServiceConfig) async throws -> String {
         switch kind {
@@ -44,7 +42,7 @@ public extension ConfigStore {
     var tmdbClient: TMDBClient { TMDBClient(apiKey: tmdbApiKey) }
     /// Configless: the gateway holds Prowlarr's single saved instance.
     var prowlarrClient: ProwlarrClient { ProwlarrClient() }
-    func arrClient(for source: QueueItem.Source) -> any ArrAPIClient { ServiceHandles.arr(source, config: serviceConfig(for: source)) }
-    func searchClient(for source: QueueItem.Source) -> SearchClient { SearchClient(config: serviceConfig(for: source), source: source) }
+    func arrClient(for source: QueueItem.Source) -> any ArrAPIClient { ServiceHandles.arr(source, config: config(for: source)) }
+    func searchClient(for source: QueueItem.Source) -> SearchClient { SearchClient(config: config(for: source), source: source) }
     var mediaServerClient: MediaServerClient? { MediaServerClientFactory.make(config: mediaServer) }
 }

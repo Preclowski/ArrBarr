@@ -256,7 +256,7 @@ extension LocalToolBackend {
     /// empty answer to a title query (the nearest titles come back instead),
     /// print the first N of a big library as if they were the answer (an
     /// unfiltered call is labelled a sample), or hide that rows were cut.
-    private func libraryText<T>(
+    func libraryText<T>(
         serviceName: String, noun: String, nounPlural: String,
         total: Int, matched: Int, shown: [T],
         query: LibraryQuery,

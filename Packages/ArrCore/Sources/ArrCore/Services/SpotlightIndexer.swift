@@ -200,7 +200,7 @@ public enum SpotlightIndexer {
     @MainActor
     public static func browserURL(forIdentifier id: String, configStore: ConfigStore) async -> URL? {
         guard let ref = parse(id) else { return nil }
-        let cfg = configStore.serviceConfig(for: ref.source)
+        let cfg = configStore.config(for: ref.source)
         guard cfg.isConfigured else { return nil }
         let slug: String?
         switch configStore.arrClient(for: ref.source) {

@@ -301,13 +301,14 @@ public actor LocalToolBackend {
         let filter = Self.stringArg(args, key: "query").lowercased()
         let all = try await fetch()
         let matched = filter.isEmpty ? all : all.filter { filterMatch($0, filter) }
-        let text = Self.formatLibrary(
-            serviceName: source.displayName,
-            itemNounSingular: itemNounSingular,
-            itemNounPlural: itemNounPlural,
-            items: matched, filter: filter, line: line
+        let query = LibraryQuery(title: filter)
+        let shown = filter.isEmpty ? LibraryFilter.sample(matched, count: Self.librarySampleSize) : Array(matched.prefix(Self.libraryRowCap))
+        let text = libraryText(
+            serviceName: source.displayName, noun: itemNounSingular, nounPlural: itemNounPlural,
+            total: all.count, matched: matched.count, shown: shown, query: query, nearest: [],
+            line: line, nearestLine: line
         )
-        return ToolCallOutput(text: text, rich: rich(matched))
+        return ToolCallOutput(text: text, rich: rich(shown))
     }
 
 
@@ -405,31 +406,6 @@ public actor LocalToolBackend {
         if results.count > top.count {
             out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
         }
-        return out
-    }
-
-    /// Shared library-list formatter. Caller passes the line transform so
-    /// per-arr field selection (tvdbId vs tmdbId vs foreignArtistId vs file
-    /// state) stays where it belongs without four near-identical functions.
-    nonisolated static func formatLibrary<Rec>(
-        serviceName: String,
-        itemNounSingular: String,
-        itemNounPlural: String,
-        items: [Rec],
-        filter: String,
-        line: (Rec) -> String
-    ) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty
-                ? "\(serviceName) library is empty."
-                : "No \(itemNounPlural) in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let noun = items.count == 1 ? itemNounSingular : itemNounPlural
-        var out = "\(serviceName) library — \(items.count) \(noun)"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + top.map(line).joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
         return out
     }
 

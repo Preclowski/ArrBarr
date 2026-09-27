@@ -11,7 +11,7 @@ import MediaKit
 /// whichever arr `item.source` points at, regardless of whether the poster
 /// actually requires auth — callers gate on `item.posterRequiresAuth`.
 func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
-    configStore.serviceConfig(for: item.source).apiKey
+    configStore.config(for: item.source).apiKey
 }
 
 /// Deep-link to the arr's web UI for this item, if we know a slug. Path
@@ -19,7 +19,7 @@ func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
 /// Whisparr both use `/movie/` (Whisparr is a Radarr fork).
 func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
     guard let slug = item.contentSlug else { return nil }
-    let cfg = configStore.serviceConfig(for: item.source)
+    let cfg = configStore.config(for: item.source)
     let path: String = switch item.source {
     case .radarr, .whisparr: "/movie/\(slug)"
     case .sonarr:            "/series/\(slug)"
@@ -38,7 +38,7 @@ func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
 func arrPosterURL(images: [ArrImage]?, for item: QueueItem,
                   in configStore: ConfigStore,
                   mediaServerKeys: [MediaServerExternalKey] = []) -> URL? {
-    let baseURL = configStore.serviceConfig(for: item.source).baseURL
+    let baseURL = configStore.config(for: item.source).baseURL
     return images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"],
                              mediaServerKeys: mediaServerKeys).0
 }
