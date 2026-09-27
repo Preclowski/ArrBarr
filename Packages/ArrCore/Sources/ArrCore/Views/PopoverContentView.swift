@@ -291,9 +291,7 @@ public struct PopoverContentView: View {
             // pending confirmation outranks entertainment.
             .trailerOverlay(key: Binding(
                 get: { trailerSession.key },
-                set: { newValue in
-                    if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
-                }
+                set: { if $0 == nil { trailerSession.dismiss() } }
             ))
             // Renders whatever confirmation is pending, and reports that this
             // surface is here to render it.

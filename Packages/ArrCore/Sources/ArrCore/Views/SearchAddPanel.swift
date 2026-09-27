@@ -29,7 +29,7 @@ public struct SearchAddPanel: View {
 
     /// Trailer for the title being added. Nil = no clip (or no TMDB key for
     /// the series route), and then no badge on the poster.
-    @State private var trailerKey: String?
+    @State private var trailer: TrailerReel?
     /// The clip on screen — shared session, rendered by the surface root so it
     /// survives popover close/reopen (see `TrailerSession`).
     @ObservedObject private var trailerSession = TrailerSession.shared
@@ -235,11 +235,11 @@ public struct SearchAddPanel: View {
     }
 
     private var trailerBadge: AnyView? {
-        guard let trailerKey else { return nil }
+        guard let trailer else { return nil }
         return AnyView(
-            TrailerPosterBadge(isPlaying: trailerSession.key == trailerKey) {
+            TrailerPosterBadge(isPlaying: trailerSession.isShowing(trailer)) {
                 withAnimation(.smooth(duration: 0.22)) {
-                    trailerSession.toggle(trailerKey)
+                    trailerSession.toggle(trailer)
                 }
             }
         )
@@ -248,26 +248,26 @@ public struct SearchAddPanel: View {
     /// `mediaRef` already knows which foreign key this result carries, so the
     /// movie/series split needs no second source check.
     private func resolveTrailer() async {
-        // Dismiss only OUR previous clip — a fresh mount (trailerKey nil) must
+        // Dismiss only OUR previous clip — a fresh mount (trailer nil) must
         // not kill a session restored across a popover reopen.
-        if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
-        trailerKey = nil
+        if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
+        trailer = nil
         switch result.mediaRef {
         case .tmdb(let id):
-            trailerKey = await TrailerProvider.movieTrailerKey(
+            trailer = await TrailerProvider.movieReel(
                 radarrTrailerId: nil, tmdbId: id, configStore: configStore
             )
         case .tvdb(let id):
             // Same as the cast strip: pass the TMDB id when the row has one,
             // so this costs one request instead of a `/find` plus one.
-            trailerKey = await TrailerProvider.seriesTrailerKey(
+            trailer = await TrailerProvider.seriesReel(
                 tmdbId: result.tmdbTVId, tvdbId: id, configStore: configStore
             )
         case .tmdbTV(let id):
             // A row that hasn't been resolved to a tvdbId yet — TMDB is the
             // only side that knows this show, and it is the side serving the
             // clip anyway.
-            trailerKey = await TrailerProvider.seriesTrailerKey(
+            trailer = await TrailerProvider.seriesReel(
                 tmdbId: id, tvdbId: nil, configStore: configStore
             )
         case .musicBrainz, .imdb:

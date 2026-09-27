@@ -38,11 +38,11 @@ public struct DiscoverTabView: View {
     @State private var emptyRoundRetried = false
     /// Trailer for the card on top of the deck, resolved as it comes up so the
     /// button only appears when there's something to play.
-    @State private var trailerKey: String?
-    /// Card id `trailerKey` belongs to. While it lags behind the top card the
+    @State private var trailer: TrailerReel?
+    /// Card id `trailer` belongs to. While it lags behind the top card the
     /// button is still on screen (see `resolveTrailer`) but inert — it would
     /// otherwise play the PREVIOUS card's clip.
-    @State private var trailerKeyCardId: String?
+    @State private var trailerCardId: String?
     /// The clip on screen. Same shared-session presentation every other trailer
     /// surface uses (rendered by the surface root), so the Quiz keeps no
     /// player layout of its own.
@@ -431,7 +431,7 @@ public struct DiscoverTabView: View {
                 Spacer()
                 // Rendered only once a clip is known: a permanently dead
                 // button would be worse than one that arrives when ready.
-                if trailerKey != nil {
+                if trailer != nil {
                     GlassCircleButton(
                         assetName: "brand-youtube",
                         // Smaller than the two verdicts on purpose: skip and
@@ -442,9 +442,9 @@ public struct DiscoverTabView: View {
                         action: {
                             // Ignore taps aimed at a clip we haven't resolved
                             // for THIS card yet.
-                            guard trailerKeyCardId == viewModel.current?.id,
-                                  let trailerKey else { return }
-                            withAnimation(.smooth(duration: 0.2)) { trailerSession.present(trailerKey) }
+                            guard trailerCardId == viewModel.current?.id,
+                                  let trailer else { return }
+                            withAnimation(.smooth(duration: 0.2)) { trailerSession.present(trailer) }
                         }
                     )
                     .transition(.scale.combined(with: .opacity))
@@ -485,28 +485,28 @@ public struct DiscoverTabView: View {
             // The overlay is a different matter: a new card must never keep the
             // previous title's clip playing. Only OUR clip, though — a session
             // restored across a popover reopen belongs to whoever started it.
-            if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
+            if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         }
         guard let item, let foreignId = Int(item.result.foreignId), foreignId > 0 else {
-            withAnimation(.smooth(duration: 0.2)) { trailerKey = nil }
-            trailerKeyCardId = nil
+            withAnimation(.smooth(duration: 0.2)) { trailer = nil }
+            trailerCardId = nil
             return
         }
-        let found: String?
+        let found: TrailerReel?
         switch item.kind {
         case .movie:
-            found = await TrailerProvider.movieTrailerKey(
+            found = await TrailerProvider.movieReel(
                 radarrTrailerId: nil, tmdbId: foreignId, configStore: ConfigStore.shared
             )
         case .show:
-            found = await TrailerProvider.seriesTrailerKey(
+            found = await TrailerProvider.seriesReel(
                 tmdbId: nil, tvdbId: foreignId, configStore: ConfigStore.shared
             )
         }
         // The deck may have moved on while TMDB was answering.
         guard viewModel.current?.id == item.id else { return }
-        trailerKeyCardId = found == nil ? nil : item.id
-        withAnimation(.smooth(duration: 0.2)) { trailerKey = found }
+        trailerCardId = found == nil ? nil : item.id
+        withAnimation(.smooth(duration: 0.2)) { trailer = found }
     }
 
     private var rightDragProgress: CGFloat { max(0, min(1, dragOffset.width / 90)) }

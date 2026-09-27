@@ -20,6 +20,8 @@ public final class TrailerSession: ObservableObject {
     /// YouTube id of the clip on screen (or playing behind a closed popover).
     /// Nil = no trailer up.
     @Published public private(set) var key: String?
+    /// The title's clips the player offers as tiles; `key` is one of them.
+    @Published public private(set) var reel: TrailerReel?
 
     /// The live player, kept so a popover close/reopen re-parents the SAME
     /// web view instead of reloading the clip from zero.
@@ -28,9 +30,22 @@ public final class TrailerSession: ObservableObject {
     /// because coordinators die with the popover's view tree.
     var loadedKey: String?
 
-    public func present(_ key: String) {
-        self.key = key
+    public func present(_ reel: TrailerReel) {
+        self.reel = reel
+        key = reel.featuredKey
         Self.syncInterfaceOrientations()
+    }
+
+    /// Switches the open player to another clip of the same title.
+    func play(_ clip: TrailerClip) {
+        guard key != nil, reel?.clips.contains(clip) == true else { return }
+        key = clip.key
+    }
+
+    /// Whether `reel` is the one up — by title, not by clip, so picking another
+    /// tile doesn't make its surface think the trailer closed.
+    public func isShowing(_ reel: TrailerReel?) -> Bool {
+        reel != nil && self.reel == reel
     }
 
     /// The whole iPhone app is portrait-locked; a playing trailer is the one
@@ -38,16 +53,17 @@ public final class TrailerSession: ObservableObject {
     /// the system re-evaluates when it flips.
     public private(set) static var allowsLandscape = false
 
-    /// The badge's toggle: play, or stop if this clip is already up.
-    public func toggle(_ key: String?) {
-        guard let key else { return }
-        if self.key == key { dismiss() } else { present(key) }
+    /// The badge's toggle: play, or stop if this title's reel is already up.
+    public func toggle(_ reel: TrailerReel?) {
+        guard let reel else { return }
+        if isShowing(reel) { dismiss() } else { present(reel) }
     }
 
     /// Stops playback for real: releasing the web view is NOT enough — WebKit
     /// keeps the media playing until the page goes, so blank it.
     public func dismiss() {
         key = nil
+        reel = nil
         loadedKey = nil
         webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
         webView = nil
@@ -482,9 +498,12 @@ extension View {
                         .onTapGesture {
                             withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                         }
-                    TrailerPlayerCard(key: presented)
-                        .modifier(TrailerStageInsets())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 14) {
+                        TrailerPlayerCard(key: presented)
+                            .modifier(TrailerStageInsets())
+                        TrailerReelStrip(playing: presented)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     LightboxCloseButton(labelKey: "detail.trailerClose.button") {
                         withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                     }
@@ -495,6 +514,92 @@ extension View {
                 .zIndex(9)
             }
         }
+    }
+}
+
+// MARK: - Reel strip
+
+/// The title's other clips as thumbnail tiles under the player. Hidden when
+/// there is only the one clip, and in landscape, where the clip owns the glass.
+private struct TrailerReelStrip: View {
+    let playing: String
+    @ObservedObject private var session = TrailerSession.shared
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
+
+    var body: some View {
+        if let clips = session.reel?.clips, clips.count > 1, !isLandscape {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 10) {
+                        ForEach(clips) { clip in
+                            TrailerClipTile(clip: clip, isPlaying: clip.key == playing) {
+                                withAnimation(.smooth(duration: 0.2)) { session.play(clip) }
+                            }
+                            .id(clip.key)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+                .onAppear { proxy.scrollTo(playing, anchor: .center) }
+                .onChange(of: playing) { _, key in
+                    withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(key, anchor: .center) }
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var isLandscape: Bool {
+        #if os(iOS)
+        verticalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+}
+
+private struct TrailerClipTile: View {
+    let clip: TrailerClip
+    let isPlaying: Bool
+    let action: () -> Void
+
+    private static let thumbnail = CGSize(width: 128, height: 72)
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                RemotePoster(url: clip.thumbnailURL, apiKey: nil, tier: .icon,
+                             size: Self.thumbnail, cornerRadius: 6,
+                             fallbackSymbol: "play.rectangle")
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color.white, lineWidth: isPlaying ? 2 : 0)
+                    }
+                Group {
+                    if let name = clip.name, !name.isEmpty {
+                        Text(verbatim: name)
+                    } else {
+                        Text("detail.trailer.button", bundle: .module)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.white)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+            }
+            .frame(width: Self.thumbnail.width)
+            .opacity(isPlaying ? 1 : 0.7)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isPlaying ? .isSelected : [])
+        #if os(macOS)
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        #endif
     }
 }
 

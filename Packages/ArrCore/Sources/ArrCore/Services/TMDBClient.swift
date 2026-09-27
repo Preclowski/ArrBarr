@@ -109,11 +109,10 @@ nonisolated public extension TMDBTVSummary {
 }
 
 nonisolated public extension TMDBVideo {
-    /// The one clip worth opening, or nil. Ranked rather than filtered: a
-    /// title with only an unofficial teaser should still get a play button.
-    /// YouTube-only because that's the only site we can hand to the OS.
-    static func bestTrailerKey(_ videos: [TMDBVideo]) -> String? {
-        let youTube = videos.filter { ($0.site ?? "YouTube") == "YouTube" && !$0.key.isEmpty }
+    /// Every playable clip, best first. Ranked rather than filtered: a title
+    /// with only an unofficial teaser should still get a play button.
+    /// YouTube-only because that's the only embed we can play.
+    static func rankedYouTube(_ videos: [TMDBVideo]) -> [TMDBVideo] {
         func rank(_ v: TMDBVideo) -> Int {
             switch (v.type, v.official ?? false) {
             case ("Trailer", true):  return 0
@@ -123,8 +122,11 @@ nonisolated public extension TMDBVideo {
             default:                 return 4
             }
         }
-        // `min(by:)` keeps TMDB's own order inside a rank: its first entry is the one the site features.
-        return youTube.min { rank($0) < rank($1) }?.key
+        // Index tiebreak keeps TMDB's own order inside a rank: its first entry is the one the site features.
+        return videos.enumerated()
+            .filter { ($0.element.site ?? "YouTube") == "YouTube" && !$0.element.key.isEmpty }
+            .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
+            .map(\.element)
     }
 }
 

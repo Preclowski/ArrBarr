@@ -180,9 +180,7 @@ public struct iOSAppRoot: View {
             // one clip can ever be playing.
             .trailerOverlay(key: Binding(
                 get: { trailerSession.key },
-                set: { newValue in
-                    if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
-                }
+                set: { if $0 == nil { trailerSession.dismiss() } }
             ))
         }
         // The trailer overlay for the tab tree. The quiz cover carries its own
@@ -193,9 +191,7 @@ public struct iOSAppRoot: View {
         // rotation. While the deck is up, the deck's copy owns the clip.
         .trailerOverlay(key: Binding(
             get: { discoverViewModel.isPresented ? nil : trailerSession.key },
-            set: { newValue in
-                if let newValue { trailerSession.present(newValue) } else { trailerSession.dismiss() }
-            }
+            set: { if $0 == nil { trailerSession.dismiss() } }
         ))
         .fullScreenCover(isPresented: Binding(
             get: { storeManager.gatedFeature != nil },

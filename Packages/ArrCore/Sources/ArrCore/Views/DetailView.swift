@@ -180,10 +180,9 @@ public struct DetailView: View {
     /// overlay on top of the detail surface so it dismisses without
     /// leaving the popover.
     @State private var enlargedPoster: URL?
-    /// YouTube video id of this title's trailer, resolved once the detail
-    /// payload lands. Nil = no chip (no trailer, or no TMDB key for the
+    /// This title's trailers, resolved once the detail payload lands. Nil = no chip (no trailer, or no TMDB key for the
     /// series path).
-    @State private var trailerKey: String?
+    @State private var trailer: TrailerReel?
     /// The clip currently on screen. Presentation lives in the shared
     /// `TrailerSession` (rendered by the surface root), so the clip survives
     /// the popover being closed and reopened mid-play.
@@ -1195,19 +1194,19 @@ public struct DetailView: View {
 
     private func resolveTrailer() async {
         // A new title must not keep the previous one's clip on screen — but
-        // only OUR clip: on a fresh mount `trailerKey` is nil and a session
+        // only OUR clip: on a fresh mount `trailer` is nil and a session
         // restored across a popover reopen must be left alone.
-        if let old = trailerKey, trailerSession.key == old { trailerSession.dismiss() }
-        trailerKey = nil
+        if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
+        trailer = nil
         switch item.source {
         case .radarr, .whisparr:
-            trailerKey = await TrailerProvider.movieTrailerKey(
+            trailer = await TrailerProvider.movieReel(
                 radarrTrailerId: radarrDetail?.youTubeTrailerId,
                 tmdbId: radarrDetail?.tmdbId,
                 configStore: configStore
             )
         case .sonarr:
-            trailerKey = await TrailerProvider.seriesTrailerKey(
+            trailer = await TrailerProvider.seriesReel(
                 tmdbId: sonarrDetail?.tmdbId,
                 tvdbId: sonarrDetail?.tvdbId,
                 configStore: configStore
@@ -1220,11 +1219,11 @@ public struct DetailView: View {
     /// The badge in the poster's corner — only once a clip is actually known,
     /// so it never sits there dead.
     private var trailerBadge: AnyView? {
-        guard let trailerKey else { return nil }
+        guard let trailer else { return nil }
         return AnyView(
-            TrailerPosterBadge(isPlaying: trailerSession.key == trailerKey) {
+            TrailerPosterBadge(isPlaying: trailerSession.isShowing(trailer)) {
                 withAnimation(.smooth(duration: 0.22)) {
-                    trailerSession.toggle(trailerKey)
+                    trailerSession.toggle(trailer)
                 }
             }
         )
