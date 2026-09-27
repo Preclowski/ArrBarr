@@ -61,14 +61,13 @@ final class IndexerNames {
     }
 
     private func prowlarrNames(configStore: ConfigStore) async -> [Int: String] {
-        guard let service = configStore.gateway.prowlarr else { return [:] }
         do {
-            let indexers = try await configStore.gateway.store.read(service.indexers()).value
+            let indexers = try await configStore.prowlarrClient.indexers()
             return indexers.reduce(into: [:]) { out, indexer in
                 if let name = indexer.name, !name.isEmpty { out[indexer.id] = name }
             }
         } catch {
-            // Prowlarr being down only costs us the nicer spelling.
+            // Prowlarr being down (or unconfigured) only costs us the nicer spelling.
             Logger(category: "Indexers").debug("Prowlarr indexer list unavailable: \(error.localizedDescription, privacy: .public)")
             return [:]
         }

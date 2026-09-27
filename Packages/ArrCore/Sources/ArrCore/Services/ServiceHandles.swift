@@ -45,6 +45,8 @@ public extension ConfigStore {
     var lidarrClient: LidarrClient { LidarrClient(config: lidarr) }
     var whisparrClient: WhisparrClient { WhisparrClient(config: whisparr) }
     var tmdbClient: TMDBClient { TMDBClient(apiKey: tmdbApiKey) }
+    /// Configless: the gateway holds Prowlarr's single saved instance.
+    var prowlarrClient: ProwlarrClient { ProwlarrClient() }
     func arrClient(for source: QueueItem.Source) -> any ArrAPIClient { ServiceHandles.arr(source, config: serviceConfig(for: source)) }
     func searchClient(for source: QueueItem.Source) -> SearchClient { SearchClient(config: serviceConfig(for: source), source: source) }
     var mediaServerClient: MediaServerClient? { MediaServerClientFactory.make(config: mediaServer) }

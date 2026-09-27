@@ -526,6 +526,11 @@ public final class ConfigStore: ObservableObject {
             self.prowlarr = cfg
         }
         self.prowlarr.apiKey = secrets.read(.prowlarrKey) ?? self.prowlarr.apiKey
+        // Prowlarr had no Enabled switch before it got its own Settings page,
+        // so a URL typed into the old field pair persisted as `enabled: false`
+        // — which `isConfigured` rejects, leaving the credentials inert.
+        // Anything already pointed at a server counts as on.
+        if !self.prowlarr.enabled, !self.prowlarr.baseURL.isEmpty { self.prowlarr.enabled = true }
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
         // Default-true migration: an absent key means the user never touched
@@ -762,8 +767,7 @@ public final class ConfigStore: ObservableObject {
     /// Settings' "Test connection" for Prowlarr — throws when the server can't
     /// be reached or the key is refused.
     public func testProwlarr() async throws {
-        guard let service = gateway.prowlarr else { throw ProwlarrNotConfigured() }
-        _ = try await gateway.store.read(service.status(), policy: .mustRevalidate).value
+        _ = try await ProwlarrClient().testConnection()
     }
 
     /// Lookup the matching `ServiceConfig` for an arr `Source`. Replaces the

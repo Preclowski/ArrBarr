@@ -67,6 +67,15 @@ public struct ServiceIcon: View {
         self.size = size
     }
 
+    /// Prowlarr has no `ServiceKind` of its own, so its mark is named here
+    /// rather than derived from one. The asset is selfh.st's monochrome line
+    /// art, not the full-colour mascot — it tints like every other mark.
+    public init(prowlarr size: CGFloat) {
+        self.brandName = "prowlarr"
+        self.fallbackSymbol = "magnifyingglass.circle"
+        self.size = size
+    }
+
     public var body: some View {
         if let brandName {
             Image(brandName, bundle: .module)

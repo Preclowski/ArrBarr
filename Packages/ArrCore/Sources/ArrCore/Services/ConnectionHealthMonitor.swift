@@ -1,14 +1,16 @@
 import Foundation
 
 /// Actively probes the services the queue refresh never touches (download
-/// clients + OpenAI + TMDB) by calling each client's existing
+/// clients + Prowlarr + OpenAI + TMDB) by calling each client's existing
 /// `testConnection()`. Throttled so the probe runs at most once per
 /// `minInterval`, since connection health changes rarely and probing every 5s
 /// queue tick would hammer the clients.
 ///
 /// Isolated as an `actor` that only ever sees a `Sendable` `ProbeInputs`
-/// snapshot — it never touches the `@MainActor ConfigStore`. Results come back
-/// as `Sendable` `ProbeOutcome`s for the caller to apply on the main actor.
+/// snapshot — it never reads the `@MainActor ConfigStore` itself (the Prowlarr
+/// probe resolves the shared gateway, the same way every facade does). Results
+/// come back as `Sendable` `ProbeOutcome`s for the caller to apply on the main
+/// actor.
 actor ConnectionHealthMonitor {
     /// A Sendable snapshot of just what the probes need, built on the main actor
     /// and handed across the isolation boundary.
@@ -19,13 +21,19 @@ actor ConnectionHealthMonitor {
         var tmdbKey: String?
         /// Non-nil only when a media server is configured.
         var mediaServer: MediaServerConfig?
+        /// Whether to probe Prowlarr. A flag rather than a config, because
+        /// `ProwlarrClient` talks to the one saved instance the gateway already
+        /// holds — there is no draft to hand across.
+        var prowlarr: Bool
 
         init(clients: [ServiceKind: ServiceConfig] = [:], openai: OpenAIConfig? = nil,
-             tmdbKey: String? = nil, mediaServer: MediaServerConfig? = nil) {
+             tmdbKey: String? = nil, mediaServer: MediaServerConfig? = nil,
+             prowlarr: Bool = false) {
             self.clients = clients
             self.openai = openai
             self.tmdbKey = tmdbKey
             self.mediaServer = mediaServer
+            self.prowlarr = prowlarr
         }
     }
 
@@ -64,6 +72,7 @@ actor ConnectionHealthMonitor {
         if inputs.openai != nil { targets.append(.openai) }
         if inputs.tmdbKey != nil { targets.append(.tmdb) }
         if inputs.mediaServer != nil { targets.append(.mediaServer) }
+        if inputs.prowlarr { targets.append(.prowlarr) }
 
         return await withTaskGroup(of: ProbeOutcome.self) { group in
             for target in targets {
@@ -96,6 +105,12 @@ actor ConnectionHealthMonitor {
                 }
                 try await TMDBClient(apiKey: key).testConnection()
                 return ProbeOutcome(service: service, success: true, detail: nil, message: nil)
+            case .prowlarr:
+                guard inputs.prowlarr else {
+                    return ProbeOutcome(service: service, success: false, detail: nil, message: nil)
+                }
+                let detail = try await ProwlarrClient().testConnection()
+                return ProbeOutcome(service: service, success: true, detail: detail, message: nil)
             case .mediaServer:
                 guard let cfg = inputs.mediaServer,
                       let client = MediaServerClientFactory.make(config: cfg) else {

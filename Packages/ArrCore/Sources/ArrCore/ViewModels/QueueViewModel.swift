@@ -320,6 +320,12 @@ public final class QueueViewModel {
             .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
             .sink { [weak self] _ in self?.reprobe(.mediaServer) }
             .store(in: &intervalObservers)
+        configStore.$prowlarr
+            .dropFirst()
+            .removeDuplicates()
+            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in self?.reprobe(.prowlarr) }
+            .store(in: &intervalObservers)
 
         // A successful "Test Connection" in Settings: refresh now so a freshly-saved key clears any stale per-arr error.
         configValidatedTask = Task { [weak self] in
@@ -817,7 +823,9 @@ public final class QueueViewModel {
         // leave a probe quietly talking to the user's server every minute.
         let mediaServer = (configStore.mediaServer.isConfigured && StoreManager.shared.isPro)
             ? configStore.mediaServer : nil
-        return .init(clients: clients, openai: openai, tmdbKey: tmdb, mediaServer: mediaServer)
+        let prowlarr = MonitoredService.prowlarr.isConfigured(in: configStore)
+        return .init(clients: clients, openai: openai, tmdbKey: tmdb, mediaServer: mediaServer,
+                     prowlarr: prowlarr)
     }
 
     /// "Needs you" rows for the non-arr services currently `.down` (download

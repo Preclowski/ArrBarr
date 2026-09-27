@@ -62,6 +62,9 @@ public struct SettingsView: View {
         case mediaManagers
         case downloadClients
         case service(ServiceKind)
+        /// Prowlarr has no `ServiceKind` (it feeds the managers, it is not a
+        /// queue source), so it gets its own case instead of `.service`.
+        case prowlarr
         case mediaServer
         case assistant
         case quiz
@@ -252,12 +255,19 @@ public struct SettingsView: View {
         }
     }
 
-    /// Prowlarr, in one field pair: ArrBarr asks it exactly one question —
-    /// what an indexer is really called — so manual-search rows can name the
-    /// indexer the way the user named it rather than the way the sync did.
-    private var prowlarrSection: some View {
-        Section {
-            TextField(text: $configStore.prowlarr.baseURL,
+    /// Prowlarr's fields, on its own page like every other service: ArrBarr
+    /// asks it exactly one question — what an indexer is really called — so
+    /// manual-search rows can name the indexer the way the user named it
+    /// rather than the way the sync did. It has no `ServiceKind` (it is not a
+    /// queue source), so the field list is spelled out here instead of coming
+    /// from `ServiceFields`; the shape deliberately matches it.
+    @ViewBuilder
+    private var prowlarrFields: some View {
+        Toggle(isOn: $configStore.prowlarr.enabled) {
+            Text("settings.enabled.button", bundle: .module)
+        }
+        if configStore.prowlarr.enabled {
+            TextField(text: prowlarrURLBinding,
                       prompt: Text(verbatim: "http://192.168.1.10:9696")) {
                 Text("settings.url.label", bundle: .module)
             }
@@ -267,15 +277,81 @@ public struct SettingsView: View {
                 Text("settings.apiKey.button", bundle: .module)
             }
             .apiKeyField()
+            if let reason = prowlarrIncompleteReason {
+                Label {
+                    Text(verbatim: reason)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(.orange)
+            }
             if configStore.prowlarr.isConfigured {
-                ApiKeyTestButton(test: { try await configStore.testProwlarr() })
+                ApiKeyTestButton(test: { try await configStore.testProwlarr() },
+                                 service: .prowlarr)
             }
-        } header: {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass.circle")
-                    .accessibilityHidden(true)
-                Text(verbatim: "Prowlarr")
+        }
+    }
+
+    /// Same sanitising as the arrs: a URL pasted out of Prowlarr's own address
+    /// bar carries its `#/…` hash route, which `URL(string:)` rejects.
+    private var prowlarrURLBinding: Binding<String> {
+        Binding(
+            get: { configStore.prowlarr.baseURL },
+            set: { configStore.prowlarr.baseURL = ServiceFields.sanitizedBaseURL($0) }
+        )
+    }
+
+    private var prowlarrIncompleteReason: String? {
+        guard configStore.prowlarr.enabled else { return nil }
+        if !configStore.prowlarr.isConfigured {
+            return String(localized: "settings.enterAValidUrl.tooltip", bundle: .module)
+        }
+        if configStore.prowlarr.apiKey.isEmpty {
+            return String(localized: "settings.apiKeyIsRequired.tooltip", bundle: .module)
+        }
+        return nil
+    }
+
+    /// The Prowlarr row as it appears in the Media-managers list: same shape as
+    /// an arr card (glyph, name, live health dot) minus the reorder grip. macOS
+    /// draws the drill-in chevron itself; iOS's `NavigationLink` adds one.
+    private var prowlarrRowLabel: some View {
+        HStack(spacing: 10) {
+            #if os(macOS)
+            // The arr cards lead with a reorder grip; Prowlarr has none, so it
+            // reserves the same glyph invisibly — the marks then share a
+            // leading edge at every text size instead of a guessed inset.
+            Image(systemName: "line.3.horizontal")
+                .scaledFont(size: 11)
+                .hidden()
+                .accessibilityHidden(true)
+            #endif
+            ServiceIcon(prowlarr: 18)
+                .accessibilityHidden(true)
+            Text(verbatim: "Prowlarr")
+                .foregroundStyle(.primary)
+            Spacer()
+            if configStore.prowlarr.isConfigured {
+                ConnectionStatusDot(service: .prowlarr)
             }
+            #if os(macOS)
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+            #endif
+        }
+        .contentShape(Rectangle())
+    }
+
+    /// Header for the Prowlarr page — no brand asset ships for it, so the row
+    /// and the header share one SF Symbol.
+    private var prowlarrHeader: some View {
+        HStack(spacing: 6) {
+            ServiceIcon(prowlarr: 12)
+                .accessibilityHidden(true)
+            Text(verbatim: "Prowlarr")
         }
     }
 
@@ -411,6 +487,7 @@ public struct SettingsView: View {
         if case .service(let kind) = section {
             return downloadClientSpecs.contains { $0.kind == kind } ? .downloadClients : .mediaManagers
         }
+        if case .prowlarr = section { return .mediaManagers }
         return section
     }
 
@@ -480,6 +557,8 @@ public struct SettingsView: View {
         let title: String
         let kind: ServiceKind?
         let systemImage: String
+        /// Prowlarr's mark comes from its own asset, not from a `ServiceKind`.
+        var isProwlarr: Bool = false
         var id: SettingsSection { section }
     }
 
@@ -493,6 +572,8 @@ public struct SettingsView: View {
         items += (mediaManagerSpecs + downloadClientSpecs).map {
             .init(section: .service($0.kind), title: $0.title, kind: $0.kind, systemImage: "")
         }
+        items.append(.init(section: .prowlarr, title: "Prowlarr", kind: nil,
+                           systemImage: "", isProwlarr: true))
         items += [
             .init(section: .mediaServer, title: String(localized: "settings.mediaServer.label", bundle: .module), kind: nil, systemImage: "play.tv"),
             .init(section: .assistant, title: String(localized: "settings.assistant.button", bundle: .module), kind: nil, systemImage: "sparkles"),
@@ -521,6 +602,8 @@ public struct SettingsView: View {
         } icon: {
             if let kind = entry.kind {
                 ServiceIcon(kind: kind, size: 14)
+            } else if entry.isProwlarr {
+                ServiceIcon(prowlarr: 14)
             } else {
                 Image(systemName: entry.systemImage)
             }
@@ -569,6 +652,7 @@ public struct SettingsView: View {
         case .mediaManagers: return Text("settings.mediaManagers.button", bundle: .module)
         case .downloadClients: return Text("settings.downloadClients.button", bundle: .module)
         case .service(let kind): return Text(verbatim: kind.displayName)
+        case .prowlarr: return Text(verbatim: "Prowlarr")
         case .mediaServer: return Text("settings.mediaServer.label", bundle: .module)
         case .assistant: return Text("settings.assistant.button", bundle: .module)
         case .quiz: return Text("settings.quiz.label", bundle: .module)
@@ -587,6 +671,7 @@ public struct SettingsView: View {
         case .mediaManagers: serviceHubPane(mediaManagerSpecs, locked: false, reorderable: true)
         case .downloadClients: serviceHubPane(downloadClientSpecs, locked: true)
         case .service(let kind): singleServicePane(for: kind)
+        case .prowlarr: prowlarrPane
         case .mediaServer: MediaServerSettingsPane()
         case .assistant: aiPane
         case .quiz: QuizSettingsPane()
@@ -647,16 +732,21 @@ public struct SettingsView: View {
                     .buttonStyle(.plain)
                 }
                 .onMove(perform: reorderable ? moveMediaManagers : nil)
+                // Prowlarr belongs with the managers it feeds, and rides the
+                // list's last slot — outside the `ForEach`, so it has no
+                // reorder grip and the arrs permute among themselves.
+                if reorderable {
+                    Button {
+                        macSelection = .prowlarr
+                    } label: {
+                        prowlarrRowLabel
+                    }
+                    .buttonStyle(.plain)
+                }
             } footer: {
                 if reorderable {
                     Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
-            }
-            // Prowlarr belongs with the managers it feeds, not with the
-            // discovery keys — but it isn't a queue source, so it sits below
-            // the roster instead of inside it.
-            if reorderable {
-                prowlarrSection
             }
         }
         .formStyle(.grouped)
@@ -688,6 +778,17 @@ public struct SettingsView: View {
                 }
             }
         }
+    }
+
+    /// Prowlarr's own page, reached from the Media Managers hub — same
+    /// one-configuration-per-page shape as `singleServicePane`.
+    private var prowlarrPane: some View {
+        Form {
+            Section {
+                prowlarrFields
+            } header: { prowlarrHeader }
+        }
+        .formStyle(.grouped)
     }
 
     /// Siri & Shortcuts on its own sidebar row (was inlined at the bottom of
@@ -728,9 +829,13 @@ public struct SettingsView: View {
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
             } header: { Text("settings.about.button", bundle: .module) }
+            // Plain rows, no glyphs: these are attribution lines, not actions.
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
-                    Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
+                    Text(verbatim: "Dashboard Icons — CC BY 4.0")
+                }
+                Link(destination: URL(string: "https://selfh.st/icons")!) {
+                    Text(verbatim: "selfh.st Icons — CC BY 4.0")
                 }
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
@@ -875,13 +980,22 @@ public struct SettingsView: View {
                     }
                 }
                 .onMove(perform: reorderable ? moveMediaManagers : nil)
+                // Last slot of the same list, outside the `ForEach`: Prowlarr
+                // feeds the managers but is no queue source, so it has nothing
+                // to reorder against.
+                if reorderable {
+                    NavigationLink {
+                        Form { Section { prowlarrFields } }
+                            .navigationTitle(Text(verbatim: "Prowlarr"))
+                            .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        prowlarrRowLabel
+                    }
+                }
             } footer: {
                 if reorderable {
                     Text("settings.dragToReorderQueue.footer", bundle: .module)
                 }
-            }
-            if reorderable {
-                prowlarrSection
             }
         }
         .navigationTitle(Text(title, bundle: .module))
@@ -962,9 +1076,13 @@ public struct SettingsView: View {
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
             } header: { Text("settings.about.button", bundle: .module) }
+            // Plain rows, no glyphs: these are attribution lines, not actions.
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
-                    Label { Text(verbatim: "Dashboard Icons — CC BY 4.0") } icon: { Image(systemName: "paintpalette") }
+                    Text(verbatim: "Dashboard Icons — CC BY 4.0")
+                }
+                Link(destination: URL(string: "https://selfh.st/icons")!) {
+                    Text(verbatim: "selfh.st Icons — CC BY 4.0")
                 }
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)

@@ -51,7 +51,9 @@ struct ServiceFields: View {
         )
     }
 
-    private static func sanitizedBaseURL(_ raw: String) -> String {
+    /// Internal, not private: Settings' Prowlarr page has no `ServiceKind`
+    /// and so builds its own URL binding, but must sanitise identically.
+    static func sanitizedBaseURL(_ raw: String) -> String {
         var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
         // "http://host:8989/#/activity/queue" → "http://host:8989". The arrs
         // are hash-routed SPAs, so every URL the user can see in their browser

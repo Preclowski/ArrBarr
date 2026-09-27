@@ -298,6 +298,7 @@ public final class ServiceGateway {
         case .arr(let kind): kit.health(of: kind.instanceID)
         case .tmdb: kit.health(of: InstanceID(.tmdb))
         case .mediaServer: kit.health(of: configStore.mediaServer.kind.instanceID)
+        case .prowlarr: kit.health(of: InstanceID(.prowlarr))
         case .openai: .unknown
         }
     }
@@ -380,7 +381,8 @@ public final class ServiceGateway {
         return kit.mediaServer(configStore.mediaServer.kind.instanceID)
     }
     public nonisolated var tmdb: TMDBService { kit.tmdb }
-    public var prowlarr: ProwlarrService? {
+    /// Internal: `ProwlarrClient` is the door, the way `servarr` is for the arrs.
+    var prowlarr: ProwlarrService? {
         configStore.prowlarr.isConfigured ? kit.prowlarr : nil
     }
     public nonisolated var store: ResourceStore { kit.store }

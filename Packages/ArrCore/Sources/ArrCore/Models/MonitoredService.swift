@@ -2,13 +2,17 @@ import Foundation
 
 /// One target of the unified connection-health system. Wraps every
 /// `ServiceKind` (the 4 arrs + 6 download clients) and adds the two AI services
-/// (OpenAI, TMDB) that have no `ServiceKind` of their own. Kept separate from
+/// (OpenAI, TMDB) plus Prowlarr, none of which has a `ServiceKind`. Kept separate from
 /// `ServiceKind` so the arr/download semantics there (and its many `.allCases`
 /// iterations) stay untouched.
 nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
     case arr(ServiceKind)
     case openai
     case tmdb
+    /// Prowlarr. No `ServiceKind` of its own (it feeds the managers rather than
+    /// the queue), and nothing fetches from it on the queue cycle, so its dot
+    /// comes from the probe sweep like the download clients'.
+    case prowlarr
     /// The one connected media server (Plex / Jellyfin / Emby). Which server it
     /// is lives in `ConfigStore.mediaServer`, not in the case — there is only
     /// ever one, and a per-kind case would imply otherwise.
@@ -22,13 +26,13 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
     /// Every monitored target, arrs first (declaration order) then download
     /// clients, then the AI services.
     public static var allCases: [MonitoredService] {
-        ServiceKind.allCases.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
+        ServiceKind.allCases.map { .arr($0) } + [.prowlarr, .mediaServer, .openai, .tmdb]
     }
 
     /// Targets that are NOT live-fetched by the queue refresh and therefore
-    /// require their own probe: the download clients + the AI services.
+    /// require their own probe: the download clients, Prowlarr, the AI services.
     public static var probeTargets: [MonitoredService] {
-        downloadClientKinds.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
+        downloadClientKinds.map { .arr($0) } + [.prowlarr, .mediaServer, .openai, .tmdb]
     }
 
     public var id: String {
@@ -36,6 +40,7 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return "arr.\(kind.rawValue)"
         case .openai: return "openai"
         case .tmdb: return "tmdb"
+        case .prowlarr: return "prowlarr"
         case .mediaServer: return "mediaServer"
         }
     }
@@ -45,6 +50,7 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return kind.displayName
         case .openai: return "OpenAI"
         case .tmdb: return "TMDB"
+        case .prowlarr: return "Prowlarr"
         // Named generically because the case is: the row's detail line carries
         // the version the handshake reported ("Plex 1.40.2"), which says which
         // server it is more precisely than a stale display name could.
@@ -74,6 +80,8 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
             return store.openai.isConfigured
         case .tmdb:
             return !store.tmdbApiKey.isEmpty
+        case .prowlarr:
+            return store.prowlarr.isConfigured && !store.prowlarr.apiKey.isEmpty
         case .mediaServer:
             return store.mediaServer.isConfigured
         }

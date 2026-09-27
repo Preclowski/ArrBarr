@@ -85,6 +85,7 @@ struct ServerStatusView: View {
             case .tmdb:   brandMark("brand-tmdb")
             case .mediaServer:
                 ServiceIcon(mediaServer: ConfigStore.shared.mediaServer.kind, size: 16)
+            case .prowlarr: ServiceIcon(prowlarr: 16)
             case .arr:    EmptyView()
             }
         }
