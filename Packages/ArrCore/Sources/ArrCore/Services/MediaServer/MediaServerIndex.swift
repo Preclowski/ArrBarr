@@ -222,7 +222,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             lock.withLock { if pending?.config == config { pending = nil } }
             return nil
         }
-        let snapshot = Snapshot(tags: Self.tags(scope.instance), initial: State(), store: scope.store,
+        let snapshot = Snapshot(tags: Self.tags(scope.instance), initial: State(), store: scope.store, settle: .milliseconds(500),
                                 didRebuild: { [weak self] in self?.announceIfPostersChanged($0) }) { _ in
             await Self.state(facade)
         }
