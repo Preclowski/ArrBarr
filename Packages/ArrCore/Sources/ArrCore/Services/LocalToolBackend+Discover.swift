@@ -43,7 +43,8 @@ extension LocalToolBackend {
             if quizEarlyPipeline == nil {
                 quizEarlyPipeline = pipeline
                 if fromTMDB {
-                    await pipeline.feed(await nowPicks(kind: kind), isFinal: true)
+                    // The tool call below reports a TMDB failure; the early pipeline just starts empty.
+                    await pipeline.feed((try? await nowPicks(kind: kind)) ?? [], isFinal: true)
                     return
                 }
             }
@@ -104,7 +105,9 @@ extension LocalToolBackend {
             guard tmdbEnabled else {
                 return ToolCallOutput(text: "ERROR: source 'now' needs TMDB, which isn't configured. Tell the user you can't see what is in cinemas or airing today — do NOT build this deck from memory, your training data predates it.")
             }
-            items = await nowPicks(kind: kind)
+            do { items = try await nowPicks(kind: kind) } catch {
+                return ToolCallOutput(text: "ERROR: couldn't reach TMDB (\(error.userFacingMessage)). Tell the user; do NOT build this deck from memory.")
+            }
             guard !items.isEmpty else {
                 return ToolCallOutput(text: "TMDB lists nothing \(kind == "movie" ? "in cinemas" : "airing") right now. Tell the user; do not substitute older titles.")
             }
@@ -427,11 +430,11 @@ extension LocalToolBackend {
     /// older Sonarr searches the literal text; otherwise the title decides.
     nonisolated static func matchedMovie(_ pick: QuizDeckPipeline.Pick, client: RadarrClient) async -> ArrMovie? {
         if let id = pick.tmdbId,
-           let hit = ((try? await client.lookupMovies(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
+           let hit = ((await Self.discoverLog.attempt("quiz movie lookup", { try await client.lookupMovies(term: "tmdb:\(id)") })) ?? []).first(where: { $0.tmdbId == id }) {
             return hit
         }
         return await matchedHit(title: pick.title, year: pick.year,
-                                lookup: { (try? await client.lookupMovies(term: $0)) ?? [] },
+                                lookup: { term in (await Self.discoverLog.attempt("quiz movie lookup", { try await client.lookupMovies(term: term) })) ?? [] },
                                 candidate: { hit in
                                     PickMatcher.Candidate(titles: [hit.title, hit.originalTitle].compactMap { $0 }
                                                             + (hit.alternateTitles ?? []).compactMap(\.title),
@@ -441,11 +444,11 @@ extension LocalToolBackend {
 
     nonisolated static func matchedSeries(_ pick: QuizDeckPipeline.Pick, client: SonarrClient) async -> ArrSeries? {
         if let id = pick.tmdbId,
-           let hit = ((try? await client.lookupSeries(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
+           let hit = ((await Self.discoverLog.attempt("quiz series lookup", { try await client.lookupSeries(term: "tmdb:\(id)") })) ?? []).first(where: { $0.tmdbId == id }) {
             return hit
         }
         return await matchedHit(title: pick.title, year: pick.year,
-                                lookup: { (try? await client.lookupSeries(term: $0)) ?? [] },
+                                lookup: { term in (await Self.discoverLog.attempt("quiz series lookup", { try await client.lookupSeries(term: term) })) ?? [] },
                                 candidate: { hit in
                                     PickMatcher.Candidate(titles: [hit.title] + (hit.alternateTitles ?? []).compactMap(\.title),
                                                           year: hit.year, votes: hit.ratings?.votes)
@@ -466,14 +469,14 @@ extension LocalToolBackend {
         return PickMatcher.bestIndex(title: title, year: year, in: bare.map(candidate)).map { bare[$0] }
     }
 
-    private func nowPicks(kind: String) async -> [QuizDeckPipeline.Pick] {
+    private func nowPicks(kind: String) async throws -> [QuizDeckPipeline.Pick] {
         let tmdb = tmdbClient
         if kind == "movie" {
             // The user's country, not the app language: "in cinemas" is a place.
             let region = Locale.current.region?.identifier
-            return ((try? await tmdb.moviesInCinemas(region: region)) ?? []).map { ($0.title, $0.year, $0.id) }
+            return try await tmdb.moviesInCinemas(region: region).map { ($0.title, $0.year, $0.id) }
         }
-        return ((try? await tmdb.seriesOnAir()) ?? []).map { ($0.name, $0.year, $0.id) }
+        return try await tmdb.seriesOnAir().map { ($0.name, $0.year, $0.id) }
     }
 
     nonisolated static func swipeMedia(_ kind: String) -> SwipeSignal.Media {

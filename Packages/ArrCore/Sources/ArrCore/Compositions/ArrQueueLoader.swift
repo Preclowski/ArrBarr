@@ -1,8 +1,10 @@
 import Foundation
+import os
 import MediaKit
 
 /// Queue rows plus the side loads a row needs: entity details (title, poster, ids) and the existing file for the upgrade diff.
 enum ArrQueueLoader {
+    nonisolated private static let log = Logger(category: "QueueFetch")
     /// A live stream's failed fetch, with the revision it was published under.
     struct LiveFailure: Error {
         let underlying: any Error
@@ -84,17 +86,17 @@ enum ArrQueueLoader {
                 group.addTask {
                     switch source {
                     case .radarr, .whisparr:
-                        guard let m = try? await store.read(service.movie(id: id), priority: .background).value else { return (id, nil) }
+                        guard let m = await log.attempt("queue movie metadata", { try await store.read(service.movie(id: id), priority: .background).value }) else { return (id, nil) }
                         let keys = source == .radarr ? m.mediaServerKeys : []
                         let (poster, auth) = (m.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
                         return (id, .init(title: m.title, year: m.year, slug: m.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
                     case .sonarr:
-                        guard let s = try? await store.read(service.seriesDetails(id: id), priority: .background).value else { return (id, nil) }
+                        guard let s = await log.attempt("queue series metadata", { try await store.read(service.seriesDetails(id: id), priority: .background).value }) else { return (id, nil) }
                         let keys = s.mediaServerKeys
                         let (poster, auth) = (s.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
                         return (id, .init(title: s.title, year: s.year, slug: s.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
                     case .lidarr:
-                        guard let a = try? await store.read(service.album(id: id), priority: .background).value else { return (id, nil) }
+                        guard let a = await log.attempt("queue album metadata", { try await store.read(service.album(id: id), priority: .background).value }) else { return (id, nil) }
                         let (poster, auth) = a.coverURL(baseURL: baseURL)
                         return (id, .init(title: a.title, secondary: a.artist?.artistName, slug: a.foreignAlbumId, poster: poster, posterRequiresAuth: auth))
                     }

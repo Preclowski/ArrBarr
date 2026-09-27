@@ -1,4 +1,5 @@
 import Foundation
+import os
 import UserNotifications
 
 nonisolated public extension QueueItem.Source {
@@ -52,6 +53,7 @@ struct RunLoopCoalescerScheduler: CoalescerScheduler {
 /// Groups queue-event notifications. Movies/music fire the first grab at once and
 /// batch the tail; series hold the first grab so a season search's per-episode grabs join it.
 public final class NotificationCoalescer {
+    nonisolated private static let log = Logger(category: "Notifications")
     /// Multi-item batches: only "Open in browser", since one tap can't
     /// meaningfully pause/remove a batch.
     public static let categoryIdentifier = "ARRBARR_QUEUE_EVENT"
@@ -357,7 +359,7 @@ public final class NotificationCoalescer {
 
             let req = UNNotificationRequest(
                 identifier: identifier, content: content, trigger: nil)
-            try? await UNUserNotificationCenter.current().add(req)
+            _ = await Self.log.attempt("posting a notification", level: .error) { try await UNUserNotificationCenter.current().add(req) }
         }
     }
 

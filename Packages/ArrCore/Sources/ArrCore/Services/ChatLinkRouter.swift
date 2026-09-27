@@ -51,7 +51,7 @@ enum ChatLinkRouter {
 
         for (source, config) in candidates where config.isConfigured {
             let client = SearchClient(config: config, source: source)
-            guard let result = try? await client.lookup(input: .ref(ref)).first else { continue }
+            guard let result = await log.attempt("chat link lookup", { try await client.lookup(input: .ref(ref)) })?.first else { continue }
             let owned = await libraryOwnership(for: ref, source: source, config: config)
             // Read back after a wrong-link report: ids and arr public, the resolved title private.
             log.notice("""

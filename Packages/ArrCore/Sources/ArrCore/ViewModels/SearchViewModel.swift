@@ -201,7 +201,7 @@ public final class SearchViewModel {
         async let s = fetchOne(client: effective.allows(.sonarr) ? client(for: .sonarr) : nil, generation: generation)
         async let l = fetchOne(client: effective.allows(.lidarr) ? client(for: .lidarr) : nil, generation: generation)
         async let w = fetchOne(client: effective.allows(.whisparr) ? client(for: .whisparr) : nil, generation: generation)
-        async let p = fetchPeople(scope: effective)
+        async let p = fetchPeople(scope: effective, generation: generation)
         let (rRes, sRes, lRes, wRes, pRes) = await (r, s, l, w, p)
 
         // Superseded: drop the results but leave `isSearching` on, so the loader stays continuous.
@@ -250,13 +250,20 @@ public final class SearchViewModel {
         isSearching = false
     }
 
-    private func fetchPeople(scope: SearchScope) async -> (rows: [TMDBPerson], starring: StarringSection?) {
+    private func fetchPeople(scope: SearchScope, generation: Int) async -> (rows: [TMDBPerson], starring: StarringSection?) {
         guard scope.searchesPeople, !tmdbApiKey.isEmpty else { return ([], nil) }
         let term = peoplePrefixTerm ?? query.trimmingCharacters(in: .whitespaces)
         guard term.count >= 2 else { return ([], nil) }
-        let raw = DemoMode.isActive
-            ? DemoMocks.searchPeople(query: term)
-            : (try? await ServiceHandles.tmdb(apiKey: tmdbApiKey).searchPerson(query: term)) ?? []
+        let raw: [TMDBPerson]
+        if DemoMode.isActive {
+            raw = DemoMocks.searchPeople(query: term)
+        } else {
+            do { raw = try await ServiceHandles.tmdb(apiKey: tmdbApiKey).searchPerson(query: term) } catch {
+                // In the people scope the list is the whole screen; elsewhere it is only the Starring extra.
+                if scope == .people, searchGeneration == generation { errorMessage = error.userFacingMessage }
+                return ([], nil)
+            }
+        }
         let ranked = PersonRelevance.rank(raw, query: term)
         if scope == .people {
             return (ranked, nil)
@@ -268,11 +275,11 @@ public final class SearchViewModel {
             return ([], nil)
         }
         // Series as the fallback: a TV-only actor has a thin-to-empty movie list.
-        var titles = await People.movieFilmography(
-            personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)
+        var titles = (try? await People.movieFilmography(
+            personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)) ?? []
         if titles.isEmpty {
-            titles = await People.seriesFilmography(
-                personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty)
+            titles = (try? await People.seriesFilmography(
+                personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty)) ?? []
         }
         guard isFullName || !titles.isEmpty else { return ([], nil) }
         return ([], StarringSection(person: top, titles: Array(titles.prefix(8)),
@@ -293,12 +300,11 @@ public final class SearchViewModel {
                 map[result.externalId].map(result.withLibraryOwnership) ?? result
             }
         } catch {
-            // A superseded keystroke cancelled this lookup; `HTTPClient` rethrows
-            // `CancellationError` bare and URLSession reports `URLError.cancelled`.
+            // A superseded keystroke cancelled this lookup.
             if error is CancellationError || (error as? URLError)?.code == .cancelled {
                 return []
             }
-            if searchGeneration == generation { errorMessage = error.localizedDescription }
+            if searchGeneration == generation { errorMessage = error.userFacingMessage }
             return []
         }
     }

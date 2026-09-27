@@ -1,8 +1,10 @@
 import Foundation
+import os
 import MediaKit
 
 /// The upcoming list outside the app's queue: the Up Next widget and the calendar tool.
 public actor UpcomingService {
+    nonisolated private static let log = Logger(category: "Widget")
     public init() {}
 
     public func upcoming(
@@ -23,7 +25,7 @@ public actor UpcomingService {
         var all: [UpcomingItem] = []
         for source in sources {
             let base = ServiceGateway.demoURL(source.serviceKind.instanceKind).absoluteString
-            all += (try? await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base)) ?? []
+            all += await log.attempt("demo calendar") { try await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base) } ?? []
         }
         await gateway.kit.stop()
         return curate(all, limit: limit)

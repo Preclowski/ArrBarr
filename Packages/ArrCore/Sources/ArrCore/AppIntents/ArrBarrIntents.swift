@@ -24,15 +24,18 @@ enum ArrIntentSupport {
         )
     }
 
+    /// nil when the servers didn't answer: Siri must not turn an outage into "nothing is downloading".
     private static func call(_ name: String) async -> ToolCallOutput? {
         let backend = await MainActor.run { makeBackend() }
         return try? await backend.callTool(name: name, arguments: .object([:]))
     }
 
+    private static var unreachable: String { String(localized: "intents.unreachable", bundle: .module) }
+
     /// e.g. "3 downloads. Ran at 100%, The Next Karate Kid at 80%, and 1 more."
     static func queueSummary() async -> String {
-        guard case .downloadQueue(let items)? = await call("list_download_queue")?.rich,
-              !items.isEmpty else {
+        guard let output = await call("list_download_queue") else { return unreachable }
+        guard case .downloadQueue(let items)? = output.rich, !items.isEmpty else {
             return String(localized: "Nothing is downloading right now.", bundle: .module)
         }
         let top = items.prefix(3).map {
@@ -53,7 +56,8 @@ enum ArrIntentSupport {
 
     /// e.g. "Coming up: Severance S2E3 tomorrow, Dune in 3 days."
     static func upcomingSummary() async -> String {
-        guard case .calendar(let items)? = await call("get_calendar")?.rich else {
+        guard let output = await call("get_calendar") else { return unreachable }
+        guard case .calendar(let items)? = output.rich else {
             return String(localized: "Nothing is coming up soon.", bundle: .module)
         }
         // The feed can include past-dated entries (an old cinema date).
@@ -89,22 +93,8 @@ enum ArrIntentSupport {
         return items
     }
 
-    /// Mirrors QueueRowView.canControl.
-    @MainActor
-    static func canControl(_ item: QueueItem, _ cs: ConfigStore) -> Bool {
-        switch item.downloadProtocol {
-        case .usenet:
-            return (cs.sabnzbd.isConfigured && !cs.sabnzbd.apiKey.isEmpty) || cs.nzbget.isConfigured
-        case .torrent:
-            return cs.qbittorrent.isConfigured || cs.transmission.isConfigured
-                || cs.rtorrent.isConfigured || cs.deluge.isConfigured
-        case .unknown:
-            return false
-        }
-    }
-
     static func healthSummary() async -> String {
-        let text = await call("health")?.text ?? ""
+        guard let text = await call("health")?.text else { return unreachable }
         guard !text.isEmpty else { return String(localized: "No services are configured.", bundle: .module) }
         let lines = text
             .split(separator: "\n")
@@ -157,7 +147,7 @@ public struct PauseAllDownloadsIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .downloading && ArrIntentSupport.canControl($0, ConfigStore.shared) }
+            items.filter { $0.status == .downloading && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
         }
         for item in targets { await QueueViewModel.shared.pause(item) }
         let msg = targets.isEmpty
@@ -177,7 +167,7 @@ public struct ResumeAllDownloadsIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .paused && ArrIntentSupport.canControl($0, ConfigStore.shared) }
+            items.filter { $0.status == .paused && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
         }
         for item in targets { await QueueViewModel.shared.resume(item) }
         let msg = targets.isEmpty

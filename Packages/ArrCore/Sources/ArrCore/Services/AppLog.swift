@@ -23,6 +23,16 @@ nonisolated public extension URL {
     }
 }
 
+nonisolated extension Logger {
+    /// `try?` that leaves a trace: the value, or nil with the reason logged. `what` is a fixed label, never user data.
+    func attempt<T>(_ what: StaticString, level: OSLogType = .debug, _ body: () async throws -> T) async -> T? {
+        do { return try await body() } catch is CancellationError { return nil } catch {
+            log(level: level, "\(String(describing: what), privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            return nil
+        }
+    }
+}
+
 /// Timings go here, not into log lines. Compiled out of the measurement path when nothing records.
 nonisolated enum AppSignpost {
     static let queue = OSSignposter(subsystem: AppLog.subsystem, category: "QueueFetch")

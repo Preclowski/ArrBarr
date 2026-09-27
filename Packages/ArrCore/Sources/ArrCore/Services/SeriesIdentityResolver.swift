@@ -63,7 +63,7 @@ enum SeriesIdentityResolver {
 
         let fingerprint = sonarrConfig.identityFingerprint
         if acceptsTMDBTerm[fingerprint] != false {
-            let candidates = (try? await client.lookup(query: MediaRef.tmdbTV(tmdbTVId).lookupTerm)) ?? []
+            let candidates = await log.attempt("sonarr tmdb: lookup", level: .default) { try await client.lookup(query: MediaRef.tmdbTV(tmdbTVId).lookupTerm) } ?? []
             if let hit = candidates.first(where: { $0.tmdbTVId == tmdbTVId && $0.externalId > 0 }) {
                 acceptsTMDBTerm[fingerprint] = true
                 logResolution(tmdbTVId, hit, via: "sonarr tmdb: term")
@@ -99,7 +99,7 @@ enum SeriesIdentityResolver {
     /// The only TMDB request this type makes, for titles that missed the cheaper routes.
     private static func externalTVDBId(tmdbTVId: Int, tmdbKey: String) async -> Int? {
         guard !tmdbKey.isEmpty,
-              let tvdb = try? await TMDBClient(apiKey: tmdbKey).tvdbIdFromTVId(tmdbTVId),
+              let tvdb = await log.attempt("TMDB external ids", level: .default, { try await TMDBClient(apiKey: tmdbKey).tvdbIdFromTVId(tmdbTVId) }) ?? nil,
               tvdb > 0
         else { return nil }
         return tvdb
@@ -107,7 +107,7 @@ enum SeriesIdentityResolver {
 
     /// A mismatch means something odd came back; nothing is better.
     private static func lookupTVDB(_ tvdbId: Int, client: SearchClient) async -> SearchResult? {
-        let candidates = (try? await client.lookup(input: .ref(.tvdb(tvdbId)))) ?? []
+        let candidates = await log.attempt("sonarr tvdb: lookup", level: .default) { try await client.lookup(input: .ref(.tvdb(tvdbId))) } ?? []
         return candidates.first { $0.externalId == tvdbId }
     }
 

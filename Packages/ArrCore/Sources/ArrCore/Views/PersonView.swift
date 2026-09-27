@@ -46,6 +46,8 @@ struct PersonView: View {
     @State private var seriesRows: [SearchResult] = []
     /// Both load up front so switching tabs needs no fetch and the counts are known.
     @State private var filmographyLoading = true
+    /// Why the page is empty when TMDB didn't answer; distinct from a person with no credits.
+    @State private var loadError: String?
     @State private var kind: Kind = .movie
     @State private var enlargedPoster: URL?
     /// Local pushes: routing through the root `DetailRequest` tears the stack down, so back lands on the wrong tab.
@@ -102,6 +104,17 @@ struct PersonView: View {
                     let rows = kind == .movie ? movieRows : seriesRows
                     if filmographyLoading && rows.isEmpty {
                         SkeletonRows(count: 6).padding(.horizontal, 12)
+                    } else if let loadError, rows.isEmpty {
+                        VStack(spacing: 10) {
+                            Text(verbatim: loadError)
+                                .scaledFont(size: 12)
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button { Task { await loadInitial() } } label: { Text("common.retry.button", bundle: .module) }
+                                .modifier(GlassButtonStyle())
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
                     } else if rows.isEmpty {
                         Text("person.noTitles.label", bundle: .module)
                             .scaledFont(size: 12)
@@ -326,17 +339,23 @@ struct PersonView: View {
 
     private func loadInitial() async {
         let key = configStore.tmdbApiKey
-        async let d = People.details(personId: ref.tmdbId, tmdbKey: key)
-        async let m = People.movieFilmography(
-            personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
-        async let s = People.seriesFilmography(
-            personId: ref.tmdbId, tmdbKey: key, sonarrConfig: configStore.sonarr)
-        details = await d
-        detailsLoading = false
-        Self.warnIfIdentityDisagrees(ref: ref, details: details)
-        movieRows = await m
-        seriesRows = await s
-        filmographyLoading = false
+        loadError = nil
+        detailsLoading = true
+        filmographyLoading = true
+        defer { detailsLoading = false; filmographyLoading = false }
+        do {
+            async let d = People.details(personId: ref.tmdbId, tmdbKey: key)
+            async let m = People.movieFilmography(
+                personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
+            async let s = People.seriesFilmography(
+                personId: ref.tmdbId, tmdbKey: key, sonarrConfig: configStore.sonarr)
+            details = try await d
+            Self.warnIfIdentityDisagrees(ref: ref, details: details)
+            (movieRows, seriesRows) = try await (m, s)
+        } catch {
+            Self.identityLog.error("person \(ref.tmdbId, privacy: .public) failed to load: \(error.localizedDescription, privacy: .public)")
+            loadError = String(format: String(localized: "Couldn't load details: %@", bundle: .module), error.userFacingMessage)
+        }
     }
 }
 

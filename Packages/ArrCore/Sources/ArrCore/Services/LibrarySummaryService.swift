@@ -1,8 +1,10 @@
 import Foundation
+import os
 
 /// Extension-safe: builds the arr clients directly rather than `LocalToolBackend`,
 /// which is too heavy for a widget's memory budget.
 public actor LibrarySummaryService {
+    nonisolated private static let log = Logger(category: "Widget")
     public init() {}
 
     /// A service that errors is omitted; the caller renders it as a stale row.
@@ -37,6 +39,7 @@ public actor LibrarySummaryService {
         // isVisible, not isConfigured: a keyless arr would 401 and leave a blank widget
         // instead of the "Set up a server" state.
         guard config.isVisible else { return nil }
-        return try? await body(config)
+        // The widget has no other diagnostics, so a failed source is kept at notice.
+        return await log.attempt("library summary", level: .default) { try await body(config) }
     }
 }

@@ -133,6 +133,14 @@ struct ServerStatusView: View {
                     diskRow(disk)
                 }
             }
+            ForEach(status.failures, id: \.kind) { failure in
+                Label {
+                    Text("status.diskSpaceFailed \(failure.kind.displayName) \(failure.message)", bundle: .module)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                }
+            }
         } header: {
             Text("status.storage.header", bundle: .module)
         }

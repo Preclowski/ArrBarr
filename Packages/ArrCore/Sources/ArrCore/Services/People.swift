@@ -11,17 +11,18 @@ enum People {
 
     // MARK: - Public API
 
-    /// nil without a TMDB key or on a failed lookup.
-    static func details(personId: Int, tmdbKey key: String) async -> TMDBPersonDetails? {
+    /// nil without a TMDB key; a failed lookup throws.
+    static func details(personId: Int, tmdbKey key: String) async throws -> TMDBPersonDetails? {
         if DemoMode.isActive { return DemoMocks.personDetails(personId: personId) }
         guard !key.isEmpty else { return nil }
-        return try? await TMDBClient(apiKey: key).personDetails(personId: personId)
+        return try await TMDBClient(apiKey: key).personDetails(personId: personId)
     }
 
     /// Popularity-desc, year-desc, the same order the chat credits tools use.
-    static func movieFilmography(personId: Int, tmdbKey key: String, radarrConfig: ServiceConfig) async -> [SearchResult] {
+    static func movieFilmography(personId: Int, tmdbKey key: String, radarrConfig: ServiceConfig) async throws -> [SearchResult] {
         if DemoMode.isActive { return DemoMocks.personMovies(personId: personId) }
-        guard !key.isEmpty, let credits = try? await TMDBClient(apiKey: key).personMovieCredits(personId: personId) else { return [] }
+        guard !key.isEmpty else { return [] }
+        let credits = try await TMDBClient(apiKey: key).personMovieCredits(personId: personId)
         let libraryMap = await ArrLibraryMaps.radarrByTMDBId(config: radarrConfig)
         let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
         return TMDBSearchMapping.movies(PersonCreditMerge.byPopularity(merged.credits), libraryMap: libraryMap, roles: merged.roles)
@@ -29,9 +30,10 @@ enum People {
 
     /// The tvdbId a row needs is resolved on tap by `SeriesIdentityResolver`, never here,
     /// so a filmography costs one credits call.
-    static func seriesFilmography(personId: Int, tmdbKey key: String, sonarrConfig: ServiceConfig) async -> [SearchResult] {
+    static func seriesFilmography(personId: Int, tmdbKey key: String, sonarrConfig: ServiceConfig) async throws -> [SearchResult] {
         if DemoMode.isActive { return DemoMocks.personSeries(personId: personId) }
-        guard !key.isEmpty, let credits = try? await TMDBClient(apiKey: key).personTVCredits(personId: personId) else { return [] }
+        guard !key.isEmpty else { return [] }
+        let credits = try await TMDBClient(apiKey: key).personTVCredits(personId: personId)
         // Ownership by TMDB id off the shared `LibraryIndex`, never by title + year.
         let libraryMap = await ArrLibraryMaps.sonarrByTMDBId(config: sonarrConfig)
         let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])

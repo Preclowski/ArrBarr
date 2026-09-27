@@ -2357,6 +2357,48 @@
         }
       }
     },
+    "intents.unreachable": {
+      "comment": "Siri / Shortcuts answer when ArrBarr could not reach the user's servers.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't reach your servers."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się połączyć z Twoimi serwerami."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deine Server sind nicht erreichbar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo conectar con tus servidores."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de joindre tes serveurs."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je servers zijn niet bereikbaar."
+          }
+        }
+      }
+    },
     "It will be sent to your download client.": {
       "extractionState": "manual",
       "localizations": {
@@ -5285,6 +5327,48 @@
           "stringUnit": {
             "state": "translated",
             "value": "Status"
+          }
+        }
+      }
+    },
+    "status.diskSpaceFailed %@ %@": {
+      "comment": "Settings → Status row when an arr's /diskspace request failed. First %@ is the service name, second the reason.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't read disk space from %@: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się odczytać miejsca na dysku z %@: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speicherplatz von %@ konnte nicht gelesen werden: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo leer el espacio en disco de %@: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impossible de lire l’espace disque de %@ : %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kon de schijfruimte van %@ niet lezen: %@"
           }
         }
       }

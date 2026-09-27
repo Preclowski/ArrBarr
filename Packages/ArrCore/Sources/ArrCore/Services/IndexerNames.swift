@@ -9,7 +9,7 @@ enum IndexerNames {
 
     static func names(for source: QueueItem.Source, configStore: ConfigStore) async -> [Int: String] {
         let client = configStore.arrClient(for: source)
-        guard let definitions = try? await client.fetchIndexers() else { return [:] }
+        guard let definitions = await log.attempt("indexer list", { try await client.fetchIndexers() }) else { return [:] }
         let prowlarrNames = await prowlarrNames(configStore: configStore)
         var out: [Int: String] = [:]
         for definition in definitions {

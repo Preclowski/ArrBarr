@@ -49,7 +49,10 @@ extension LocalToolBackend {
 
     /// Movie cast from Radarr's `/credit` — no TMDB key needed.
     private func movieCast(movieId: Int) async -> CastSection {
-        let credits = (try? await radarrClient.fetchCredits(movieId: movieId)) ?? []
+        let credits: [ArrCredit]
+        do { credits = try await radarrClient.fetchCredits(movieId: movieId) } catch {
+            return ("\n\nCast: couldn't load (\(error.userFacingMessage)).", [])
+        }
         // Same ordering the detail surfaces render, so chat and detail agree on top billing.
         let members = CastMember.from(radarrCredits: credits)
         guard !members.isEmpty else { return ("\n\nCast: (Radarr returned none).", []) }
@@ -64,10 +67,11 @@ extension LocalToolBackend {
         guard let tmdbId, tmdbId > 0 else {
             return ("\n\nCast: unavailable — TMDB id not found for this series.", [])
         }
-        guard let credits = try? await tmdbClient.tvCredits(tvId: tmdbId),
-              !credits.cast.isEmpty else {
-            return ("\n\nCast: (TMDB returned none).", [])
+        let credits: TMDBCredits
+        do { credits = try await tmdbClient.tvCredits(tvId: tmdbId) } catch {
+            return ("\n\nCast: couldn't load (\(error.userFacingMessage)).", [])
         }
+        guard !credits.cast.isEmpty else { return ("\n\nCast: (TMDB returned none).", []) }
         let members = CastMember.from(tmdbCast: credits.cast)
         return (Self.castText(members), members)
     }

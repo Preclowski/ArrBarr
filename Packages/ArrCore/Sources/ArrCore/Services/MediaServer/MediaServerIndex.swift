@@ -173,7 +173,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
 
     private func build(_ config: MediaServerConfig) async -> Live? {
         let facade = MediaServerFacade(config: config)
-        guard let scope = try? await facade.scope() else {
+        guard let scope = await Self.log.attempt("media server scope", { try await facade.scope() }) else {
             lock.withLock { if pending?.config == config { pending = nil } }
             return nil
         }
@@ -221,7 +221,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
     }
 
     private static func state(_ facade: MediaServerFacade) async -> State {
-        guard let index = try? await facade.libraryIndex(policy: .staleWhileRevalidate) else {
+        guard let index = await Self.log.attempt("media server index", { try await facade.libraryIndex(policy: .staleWhileRevalidate) }) else {
             log.debug("Media server index has no library rows yet")
             return State()
         }

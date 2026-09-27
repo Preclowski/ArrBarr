@@ -7,6 +7,8 @@ final class ServerStatusModel {
     private(set) var disks: [ArrDiskSpace] = []
     private(set) var isRefreshing = false
     private(set) var lastRefresh: Date?
+    /// Arrs whose `/diskspace` read failed, with the reason; their mounts are missing, not full.
+    private(set) var failures: [(kind: ServiceKind, message: String)] = []
 
     init() {}
 
@@ -24,20 +26,29 @@ final class ServerStatusModel {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let fetched = await Self.fetchAll(targets)
+        let (fetched, failed) = await Self.fetchAll(targets)
         disks = Self.dedupe(fetched)
+        failures = failed.sorted { $0.kind.displayName < $1.kind.displayName }
         lastRefresh = Date()
     }
 
-    /// A failing arr contributes nothing rather than aborting the sweep.
-    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> [ArrDiskSpace] {
-        await withTaskGroup(of: [ArrDiskSpace].self) { group in
+    /// A failing arr is reported and skipped rather than aborting the sweep.
+    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> ([ArrDiskSpace], [(kind: ServiceKind, message: String)]) {
+        await withTaskGroup(of: (ServiceKind, Result<[ArrDiskSpace], any Error>).self) { group in
             for (kind, cfg) in targets {
-                group.addTask { (try? await client(kind, cfg).fetchDiskSpace()) ?? [] }
+                group.addTask {
+                    do { return (kind, .success(try await client(kind, cfg).fetchDiskSpace())) }
+                    catch { return (kind, .failure(error)) }
+                }
             }
-            var all: [ArrDiskSpace] = []
-            for await chunk in group { all += chunk }
-            return all
+            var all: [ArrDiskSpace] = [], failed: [(kind: ServiceKind, message: String)] = []
+            for await (kind, outcome) in group {
+                switch outcome {
+                case let .success(disks): all += disks
+                case let .failure(error): failed.append((kind, error.userFacingMessage))
+                }
+            }
+            return (all, failed)
         }
     }
 

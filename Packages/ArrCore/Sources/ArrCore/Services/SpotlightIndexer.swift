@@ -132,10 +132,16 @@ public enum SpotlightIndexer {
         let cfg = configStore.config(for: ref.source)
         guard cfg.isConfigured else { return nil }
         let slug: String?
-        switch configStore.arrClient(for: ref.source) {
-        case let movies as any MovieArrClient: slug = try? await movies.fetchMovieDetails(id: ref.id).titleSlug
-        case let series as SonarrClient: slug = try? await series.fetchSeriesDetails(id: ref.id).titleSlug
-        default: slug = nil
+        do {
+            switch configStore.arrClient(for: ref.source) {
+            case let movies as any MovieArrClient: slug = try await movies.fetchMovieDetails(id: ref.id).titleSlug
+            case let series as SonarrClient: slug = try await series.fetchSeriesDetails(id: ref.id).titleSlug
+            default: slug = nil
+            }
+        } catch {
+            // A click must open something: the arr itself beats a dead hit.
+            log.error("Spotlight hit \(id, privacy: .private) unresolved: \(error.localizedDescription, privacy: .public)")
+            return URL(string: cfg.baseURL)
         }
         guard let slug, !slug.isEmpty else { return nil }
         let path = ref.source == .sonarr ? "/series/\(slug)" : "/movie/\(slug)"

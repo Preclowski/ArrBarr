@@ -41,6 +41,7 @@ public actor LocalToolBackend {
     /// Every caller (chat, MCP, App Intents) passes through here, so the audit trail lives here.
     /// Arguments are never logged: they carry the user's search terms.
     nonisolated private static let log = Logger(category: "Tools")
+    nonisolated static let discoverLog = Logger(category: "Quiz")
 
     /// Stops retries from resurfacing the same lone unowned survivor across calls.
     var surfacedSuggestionIds: Set<String> = []
