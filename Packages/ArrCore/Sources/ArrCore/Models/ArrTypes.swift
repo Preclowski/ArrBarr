@@ -101,17 +101,6 @@ nonisolated public struct ArrImage: Codable, Equatable, Sendable {
     let remoteUrl: String?
 }
 
-/// Sonarr / Radarr / Lidarr / Whisparr all return queue warnings in
-/// the same shape: an array of objects, each with a one-line `title`
-/// summary (e.g. "Title mismatch") and a deeper `messages` list. We
-/// flatten both into a single user-facing string per entry when the
-/// status is `warning` / `failed`. No tracker-prefix or i18n parsing —
-/// the arr ships these in the user's configured server locale.
-nonisolated public struct ArrStatusMessage: Codable, Sendable, Equatable {
-    public let title: String?
-    public let messages: [String]?
-}
-
 // MARK: - Radarr
 
 
