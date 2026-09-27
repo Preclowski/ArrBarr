@@ -227,7 +227,7 @@ extension LocalToolBackend {
                       let first = await Self.matchedMovie(pick, client: radarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
                 let tmdbId = first.tmdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: radarrBase).0
+                let poster = (first.images ?? []).posterURL(baseURL: radarrBase, mediaServerKeys: tmdbId > 0 ? [.tmdbMovie(tmdbId)] : []).0
                 let resultBase = SearchResult(
                     externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                     title: first.title, subtitle: nil,
@@ -253,7 +253,7 @@ extension LocalToolBackend {
                       let first = await Self.matchedSeries(pick, client: sonarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
                 let tvdbId = first.tvdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: sonarrBase).0
+                let poster = (first.images ?? []).posterURL(baseURL: sonarrBase, mediaServerKeys: tvdbId > 0 ? [.tvdb(tvdbId)] : []).0
                 let resultBase = SearchResult(
                     externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                     title: first.title, subtitle: nil,
@@ -299,7 +299,7 @@ extension LocalToolBackend {
             let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
             return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
                 guard rec.id != nil, let title = rec.title else { return nil }
-                let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL).0
+                let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
                 let result = SearchResult(
                     externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
                     title: title, subtitle: nil,
@@ -323,7 +323,7 @@ extension LocalToolBackend {
         let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
         return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
             guard rec.id != nil, let title = rec.title else { return nil }
-            let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL).0
+            let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
             let result = SearchResult(
                 externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
                 title: title, subtitle: nil,
@@ -495,7 +495,8 @@ extension LocalToolBackend {
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 guard let first = await Self.matchedMovie((s.title, s.year, s.id), client: radarrClient) else { return nil }
                                 let tmdbId = first.tmdbId ?? 0
-                                let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL).0
+                                let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL,
+                                                                                  mediaServerKeys: tmdbId > 0 ? [.tmdbMovie(tmdbId)] : []).0
                                 let result = SearchResult(
                                     externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
                                     title: first.title, subtitle: nil,
@@ -520,7 +521,8 @@ extension LocalToolBackend {
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 guard let first = await Self.matchedSeries((s.name, s.year, s.id), client: sonarrClient) else { return nil }
                                 let tvdbId = first.tvdbId ?? 0
-                                let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL).0
+                                let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL,
+                                                                                  mediaServerKeys: tvdbId > 0 ? [.tvdb(tvdbId)] : []).0
                                 let result = SearchResult(
                                     externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
                                     title: first.title, subtitle: nil,

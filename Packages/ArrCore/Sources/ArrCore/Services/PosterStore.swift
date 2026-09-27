@@ -391,6 +391,14 @@ public actor PosterStore {
         }
     }
 
+    nonisolated private static let publicHosts: Set<String> = ["image.tmdb.org", "artworks.thetvdb.com"]
+
+    /// The arr's key belongs to the arr: never to a media server or a public CDN, whatever the caller passed.
+    nonisolated static func arrKey(_ apiKey: String?, for url: URL, artwork: ArtworkReference?) -> String? {
+        guard let apiKey, !apiKey.isEmpty, artwork == nil, !publicHosts.contains(url.host ?? "") else { return nil }
+        return apiKey
+    }
+
     private func download(_ url: URL, apiKey: String?, artwork: ArtworkReference?) async -> Data? {
         // Poster fetches are the app's other fan-out, and they share the same
         // six-connections-per-host pool as the queue's side-loads. Whether a
@@ -403,7 +411,7 @@ public actor PosterStore {
         defer { signpost.endInterval("poster download", state) }
 
         var request = URLRequest(url: url)
-        if let apiKey, !apiKey.isEmpty {
+        if let apiKey = Self.arrKey(apiKey, for: url, artwork: artwork) {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
         }
         // The media server's token never appears in the URL — it would be

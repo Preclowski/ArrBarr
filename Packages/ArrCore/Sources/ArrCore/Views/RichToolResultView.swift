@@ -125,7 +125,8 @@ public struct RichToolResultView: View {
                             baseURL: radarr.baseURL,
                             apiKey: radarr.apiKey,
                             source: .radarr,
-                            entityId: rec.id
+                            entityId: rec.id,
+                            mediaServerKeys: rec.mediaServerKeys
                         )
                     }
                     if visible.count < recs.count {
@@ -144,7 +145,8 @@ public struct RichToolResultView: View {
                             baseURL: sonarr.baseURL,
                             apiKey: sonarr.apiKey,
                             source: .sonarr,
-                            entityId: rec.id
+                            entityId: rec.id,
+                            mediaServerKeys: rec.mediaServerKeys
                         )
                     }
                     if visible.count < recs.count {
@@ -418,12 +420,15 @@ private struct LibraryRecordCard: View {
     let apiKey: String
     let source: QueueItem.Source
     let entityId: Int?
+    var mediaServerKeys: [MediaServerExternalKey] = []
     var blurred: Bool = false
+
+    private var posterURL: URL? { images?.posterURL(baseURL: baseURL, mediaServerKeys: mediaServerKeys).0 }
 
     var body: some View {
         Button {
             guard let entityId else { return }
-            let url = images?.posterURL(baseURL: baseURL).0
+            let url = posterURL
             // `.libraryArtists` cards carry an ARTIST id — open the artist
             // surface, not the album-shaped DetailView.
             if source == .lidarr {
@@ -456,7 +461,7 @@ private struct LibraryRecordCard: View {
             ZStack(alignment: .bottomTrailing) {
                 PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
-                        url: images?.posterURL(baseURL: baseURL).0,
+                        url: posterURL,
                         apiKey: apiKey,
                         size: CGSize(width: 90, height: 135),
                         cornerRadius: Tokens.Radius.card

@@ -152,8 +152,9 @@ public actor SearchClient {
 
     // MARK: - Result mapping
 
-    nonisolated private static func poster(_ images: [ArrCore.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"]) -> URL? {
-        images?.posterURL(baseURL: baseURL, coverTypes: coverTypes).0
+    nonisolated private static func poster(_ images: [ArrCore.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"],
+                                           keys: [MediaServerExternalKey] = []) -> URL? {
+        images?.posterURL(baseURL: baseURL, coverTypes: coverTypes, mediaServerKeys: keys).0
     }
 
     nonisolated private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
@@ -162,7 +163,7 @@ public actor SearchClient {
             externalId: tmdbId, foreignId: String(tmdbId), title: r.title, subtitle: nil, year: r.year, rating: r.ratings?.tmdb?.value,
             votes: r.ratings?.tmdb?.votes ?? r.ratings?.imdb?.votes, imdb: r.ratings?.imdb?.value, rottenTomatoes: r.ratings?.rottenTomatoes?.value,
             metacritic: r.ratings?.metacritic?.value, overview: r.overview, runtime: r.runtime, genres: r.genres ?? [], network: r.studio,
-            certification: r.certification, posterURL: poster(r.images, baseURL: baseURL), source: .radarr,
+            certification: r.certification, posterURL: poster(r.images, baseURL: baseURL, keys: [.tmdbMovie(tmdbId)]), source: .radarr,
             inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, imdbId: r.imdbId, sourceRank: sourceRank)
     }
 
@@ -173,7 +174,8 @@ public actor SearchClient {
             externalId: tvdbId, foreignId: String(tvdbId), title: r.title, subtitle: seasons.map { "\($0) season\($0 == 1 ? "" : "s")" },
             year: r.year, rating: r.ratings?.value, votes: r.ratings?.votes, imdb: nil, rottenTomatoes: nil, metacritic: nil,
             overview: r.overview, runtime: r.runtime, genres: r.genres ?? [], network: r.network, certification: nil,
-            posterURL: poster(r.images, baseURL: baseURL), source: .sonarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
+            posterURL: poster(r.images, baseURL: baseURL, keys: [.tvdb(tvdbId)] + ((r.tmdbId ?? 0) != 0 ? [.tmdbSeries(r.tmdbId!)] : [])),
+            source: .sonarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
             imdbId: r.imdbId, sourceRank: sourceRank, tmdbTVId: (r.tmdbId ?? 0) != 0 ? r.tmdbId : nil)
     }
 
