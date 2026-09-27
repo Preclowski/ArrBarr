@@ -7,7 +7,6 @@ nonisolated struct WaitFact: Hashable, Sendable {
 
 /// Lines for the Quiz wait screens, from the local media-server snapshot.
 enum WaitFacts {
-    /// The viewer's own recent watching, from the media-server snapshot.
     static func watching(index: MediaServerIndex = .shared, now: Date = .now) -> [WaitFact] {
         let history = index.recentlyWatched()
         guard !history.isEmpty else { return [] }
@@ -24,8 +23,7 @@ enum WaitFacts {
     }
 }
 
-/// Cycles through `facts`, one line at a time, with a soft cross-fade. Draws
-/// nothing when there is nothing to say, so callers can pass an empty list.
+/// Draws nothing for an empty list.
 struct WaitFactTicker: View {
     let facts: [WaitFact]
     var interval: TimeInterval = 4

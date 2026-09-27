@@ -173,8 +173,7 @@ public struct ServarrService: Sendable {
                        effects: [PendingEffect(elementID: String(id), instance: instance, change: .status("downloading"))]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
-    /// The arr's own indexer definitions — how a release's `indexerId` is
-    /// turned into something a human recognises.
+    /// Turns a release's `indexerId` into a name a human recognises.
     public func indexers() -> Resource<[ArrIndexerDefinition]> {
         .json(plan("indexers", path: "/indexer"), tags: [tag(.profiles)], freshness: .reference, ttl: .seconds(3600))
     }
@@ -300,7 +299,6 @@ public struct ServarrService: Sendable {
         }
     }
 
-    /// The record's editable settings, read fresh for the Edit form.
     public func settings(entityID: Int) -> Resource<ArrRecordSettings> {
         .json(plan("fetchLibraryRecord", path: "/\(profile.entityNoun)/{id}", values: ["id": String(entityID)]), tags: [entityTag(entityID)], freshness: .volatile)
     }

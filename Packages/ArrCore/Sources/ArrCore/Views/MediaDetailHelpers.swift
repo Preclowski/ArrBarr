@@ -1,12 +1,7 @@
 import SwiftUI
 
-/// Splits a queue-style title like "The Boys (2019)" into the bare
-/// title and the trailing year. Used as a fallback when the arr fetch
-/// hasn't returned a structured `(title, year)` pair yet — keeps the
-/// hero card rendering consistent between loading and loaded states
-/// (otherwise the title looked like "The Boys (2019)" while loading
-/// and just "The Boys" after, because MediaHeaderCard appends `(year)`
-/// itself).
+/// Loading-state fallback: MediaHeaderCard appends `(year)` itself, so the raw
+/// "The Boys (2019)" must be split to match the loaded hero.
 func splitTitleAndYear(_ raw: String) -> (title: String, year: Int?) {
     guard let regex = try? NSRegularExpression(pattern: #"^(.+?)\s*\((19|20)\d{2}\)\s*$"#) else {
         return (raw, nil)

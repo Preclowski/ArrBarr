@@ -1,21 +1,10 @@
 import SwiftUI
 
 // MARK: - Shared tooltip chrome
-//
-// The container itself is `MediaTooltipChrome` (QueueItemPrimitives.swift) —
-// every media tooltip renders inside it. This file owns the shared inner
-// pieces: the info grid's label/value styling, the rating-pill row and the
-// filename treatment, so tooltip surfaces can't drift apart visually again.
-// (They did: filename colours, label styles and grid spacing all diverged
-// before this was extracted.)
 
-/// The ONE long-hover presenter: 600 ms dwell, then `tooltipPopover` on
-/// the trailing edge. Every tooltip-bearing row/tile that doesn't need its
-/// hover state for anything else goes through this — the dwell time and
-/// dismiss behaviour can't drift per surface. (QueueRowView / group rows
-/// keep their own copy: their `isHovering` also drives poster controls.)
+/// The one long-hover presenter (600 ms dwell). QueueRowView keeps its own copy:
+/// its `isHovering` also drives poster controls.
 struct HoverTooltip<TooltipContent: View>: ViewModifier {
-    /// Skipped entirely when false (e.g. a tooltip with nothing to show).
     var enabled: Bool = true
     @ViewBuilder let tooltip: () -> TooltipContent
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
@@ -50,16 +39,13 @@ struct HoverTooltip<TooltipContent: View>: ViewModifier {
 }
 
 extension View {
-    /// See `HoverTooltip`.
     func hoverTooltip<T: View>(enabled: Bool = true, @ViewBuilder _ tooltip: @escaping () -> T) -> some View {
         modifier(HoverTooltip(enabled: enabled, tooltip: tooltip))
     }
 }
 
-/// One key–value line of a tooltip's info grid.
 struct TooltipInfoLine: Identifiable {
-    /// Catalog key of the label — doubles as the identity (labels are
-    /// unique within one grid).
+    /// Doubles as the identity: labels are unique within one grid.
     let labelKey: String
     let value: String
     var valueColor: Color? = nil
@@ -68,8 +54,6 @@ struct TooltipInfoLine: Identifiable {
     var id: String { labelKey }
 }
 
-/// The tooltip's key–value grid — single source of the label column style
-/// (11 pt secondary) and value style (11 pt primary, monospace opt-in).
 struct TooltipInfoGrid: View {
     let lines: [TooltipInfoLine]
 
@@ -95,8 +79,6 @@ struct TooltipInfoGrid: View {
     }
 }
 
-/// Rating pills row — the same `RatingPill` chips the detail heroes render
-/// (brand icons live ONLY in these pills, per the app's rating-icon rule).
 struct TooltipRatingPills: View {
     let chips: [RatingChip]
 
@@ -111,11 +93,7 @@ struct TooltipRatingPills: View {
     }
 }
 
-/// Synopsis block — sits DIRECTLY under the info grid in every tooltip
-/// (before the custom-format strip and filename). One style: 11 pt
-/// secondary, up to 8 lines, ideal height forced (see the fixedSize note
-/// in MediaTooltipChrome's history: without it a height-squeezed column
-/// collapses the text to one truncated line).
+/// Ideal height forced: a height-squeezed column otherwise collapses the text to one truncated line.
 struct TooltipOverview: View {
     let text: String?
 
@@ -131,10 +109,7 @@ struct TooltipOverview: View {
     }
 }
 
-/// Filename, the one way it renders anywhere in the app: bare (no label),
-/// 11 pt monospace, never truncated. Colour rule: a lone filename (and the
-/// NEW side of a diff) is primary; only the OLD file in a comparison drops
-/// to secondary.
+/// Never truncated. Only the old file in a comparison drops to secondary.
 struct TooltipFileName: View {
     let name: String?
 

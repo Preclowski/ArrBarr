@@ -38,7 +38,6 @@ public final class ServiceGateway {
     private var breakerContinuations: [UUID: AsyncStream<Void>.Continuation] = [:]
     /// Demo answers from bundled fixtures; held here so a gateway built for a test can be a demo one without the global flag.
     private var demo: Bool
-    /// Tests answer through their own transport instead of a URLSession.
     private let transport: (any Transport)?
     /// Configs handed to a client that differ from the saved profile (Settings drafts, tests). Each distinct config
     /// is its own instance (ordinal 1...), so a draft never displaces the saved instance's cache or credentials.
@@ -63,7 +62,6 @@ public final class ServiceGateway {
         startTask = Task { await self.start() }
     }
 
-    /// Consumers await this before their first read so the registry is populated.
     public func ready() async { await startTask?.value }
 
     /// What the crosswalk already knows about `id` in another id space — no request.
@@ -294,7 +292,6 @@ public final class ServiceGateway {
         }
     }
 
-    /// One SignalR source per configured arr; the hub turns its frames into store invalidations.
     /// The widget reads the app's stored rows and refetches what is stale; it runs no hubs, probes or sweeps.
     nonisolated static let isAppExtension = Bundle.main.bundlePath.hasSuffix(".appex")
 
@@ -313,7 +310,7 @@ public final class ServiceGateway {
     }
 
     #if DEBUG
-    /// Criterion 27: request volume of the first minute, counts only.
+    /// Request volume of the first minute, counts only.
     private func logTelemetryAfterLaunch() {
         Task { [telemetry] in
             try? await Task.sleep(for: .seconds(60))
@@ -328,7 +325,6 @@ public final class ServiceGateway {
     /// Retention sweep of the SQLite resource store, beside the poster sweep.
     public nonisolated func sweepDataCache() async { await kit.store.sweep() }
 
-    /// Drops every cached response; the next reads go to the network.
     public nonisolated func purgeDataCache() async { await kit.store.purgeAll() }
 
     public nonisolated func dataCacheBytes() async -> Int64 {
@@ -356,7 +352,6 @@ public final class ServiceGateway {
         return receipt
     }
 
-    /// One queue stream per arr, on its saved instance.
     public nonisolated func queueStream(_ source: QueueItem.Source) -> LiveStream<ArrQueueRecord> {
         let kit = self.kit
         return streams.withLock { streams in
@@ -368,7 +363,6 @@ public final class ServiceGateway {
         }
     }
 
-    /// The download-client progress stream over exactly these instances.
     public nonisolated func progressStream(instances: [InstanceID]) -> LiveStream<DownloadTask> {
         let kit = self.kit
         return streams.withLock { streams in

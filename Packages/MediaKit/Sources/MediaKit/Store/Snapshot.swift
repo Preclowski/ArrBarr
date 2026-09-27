@@ -12,7 +12,7 @@ public final class Snapshot<Value: Sendable>: Sendable {
     private let settle: Duration
     private let task = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
 
-    /// `didRebuild` runs after each new value is readable through `current`, for a consumer that caches something derived from it.
+    /// `didRebuild` runs once each new value is readable through `current`.
     /// `settle` waits after a bump so a burst of commits (a revalidation touching several of the tags) rebuilds once.
     public init(tags: Set<InvalidationTag>, initial: Value, store: ResourceStore, settle: Duration = .zero,
                 didRebuild: (@Sendable (Value) -> Void)? = nil, rebuild: @escaping @Sendable (ResourceStore) async -> Value) {

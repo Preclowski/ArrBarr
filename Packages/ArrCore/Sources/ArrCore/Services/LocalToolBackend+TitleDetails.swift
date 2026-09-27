@@ -3,11 +3,8 @@ import MediaKit
 
 // MARK: - get_title_details
 //
-// Single-title detail lookup for the chat assistant: overview + metadata for
-// one movie (Radarr) or series (Sonarr), with an OPTIONAL cast section. Cast
-// is TMDB-only, so `include_cast` is off by default — it costs an extra TMDB
-// round-trip and tokens, and needs a configured key. Read-only (not in
-// MCPToolWhitelist.isDestructive), so no confirm gate.
+// Cast is TMDB-only for series, so `include_cast` is off by default: an extra
+// round-trip, more tokens, and a key.
 
 extension LocalToolBackend {
 
@@ -41,13 +38,10 @@ extension LocalToolBackend {
         }
     }
 
-    /// The cast section in both shapes: prose for the model, `CastMember`s for
-    /// the head strip. Same list, so what the user sees and what the assistant
-    /// talks about can't drift apart.
+    /// One list in both shapes, so what the user sees and the assistant says can't drift.
     private typealias CastSection = (text: String, members: [CastMember])
 
-    /// Only strips with at least one tappable head are worth rendering — a row
-    /// of grey silhouettes that go nowhere is worse than the prose alone.
+    /// A row of grey silhouettes that go nowhere is worse than the prose alone.
     nonisolated private static func castRich(_ members: [CastMember]) -> ChatRichContent? {
         let usable = members.filter { $0.tmdbPersonId != nil }
         return usable.isEmpty ? nil : .cast(usable)
@@ -56,16 +50,13 @@ extension LocalToolBackend {
     /// Movie cast from Radarr's `/credit` — no TMDB key needed.
     private func movieCast(movieId: Int) async -> CastSection {
         let credits = (try? await radarrClient.fetchCredits(movieId: movieId)) ?? []
-        // `CastMember.from` owns the cast/crew filter and the billing-order
-        // sort, and is what the detail surfaces render, so chat and detail
-        // agree on who the top of the cast is.
+        // Same ordering the detail surfaces render, so chat and detail agree on top billing.
         let members = CastMember.from(radarrCredits: credits)
         guard !members.isEmpty else { return ("\n\nCast: (Radarr returned none).", []) }
         return (Self.castText(members), members)
     }
 
-    /// Series cast from TMDB — Sonarr has no `/credit` endpoint, so this is
-    /// the only source. Self-describing failure strings for the model.
+    /// Sonarr has no `/credit` endpoint, so TMDB is the only source.
     private func seriesCast(tmdbId: Int?) async -> CastSection {
         guard !tmdbApiKey.isEmpty else {
             return ("\n\nCast: unavailable — series cast needs a TMDB key (Sonarr has no cast API). Configure it in Settings.", [])
@@ -81,9 +72,8 @@ extension LocalToolBackend {
         return (Self.castText(members), members)
     }
 
-    /// "• Keanu Reeves — Neo" ×15. The personId rides along so the model can
-    /// link a name it mentions (see the linking rules in the system prompt) or
-    /// pull that person's filmography without a second name lookup.
+    /// The personId rides along so the model can link a name or pull a filmography
+    /// without a second lookup.
     nonisolated private static func castText(_ members: [CastMember]) -> String {
         let lines = members.prefix(15).map { m -> String in
             var line = "• \(m.name)"

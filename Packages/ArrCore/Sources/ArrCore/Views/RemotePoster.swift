@@ -1,14 +1,8 @@
 import SwiftUI
 import os
 
-/// Wraps a poster (or any view) and blurs it when `blurred` is true. Used to
-/// hide NSFW Whisparr posters. There's no tap-to-reveal — toggle is a global
-/// preference in Settings, not a per-poster trick.
-///
-/// SwiftUI's `.blur(radius:)` is a Gaussian convolution that bleeds past the
-/// content's frame, producing fuzzy edges past the poster. We `.compositingGroup()`
-/// to rasterize the blur, then `.clipShape(RoundedRectangle)` to confine it back
-/// to the poster's shape so the bleed disappears.
+/// Blurs NSFW Whisparr posters. `.blur` bleeds past the frame, so `.compositingGroup()` plus
+/// `.clipShape` confine it to the poster.
 struct PosterBlurContainer<Content: View>: View {
     let blurred: Bool
     let cornerRadius: CGFloat
@@ -28,36 +22,20 @@ struct PosterBlurContainer<Content: View>: View {
     }
 }
 
-/// The hero artwork every detail surface draws: blur container, tap-to-enlarge,
-/// and the two corner slots that live ON the poster — the monitor bookmark
-/// (top-right) and the trailer badge (bottom-right).
-///
-/// One component because the corner geometry has to be decided ONCE. Four
-/// surfaces hand-rolled this stack — `MediaHeaderCard`, `EpisodeDetailOverlay`,
-/// `LidarrDetailPanel` (square album art) and `LidarrArtistView` — and the two
-/// Lidarr ones can't just adopt `MediaHeaderCard`: their right columns are
-/// genuinely different (artist chevron subtitle, album statistics). So the
-/// POSTER is what gets shared, not the whole card.
+/// The hero artwork every detail surface draws, with the corner slots that live on the poster.
 struct DetailHeroPoster: View {
     let url: URL?
     var apiKey: String?
     var size: CGSize
     var fallbackSymbol: String
     var blurred: Bool
-    /// Top-left, over the artwork — the monitored ribbon's home, tucked into
-    /// the same corner as the watched wedge.
+    /// Top-left, tucked into the same corner as the watched wedge.
     var cornerAction: AnyView?
-    /// The media server says this title has been played.
     var watched: Bool = false
-    /// Bottom-right, over the artwork — the trailer badge's home.
     var badge: AnyView?
-    /// Raises the host's lightbox. `nil` renders the poster inert; a nil `url`
-    /// disables the button, since there's nothing to enlarge.
+    /// `nil` renders the poster inert; a nil `url` disables the button.
     var onTap: ((URL?) -> Void)?
 
-    /// Pointer is over the artwork. Drives the enlarge hint — the poster was a
-    /// click target with nothing to say so; a tooltip only pays out after the
-    /// user has already hovered long enough to wonder.
     @State private var hovering = false
 
     init(
@@ -123,11 +101,7 @@ struct DetailHeroPoster: View {
         }
     }
 
-    /// Hover-only "this opens bigger" hint: a magnifier centred on the artwork,
-    /// over a light scrim that keeps it legible on a bright poster without
-    /// hiding what's underneath. Decoration for the pointer — hidden from
-    /// VoiceOver, which already gets the button's label, and absent on touch,
-    /// where there is no hover and a permanent badge would just cover art.
+    /// Hover-only enlarge hint; hidden from VoiceOver (the button has a label) and absent on touch.
     @ViewBuilder
     private var enlargeHint: some View {
         if hovering, url != nil {
@@ -146,8 +120,6 @@ struct DetailHeroPoster: View {
     }
 }
 
-/// `.scaledToFit()` / `.scaledToFill()` as a modifier, so the two branches
-/// don't fork the whole image expression.
 private struct PosterContentMode: ViewModifier {
     let fits: Bool
     func body(content: Content) -> some View {
@@ -158,29 +130,15 @@ private struct PosterContentMode: ViewModifier {
 struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
-    /// How large a copy to fetch and keep. Stated explicitly rather than
-    /// inferred from `size`, because `size` cannot see the two things that
-    /// decide it: `fill` ignores `size` entirely, and the lightbox scales its
-    /// poster up to 5× after layout. Defaults to `.card` — the safe direction,
-    /// since a too-small tier shows as a blurry poster while a too-large one
-    /// only costs bytes (and DEBUG builds log both, see `load`).
+    /// Explicit because `size` can't decide it: `fill` ignores `size` and the lightbox scales up to 5×.
+    /// Too small shows blurry, too large only costs bytes.
     var tier: PosterTier = .card
     var size: CGSize = CGSize(width: 40, height: 60)
     var cornerRadius: CGFloat = 4
     var fallbackSymbol: String? = "photo"
-    /// When true the poster expands to fill its parent's available
-    /// rectangle (`maxWidth/Height: .infinity`) instead of clamping to
-    /// `size`. Default `false` preserves all existing call-site behaviour.
     var fill: Bool = false
-    /// Fit the whole image inside `size` instead of cropping it to fill.
-    /// Detail heroes use this: their artwork is usually 2:3 (where fit and
-    /// fill are identical), but an episode still, a square cover or a
-    /// media-server season thumb is NOT, and cropping a hero poster is the
-    /// one place that reads as a bug rather than as a thumbnail.
+    /// Detail heroes fit: an episode still or square cover is not 2:3, and a cropped hero reads as a bug.
     var fitsContent: Bool = false
-    /// Opt-in: show a spinner while the image is in flight instead of the
-    /// fallback symbol. Off by default so existing call sites are unchanged;
-    /// used where load latency is visible (e.g. the Quiz card's poster deck).
     var showsLoadingIndicator: Bool = false
 
     @State private var image: PlatformImage?
@@ -196,13 +154,7 @@ struct RemotePoster: View {
                     .modifier(PosterContentMode(fits: fitsContent && !nearlyFillsFrame(image)))
             } else {
                 ZStack {
-                    // A styled "blank poster" instead of a flat grey box: a
-                    // soft top-down sheen over the fill plus the arr's own
-                    // glyph, so a posterless title still reads as a
-                    // poster-shaped placeholder at any size — list thumbnail
-                    // through detail hero. Callers pass their source symbol
-                    // (`tv`/`film`/`music.note`/`flame`); an empty symbol just
-                    // yields the sheen with no glyph.
+                    // A styled blank poster (sheen plus the arr's glyph) so a posterless title still reads as one.
                     Rectangle().fill(.quaternary)
                     LinearGradient(
                         colors: [Color.primary.opacity(0.06), .clear],
@@ -234,9 +186,7 @@ struct RemotePoster: View {
         }
     }
 
-    /// A TVDB poster is 680×1000, not 2:3 — fitting it leaves hairline bars
-    /// above and below. Within this tolerance the crop is a percent or two per
-    /// edge and invisible; past it (a still, a square cover) fitting wins.
+    /// A TVDB poster is 680×1000, not 2:3; within this tolerance the crop is invisible and beats hairline bars.
     private func nearlyFillsFrame(_ image: PlatformImage) -> Bool {
         guard image.size.height > 0, size.height > 0 else { return false }
         let ratio = (image.size.width / image.size.height) / (size.width / size.height)
@@ -251,11 +201,8 @@ struct RemotePoster: View {
             return
         }
         isLoading = true
-        // Paint the smaller copy we already hold, then sharpen. The icon tier
-        // covers the whole library, so a detail view that used to sit on a grey
-        // rectangle for the length of a download now opens with its poster.
-        // Skipped when this view already shows something (a recycled row would
-        // otherwise visibly step *down* in quality first).
+        // Paint the smaller cached copy first, then sharpen. Skipped when something is already shown,
+        // or a recycled row would step down in quality.
         if image == nil, let preview = await PosterStore.shared.cachedPreview(for: url, below: tier) {
             guard !Task.isCancelled else { return }
             await MainActor.run {
@@ -264,12 +211,10 @@ struct RemotePoster: View {
             }
         }
         let result = await PosterStore.shared.image(for: url, tier: tier, apiKey: apiKey)
-        // The view may have been recycled onto a different title while we were
-        // downloading; landing this poster there would show the wrong artwork.
+        // The view may have been recycled onto a different title while downloading.
         guard !Task.isCancelled else { return }
         await MainActor.run {
-            // Never replace a poster with nothing: if the bigger copy failed,
-            // the preview on screen is still the best we have.
+            // Never replace a poster with nothing: the preview is still the best we have.
             if result != nil || image == nil { image = result }
             failed = (result == nil && image == nil)
             isLoading = false
@@ -282,8 +227,7 @@ struct RemotePoster: View {
     #if DEBUG
     private static let log = Logger(category: "RemotePoster")
 
-    /// Tier is a hand-made choice per call site, so make a wrong one visible
-    /// instead of silently blurry (too small) or silently expensive (too big).
+    /// Tier is a hand-made choice per call site, so make a wrong one visible.
     private func warnOnTierMismatch(_ image: PlatformImage) {
         guard !fill, size.width > 0, size.height > 0 else { return }
         let scale: CGFloat
@@ -307,8 +251,6 @@ struct RemotePoster: View {
     #endif
 }
 
-/// Identity of a poster request — `.task(id:)` must re-run when either half
-/// changes.
 private struct PosterRequest: Equatable {
     let url: URL?
     let tier: PosterTier

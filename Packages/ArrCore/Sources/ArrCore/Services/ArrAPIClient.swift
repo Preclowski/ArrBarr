@@ -16,9 +16,7 @@ extension MovieArrClient {
     func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
     func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
     func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
-    /// `revalidate: false` serves whatever the on-disk store holds and says so
-    /// in `isStale`, refreshing behind the caller — what the Library's first
-    /// paint of a session wants.
+    /// `revalidate: false` serves the stored rows, flags `isStale` and refreshes behind the caller.
     func fetchAllMovies(revalidate: Bool = true) async throws -> [ArrMovie] {
         try await fetchAllMoviesFetched(revalidate: revalidate).value
     }
@@ -67,16 +65,8 @@ extension ArrAPIClient {
         return try await context.store.read(make(context.service), policy: policy, maxAge: maxAge, priority: priority)
     }
 
-    /// Read for the big library lists. `revalidate: false` takes the stored row
-    /// however old; otherwise the store's own freshness decides (`warm` TTL,
-    /// invalidated by imports, adds and edits).
-    ///
-    /// `.cacheOnly` rather than `.staleWhileRevalidate`, because the rows we
-    /// want are exactly the ones SWR refuses: an import event marks the
-    /// library tag changed (`stale_at` in the past), and from then on the
-    /// store treats the row as known-stale and goes to the network. Serving it
-    /// is safe here ONLY because the caller follows a stale answer with a real
-    /// fetch (see `LibraryViewModel.loadIfNeeded`); `isStale` says when.
+    /// `.cacheOnly`, not SWR: after an import marks the library tag stale, SWR refuses exactly these rows.
+    /// Safe only because the caller follows a stale answer with a real fetch (`LibraryViewModel.loadIfNeeded`).
     func readCacheFirst<V>(revalidate: Bool, _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<V> {
         if !revalidate, let cached = try? await readFetched(policy: .cacheOnly, make) { return cached }
         return try await readFetched(policy: .cacheFirst, make)

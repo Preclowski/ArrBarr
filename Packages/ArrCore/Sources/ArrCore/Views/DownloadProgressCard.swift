@@ -1,46 +1,18 @@
 import SwiftUI
 
-/// Unified rounded-corner card wrapping any download's progress
-/// block — status pill + percent + score on top, thin progress bar
-/// below, optional upgrade-diff sub-row, all inside a status-tinted
-/// rounded background whose fill scales with progress. Drop-in
-/// replacement for the inline `StatusIconLabel + ThinProgressBar`
-/// pairs scattered across queue rows, season-pack rows, the detail
-/// `DownloadSection`, and the episode-detail file section.
-///
-/// One card visual = one place to tweak it. Adding warnings banner,
-/// release-name footer, or any other download-context decoration
-/// stays the responsibility of the surrounding container so the
-/// card itself stays focused on the progress narrative.
+/// Progress block for any download: status header, bar, optional upgrade diff,
+/// on a status-tinted background whose fill scales with progress.
 struct DownloadProgressCard: View {
     let item: QueueItem
-    /// Override the displayed progress — used by season-pack rows
-    /// where the rendered % is an *aggregate* over member items, not
-    /// the representative's own progress. nil = use `item.progress`.
+    /// Aggregate progress for season-pack rows; nil uses `item.progress`.
     let progressOverride: Double?
-    /// Show the inline upgrade diff sub-line (`└─ OLD: quality · size (±delta)`).
-    /// Defaults to true; surfaces that already render an explicit
-    /// existing-file section can pass false.
     let showUpgradeDiff: Bool
-    /// Render the status icon + label / percent / score header above
-    /// the bar. Queue-row variants set `false` because the row
-    /// already shows status info inline above the card.
     let showHeader: Bool
-    /// The status pill + Upgrade badge + client capsule that open the header.
-    /// Detail surfaces hand that row to the "Downloading" section header
-    /// instead (see `DownloadingSectionHeader`), so they switch it off here
-    /// while keeping the spec grid the header block also renders.
+    /// Detail surfaces show the status row on `DownloadingSectionHeader` instead.
     let showStatusRow: Bool
-    /// Queue-row variant: inline `quality · size · score` next to
-    /// the status pill instead of on its own row. Keeps the compact
-    /// list dense. Detail surfaces stay false (spec gets its own
-    /// row so the diff sub-line reads as a vertical continuation).
+    /// Queue rows: `quality · size` inline next to the status pill.
     let compactSpec: Bool
-    /// Side-channel "existing file" payload for arrs that don't pack
-    /// the existing metadata into the QueueItem (Sonarr ships it via
-    /// `/episodefile/{id}` only). When non-nil, this overrides
-    /// `item.existing*` so the in-card diff line renders the same
-    /// `↑` row as the movie/album path.
+    /// Sonarr ships existing-file metadata only via `/episodefile/{id}`, not on the queue item.
     let existingOverride: ExistingFileSnapshot?
 
     struct ExistingFileSnapshot {
@@ -94,48 +66,25 @@ struct DownloadProgressCard: View {
     }
     private var willShowDiff: Bool {
         guard showUpgradeDiff else { return false }
-        // With an explicit override we trust the caller to pass it
-        // only for upgrade contexts; without one, gate on the
-        // QueueItem's own upgrade flag + populated existing fields.
+        // An explicit override is only passed in upgrade contexts.
         if existingOverride != nil { return hasExistingMetadata }
         return item.isUpgrade && hasExistingMetadata
     }
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Status + spec row sits ABOVE the progress bar (per user
-            // direction) so the row reads top-down: what/quality, then the
-            // bar. The detail variant (`!compactSpec`) has no bar — its diff
-            // grid is part of this header block.
             if showHeader {
                 if showStatusRow {
                     HStack(spacing: 6) {
                         DownloadStatusCluster(item: item, showUpgradeBadge: !compactSpec)
                         Spacer(minLength: 6)
-                        // List variant always shows the inline spec —
-                        // upgrade context lives in detail (one screen up).
                         if compactSpec {
                             inlineSpec
                         }
                     }
                 }
                 if !compactSpec {
-                    // Detail variant — one row per dimension
-                    // (Quality / Size / Score) in an aligned grid. For
-                    // a real upgrade we also pass the OLD values +
-                    // Formaty / Plik so the table renders the full diff
-                    // (arrows, second version, deltas). For a plain
-                    // "new" download we pass no OLD data and let the
-                    // table degrade to a label+value spec — same grid,
-                    // no arrows, no second version. Formats / filename
-                    // stay nil in that case because the surrounding
-                    // detail section renders its own CF-chip strip and
-                    // release-name block for non-upgrades.
-                    // Experiment: a real upgrade renders the extracted
-                    // side-by-side `UpgradeDiffView` (current file → incoming,
-                    // gained/lost format chips). Built from the `effective*`
-                    // values so Sonarr's side-channel `existingOverride` is
-                    // honoured. A plain "new" download (no OLD data) keeps the
-                    // degraded `UpgradeDiffTable` spec grid.
+                    // A real upgrade renders the side-by-side `UpgradeDiffView` from the `effective*` values
+                    // (so Sonarr's `existingOverride` counts); a new download keeps the `UpgradeDiffTable` spec grid.
                     Group {
                         if willShowDiff {
                             UpgradeDiffView(
@@ -167,23 +116,13 @@ struct DownloadProgressCard: View {
                                 oldFormats: [],
                                 newFilename: nil,
                                 oldFilename: nil,
-                                // Where the grab came from — previously
-                                // tooltip-only, which left both the movie and
-                                // series details without the indexer. Lives
-                                // inside the grid so it shares the label
-                                // column and row spacing with Quality / Size /
-                                // Score instead of floating above them.
                                 indexer: item.indexer,
                                 tint: tint
                             )
                         }
                     }
-                    // Nudge the facts grid down off the progress-bar
-                    // block so it doesn't read as glued to the bar.
                     .padding(.top, 5)
 
-                    // The upgrade layout is a side-by-side card, not a label
-                    // grid, so its indexer stays a free-standing line.
                     if willShowDiff, let indexer = item.indexer, !indexer.isEmpty {
                         HStack(alignment: .firstTextBaseline, spacing: 8) {
                             Text("Indexer", bundle: .module)
@@ -196,30 +135,20 @@ struct DownloadProgressCard: View {
                     }
                 }
             }
-            // Progress bar BELOW the status/spec row (compact / queue
-            // variant only — detail surfaces show progress in their CTA).
             progressBarWithPercent
         }
     }
 
     @ViewBuilder
     private var progressBarWithPercent: some View {
-        // Queue rows keep the full-width track bar, doubled to 6pt so it
-        // reads as a deliberate progress bar rather than a hairline. The
-        // detail drops it entirely — progress shows in the Resume/Pause CTA.
+        // Detail surfaces drop the bar; progress shows in their Resume/Pause CTA.
         if compactSpec {
             LiveProgress(item: item) { live in
-                // `progressOverride` wins when the card speaks for a pack's
-                // representative row rather than for `item` itself.
                 ThinProgressBar(progress: progressOverride ?? live, tint: tint, height: 6)
             }
         }
     }
 
-    /// Trailing-edge spec for the compact queue-row variant —
-    /// `quality · size` condensed to fit next to the status pill /
-    /// client label on a single row. The score moved up to the row's
-    /// title line (rendered by the queue rows themselves).
     @ViewBuilder
     private var inlineSpec: some View {
         HStack(spacing: 3) {
@@ -249,10 +178,7 @@ struct DownloadProgressCard: View {
 }
 
 
-/// Status pill, Upgrade badge and download client — the three chips that say
-/// what is happening to a download right now. Lives here rather than inside
-/// `DownloadProgressCard`'s header because the detail surfaces put the same
-/// cluster on their "Downloading" section header instead.
+/// Separate from the card because detail surfaces put it on the "Downloading" section header.
 struct DownloadStatusCluster: View {
     let item: QueueItem
     var showUpgradeBadge: Bool = true
@@ -275,9 +201,6 @@ struct DownloadStatusCluster: View {
     }
 }
 
-/// "Downloading" with the live status chips on its trailing edge. The one
-/// header for an active download, shared by the movie detail and the episode
-/// detail — the episode one had no header at all before.
 struct DownloadingSectionHeader: View {
     let item: QueueItem
 
@@ -286,9 +209,7 @@ struct DownloadingSectionHeader: View {
     var body: some View {
         HStack(spacing: 8) {
             DetailSectionHeader("Downloading")
-                // The header gives way, never the chips: a status word wrapped
-                // onto a second line inside its own capsule is the break the
-                // user saw. The title truncates instead.
+                // The title truncates rather than a status word wrapping inside its capsule.
                 .lineLimit(1)
                 .layoutPriority(-1)
             Spacer(minLength: 6)

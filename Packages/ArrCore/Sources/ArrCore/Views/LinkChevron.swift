@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Drives a `LinkChevron`'s hover affordance from an ancestor row's
-/// hover state. A row applies `.linkRowHover()`; any `LinkChevron`
-/// inside it then lights up whenever the cursor is over the *row*, not
-/// only over the 9pt glyph.
+/// Lights a `LinkChevron` whenever the cursor is over the row, not only the 9pt glyph.
 private struct LinkRowHoveringKey: EnvironmentKey {
     static let defaultValue = false
 }
@@ -16,10 +13,7 @@ extension EnvironmentValues {
 }
 
 public extension View {
-    /// Mark this view as a "link row": its hover state is published to
-    /// descendant `LinkChevron`s so they brighten when the cursor is
-    /// anywhere over the row. macOS-only — iOS has no hover, so the
-    /// chevron stays static and the whole row is the tap target.
+    /// macOS-only: iOS has no hover, so the chevron stays static there.
     func linkRowHover() -> some View {
         modifier(LinkRowHoverModifier())
     }
@@ -41,19 +35,8 @@ private struct LinkRowHoverModifier: ViewModifier {
     }
 }
 
-/// Drill-in chevron for tappable rows — queue rows, season-pack rows,
-/// search-result rows, the episode→series link, "Needs you" items.
-///
-/// Its hover affordance is driven by the enclosing row (via
-/// `.linkRowHover()`), NOT by the cursor sitting on the glyph itself:
-/// when the row is hovered, the chevron brightens from `.tertiary` to
-/// `.secondary` and nudges a hair rightward, reading as an interactive
-/// link. Without a `.linkRowHover()` ancestor (e.g. iOS) it renders as
-/// a plain static `.tertiary` chevron.
-///
-/// Disclosure chevrons (section collapse, season expand) deliberately
-/// do NOT use this — they rotate to show open/closed state and aren't
-/// navigation links.
+/// Drill-in chevron whose hover is driven by the enclosing `.linkRowHover()` row.
+/// Disclosure chevrons don't use this: they rotate for open/closed and aren't links.
 struct LinkChevron: View {
     var size: CGFloat
     @Environment(\.linkRowHovering) private var rowHovering

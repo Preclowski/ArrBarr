@@ -63,8 +63,7 @@ nonisolated enum ArrCompositions {
             slug = slug ?? r.album?.foreignAlbumId
         }
 
-        // Same ids the artwork override keys on: the cached meta when the
-        // loader resolved the entity, the wire record otherwise.
+        // Same ids the artwork override keys on.
         let mediaServerKeys: [MediaServerExternalKey] = {
             if let cached, !cached.mediaServerKeys.isEmpty { return cached.mediaServerKeys }
             switch source {
@@ -113,8 +112,7 @@ nonisolated enum ArrCompositions {
             entityId: entityID,
             posterURL: poster,
             posterRequiresAuth: posterAuth,
-            // Per episode for Sonarr rows, per title for the rest (the
-            // coordinates are nil there and the lookup falls back).
+            // Per episode for Sonarr rows; the coordinates are nil elsewhere and the lookup falls back.
             watched: MediaServerIndex.shared.isWatched(mediaServerKeys, season: seasonNumber, episode: episodeNumber),
             statusMessages: flatten(r.statusMessages)
         )
@@ -128,7 +126,7 @@ nonisolated enum ArrCompositions {
         }
     }
 
-    /// Multi-row downloads of one season get the season poster; mirrors the old `seasonPackSeasons`.
+    /// Multi-row downloads of one season get the season poster.
     static func seasonPackSeasons(_ records: [ArrQueueRecord]) -> [String: Int] {
         var seasons: [String: Set<Int>] = [:]
         var rows: [String: Int] = [:]
@@ -338,8 +336,7 @@ nonisolated enum MediaKitErrorPresenter {
 }
 
 nonisolated public extension Error {
-    /// The message to put in front of a user: `localizedDescription` alone drops a
-    /// `LocalizedError`'s own text and the arr's reason a `MediaKitError` carries.
+    /// `localizedDescription` alone drops a `LocalizedError`'s text and the arr's reason a `MediaKitError` carries.
     var userFacingMessage: String { MediaKitErrorPresenter.message(for: self) }
 }
 

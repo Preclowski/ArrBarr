@@ -1,29 +1,14 @@
 import Foundation
 
-/// Actively probes the services the queue refresh never touches (download
-/// clients + Prowlarr + OpenAI + TMDB) by calling each client's existing
-/// `testConnection()`. Throttled so the probe runs at most once per
-/// `minInterval`, since connection health changes rarely and probing every 5s
-/// queue tick would hammer the clients.
-///
-/// Isolated as an `actor` that only ever sees a `Sendable` `ProbeInputs`
-/// snapshot — it never reads the `@MainActor ConfigStore` itself (the Prowlarr
-/// probe resolves the shared gateway, the same way every facade does). Results
-/// come back as `Sendable` `ProbeOutcome`s for the caller to apply on the main
-/// actor.
+/// Probes services the queue refresh never touches, at most once per `minInterval`.
+/// Sees only a `Sendable` `ProbeInputs` snapshot, never the main-actor ConfigStore.
 actor ConnectionHealthMonitor {
-    /// A Sendable snapshot of just what the probes need, built on the main actor
-    /// and handed across the isolation boundary.
     struct ProbeInputs: Sendable {
-        /// Configured download clients only (keyed by kind).
         var clients: [ServiceKind: ServiceConfig]
         var openai: OpenAIConfig?
         var tmdbKey: String?
-        /// Non-nil only when a media server is configured.
         var mediaServer: MediaServerConfig?
-        /// Whether to probe Prowlarr. A flag rather than a config, because
-        /// `ProwlarrClient` talks to the one saved instance the gateway already
-        /// holds — there is no draft to hand across.
+        /// A flag, not a config: `ProwlarrClient` uses the gateway's saved instance.
         var prowlarr: Bool
 
         init(clients: [ServiceKind: ServiceConfig] = [:], openai: OpenAIConfig? = nil,
@@ -45,12 +30,9 @@ actor ConnectionHealthMonitor {
     }
 
     private var lastProbe: Date?
-    /// Minimum gap between full probe sweeps.
     nonisolated static let minInterval: TimeInterval = 60
 
-    /// Probe every configured target, but skip the sweep entirely if the last
-    /// one ran less than `minInterval` ago (unless `force`). Returns one outcome
-    /// per probed target; an empty array means "throttled, nothing to apply".
+    /// An empty result means "throttled, nothing to apply".
     func probeIfDue(_ inputs: ProbeInputs, force: Bool) async -> [ProbeOutcome] {
         let now = Date()
         if !force, let last = lastProbe, now.timeIntervalSince(last) < Self.minInterval {
@@ -60,7 +42,6 @@ actor ConnectionHealthMonitor {
         return await Self.probeAll(inputs)
     }
 
-    /// Probe one service immediately (e.g. right after a key was saved).
     func probe(_ service: MonitoredService, _ inputs: ProbeInputs) async -> ProbeOutcome {
         await Self.probeOne(service, inputs)
     }
@@ -116,8 +97,7 @@ actor ConnectionHealthMonitor {
                       let client = MediaServerClientFactory.make(config: cfg) else {
                     return ProbeOutcome(service: service, success: false, detail: nil, message: nil)
                 }
-                // The handshake's version line doubles as the row's detail
-                // ("Plex 1.40.2"), which is what names the server in Status.
+                // The version line ("Plex 1.40.2") names the server in Status.
                 let handshake = try await client.testConnection()
                 return ProbeOutcome(service: service, success: true,
                                     detail: handshake.versionLine, message: nil)

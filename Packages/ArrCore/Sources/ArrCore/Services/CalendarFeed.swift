@@ -1,16 +1,10 @@
 import Foundation
 
-/// Builds the `webcal://` subscription URL for an arr's built-in iCal
-/// calendar feed (Sonarr/Radarr/Lidarr/Whisparr each serve one). Opening
-/// the URL hands off to Apple Calendar's native "Subscribe to calendar"
-/// flow on both iOS and macOS — the arr then serves the feed and Calendar
-/// refreshes it on its own, so ArrBarr needs zero sync code.
+/// Apple Calendar subscribes to the arr's own iCal feed and refreshes it itself, so no sync code.
 enum CalendarFeed {
 
-    /// `webcal://host[:port][/base]/feed/<v>/calendar/<App>.ics?apikey=…`
-    /// Returns nil for non-arr kinds, an unconfigured service, or a missing
-    /// API key (the feed requires it). The base path is preserved so it works
-    /// behind a reverse proxy subpath.
+    /// `webcal://host[:port][/base]/feed/<v>/calendar/<App>.ics?apikey=…`; the base path is kept
+    /// for reverse-proxy subpaths. nil without an API key, which the feed requires.
     static func subscriptionURL(kind: ServiceKind, config: ServiceConfig) -> URL? {
         guard config.isConfigured, !config.apiKey.isEmpty else { return nil }
         let feedPath: String
@@ -22,7 +16,6 @@ enum CalendarFeed {
         default: return nil
         }
         guard var comps = URLComponents(string: config.baseURL) else { return nil }
-        // webcal:// is the scheme Apple Calendar treats as "subscribe".
         comps.scheme = "webcal"
         let base = comps.path.hasSuffix("/") ? String(comps.path.dropLast()) : comps.path
         comps.path = base + feedPath

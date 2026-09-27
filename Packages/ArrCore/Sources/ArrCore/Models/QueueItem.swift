@@ -49,24 +49,18 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
 
     public let title: String
     public let subtitle: String?
-    /// Sonarr-only: structured episode coordinates so consumers don't have
-    /// to regex-parse `subtitle` to know which episode the row represents.
-    /// nil for Radarr / Lidarr / unknown-episode Sonarr rows.
+    /// Sonarr-only, so consumers needn't parse `subtitle`. nil for other arrs and unknown episodes.
     public let seasonNumber: Int?
     public let episodeNumber: Int?
     public let episodeTitle: String?
     public let releaseName: String?
     public var status: Status
-    /// `var` so `QueueAggregator` can overlay the download client's live value
-    /// (fresher than the arr's polled `/queue` progress) — see DownloadProgress.
+    /// `var` so `QueueAggregator` can overlay the download client's fresher live value.
     public var progress: Double
     public let sizeTotal: Int64
     public let sizeLeft: Int64
     public let timeLeft: String?
-    /// Bytes per second, when a download client reported one. Not every client
-    /// does — SABnzbd reports a percentage per slot and a speed only for the
-    /// queue as a whole — so `progressRatePerSecond` falls back to the arr's
-    /// own ETA.
+    /// Not every client reports one (SABnzbd only for the whole queue), so `progressRatePerSecond` falls back to the arr's ETA.
     public var downloadSpeed: Int64? = nil
 
 
@@ -81,23 +75,14 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     public let existingSize: Int64?
     public let existingFileName: String?
     public let contentSlug: String?
-    /// Underlying arr entity id — Radarr `movie.id`, Sonarr `series.id`,
-    /// Lidarr `album.id`. Used to fetch detail views.
     public let entityId: Int?
 
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
-    /// The connected media server says this title has been played. Resolved at
-    /// composition time (the same provider ids that pick the artwork), because
-    /// a row carries no ids of its own.
+    /// Resolved at composition time: a row carries no provider ids of its own.
     public let watched: Bool
 
-    /// Flattened user-facing warning lines from the arr's
-    /// `statusMessages` payload. Populated only when status is
-    /// `warning` / `failed` — those are the only times the arr
-    /// attaches a message. Empty for healthy rows. Each string is one
-    /// already-merged "Title — Message" line so the consuming view
-    /// can just iterate and render.
+    /// One merged "Title — Message" line each; the arr only attaches messages on `warning` / `failed`.
     public let statusMessages: [String]
 
     public init(
@@ -143,19 +128,16 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
 
     public var isPaused: Bool { status == .paused }
 
-    /// A release the arr is still holding (delay profile) — it has no download-client id yet.
     var isPendingRelease: Bool { downloadId?.isEmpty ?? true }
 
-    /// The arr drops a pending row when it grabs it and tracks the download under a new queue id,
+    /// On grab the arr drops the pending row and tracks the download under a new queue id,
     /// so the entity and episode are all the two rows share.
     var handoffKey: String? {
         guard let entityId else { return nil }
         return "\(source.rawValue)|\(entityId)|\(seasonNumber ?? -1)|\(episodeNumber ?? -1)"
     }
 
-    /// Key for hiding the row. Stable across the queue-id change of a
-    /// delay-profile grab: the download id when there is one, else the
-    /// episode/movie coordinates.
+    /// Stable across a delay-profile grab's queue-id change: the download id, else the episode/movie coordinates.
     var hideKey: String {
         if let downloadId, !downloadId.isEmpty {
             return "\(source.rawValue)|dl|\(downloadId.lowercased())"
@@ -164,34 +146,26 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         return "\(source.rawValue)|id|\(id)"
     }
 
-    /// Every key that hides this row — a pending row hidden by coordinates
-    /// stays hidden once it becomes a real download.
+    /// A pending row hidden by coordinates stays hidden once it becomes a real download.
     var hideMatchKeys: [String] {
         var keys = [hideKey]
         if let handoffKey { keys.append("\(source.rawValue)|ep|\(handoffKey)") }
         return keys
     }
 
-    /// Whether this row is the download `pending` turned into.
     func succeeds(_ pending: QueueItem) -> Bool {
         guard pending.isPendingRelease, !isPendingRelease, let key = handoffKey else { return false }
         return key == pending.handoffKey
     }
 
-    /// Whether the row actually carries facts about the file it would replace.
-    /// `isUpgrade` alone isn't enough — an arr can flag an upgrade and ship
-    /// none of the `existing*` fields — and every surface that draws the
-    /// old→new diff has to make the same call, so it lives here rather than
-    /// being re-derived per view.
+    /// An arr can flag an upgrade yet ship none of the `existing*` fields; every diff surface must agree.
     public var hasExistingFileMetadata: Bool {
         (existingQuality.map { !$0.isEmpty } ?? false)
             || (existingSize ?? 0) > 0
             || (existingCustomFormatScore ?? 0) != 0
     }
 
-    /// Copy with the episode coordinates cleared. A detail view auto-drills to
-    /// a specific episode only when `episodeNumber` is set — season-pack rows
-    /// pass this so the detail opens the SEASON instead.
+    /// Detail auto-drills to an episode only when `episodeNumber` is set; season packs open the SEASON.
     public func seasonContext() -> QueueItem {
         QueueItem(
             id: id, source: source, arrQueueId: arrQueueId,

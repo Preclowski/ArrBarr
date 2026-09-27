@@ -1,10 +1,7 @@
 import Foundation
 import MediaKit
 
-/// Owns the disk-space fetch behind Settings → Status. Connection health and
-/// queue activity are read straight from their shared singletons
-/// (`ConnectionHealth`, `QueueViewModel`); only `/diskspace` needs its own
-/// fetch, so that's all this model carries.
+/// Settings → Status disk space; health and queue activity come from their shared singletons.
 @Observable
 final class ServerStatusModel {
     private(set) var disks: [ArrDiskSpace] = []
@@ -13,7 +10,6 @@ final class ServerStatusModel {
 
     init() {}
 
-    /// Configured + keyed arrs — the only services that answer `/diskspace`.
     private var targets: [(ServiceKind, ServiceConfig)] {
         let store = ConfigStore.shared
         return [ServiceKind.radarr, .sonarr, .lidarr, .whisparr].compactMap { kind in
@@ -33,8 +29,7 @@ final class ServerStatusModel {
         lastRefresh = Date()
     }
 
-    /// Fetch `/diskspace` from every target concurrently; a failing arr
-    /// contributes nothing rather than aborting the sweep.
+    /// A failing arr contributes nothing rather than aborting the sweep.
     private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> [ArrDiskSpace] {
         await withTaskGroup(of: [ArrDiskSpace].self) { group in
             for (kind, cfg) in targets {
@@ -46,15 +41,11 @@ final class ServerStatusModel {
         }
     }
 
-    /// The four arrs share `ArrAPIClient`, so an existential is enough to call
-    /// the protocol-extension `fetchDiskSpace()`.
     private static func client(_ kind: ServiceKind, _ cfg: ServiceConfig) -> any ArrAPIClient {
         ServiceHandles.arr(QueueItem.Source(rawValue: kind.rawValue) ?? .whisparr, config: cfg)
     }
 
-    /// Different arrs sharing a mount report it identically — collapse by path
-    /// (keeping the largest-capacity read), drop capacity-less mounts, and sort
-    /// fullest-first so the disks that need attention lead.
+    /// Arrs sharing a mount report it identically: collapse by path, keep the largest capacity, fullest first.
     private static func dedupe(_ disks: [ArrDiskSpace]) -> [ArrDiskSpace] {
         var byPath: [String: ArrDiskSpace] = [:]
         for d in disks where d.isMeaningful {

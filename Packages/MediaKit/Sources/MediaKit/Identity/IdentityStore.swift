@@ -9,9 +9,8 @@ public actor IdentityStore {
         self.database = database; self.clock = clock
     }
 
-    /// Pure lookup, no network.
-    /// Arr and media-server harvests link each record to its external ids, so two external ids meet one hop
-    /// away, through the record that carries both.
+    /// Pure lookup, no network. Two external ids meet one hop away, through the harvested
+    /// record that carries both.
     public func known(_ id: MediaID, in namespace: IDNamespace, minimum: Crosswalk.Confidence = .inferred) async -> MediaID? {
         let edges = await lookup(id).filter { $0.confidence >= minimum }
         if let direct = Self.best(edges, in: namespace) { return direct }

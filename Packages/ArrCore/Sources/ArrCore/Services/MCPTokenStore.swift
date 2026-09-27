@@ -1,23 +1,16 @@
 import Foundation
 import Security
 
-/// Keychain-backed storage for the MCP server's bearer token. Device-only,
-/// never synced. Thin wrapper over `SecretStore` so there is one Keychain code
-/// path; kept as a named type because several call sites read it as a static.
+/// The MCP server's bearer token over `SecretStore`. Device-only, never synced.
 public enum MCPTokenStore {
-    /// Device-only, never synced. Deliberately reuses `ConfigStore`'s backend
-    /// selection instead of repeating it: builds whose signature provisions the
-    /// shared access group get the Keychain, ad-hoc ones (incl. `swift test`)
-    /// get UserDefaults. Picking differently here would let the MCP server fail
-    /// to read back its own bearer token after a relaunch — auth would break on
-    /// exactly the self-hosted builds most likely to run it.
+    /// Same backend selection as `ConfigStore`, or the server couldn't read back
+    /// its own token after a relaunch.
     private static let store: SecretStore =
         ConfigStore.makeDefaultSecretStore(defaults: .standard)
 
     public static func read() -> String? {
         if let token = store.read(.mcpBearer) { return token }
-        // Self-healing migration: tokens written by builds <= the SecretStore
-        // refactor lived at a different keychain location. Move it once.
+        // Tokens from before the SecretStore refactor lived at a different keychain location.
         if let legacy = readLegacy() {
             store.set(legacy, for: .mcpBearer)
             deleteLegacy()
@@ -32,7 +25,6 @@ public enum MCPTokenStore {
         deleteLegacy()
     }
 
-    /// Generate a URL-safe random token (base64url, no padding).
     public static func generate() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)

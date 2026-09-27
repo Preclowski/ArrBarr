@@ -2,10 +2,6 @@ import Foundation
 import SwiftUI
 
 nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codable {
-    /// Calendar entries share the same arr-source identity as queue rows;
-    /// keeping two parallel enums made every cross-section helper translate
-    /// back and forth. `QueueItem.Source` already carries `symbol` and
-    /// `displayName`, so we alias instead of duplicating.
     public typealias Source = QueueItem.Source
 
     public let id: String
@@ -18,44 +14,28 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
     public let overview: String?
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
-    /// IMDb rating from the arr's stored series/movie metadata. Same units
-    /// as `SearchResult.imdb` so the unified poster-metadata row can format
-    /// it identically across the + and Upcoming surfaces.
+    /// Same units as `SearchResult.imdb`.
     public let imdb: Double?
-    /// TMDB score — the fallback when IMDb hasn't rated the title yet
-    /// (typical for unreleased movies). Radarr/Whisparr only.
+    /// Fallback when IMDb hasn't rated the title yet. Radarr/Whisparr only.
     public var tmdb: Double? = nil
-    /// Runtime in minutes (episode for Sonarr, movie for Radarr/Whisparr).
-    /// `nil` for Lidarr — albums don't have a single runtime.
+    /// Episode or movie minutes; nil for Lidarr.
     public let runtime: Int?
-    /// Underlying arr entity id — Sonarr `series.id`, Radarr `movie.id`,
-    /// Lidarr `album.id`, Whisparr `scene.id`. Lets the row open DetailView
-    /// just like a queue tap. `nil` when the source didn't carry one
-    /// (e.g. demo entries without a matching backend record).
+    /// Sonarr `series.id`, Radarr `movie.id`, Lidarr `album.id`, Whisparr `scene.id`.
     public let entityId: Int?
-    /// Lidarr only: how many tracks the album has, when the arr knows the
-    /// tracklist yet. Carried as a number rather than a formatted string so the
-    /// row can pluralize it in the user's language — a service-layer
-    /// `String(localized:)` resolves once, at fetch time.
+    /// A number so the row pluralizes it live; service-layer `String(localized:)` resolves once.
     public var trackCount: Int? = nil
-    /// Sonarr only: the on-disk episode file's id (calendar entries carry a
-    /// SERIES `entityId`, so the tooltip needs this to find the right file).
+    /// Calendar entries carry a series `entityId`, so the tooltip needs the file id.
     public var episodeFileId: Int? = nil
-    /// Title facts mirrored from the library records so the Upcoming tooltip
-    /// carries the SAME data set as the Library tooltip.
     public var genres: [String] = []
     public var certification: String? = nil
     public var releaseStatus: String? = nil
     public var ratingRt: Double? = nil
     public var ratingMetacritic: Double? = nil
     public var qualityProfileId: Int? = nil
-    /// Sonarr: this calendar entry's episode identity — what lets the row
-    /// find its own live queue item (the series-level `entityId` alone
-    /// matches every episode of the show).
+    /// The series-level `entityId` alone matches every episode of the show.
     public var seasonNumber: Int? = nil
     public var episodeNumber: Int? = nil
-    /// Foreign ids for the tooltip's country line — TMDB for movies, TVDB
-    /// for series (what Sonarr's calendar embeds). Nil for music.
+    /// TMDB for movies, TVDB for series (what Sonarr's calendar embeds). Nil for music.
     public var tmdbId: Int? = nil
     public var tvdbId: Int? = nil
 
@@ -89,10 +69,6 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         self.tmdbId = tmdbId; self.tvdbId = tvdbId
     }
 
-    /// Compact when-label for one-line rows (the queue's "This week"
-    /// banner): today → just the time, tomorrow → just "Tomorrow", later →
-    /// a short day-month date. The full date + time lives in the tooltip
-    /// (`airDateTimeFormatted`).
     public func airDateCompact(locale: Locale) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(airDate) {
@@ -105,9 +81,7 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         return CachedDateFormatters.template("dMMM", locale: locale).string(from: airDate)
     }
 
-    /// Tooltip form: the full relative/absolute date plus the air time
-    /// ("17 sie 2026, 06:00"). Date-only entries (movie releases parse to
-    /// midnight) skip the meaningless ", 00:00".
+    /// Date-only entries (movie releases parse to midnight) skip ", 00:00".
     public func airDateTimeFormatted(locale: Locale) -> String {
         let date = airDateFormatted(locale: locale)
         let comps = Calendar.current.dateComponents([.hour, .minute], from: airDate)
@@ -116,9 +90,7 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         return "\(date), \(time.string(from: airDate))"
     }
 
-    /// Localized display form of `releaseType` ("Airing" / "Digital" /
-    /// "Physical" / "In Cinemas" — set verbatim by the clients). Unknown
-    /// values fall back to the raw string.
+    /// Unknown values fall back to the raw string.
     public func releaseTypeText(locale: Locale) -> String? {
         guard let releaseType, !releaseType.isEmpty else { return nil }
         let keys: [String: String] = [
@@ -133,12 +105,8 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         return releaseType
     }
 
-    /// `locale` drives BOTH the numeric date *and* the "Today"/"Tomorrow" words,
-    /// so the whole label follows the in-app language picker live. The words go
-    /// through `AppLocalized` (per-language bundle) rather than
-    /// `String(localized:)`, which reads the process `AppleLanguages` and would
-    /// stay in the pre-switch language until relaunch — leaving the word and the
-    /// date in different languages. Callers pass `configStore.currentLocale`.
+    /// Words go through `AppLocalized`: `String(localized:)` stays in the process
+    /// language until relaunch, mismatching the date.
     public func airDateFormatted(locale: Locale = .current) -> String {
         let cal = Calendar.current
         if cal.isDateInToday(airDate) {

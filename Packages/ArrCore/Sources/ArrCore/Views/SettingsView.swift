@@ -19,51 +19,37 @@ public struct SettingsView: View {
     }
 
     @EnvironmentObject var configStore: ConfigStore
-    /// `@Bindable`: the queue's state is `@Observable`, so a binding comes
-    /// from here rather than from a `$`-projection on the store.
+    /// `@Bindable` because the queue state is `@Observable`, not a `$`-projected store.
     @Bindable var queueUI = QueueUIState.shared
     @ObservedObject private var storeManager = StoreManager.shared
     @State private var demoModeOn: Bool = DemoMode.isActive
     @State private var telemetryReport: String?
-    /// iOS: 7-tap on the Version row enables Developer mode, since iOS
-    /// users can't pass `--demo` on launch.
+    /// iOS: 7 taps on the Version row enable Developer mode (no launch args there).
     @State private var versionTapCount: Int = 0
     @State private var devModeRevealed: Bool = DeveloperMode.isActive
-    /// The app language at the moment Settings opened. We compare against
-    /// `configStore.appLanguage` to decide whether the "restart required"
-    /// footer should appear — `nil` until the view first appears.
+    /// App language when Settings opened; drives the "restart required" footer.
     @State private var initialAppLanguage: String?
-    /// Bytes the poster cache occupies, refreshed when the pane appears and
-    /// after a clear. `nil` until the first measurement lands.
     @State private var artworkBytes: Int64?
     @State private var isClearingArtwork = false
     @State private var dataCacheBytes: Int64?
     @State private var isClearingDataCache = false
     #if os(macOS)
-    /// Which sidebar row is selected in the macOS System-Settings-style layout.
     @State private var macSelection: SettingsSection = .general
-    /// Sidebar search query. Non-empty collapses the structured list into a
-    /// flat, filtered set of matching rows.
     @State private var macSearch: String = ""
-    /// Back/forward navigation history (like System Settings). `historyIndex`
-    /// points at the current entry; `isNavigatingHistory` suppresses recording
-    /// when a selection change came from the back/forward buttons themselves.
+    /// `isNavigatingHistory` suppresses recording when back/forward caused the change.
     @State private var history: [SettingsSection] = [.general]
     @State private var historyIndex: Int = 0
     @State private var isNavigatingHistory: Bool = false
 
-    /// Sidebar rows for the macOS Settings window. Media Managers and Download
-    /// clients are hub rows that open a card list (iOS-style); tapping a card
-    /// drills into `.service(kind)`, a single-config page reached via history,
-    /// not a sidebar row of its own.
+    /// Media Managers and Download clients are hub rows; `.service(kind)` is reached
+    /// from a hub card via history, not from the sidebar.
     enum SettingsSection: Hashable {
         case general
         case status
         case mediaManagers
         case downloadClients
         case service(ServiceKind)
-        /// Prowlarr has no `ServiceKind` (it feeds the managers, it is not a
-        /// queue source), so it gets its own case instead of `.service`.
+        /// Prowlarr has no `ServiceKind` (it is not a queue source).
         case prowlarr
         case mediaServer
         case assistant
@@ -85,46 +71,26 @@ public struct SettingsView: View {
             #if os(macOS)
             macSidebarLayout
             #else
-            // iOS: a single Form with every section inline. The macOS
-            // TabView paradigm fights with the bottom tab bar, and a
-            // grouped scrolling list is the iOS-native way to present
-            // settings anyway. The "About" section at the very end is
-            // where macOS's bottom-bar version+link footer lives.
+            // iOS: one grouped Form; a TabView fights the bottom tab bar.
             iOSCombinedForm
             #endif
         }
         .environment(\.locale, configStore.currentLocale)
-        // Settings is hosted in its own NSWindow on macOS and as a tab on
-        // iOS — neither path inherits the popover's `\.fontScale` env, so
-        // the Text-size picker had no effect on Settings itself (the most
-        // visible place where the user *previews* the change). Inject the
-        // env right here; observing configStore re-renders on every step.
+        // Settings has its own window/tab, so it does not inherit the popover's `\.fontScale`.
         .appFontScale(configStore)
         .preferredColorScheme(configStore.preferredColorScheme)
         .onAppear {
             if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
         }
         .task { refreshArtworkBytes(); refreshDataCacheBytes() }
-        // Paywall presentation is handled centrally (iOS: a sheet on
-        // iOSAppRoot's TabView; macOS: a dedicated NSWindow opened by
-        // AppDelegate observing StoreManager.gatedFeature). The Download
-        // Clients lock here just calls `gate(...)`, which sets gatedFeature and
-        // lets those owners present. `storeManager` is still observed for the
-        // `.disabled`/overlay lock state.
+        // Paywall is presented by iOSAppRoot (sheet) / AppDelegate (NSWindow) observing `gatedFeature`.
     }
 
-    /// Section content for the language picker. Shared between the macOS
-    /// General pane and the iOS combined form so the "restart required"
-    /// affordance behaves identically on both platforms.
-    /// Text-size preset picker — three discrete steps (Default / Larger /
-    /// Largest = 1.0 / 1.10 / 1.20). Affects every `.scaledFont(size:)`
-    /// site in the app via the `\.fontScale` env value injected at root.
+    /// Text-size presets (1.0 / 1.10 / 1.20), read via the `\.fontScale` env.
     @ViewBuilder
     private var textSizePicker: some View {
-        // Explicit `as Double` on every tag — without it, SwiftUI
-        // infers some literals as Int, the Picker selection never
-        // matches, and the scale silently sticks at whatever it was
-        // (no compile error, no runtime warning, just nothing changes).
+        // `as Double` on every tag: SwiftUI infers some literals as Int and the
+        // selection then silently never matches.
         Picker(selection: $configStore.fontScale) {
             Text("settings.default.button", bundle: .module).tag(1.0 as Double)
             Text("settings.larger.button", bundle: .module).tag(1.10 as Double)
@@ -132,8 +98,6 @@ public struct SettingsView: View {
         } label: { Text("settings.textSize.button", bundle: .module) }
     }
 
-    /// Light / Dark / System appearance preset. Applied via
-    /// `.preferredColorScheme` at every scene root.
     @ViewBuilder
     private var themePicker: some View {
         Picker(selection: $configStore.appearance) {
@@ -143,8 +107,6 @@ public struct SettingsView: View {
         } label: { Text("settings.theme.button", bundle: .module) }
     }
 
-    /// Shared "AI" section. One master toggle at the top kills the whole
-    /// feature; provider controls only appear when AI is on.
     @ViewBuilder
     private var aiSection: some View {
         Section {
@@ -153,7 +115,6 @@ public struct SettingsView: View {
         if configStore.aiEnabled {
             Section {
                 Picker(selection: $configStore.chatProvider) {
-                    // Hide Apple Intelligence on devices that don't support it.
                     ForEach(ChatProvider.allCases.filter {
                         $0 != .foundationModels || FoundationModelsAvailability.isSupported
                     }) { p in
@@ -168,13 +129,9 @@ public struct SettingsView: View {
                     .urlField()
                     SecureField(text: $configStore.openai.apiKey) { Text("settings.apiKey2.button", bundle: .module) }
                         .apiKeyField()
-                    // LabeledContent keeps the "Model" label visible next to
-                    // the value — a bare Form TextField hides its label once
-                    // it has a value, leaving just a cryptic "gpt-4o-mini".
+                    // A bare Form TextField hides its label once it has a value.
                     LabeledContent {
-                        // Empty title — the LabeledContent `label:` below is
-                        // the visible "Model" label; giving the TextField its
-                        // own label too rendered "Model … Model … value".
+                        // Empty title: LabeledContent supplies the label; a second one renders twice.
                         TextField("", text: $configStore.openai.model,
                                   prompt: Text(verbatim: "gpt-4o-mini"))
                         #if os(iOS)
@@ -224,8 +181,7 @@ public struct SettingsView: View {
         }
     }
 
-    /// TMDB key — lives under General (not AI): the key powers cast strips,
-    /// discovery and the upcoming people features, not just the assistant.
+    /// Under General, not AI: the TMDB key also powers cast strips and discovery.
     private var tmdbSection: some View {
         Section {
             SecureField(text: $configStore.tmdbApiKey,
@@ -255,12 +211,8 @@ public struct SettingsView: View {
         }
     }
 
-    /// Prowlarr's fields, on its own page like every other service: ArrBarr
-    /// asks it exactly one question — what an indexer is really called — so
-    /// manual-search rows can name the indexer the way the user named it
-    /// rather than the way the sync did. It has no `ServiceKind` (it is not a
-    /// queue source), so the field list is spelled out here instead of coming
-    /// from `ServiceFields`; the shape deliberately matches it.
+    /// Prowlarr only names indexers for manual-search rows. No `ServiceKind`, so the
+    /// fields are spelled out here, matching `ServiceFields`.
     @ViewBuilder
     private var prowlarrFields: some View {
         Toggle(isOn: $configStore.prowlarr.enabled) {
@@ -293,8 +245,7 @@ public struct SettingsView: View {
         }
     }
 
-    /// Same sanitising as the arrs: a URL pasted out of Prowlarr's own address
-    /// bar carries its `#/…` hash route, which `URL(string:)` rejects.
+    /// A URL pasted from Prowlarr's address bar carries a `#/…` route `URL(string:)` rejects.
     private var prowlarrURLBinding: Binding<String> {
         Binding(
             get: { configStore.prowlarr.baseURL },
@@ -313,15 +264,10 @@ public struct SettingsView: View {
         return nil
     }
 
-    /// The Prowlarr row as it appears in the Media-managers list: same shape as
-    /// an arr card (glyph, name, live health dot) minus the reorder grip. macOS
-    /// draws the drill-in chevron itself; iOS's `NavigationLink` adds one.
     private var prowlarrRowLabel: some View {
         HStack(spacing: 10) {
             #if os(macOS)
-            // The arr cards lead with a reorder grip; Prowlarr has none, so it
-            // reserves the same glyph invisibly — the marks then share a
-            // leading edge at every text size instead of a guessed inset.
+            // Invisible grip keeps the leading edge aligned with the arr cards at any text size.
             Image(systemName: "line.3.horizontal")
                 .scaledFont(size: 11)
                 .hidden()
@@ -345,8 +291,7 @@ public struct SettingsView: View {
         .contentShape(Rectangle())
     }
 
-    /// Header for the Prowlarr page — no brand asset ships for it, so the row
-    /// and the header share one SF Symbol.
+    /// No brand asset ships for Prowlarr, so row and header share an SF Symbol.
     private var prowlarrHeader: some View {
         HStack(spacing: 6) {
             ServiceIcon(prowlarr: 12)
@@ -365,8 +310,7 @@ public struct SettingsView: View {
 
     // MARK: - macOS sidebar layout (System Settings style)
 
-    /// Window-vibrant material for the custom sidebar column, so it matches a
-    /// native sidebar (and the traffic-lights read on top of it).
+    /// Window-vibrant material so the custom sidebar matches a native one.
     private struct SidebarVibrancy: NSViewRepresentable {
         func makeNSView(context: Context) -> NSVisualEffectView {
             let v = NSVisualEffectView()
@@ -379,15 +323,9 @@ public struct SettingsView: View {
     }
 
 
-    /// NavigationSplitView with a sidebar list of sections and a detail pane.
-    /// Replaces the old TabView + bottom "Close" bar — the window now closes
-    /// via ⌘W / the red traffic-light, like native System Settings.
     private var macSidebarLayout: some View {
-        // Hand-built two columns. NavigationSplitView on macOS 26 (Tahoe)
-        // renders its sidebar as a floating "liquid glass" rounded card inset
-        // from the window edges — which leaves the traffic-lights stranded off
-        // the sidebar. A manual layout with our own vibrant material gives the
-        // classic flush sidebar (traffic-lights ON it) the design calls for.
+        // Hand-built columns: NavigationSplitView on macOS 26 insets the sidebar as a
+        // floating glass card, stranding the traffic lights off it.
         HStack(spacing: 0) {
             sidebarColumn
                 .frame(width: 232)
@@ -405,7 +343,7 @@ public struct SettingsView: View {
 
     private var sidebarColumn: some View {
         VStack(spacing: 0) {
-            // Clear the floating traffic-lights at the top of the column.
+            // Clears the traffic lights.
             Color.clear.frame(height: 30)
             sidebarSearchField
                 .padding(.horizontal, 10)
@@ -429,14 +367,10 @@ public struct SettingsView: View {
         }
     }
 
-    /// Top bar of the detail column: back/forward as a segmented pill (like
-    /// System Settings' `‹ | ›`) then the large section title — aligned with
-    /// the floating traffic-lights of the sidebar.
     private var detailTopBar: some View {
         HStack(spacing: 12) {
             HStack(spacing: 0) {
-                // Icon-only nav pair: `.help` is a hover tooltip, so without
-                // explicit labels VoiceOver announces "chevron backward".
+                // Icon-only buttons need explicit labels for VoiceOver.
                 Button { goBack() } label: {
                     Image(systemName: "chevron.backward")
                         .frame(width: 30, height: 24)
@@ -472,10 +406,7 @@ public struct SettingsView: View {
         .frame(height: 52)
     }
 
-    /// The List highlights a top-level row, but the *content* can be a service
-    /// page nested under a hub. Map the active service back to its hub so the
-    /// owning row (Media Managers / Download clients) stays selected while
-    /// you're inside Radarr etc. Setting it (a user click) drives `macSelection`.
+    /// Maps an active service page back to its hub so the hub row stays highlighted.
     private var sidebarSelectionBinding: Binding<SettingsSection?> {
         Binding(
             get: { sidebarParent(of: macSelection) },
@@ -491,10 +422,8 @@ public struct SettingsView: View {
         return section
     }
 
-    /// Apple-style search field living at the top of the sidebar body.
     private var sidebarSearchField: some View {
         HStack(spacing: 6) {
-            // Decorative — the field itself is labelled "Search".
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
                 .font(.system(size: 13))
@@ -518,8 +447,6 @@ public struct SettingsView: View {
         )
     }
 
-    /// The normal (non-searching) sidebar: flat rows. Media Managers and
-    /// Download clients are hubs that open a card list in the detail.
     @ViewBuilder
     private var structuredSidebar: some View {
         Label { Text("settings.general.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
@@ -550,14 +477,11 @@ public struct SettingsView: View {
 
     // MARK: - Sidebar search
 
-    /// A flat, searchable directory of every sidebar destination. `kind` drives
-    /// a brand `ServiceIcon`; when nil the `systemImage` SF Symbol is used.
     private struct SidebarEntry: Identifiable {
         let section: SettingsSection
         let title: String
         let kind: ServiceKind?
         let systemImage: String
-        /// Prowlarr's mark comes from its own asset, not from a `ServiceKind`.
         var isProwlarr: Bool = false
         var id: SettingsSection { section }
     }
@@ -608,7 +532,6 @@ public struct SettingsView: View {
                 Image(systemName: entry.systemImage)
             }
         }
-        // Row glyph is decoration for the title next to it.
         .accessibilityLabel(Text(verbatim: entry.title))
         .tag(entry.section)
     }
@@ -618,11 +541,8 @@ public struct SettingsView: View {
     private var canGoBack: Bool { historyIndex > 0 }
     private var canGoForward: Bool { historyIndex < history.count - 1 }
 
-    /// Record a selection change in the history stack, unless it originated
-    /// from a back/forward button (which sets `isNavigatingHistory`).
     private func recordHistory(_ section: SettingsSection) {
         if isNavigatingHistory { isNavigatingHistory = false; return }
-        // Truncate any forward entries — a fresh navigation forks history.
         if historyIndex < history.count - 1 {
             history.removeSubrange((historyIndex + 1)...)
         }
@@ -644,7 +564,6 @@ public struct SettingsView: View {
         macSelection = history[historyIndex]
     }
 
-    /// Window title for the selected section.
     private func navTitle(for section: SettingsSection) -> Text {
         switch section {
         case .general: return Text("settings.general.button", bundle: .module)
@@ -682,13 +601,8 @@ public struct SettingsView: View {
         }
     }
 
-    /// Hub page: a card list of services (iOS-style). Tapping a card drills
-    /// into that service's single-config page via `macSelection` (so the
-    /// back/forward arrows return here). Download clients stay Pro-gated.
-    ///
-    /// `reorderable` makes this list double as the queue's section order: the
-    /// cards are already one per arr, so dragging them here beats keeping a
-    /// second copy of the same roster over in General.
+    /// Hub page: cards drill into a service page via `macSelection`. `reorderable`
+    /// makes the card order the queue's section order.
     private func serviceHubPane(
         _ specs: [ServiceSpec],
         locked: Bool,
@@ -701,11 +615,7 @@ public struct SettingsView: View {
                         macSelection = .service(spec.kind)
                     } label: {
                         HStack(spacing: 10) {
-                            // Grip glyph, brand mark and drill-in chevron are
-                            // decoration around the service name — announcing
-                            // the asset name / "chevron right" adds nothing.
-                            // Reordering itself is `.onMove`, which ships its
-                            // own VoiceOver affordance.
+                            // Grip, brand mark and chevron are decoration; `.onMove` has its own VoiceOver affordance.
                             if reorderable {
                                 Image(systemName: "line.3.horizontal")
                                     .foregroundStyle(.tertiary)
@@ -717,8 +627,7 @@ public struct SettingsView: View {
                             Text(verbatim: spec.title)
                                 .foregroundStyle(.primary)
                             Spacer()
-                            // Live health dot, not a "configured" checkmark —
-                            // a green tick next to an unreachable service lies.
+                            // Live health dot, not a "configured" tick: a tick lies when the service is unreachable.
                             if spec.config.wrappedValue.isConfigured {
                                 ConnectionStatusDot(service: .arr(spec.kind))
                             }
@@ -732,9 +641,7 @@ public struct SettingsView: View {
                     .buttonStyle(.plain)
                 }
                 .onMove(perform: reorderable ? moveMediaManagers : nil)
-                // Prowlarr belongs with the managers it feeds, and rides the
-                // list's last slot — outside the `ForEach`, so it has no
-                // reorder grip and the arrs permute among themselves.
+                // Prowlarr sits outside the `ForEach`, so it has no grip and never reorders.
                 if reorderable {
                     Button {
                         macSelection = .prowlarr
@@ -758,9 +665,6 @@ public struct SettingsView: View {
         }
     }
 
-    /// One service's config on its own page (one configuration per page). The
-    /// roster (`mediaManagerSpecs` / `downloadClientSpecs`) is shared with iOS;
-    /// download clients stay Pro-gated, same as the old combined pane.
     @ViewBuilder
     private func singleServicePane(for kind: ServiceKind) -> some View {
         if let spec = (mediaManagerSpecs + downloadClientSpecs).first(where: { $0.kind == kind }) {
@@ -780,8 +684,6 @@ public struct SettingsView: View {
         }
     }
 
-    /// Prowlarr's own page, reached from the Media Managers hub — same
-    /// one-configuration-per-page shape as `singleServicePane`.
     private var prowlarrPane: some View {
         Form {
             Section {
@@ -791,8 +693,6 @@ public struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    /// Siri & Shortcuts on its own sidebar row (was inlined at the bottom of
-    /// the General pane under the TabView layout).
     private var siriPane: some View {
         Form {
             if #available(macOS 13.0, *) {
@@ -802,10 +702,6 @@ public struct SettingsView: View {
         .formStyle(.grouped)
     }
 
-    /// About pane — version, project links, acknowledgements, and the
-    /// Developer/Demo controls (gated on Developer mode). Mirrors the iOS
-    /// About form; under the old macOS layout this content lived in the
-    /// native "About ArrBarr" panel + the General pane's demo section.
     private var aboutPane: some View {
         Form {
             if DeveloperMode.isActive {
@@ -829,7 +725,7 @@ public struct SettingsView: View {
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
             } header: { Text("settings.about.button", bundle: .module) }
-            // Plain rows, no glyphs: these are attribution lines, not actions.
+            // Plain rows, no glyphs: attribution, not actions.
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
                     Text(verbatim: "Dashboard Icons — CC BY 4.0")
@@ -840,18 +736,14 @@ public struct SettingsView: View {
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
             }
-            // Own section: TMDB's terms require the mark AND this disclaimer,
-            // and the disclaimer has to sit under THEIR row — sharing the
-            // acknowledgements footer put the icon credit under it instead.
-            // Verbatim on purpose: a licence notice, not UI copy.
+            // TMDB's terms require the mark and this disclaimer under their own row.
+            // Verbatim: a licence notice, not UI copy.
             Section {
                 Link(destination: URL(string: "https://www.themoviedb.org")!) {
                     Label {
                         Text(verbatim: "TMDB")
                     } icon: {
-                        // `rating-tmdb`, not `brand-tmdb`: the latter is a
-                        // template asset and gets tinted, and TMDB's mark has
-                        // to appear in its own colours.
+                        // `brand-tmdb` is a template asset and gets tinted; TMDB's mark must keep its colours.
                         Image("rating-tmdb", bundle: .module)
                             .renderingMode(.original)
                             .resizable()
@@ -879,9 +771,6 @@ public struct SettingsView: View {
     #endif
 
     #if os(iOS)
-    /// Root settings list — each row drills into its own sub-form, the
-    /// iOS-native (Settings.app) pattern. Replaces the one long combined
-    /// Form so each concern lives on its own screen.
     private var iOSCombinedForm: some View {
         List {
             iosSettingsLink("settings.general.button", systemImage: "gearshape") { iosGeneralForm }
@@ -922,10 +811,6 @@ public struct SettingsView: View {
         }
     }
 
-    /// One row in the Media-managers / Download-clients submenu: brand icon +
-    /// name + a live health dot when configured, pushing a dedicated
-    /// per-service screen. Replaces the old single long form (every service
-    /// stacked) — each service now lives on its own screen one tap deep.
     private func iosServiceLink<Content: View>(
         kind: ServiceKind,
         title: String,
@@ -938,7 +823,6 @@ public struct SettingsView: View {
                 .navigationBarTitleDisplayMode(.inline)
         } label: {
             HStack(spacing: 10) {
-                // Brand mark repeats the name printed beside it.
                 ServiceIcon(kind: kind, size: 18)
                     .foregroundStyle(.primary)
                     .accessibilityHidden(true)
@@ -965,10 +849,8 @@ public struct SettingsView: View {
             }
     }
 
-    /// iOS chrome: each service is a `NavigationLink` row drilling into its
-    /// own screen — same roster as macOS, different presentation. Media
-    /// managers are `reorderable`: the list doubles as the queue's section
-    /// order (`.onMove` needs edit mode on iOS, hence the toolbar EditButton).
+    /// Media managers are `reorderable` (section order); `.onMove` needs edit mode
+    /// on iOS, hence the EditButton.
     private func iosServiceList(_ specs: [ServiceSpec], title: LocalizedStringKey,
                                 reorderable: Bool = false) -> some View {
         List {
@@ -980,9 +862,7 @@ public struct SettingsView: View {
                     }
                 }
                 .onMove(perform: reorderable ? moveMediaManagers : nil)
-                // Last slot of the same list, outside the `ForEach`: Prowlarr
-                // feeds the managers but is no queue source, so it has nothing
-                // to reorder against.
+                // Outside the `ForEach`: Prowlarr is no queue source, nothing to reorder against.
                 if reorderable {
                     NavigationLink {
                         Form { Section { prowlarrFields } }
@@ -1015,24 +895,13 @@ public struct SettingsView: View {
 
     private var iosGeneralForm: some View {
         Form {
-            // No language picker on iOS — it always follows the system
-            // language (see ConfigStore: appLanguage is forced to "system"
-            // on iOS).
-            // Section *order* lives on the Media-managers screen (the same
-            // roster, drag-sorted there); this screen keeps what each queue
-            // section shows.
+            // No language picker on iOS: ConfigStore forces "system".
             queueGroupingSection
             upcomingSection
             needsYouSection
             tmdbSection
             storageSection
-            // No theme picker on iOS — it always follows the system
-            // appearance (forced in ConfigStore).
-            // iOS has no "Show warnings" toggle and no refresh-interval
-            // picker: warnings are off (errors only), and foreground polling is
-            // a fixed 5s while the app is open (iOS suspends apps in the
-            // background, so there's no configurable background interval).
-            // Both are forced in ConfigStore for iOS.
+            // No theme, warnings or refresh-interval controls on iOS: ConfigStore forces them.
         }
         .navigationTitle(Text("settings.general.button", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)
@@ -1044,10 +913,8 @@ public struct SettingsView: View {
                 demoModeSection
             }
             Section {
-                // Classic iOS Settings.app trick: tap Version 7 times to
-                // reveal Developer options. LabeledContent swallows
-                // gestures inside Form, so use a plain Button styled like
-                // a row instead — its action fires reliably.
+                // 7 taps reveal Developer options. LabeledContent swallows gestures inside
+                // Form, so a Button styled as a row.
                 Button {
                     versionTapCount += 1
                     if versionTapCount >= 7 && !devModeRevealed {
@@ -1076,7 +943,7 @@ public struct SettingsView: View {
                 Text(verbatim: "Made by 🥨")
                     .foregroundStyle(.secondary)
             } header: { Text("settings.about.button", bundle: .module) }
-            // Plain rows, no glyphs: these are attribution lines, not actions.
+            // Plain rows, no glyphs: attribution, not actions.
             Section {
                 Link(destination: URL(string: "https://dashboardicons.com")!) {
                     Text(verbatim: "Dashboard Icons — CC BY 4.0")
@@ -1087,18 +954,14 @@ public struct SettingsView: View {
             } header: { Text("settings.acknowledgements.button", bundle: .module) } footer: {
                 Text("settings.serviceIconsByDashboard.tooltip", bundle: .module)
             }
-            // Own section: TMDB's terms require the mark AND this disclaimer,
-            // and the disclaimer has to sit under THEIR row — sharing the
-            // acknowledgements footer put the icon credit under it instead.
-            // Verbatim on purpose: a licence notice, not UI copy.
+            // TMDB's terms require the mark and this disclaimer under their own row.
+            // Verbatim: a licence notice, not UI copy.
             Section {
                 Link(destination: URL(string: "https://www.themoviedb.org")!) {
                     Label {
                         Text(verbatim: "TMDB")
                     } icon: {
-                        // `rating-tmdb`, not `brand-tmdb`: the latter is a
-                        // template asset and gets tinted, and TMDB's mark has
-                        // to appear in its own colours.
+                        // `brand-tmdb` is a template asset and gets tinted; TMDB's mark must keep its colours.
                         Image("rating-tmdb", bundle: .module)
                             .renderingMode(.original)
                             .resizable()
@@ -1115,9 +978,7 @@ public struct SettingsView: View {
     }
     #endif
 
-    /// Developer "Demo mode" controls — identical on both platforms; only the
-    /// visibility condition differs (macOS keys off `DeveloperMode.isActive`,
-    /// iOS off the 7-tap-revealed `devModeRevealed`), so callers wrap it.
+    /// Callers wrap this: macOS gates on `DeveloperMode.isActive`, iOS on `devModeRevealed`.
     @ViewBuilder
     private var demoModeSection: some View {
         Section {
@@ -1125,8 +986,7 @@ public struct SettingsView: View {
                 get: { demoModeOn },
                 set: { newValue in
                     guard newValue != demoModeOn else { return }
-                    // Confirm via the callback BEFORE flipping local state — if
-                    // the user cancels the relaunch, the toggle stays in sync.
+                    // Ask before flipping local state so a cancelled relaunch keeps the toggle in sync.
                     let committed = onSetDemoMode?(newValue) ?? false
                     if committed { demoModeOn = newValue }
                 }
@@ -1159,10 +1019,7 @@ public struct SettingsView: View {
 
     // MARK: - Service roster (shared data)
 
-    /// One configurable service row. Both the macOS panes and the iOS forms
-    /// render the *same* roster from this data — the only difference is the
-    /// chrome (a `Section` vs a `NavigationLink`). Adding a service, or wiring
-    /// a new per-service binding, happens in one place.
+    /// Shared roster for macOS panes and iOS forms; only the chrome differs.
     private struct ServiceSpec: Identifiable {
         let kind: ServiceKind
         let title: String
@@ -1194,8 +1051,6 @@ public struct SettingsView: View {
         ]
     }
 
-    /// The actual fields for one service — single wiring point for every spec
-    /// binding, so neither platform repeats the argument list.
     private func serviceFields(_ spec: ServiceSpec) -> some View {
         ServiceFields(config: spec.config, kind: spec.kind,
                       notifyBinding: spec.notify,
@@ -1205,8 +1060,6 @@ public struct SettingsView: View {
 
     // MARK: - Panes
 
-    /// Section header with the service's brand icon. Shared by the macOS panes
-    /// and the iOS forms so every configured service is visually identifiable.
     @ViewBuilder
     private func serviceSectionHeader(_ kind: ServiceKind, _ title: LocalizedStringKey) -> some View {
         HStack(spacing: 6) {
@@ -1222,10 +1075,6 @@ public struct SettingsView: View {
             Section {
                 Toggle(isOn: $configStore.launchAtLogin) { Text("settings.launchAtLogin.button", bundle: .module) }
                 #if os(macOS)
-                // Menu bar ⇄ standalone window with a Dock icon. A picker, not
-                // a switch: "detached" isn't an option *on* something, it's one
-                // of two places the app lives, and naming both says more than a
-                // paragraph of tooltip under a toggle did.
                 Picker(selection: $configStore.detachedWindow) {
                     Text("settings.interfaceMode.menuBar", bundle: .module).tag(false)
                     Text("settings.interfaceMode.window", bundle: .module).tag(true)
@@ -1254,37 +1103,22 @@ public struct SettingsView: View {
                     #endif
                 }
             }
-            // What each queue section shows. Their *order* is dragged on the
-            // Media-managers page, which lists the same arrs.
+            // Section order is dragged on the Media-managers page.
             queueGroupingSection
             upcomingSection
             needsYouSection
             tmdbSection
             storageSection
-            // No refresh-interval pickers. Both are hard-locked (see
-            // `ConfigStore.foregroundInterval`): the queue is pushed at by
-            // SignalR, the bars interpolate between fetches, and the background
-            // poll only runs when realtime has gone silent — so the numbers
-            // there described plumbing rather than anything a user wants to
-            // choose. Same reasoning as `realtimeSilenceTimeout`.
-            // Developer/Demo controls moved to the About pane; Siri & Shortcuts
-            // is now its own sidebar row (see siriPane).
+            // No refresh-interval pickers: both intervals are hard-locked (see `ConfigStore.foregroundInterval`).
         }
         .formStyle(.grouped)
     }
 
-    /// Global notification-sound picker, inlined into the Application section.
-    /// One setting for every queue banner, so it lives with the other
-    /// app-level toggles rather than per-arr. Selecting a named sound previews
-    /// it immediately — same affordance as macOS Sound preferences. iOS gets
-    /// nothing (no `/System/Library/Sounds` enumeration); the default stays.
+    /// macOS only: iOS cannot enumerate `/System/Library/Sounds`.
     @ViewBuilder
     private var notificationSoundPicker: some View {
         #if os(macOS)
-        // Play sits beside the popup, not beside the label: it acts on what the
-        // popup holds, and a glyph tucked under the row's title read as part
-        // of the title. Hence `LabeledContent` rather than the Picker's own
-        // label slot.
+        // Play acts on the popup's value, so it sits beside the popup via LabeledContent.
         LabeledContent {
             HStack(spacing: 6) {
                 Button { Self.previewSound(named: configStore.notificationSoundName) } label: {
@@ -1292,8 +1126,7 @@ public struct SettingsView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                // Silence has nothing to play, and neither has "Default" —
-                // that one is whatever the system decides at delivery time.
+                // "Default" is whatever the system picks at delivery time.
                 .disabled(configStore.notificationSoundName.isEmpty
                           || configStore.notificationSoundName == ConfigStore.silentSoundName)
                 .help(Text("settings.play.button", bundle: .module))
@@ -1321,9 +1154,7 @@ public struct SettingsView: View {
     }
 
     #if os(macOS)
-    /// Sound files shipped in `/System/Library/Sounds`, sans extension and
-    /// sorted. These are exactly the names `NSSound(named:)` and
-    /// `UNNotificationSound(named: "<name>.aiff")` resolve.
+    /// Names that `NSSound(named:)` and `UNNotificationSound(named: "<name>.aiff")` resolve.
     private static let systemSoundNames: [String] = {
         let dir = "/System/Library/Sounds"
         let files = (try? FileManager.default.contentsOfDirectory(atPath: dir)) ?? []
@@ -1333,8 +1164,6 @@ public struct SettingsView: View {
             .sorted()
     }()
 
-    /// Plays a named system sound as a preview. No-op for the "Default" and
-    /// "None" sentinels — neither maps to a previewable `NSSound`.
     private static func previewSound(named name: String) {
         guard !name.isEmpty, name != ConfigStore.silentSoundName else { return }
         NSSound(named: NSSound.Name(name))?.play()
@@ -1343,9 +1172,7 @@ public struct SettingsView: View {
 
     // MARK: - Queue sections
 
-    /// By-title queue grouping. One picker doubles as the on/off switch and
-    /// the default disclosure state — Off keeps the flat list, the other two
-    /// bundle a title's ≥2 downloads under a collapsible header.
+    /// One picker is both the on/off switch and the default disclosure state.
     private var queueGroupingSection: some View {
         Section {
             Picker(selection: $queueUI.queueTitleGrouping) {
@@ -1359,8 +1186,7 @@ public struct SettingsView: View {
         } header: { Text("Queue", bundle: .module) }
     }
 
-    /// The Upcoming banner: one switch, since its window is hard-locked to
-    /// 7 days.
+    /// One switch: the window is hard-locked to 7 days.
     private var upcomingSection: some View {
         Section {
             Toggle(isOn: $configStore.showTonight) {
@@ -1381,7 +1207,6 @@ public struct SettingsView: View {
         } header: { Text("Upcoming", bundle: .module) }
     }
 
-    /// Storage: what the app is holding on disk, and the buttons that give it back.
     @ViewBuilder
     private var storageSection: some View {
         Section {
@@ -1400,8 +1225,6 @@ public struct SettingsView: View {
             } label: {
                 Label { Text("settings.clearImageCache.button", bundle: .module) } icon: { Image(systemName: "trash") }
             }
-            // Nothing to reclaim is a reason to say so, not to offer a button
-            // that does nothing perceptible.
             .disabled(isClearingArtwork || (artworkBytes ?? 0) == 0)
             LabeledContent {
                 if let dataCacheBytes {
@@ -1445,30 +1268,22 @@ public struct SettingsView: View {
         isClearingArtwork = true
         Task {
             await AppCaches.clearArtwork()
-            // The icon tier backs the Spotlight index, so put its thumbnails
-            // back rather than leaving results iconless until the next launch.
+            // The icon tier backs the Spotlight index; restore its thumbnails now.
             SpotlightIndexer.reindex(configStore: configStore)
             artworkBytes = await AppCaches.artworkBytes()
             isClearingArtwork = false
         }
     }
 
-    /// Everything "Needs you" in one place. The three controls read as one
-    /// setting from a distance but aren't: the first decides whether the
-    /// section renders at all, the second what severity lands in it, the third
-    /// whether *errors* also leave the app as a system notification. Only the
-    /// middle one depends on the section being visible, so only it is disabled
-    /// with it. Severity is a picker rather than a "Show warnings" switch —
-    /// naming both ends ("Errors only" / "Errors and warnings") says what a
-    /// footnote under a toggle had to spell out.
+    /// Only the severity picker depends on the section being visible, so only it
+    /// is disabled with it.
     @ViewBuilder
     private var needsYouSection: some View {
         Section {
             Toggle(isOn: $configStore.showNeedsYou) {
                 Text("settings.showSection.label", bundle: .module)
             }
-            // iOS is errors-only by design — ConfigStore forces showWarnings
-            // off there on every load, so a control would spring back.
+            // iOS is errors-only: ConfigStore forces showWarnings off on every load.
             #if os(macOS)
             Picker(selection: $configStore.showWarnings) {
                 Text("settings.errorsOnly.option", bundle: .module).tag(false)
@@ -1482,18 +1297,14 @@ public struct SettingsView: View {
         } header: { Text("Needs you", bundle: .module) }
     }
 
-    /// Media-manager cards in the order their sections appear in the queue.
-    /// `arrOrder` also carries the two pseudo-sections (Upcoming / Needs you);
-    /// those have switches in General instead, so they're filtered out here.
+    /// `arrOrder` also carries Upcoming / Needs you; those are filtered out here.
     private func orderedByQueueSections(_ specs: [ServiceSpec]) -> [ServiceSpec] {
         let ranked = configStore.arrOrder.compactMap { key in specs.first { $0.kind.rawValue == key } }
         let rankedKinds = Set(ranked.map(\.kind))
         return ranked + specs.filter { !rankedKinds.contains($0.kind) }
     }
 
-    /// Apply a card drag back to `arrOrder`. The arrs are permuted among the
-    /// slots arr keys already held, so Upcoming and Needs you keep the position
-    /// they have in the queue — this list has no row for them to move.
+    /// Permutes arrs only among arr slots, so Upcoming and Needs you keep their place.
     private func moveMediaManagers(from source: IndexSet, to destination: Int) {
         var order = configStore.arrOrder
         let slots = order.indices.filter { QueueItem.Source(rawValue: order[$0]) != nil }
@@ -1513,8 +1324,7 @@ public struct SettingsView: View {
 
 }
 
-/// Internal, not private: the media-server pane lives in its own file and
-/// needs the same lock.
+/// Internal: the media-server pane in another file uses it.
 struct ProLockOverlay: View {
     @ObservedObject private var store = StoreManager.shared
     let feature: ProFeature
@@ -1522,7 +1332,6 @@ struct ProLockOverlay: View {
         ZStack {
             Color.black.opacity(0.04)
             VStack(spacing: 8) {
-                // Decorative — the Unlock button underneath says it in words.
                 Image(systemName: "lock.fill").font(.title2).foregroundStyle(.secondary)
                     .accessibilityHidden(true)
                 Button { store.gate(feature) } label: {

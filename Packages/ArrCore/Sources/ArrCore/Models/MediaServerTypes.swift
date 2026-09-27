@@ -1,18 +1,13 @@
 import Foundation
 import MediaKit
 
-/// What kind of thing a media-server library entry is. Deliberately coarse:
-/// ArrBarr only ever needs to line an entry up against a Radarr movie or a
-/// Sonarr series, so seasons, episodes and tracks collapse into their parent
-/// or are dropped.
+/// Deliberately coarse: entries only line up against Radarr movies or Sonarr series.
 nonisolated public enum MediaServerItemKind: String, Sendable, Equatable {
     case movie, show
 }
 
-/// An external metadata id a title can be matched by. Titles and years are a
-/// last resort (remakes, localized titles, "The" prefixes) — every one of the
-/// three servers stores provider ids, and so do the arrs, so the join is done
-/// on ids alone. TMDB numbers movies and series separately, so its id carries the kind.
+/// The join is on ids alone; titles and years are unreliable. TMDB numbers movies and series separately,
+/// so its id carries the kind.
 nonisolated public enum MediaServerExternalKey: Hashable, Sendable {
     case tmdbMovie(Int)
     case tmdbSeries(Int)
@@ -20,21 +15,13 @@ nonisolated public enum MediaServerExternalKey: Hashable, Sendable {
     case imdb(String)
 }
 
-/// One title as the media server knows it.
-///
-/// Deliberately narrow: the server reports far more (titles, years, play
-/// counts, last-played dates), but the app joins on ids and asks only two
-/// questions of the answer — "which artwork?" and "seen it?". Fields nothing
-/// reads would be fields nothing keeps correct.
+/// Deliberately narrow: the app only asks "which artwork?" and "seen it?", and unread fields go stale.
 nonisolated public struct MediaServerEntry: Sendable, Equatable {
-    /// The server's own id — `ratingKey` on Plex, `Id` on Jellyfin/Emby.
-    /// Distinct titles are counted by it, since one title occupies several
-    /// index keys.
+    /// `ratingKey` on Plex, `Id` on Jellyfin/Emby. Distinct titles are counted by it, since one title has several index keys.
     public let itemId: String
     /// Token-free: the credential is a header reference `PosterStore` resolves per download.
     public let poster: ArtworkReference?
     public var posterURL: URL? { poster?.url }
-    /// Every provider id this title exposes. All of them become index keys.
     public let externalKeys: [MediaServerExternalKey]
     public let watched: Bool
 
@@ -47,16 +34,12 @@ nonisolated public struct MediaServerEntry: Sendable, Equatable {
     }
 }
 
-/// One finished play, newest first when returned in a list.
 nonisolated public struct MediaServerWatch: Sendable, Equatable {
     public let title: String
     public let year: Int?
     public let kind: MediaServerItemKind
     public let watchedAt: Date?
-    /// Episodes only: which series item the play belongs to, and where in it.
-    /// The index turns these into the per-episode watched marks the Upcoming
-    /// rows draw — a series is never "watched" while it is still airing, so
-    /// the title-level flag says nothing about tonight's episode.
+    /// Episodes only. A series is never "watched" while airing, so tonight's episode needs its own mark.
     public let seriesItemId: String?
     public let season: Int?
     public let episode: Int?
@@ -73,12 +56,9 @@ nonisolated public struct MediaServerWatch: Sendable, Equatable {
     }
 }
 
-/// Outcome of a successful connection test: what to show the user, plus the
-/// user id the client resolved on their behalf (Jellyfin / Emby only).
+/// The user id is resolved for Jellyfin / Emby only.
 nonisolated public struct MediaServerHandshake: Sendable, Equatable {
-    /// e.g. "Plex 1.40.2" — shown verbatim in Settings.
     public let versionLine: String
-    /// Non-nil when the server scopes play state per user and one was found.
     public let userId: String?
 
     public init(versionLine: String, userId: String?) {
@@ -89,10 +69,8 @@ nonisolated public struct MediaServerHandshake: Sendable, Equatable {
 
 nonisolated enum MediaServerError: LocalizedError {
     case notConfigured
-    /// "Empty trash" is a Plex concept — Jellyfin and Emby delete an item when
-    /// its file goes, so there is nothing to purge.
+    /// Jellyfin and Emby delete an item when its file goes; nothing to purge.
     case trashUnsupported(server: String)
-    /// Jellyfin / Emby need a user id for play state and none could be found.
     case noUserResolved
 
     var errorDescription: String? {
@@ -108,9 +86,7 @@ nonisolated enum MediaServerError: LocalizedError {
 }
 
 nonisolated public extension MediaServerLibrary {
-    /// The server's title, or its key when it has none.
     var displayName: String { title.isEmpty ? key : title }
-    /// The glyph a Settings row wears for this library.
     var symbol: String {
         switch kind {
         case .movie: "film"
@@ -122,8 +98,6 @@ nonisolated public extension MediaServerLibrary {
 }
 
 nonisolated public extension MediaServerSession {
-    /// The show for an episode, the film otherwise.
     var headline: String { parentTitle ?? title }
-    /// The episode's own title under its show; nil for a film.
     var episodeLine: String? { parentTitle == nil ? nil : title }
 }

@@ -13,14 +13,10 @@ nonisolated public struct LLMTool: Sendable {
 }
 
 nonisolated public struct LLMResponse: Sendable {
-    /// Free-text the assistant produced.
     public let text: String
-    /// Zero or more tool calls the assistant made.
     public let toolCalls: [ToolCall]
-    /// Results aligned with `toolCalls` by index. If non-nil, the provider
-    /// has already executed each call and the view-model should NOT
-    /// re-execute them — render them as `.tool` messages.
-    /// If nil, the view-model owns execution.
+    /// Non-nil: the provider already executed each call (aligned by index) and the
+    /// view-model must not re-execute them. Nil: the view-model owns execution.
     public let toolResults: [ToolCallOutput]?
     public init(text: String, toolCalls: [ToolCall] = [], toolResults: [ToolCallOutput]? = nil) {
         self.text = text
@@ -32,9 +28,7 @@ nonisolated public struct LLMResponse: Sendable {
 /// Shared bits for composing the chat system prompt across providers, so the
 /// OpenAI and Foundation Models prompts stay in sync.
 nonisolated enum SystemPromptComposer {
-    /// Human-readable clause naming the arrs currently exposed to the model.
-    /// Derived from the gated tool list (`sonarr_*`, `radarr_*`, …) so it always
-    /// reflects exactly what's enabled — no separate config to keep in step.
+    /// Derived from the gated tool list, so it always matches what's enabled.
     static func arrsClause(tools: [LLMTool]) -> String {
         let known: [(prefix: String, label: String)] = [
             ("sonarr_", "Sonarr (TV)"),
@@ -45,7 +39,6 @@ nonisolated enum SystemPromptComposer {
         let present = known
             .filter { entry in tools.contains { $0.name.hasPrefix(entry.prefix) } }
             .map(\.label)
-        // Join "a, b and c" style.
         switch present.count {
         case 0: return "your self-hosted *arr media stack"
         case 1: return present[0]
@@ -54,10 +47,8 @@ nonisolated enum SystemPromptComposer {
         }
     }
 
-    /// In-text linking rules. Shared verbatim by both providers — the URL forms
-    /// here are the ones `ChatLink` parses, and a link that doesn't match them
-    /// is rendered as ordinary text, so the wording is deliberately narrow about
-    /// where the ids may come from.
+    /// Deliberately narrow: the URL forms are the ones `ChatLink` parses, and a
+    /// non-matching link renders as plain text.
     static let linkingClause = """
         Link the titles and people you name, using the ids the tools already gave you:
           • a film or show — [Sicario](arrbarr://media/tmdb:68718), taking the exact
@@ -87,13 +78,10 @@ nonisolated enum SystemPromptComposer {
 public protocol LLMProvider: Sendable {
     /// Whether the provider is usable at runtime (e.g. Foundation Models requires macOS 26 + AI on).
     var isAvailable: Bool { get }
-    /// One round of LLM. The view-model is responsible for the loop:
-    ///   send -> respond -> (run tool calls) -> send tool results -> respond -> ...
+    /// One round of LLM; the view-model runs the tool-call loop.
     func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse
 }
 
-/// Fallback provider that says "I'm not available." Useful when no provider has been set up
-/// yet, so the chat UI can render an unavailable banner instead of crashing.
 struct UnavailableLLMProvider: LLMProvider {
     init() {}
     var isAvailable: Bool { false }

@@ -1,16 +1,12 @@
 import SwiftUI
 
-/// The Queue tab's content: the native queue list, or a spinner while the first
-/// load is in flight. Search is not this view's business — `SearchHost` wraps
-/// it above the tabs.
+/// Search is not this view's business — `SearchHost` wraps it above the tabs.
 struct QueueTabContent: View {
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     @Binding var detailItem: QueueItem?
     @Binding var historySource: QueueItem.Source?
-    /// Queue multi-select mode — owned by PopoverContentView (toggled from its
-    /// "⋯" menu), threaded down to the native-`List` queue.
     @Binding var selecting: Bool
 
     var body: some View {
@@ -41,8 +37,7 @@ struct QueueTabContent: View {
     private var loadingIndicator: some View { LoadingStateView() }
 
     private func openNeedsYouQueue(_ needs: NeedsYouItem) {
-        // Non-arr connection issues (download client / AI) have no arr queue
-        // page to open — the user fixes those in Settings.
+        // Non-arr issues (download client / AI) have no arr queue page; they're fixed in Settings.
         guard let source = needs.source else { return }
         let cfg = configStore.config(for: source.serviceKind)
         guard let url = ArrActivityURLBuilder.queueURL(forBase: cfg.baseURL),

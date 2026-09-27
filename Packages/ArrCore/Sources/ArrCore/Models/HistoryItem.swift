@@ -11,44 +11,30 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
     public let quality: String?
     public let customFormats: [String]
     public let customFormatScore: Int
-    /// Set by the arr clients on per-file rows that arrived as one download
-    /// (a Lidarr album, a Sonarr season pack) so `collapsingBatches` can fold
-    /// them into a single row. `pairingUpgrades` copies it onto the deletions
-    /// such a batch caused, so those fold too.
+    /// Set on per-file rows of one download (album, season pack) so `collapsingBatches`
+    /// folds them; `pairingUpgrades` copies it onto the deletions the batch caused.
     public internal(set) var groupHint: GroupHint?
     /// Number of per-file rows folded into this one; 1 = a plain row.
     public internal(set) var groupedCount: Int
-    /// Poster of the movie / series / artist the event belongs to, from the
-    /// record the arr embeds in the history page. Nil when it didn't embed one
-    /// (a title deleted since).
+    /// From the record the arr embeds in the history page; nil for a title deleted since.
     public let posterURL: URL?
     public let posterRequiresAuth: Bool
-    /// The arr record the event belongs to — movie, series or artist id. What
-    /// the row opens.
+    /// Movie, series or artist id.
     public let arrId: Int?
-    /// The one file slot the event touched: the movie for Radarr / Whisparr,
-    /// the episode for Sonarr. Nil for Lidarr, whose files are tracks under an
-    /// album-level event. Upgrade pairing only matches events on the same slot.
+    /// The movie (Radarr / Whisparr) or episode (Sonarr); nil for Lidarr, whose files
+    /// are tracks under an album-level event. Upgrade pairing matches on this slot.
     public let fileKey: String?
     public let downloadId: String?
     public let downloadClient: String?
     public let indexer: String?
-    /// Release size (grabs) or file size (imports, deletions), in bytes. Nil on
-    /// a folded import or deletion, where one file's size isn't the batch's.
+    /// Nil on a folded import or deletion, where one file's size isn't the batch's.
     public internal(set) var size: Int64?
-    /// Why a file was deleted — the arr's raw reason ("Upgrade", "Manual",
-    /// "MissingFromDisk"). Nil on every other event.
+    /// The arr's raw reason ("Upgrade", "Manual", "MissingFromDisk").
     public let deleteReason: String?
-    /// The file on disk when the history was fetched, where the arr embeds it
-    /// (Radarr's movie record). Only meaningful to a grab that hasn't imported.
+    /// Only where the arr embeds it (Radarr's movie record); meaningful only to an unimported grab.
     public let fileOnDisk: FileSnapshot?
-    /// Whether the title had a file when the history was fetched; nil when the
-    /// arr didn't say.
     public let hadFileOnDisk: Bool?
-    /// The file this event's release replaced — or, for a grab still on its
-    /// way, would replace. Filled in by `pairingUpgrades`.
     public internal(set) var replaced: FileSnapshot?
-    /// Upgrade or new download; nil when the history can't tell.
     public internal(set) var isUpgrade: Bool?
 
     public init(
@@ -71,8 +57,6 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         self.deleteReason = deleteReason; self.fileOnDisk = fileOnDisk; self.hadFileOnDisk = hadFileOnDisk
     }
 
-    /// One side of an upgrade comparison — the same facts `UpgradeDiffView`
-    /// draws per column.
     public struct FileSnapshot: Equatable {
         public let quality: String?
         public let score: Int?
@@ -85,16 +69,13 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
             self.formats = formats; self.filename = filename
         }
 
-        /// The file a deletion event removed, as that event recorded it.
         init(deleted event: HistoryItem) {
             self.init(quality: event.quality, score: event.customFormatScore, size: event.size,
                       formats: event.customFormats, filename: event.sourceTitle)
         }
     }
 
-    /// Identity of a multi-file batch. `key` ties together the rows of one
-    /// download+album/season; `collapsedSubtitle` replaces the per-file
-    /// subtitle on the folded row (nil keeps the newest row's own subtitle).
+    /// `collapsedSubtitle` replaces the per-file subtitle on the folded row (nil keeps the newest row's).
     public struct GroupHint: Equatable {
         public let key: String
         public let collapsedSubtitle: String?
@@ -105,29 +86,18 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         }
     }
 
-    /// What a history list shows: upgrades paired first — pairing needs the
-    /// per-file rows — then grab, import and replaced-file batches folded.
+    /// Pairing runs first because it needs the per-file rows.
     public static func prepared(_ items: [HistoryItem]) -> [HistoryItem] {
         collapsingBatches(pairingUpgrades(items))
     }
 
     // MARK: - Upgrade pairing
 
-    /// How far apart an import and the deletion of the file it replaced may be
-    /// logged. The arr writes both in one import pass, seconds apart.
+    /// The arr logs the import and the replaced file's deletion in one pass, seconds apart.
     static let upgradePairingWindow: TimeInterval = 10 * 60
 
-    /// Works out what each grab and import replaced, from the history alone.
-    ///
-    /// - An import that upgraded a file is logged next to a deletion of the
-    ///   old file on the same slot, reason "Upgrade" — that deletion IS the
-    ///   old side of the diff. An import with no such deletion was new. The
-    ///   deletion also joins the import's batch, so a season pack's N
-    ///   replaced episodes fold like its N imports do.
-    /// - A grab that has imported since takes its import's answer (matched on
-    ///   download id): the file on disk now is the grab itself, so it can't
-    ///   be the baseline. A grab that hasn't imported compares against the
-    ///   file on disk now, which is still the one it's going to replace.
+    /// An upgrade import sits next to an "Upgrade" deletion on the same slot, which is its old side.
+    /// An imported grab takes its import's answer: the file on disk now is the grab itself.
     public static func pairingUpgrades(_ items: [HistoryItem]) -> [HistoryItem] {
         func removedFile(_ deletion: HistoryItem, replacedBy imported: HistoryItem) -> Bool {
             guard deletion.eventType == .deleted, deletion.source == imported.source,
@@ -168,15 +138,8 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
 
     // MARK: - Batch folding
 
-    /// Fold runs of per-file rows that share a batch (same source, event type,
-    /// group key and quality) into one row carrying the batch size — a season
-    /// pack's per-episode grabs, imports and replaced files, an album's
-    /// per-track imports. Order is preserved: the folded row sits where the
-    /// batch's newest row was. Unhinted rows and failures pass through.
-    ///
-    /// A folded row keeps whether the batch was an upgrade but drops the diff
-    /// and, except on a grab (one release, one size), the size: the per-file
-    /// values differ, and one of them standing for the whole pack is wrong.
+    /// The folded row sits where the batch's newest row was. It drops the diff and, except
+    /// on a grab, the size: one file's value standing for the whole pack is wrong.
     public static func collapsingBatches(_ items: [HistoryItem]) -> [HistoryItem] {
         func batchKey(_ item: HistoryItem) -> String? {
             guard item.eventType == .imported || item.eventType == .grabbed || item.eventType == .deleted,
@@ -203,13 +166,10 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
 
     // MARK: - Time grouping
 
-    /// The history list's sections: one per whole hour ago for the last day,
-    /// then one per whole day — hour sections further back would be mostly
-    /// "73 hours ago" headers over a single row.
+    /// Hours for the last day, then days: hour sections further back would be mostly single rows.
     public enum TimeBucket: Hashable, Comparable {
-        /// Whole hours ago, 0...23; 0 is the last hour.
+        /// 0...23; 0 is the last hour.
         case hours(Int)
-        /// Whole days ago, from 1.
         case days(Int)
 
         static func of(_ date: Date, now: Date) -> TimeBucket {
@@ -224,8 +184,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         public var id: TimeBucket { bucket }
     }
 
-    /// Items split into age sections, newest section first. Order within a
-    /// section is the caller's (newest first, as the arrs return it).
+    /// Order within a section is the caller's.
     public static func grouped(_ items: [HistoryItem], now: Date) -> [TimeGroup] {
         var byBucket: [TimeBucket: [HistoryItem]] = [:]
         for item in items {
@@ -241,8 +200,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         case deleted
         case other
 
-        /// Catalog key of the event's name. Views resolve it through
-        /// `AppLocalized` so a live language switch reaches it.
+        /// Resolved through `AppLocalized` so a live language switch reaches it.
         var labelKey: String {
             switch self {
             case .grabbed:  return "history.grabbed.button"
@@ -259,8 +217,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
 
         public var symbol: String {
             switch self {
-            // Outline (not filled) so "grabbed" (download just started / sent to
-            // the client) doesn't read as the finished `tray…fill` import below.
+            // Outline so "grabbed" doesn't read as the finished `tray…fill` import.
             case .grabbed: return "arrow.down.circle"
             case .imported: return "tray.and.arrow.down.fill"
             case .failed: return "xmark.circle.fill"
@@ -282,8 +239,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
     }
 }
 
-/// One page of an arr's history as a client fetched it — raw per-file rows,
-/// not yet paired or folded (`HistoryFeed` does that over every page loaded).
+/// Raw per-file rows, not yet paired or folded (`HistoryFeed` does that).
 nonisolated struct HistoryPage {
     let items: [HistoryItem]
     let hasMore: Bool

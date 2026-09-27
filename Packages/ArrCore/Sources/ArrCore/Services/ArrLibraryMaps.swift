@@ -1,19 +1,9 @@
 import Foundation
 
-/// Ownership cross-reference maps: an external id (TMDB / TVDB) → the title's
-/// `LibraryOwnership` (arr record id + whether it's downloaded), so results
-/// from any source (search, chat discovery, person filmography, Quiz) can be
-/// tagged as already-in-library, routed to the detail view instead of the add
-/// flow, and show the right ownership chip. Extracted so every caller builds
-/// the maps the same way instead of each looping the library.
-///
-/// All maps read `LibraryIndex`, so the callers that used to fetch a whole
-/// library each — search, `suggest_titles`, `discover_in_quiz` and the TMDB
-/// credit tools — share one snapshot instead of pulling a 3000-movie payload
-/// apiece.
+/// Ownership maps from an external id (TMDB / TVDB) to `LibraryOwnership`, all
+/// read off the shared `LibraryIndex` snapshot.
 nonisolated enum ArrLibraryMaps {
-    /// Radarr: `tmdbId → ownership`. Empty when Radarr isn't configured or the
-    /// fetch fails — callers proceed untagged.
+    /// Empty when Radarr isn't configured or the fetch fails; callers proceed untagged.
     static func radarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.movies(config: config) {
@@ -22,8 +12,7 @@ nonisolated enum ArrLibraryMaps {
         return map
     }
 
-    /// Sonarr: `tvdbId → ownership`. Only flows that carry real tvdbIds can use
-    /// this — TMDB-tv ids are not tvdb ids.
+    /// Only for flows with real tvdbIds: TMDB-tv ids are not tvdb ids.
     static func sonarrByTVDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
@@ -32,14 +21,7 @@ nonisolated enum ArrLibraryMaps {
         return map
     }
 
-    /// Sonarr: `tmdbId → ownership` — the TV counterpart of `radarrByTMDBId`,
-    /// and what tags TMDB-sourced series rows as owned.
-    ///
-    /// This exists because the alternative was a title + year join, which is
-    /// a guess: two different shows can share a name and a year. Sonarr has
-    /// shipped `tmdbId` on the series resource all along; reading it turns
-    /// that guess into an id match, at no extra request (the snapshot behind
-    /// `LibraryIndex` is the same one every other map reads).
+    /// An id match instead of a title + year join, which two shows can share.
     static func sonarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
@@ -48,11 +30,7 @@ nonisolated enum ArrLibraryMaps {
         return map
     }
 
-    /// Sonarr: `tmdbId → tvdbId`, straight off the library snapshot.
-    ///
-    /// The free first step of series identity resolution: for anything the
-    /// user already owns, both ids are in memory, so translating a TMDB row
-    /// to the id Sonarr wants costs zero requests.
+    /// Translating an owned TMDB row to Sonarr's id costs zero requests.
     static func sonarrTVDBByTMDBId(config: ServiceConfig) async -> [Int: Int] {
         var map: [Int: Int] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
@@ -61,19 +39,12 @@ nonisolated enum ArrLibraryMaps {
         return map
     }
 
-    /// Stable positive `Int` key for a foreign STRING id (a MusicBrainz artist
-    /// id, a Whisparr scene's `foreignId`). `SearchResult.externalId` is an
-    /// Int, so the string ids get hashed into it — this is the one definition
-    /// of that rule, and both sides of the ownership join must call it or
-    /// every owned artist reads as addable.
-    ///
-    /// `hashValue` is not stable across process launches; it does not have to
-    /// be. Both sides compute it in the same process, and nothing persists it.
+    /// `SearchResult.externalId` is an Int, so string ids are hashed; both sides of the join must use this.
+    /// `hashValue` isn't stable across launches, which is fine: nothing persists it.
     static func foreignHashKey(_ foreignId: String) -> Int {
         abs(foreignId.hashValue) & 0x7fffffff
     }
 
-    /// Lidarr: `hash(foreignArtistId) → ownership`, off the shared snapshot.
     static func lidarrByForeignArtistHash(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.artists(config: config) {
@@ -84,9 +55,8 @@ nonisolated enum ArrLibraryMaps {
         return map
     }
 
-    /// Whisparr: `tmdbId → ownership`, falling back to `hash(foreignId)` for
-    /// the scene records that carry no TMDB id. Matches what
-    /// `SearchClient.unifyWhisparr` stamps on the lookup rows.
+    /// Falls back to `hash(foreignId)` for scenes without a TMDB id, matching
+    /// `SearchClient.unifyWhisparr`.
     static func whisparrByForeignId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.whisparrMovies(config: config) {

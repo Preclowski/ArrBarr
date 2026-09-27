@@ -6,35 +6,24 @@ struct LidarrDetailPanel: View {
     @EnvironmentObject var configStore: ConfigStore
     let lidarrAlbum: ArrAlbum?
     let lidarrTracks: [ArrTrack]
-    /// `/trackfile` records for this album — joined per-track by
-    /// `trackFileId` in the pushed track detail.
+    /// Joined per-track by `trackFileId` in the pushed track detail.
     var lidarrTrackFiles: [ArrFile] = []
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?
-    /// Album fetch still in flight — overview + track list show a skeleton
-    /// instead of nothing, so the view fills in element-by-element.
     var isLoading: Bool = false
     @Binding var enlargedPoster: URL?
     @Binding var selectedDiscNumber: Int?
     let arrWebURLForItem: (QueueItem) -> URL?
-    /// Per-item queue actions for the multi-download list — see
-    /// RadarrDetailPanel; two active grabs of the same album need per-row
-    /// controls because the header CTA only drives the focused one.
+    /// The header CTA only drives the focused download, so two grabs of one album need per-row controls.
     var onPauseItem: ((QueueItem) -> Void)? = nil
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
-    /// The album's monitor bookmark, pinned to the poster's top-right corner.
-    /// This surface draws its OWN hero (square art, artist subtitle) instead
-    /// of `MediaHeaderCard`, so the host hands the toggle in rather than
-    /// setting `posterCornerAction` on the shared card.
+    /// This surface draws its own hero instead of `MediaHeaderCard`, so the host hands the toggle in.
     var posterCornerAction: AnyView? = nil
-    /// Tap on the artist line under the album title — pushes the artist
-    /// view (album list). nil leaves the line as plain text.
+    /// nil leaves the artist line as plain text.
     var onOpenArtist: ((ArrArtist) -> Void)? = nil
 
-    /// Tapped track — pushes the per-track detail (file quality / size),
-    /// the audio counterpart of the episode detail.
     @State private var selectedTrack: ArrTrack?
 
     var body: some View {
@@ -75,12 +64,7 @@ struct LidarrDetailPanel: View {
             }
 
             if !lidarrTracks.isEmpty {
-                // Header + list share a 6pt stack (the CastRow rhythm) —
-                // as siblings of the outer `VStack(spacing: 12)` the label
-                // floated 12pt above its own list. Row spacing is 0: rows
-                // already pad 4pt each, so that yields 8pt between track
-                // lines — a dense tracklist; any stack spacing on top read
-                // as unnatural daylight between bare single-line rows.
+                // Row spacing 0: rows already pad 4pt each, giving 8pt between track lines.
                 VStack(alignment: .leading, spacing: 6) {
                     DetailSectionHeader(
                         "detail.tracks.button",
@@ -119,8 +103,6 @@ struct LidarrDetailPanel: View {
         }
     }
 
-    /// Tracks on disk vs tracks on the release — same Downloaded / x/y /
-    /// Missing vocabulary the movie and series heroes and the Library tab use.
     private func albumFileState(_ stats: ArrStatistics) -> LibraryEntry.FileState {
         let have = stats.trackFileCount ?? 0
         let total = stats.totalTrackCount ?? 0
@@ -134,9 +116,6 @@ struct LidarrDetailPanel: View {
             ?? arrPosterURL(images: album?.artist?.images, for: item, in: configStore)
         let resolvedURL = posterUrl ?? item.posterURL
         return HStack(alignment: .top, spacing: 12) {
-            // Same hero component the movie / series / episode surfaces use —
-            // square art here (album covers are 1:1), but the tap affordance
-            // and the bookmark corner come from one place.
             DetailHeroPoster(
                 url: resolvedURL,
                 apiKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
@@ -148,12 +127,7 @@ struct LidarrDetailPanel: View {
                 }
             )
             VStack(alignment: .leading, spacing: 4) {
-                // No album title here: the surface's own header already
-                // carries it (`DetailView.navTitleString`), and the movie /
-                // series heroes hide theirs for the same reason
-                // (`MediaHeaderCard.showTitle`). The state chip keeps its
-                // home — floated above the artist line, the same place the
-                // shared card puts a badge once the title moves out.
+                // No album title: the surface's header already carries it (`DetailView.navTitleString`).
                 if let stats = album?.statistics {
                     MediaStateChip(
                         state: albumFileState(stats),
@@ -163,15 +137,6 @@ struct LidarrDetailPanel: View {
                     )
                 }
                 if let artist = album?.artist, let artistName = artist.artistName {
-                    // Artist as subtitle — 12pt medium .secondary.
-                    // Subordinate to the 15pt album title above but
-                    // bumped from regular weight so it stays
-                    // legible. Matches `EpisodeDetailOverlay`'s
-                    // series-title treatment so the two detail
-                    // surfaces share the same hierarchy language.
-                    // Tappable (chevron) when the host wires
-                    // `onOpenArtist` — pushes the artist's album list,
-                    // mirroring the episode hero's "series name >" tap.
                     if let onOpenArtist {
                         Button { onOpenArtist(artist) } label: {
                             HStack(spacing: 3) {
@@ -225,9 +190,7 @@ struct LidarrDetailPanel: View {
         }
     }
 
-    /// Wrapping pill-row of disc selectors. Same chrome as Sonarr's
-    /// `seasonPillBar` — capsule, mono weight active state, optional
-    /// status dot. Used only for multi-disc albums.
+    /// Same chrome as Sonarr's `seasonPillBar`; multi-disc albums only.
     @ViewBuilder
     private func discPillBar(_ discs: [Int]) -> some View {
         let active = effectiveDiscNumber(in: discs)
@@ -240,11 +203,8 @@ struct LidarrDetailPanel: View {
 
     @ViewBuilder
     private func discPill(_ disc: Int, isActive: Bool) -> some View {
-        // Dot states (mirroring seasonPill): green when every track
-        // on this disc is on-disk, no dot otherwise. There's no
-        // per-track queue mapping for Lidarr in the current detail
-        // view, so we skip the blue/orange queue tints — the album-
-        // level download chip in the header carries that signal.
+        // Green when every track is on disk, else no dot: Lidarr has no per-track queue
+        // mapping here, so the header's download chip carries queue state.
         let discTracks = lidarrTracks.filter { ($0.mediumNumber ?? 1) == disc }
         let complete = !discTracks.isEmpty && discTracks.allSatisfy { $0.hasFile == true }
         Button {
@@ -280,10 +240,7 @@ struct LidarrDetailPanel: View {
         .buttonStyle(.plain)
     }
 
-    /// Resolves which disc's content to show. User explicit pick
-    /// wins; otherwise default to the first disc with missing
-    /// tracks (most likely where the user wants to look), else
-    /// fall back to the lowest disc number.
+    /// Explicit pick wins, else the first disc with missing tracks, else the lowest.
     private func effectiveDiscNumber(in discs: [Int]) -> Int? {
         if let picked = selectedDiscNumber, discs.contains(picked) {
             return picked

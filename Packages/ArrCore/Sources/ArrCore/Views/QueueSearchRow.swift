@@ -1,12 +1,6 @@
 import SwiftUI
 
-/// Compact queue-row used in the IN QUEUE section of the queue tab's
-/// status-grouped search layout. Shares row chrome with
-/// `SearchResultRow` so library / new / queue rows scan as one list
-/// rhythm during search. Drills into `DetailView` on tap — pause /
-/// resume / delete live there. The full-fat `QueueRowView` (progress
-/// bar + inline actions) is still used in the empty-filter default
-/// view.
+/// Queue row for the search layout, on `SearchResultRow` chrome so all result rows share one rhythm.
 struct QueueSearchRow: View {
     let item: QueueItem
     let onTap: () -> Void
@@ -27,9 +21,7 @@ struct QueueSearchRow: View {
             posterFallbackSymbol: item.source.symbol,
             title: item.title,
             metadataSegments: metadataSegments,
-            // Arr identity + "In queue" status badge — section
-            // headers were dropped, so each row carries its own
-            // disposition signal directly in the title slot.
+            // No section headers in this layout, so each row carries its own "In queue" badge.
             onTap: onTap,
             titleBadge: {
                 HStack(spacing: 4) {
@@ -44,11 +36,7 @@ struct QueueSearchRow: View {
         }
     }
 
-    /// Mirror `SearchResultRow`'s rhythm: lead with the subtitle (the
-    /// same first-line metadata library/new rows show), skip
-    /// release-name detail — release strings are noisy and have no
-    /// counterpart in the search rows, so including them breaks the
-    /// "one list rhythm" the status-grouped surface is going for.
+    /// No release name: it has no counterpart in the search rows and breaks their rhythm.
     private var metadataSegments: [String] {
         [
             item.subtitle.flatMap { $0.isEmpty ? nil : $0 },

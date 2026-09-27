@@ -1,18 +1,13 @@
 import Foundation
 import MediaKit
 
-// TMDB-backed discovery tools (person search, person credits, discover-by-genre)
-// plus the TMDB → SearchResult adapters and the genre fallback lists.
-
 extension LocalToolBackend {
     // MARK: - TMDB tools
 
     func tmdbSearchPerson(_ args: JSONValue) async throws -> ToolCallOutput {
         let wantedKind = CreditsKind(Self.stringArg(args, key: "credits").lowercased())
 
-        // Straight to the filmography when the caller already resolved the
-        // person. This is the disambiguation follow-up — and the reason there
-        // is one person tool instead of three.
+        // Straight to the filmography when the caller already resolved the person.
         let givenId = Self.intArg(args, key: "personId")
         if givenId > 0 {
             guard let kind = wantedKind else {
@@ -26,18 +21,12 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Please provide a person name to search for.")
         }
         let client = tmdbClient
-        // TMDB's own result order puts namesakes above the obvious answer often
-        // enough to matter; `PersonRelevance` is the ranking the search surface
-        // already trusts for "which person did they mean".
+        // TMDB's own order often puts namesakes above the obvious answer.
         let results = PersonRelevance.rank(try await client.searchPerson(query: query), query: query)
         guard !results.isEmpty else {
             return ToolCallOutput(text: "No people found on TMDB for '\(query)'.")
         }
-        // Name → filmography in one call. Gated on `isConfidentHeadliner`: every
-        // query token covered by the name and a popularity that rules out an
-        // incidental namesake. Anything less and we hand back the candidate list
-        // instead — answering "films with X" from the wrong X is worse than
-        // costing the model one more round.
+        // Only on a confident match; answering "films with X" from the wrong X is worse than another round.
         if let kind = wantedKind, let best = results.first,
            PersonRelevance.isConfidentHeadliner(best, query: query) {
             let credits = try await personCredits(kind: kind, personId: best.id)
@@ -60,16 +49,11 @@ extension LocalToolBackend {
         if wantedKind != nil {
             out += "\nThe name did not resolve to one obvious person, so no credits were fetched — call this tool again with personId + credits for the one the user meant, or ask them which."
         }
-        // Cards for the top few only: the tail of a person search is noise
-        // (same name, no photo, popularity ~0) and the model still sees all
-        // eight in the text.
+        // The tail of a person search is noise; the model still sees all eight in the text.
         return ToolCallOutput(text: out, rich: .people(top.prefix(4).map(ChatPerson.init)))
     }
 
-    /// Which filmography the `credits` argument asks for. Deliberately one kind
-    /// per call — the two live behind different TMDB endpoints and render as
-    /// different cards, and a merged rail would have to pick one arr's poster
-    /// auth for both.
+    /// One kind per call: different TMDB endpoints and cards, and a merged rail would mix poster auth.
     enum CreditsKind {
         case movies, series
 
@@ -89,10 +73,7 @@ extension LocalToolBackend {
         }
     }
 
-    /// The person behind a credits call, for the card above the carousel. Best
-    /// effort: `/person/{id}` is a second request, and a filmography is still a
-    /// perfectly good answer without the header, so a failure here degrades to
-    /// the plain carousel rather than failing the tool.
+    /// Best effort: a filmography is still a good answer without the header.
     private func personCard(_ personId: Int) async -> ChatPerson? {
         let client = tmdbClient
         guard let details = try? await client.personDetails(personId: personId) else { return nil }
@@ -107,19 +88,11 @@ extension LocalToolBackend {
         return try await movieCreditsOutput(personId: personId)
     }
 
-    /// The movie filmography itself, reachable both as its own tool and as
-    /// `tmdb_search_person(credits:)`'s second half.
     func movieCreditsOutput(personId: Int) async throws -> ToolCallOutput {
         let client = tmdbClient
-        // Person details and credits are independent — fetch them together so
-        // the card costs latency only if TMDB is slow on that one endpoint.
         async let card = personCard(personId)
         let credits = try await client.personMovieCredits(personId: personId).cast
-        // TMDB returns credits unordered. Rank by `popularity` (TMDB's own
-        // "what people are searching/watching" metric) descending — voteAverage
-        // is misleading here because Sandler's best-rated entries are 7.5+
-        // niche cameos with a handful of votes, not Happy Gilmore (6.0, 4k
-        // votes). Tie-break on year desc so recent stuff floats.
+        // TMDB returns credits unordered; voteAverage favours niche cameos with a handful of votes.
         let ranked = PersonCreditMerge.byPopularity(credits)
         let libraryMap = await radarrLibraryByTMDBId()
         let results = TMDBSearchMapping.movies(ranked.prefix(25), libraryMap: libraryMap)
@@ -138,13 +111,10 @@ extension LocalToolBackend {
         return try await tvCreditsOutput(personId: personId)
     }
 
-    /// The TV filmography — see `movieCreditsOutput` for the shared shape.
     func tvCreditsOutput(personId: Int) async throws -> ToolCallOutput {
         let client = tmdbClient
         async let card = personCard(personId)
         let credits = try await client.personTVCredits(personId: personId).cast
-        // Same popularity-desc ranking rationale as the movie path — see
-        // tmdbPersonMovieCredits for why voteAverage is the wrong key here.
         let ranked = PersonCreditMerge.byPopularity(credits)
         let libraryMap = await sonarrLibraryByTMDBId()
         let results = TMDBSearchMapping.series(ranked.prefix(25), libraryMap: libraryMap)
@@ -155,9 +125,6 @@ extension LocalToolBackend {
         return ToolCallOutput(text: text, rich: Self.creditsRich(person: await card, results: results))
     }
 
-    /// Credits payload: with the person when TMDB details came back, the plain
-    /// carousel when they didn't. Thin alias over the model's own factory, which
-    /// the card de-duplicator reuses.
     nonisolated static func creditsRich(person: ChatPerson?, results: [SearchResult]) -> ChatRichContent {
         .credits(person: person, results: results)
     }
@@ -229,27 +196,16 @@ extension LocalToolBackend {
     }
 
     // MARK: - Library ownership maps
-    //
-    // The TMDB summary → SearchResult mapping itself lives in
-    // `TMDBSearchMapping` (shared with the person view); these build the
-    // library maps that mapping consumes to tag owned results.
 
-    /// `tmdbId → movie.id` for the Radarr library — tags owned TMDB results.
-    /// Thin wrapper over the shared `ArrLibraryMaps` (also used by the person
-    /// view) so the two build the map identically.
     func radarrLibraryByTMDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.radarrByTMDBId(config: radarr)
     }
 
-    /// `tvdbId → series.id` for the Sonarr library. See `ArrLibraryMaps`.
     func sonarrLibraryByTVDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.sonarrByTVDBId(config: sonarr)
     }
 
-    /// `tmdbId → series.id` for the Sonarr library — what tags TMDB-sourced
-    /// series as owned. The id route is open now that `ArrSeries`
-    /// decodes `tmdbId`; this replaced a normalized title + year join that
-    /// could mistake a remake for the show the user actually has.
+    /// An id join, not title + year, which could mistake a remake for the owned show.
     func sonarrLibraryByTMDBId() async -> [Int: LibraryOwnership] {
         await ArrLibraryMaps.sonarrByTMDBId(config: sonarr)
     }
@@ -261,25 +217,14 @@ extension LocalToolBackend {
             out += " \(ownedCount) already in the user's library (marked OWNED)."
         }
         out += " Top:"
-        // Every result, not the first 15: the tail of the list is exactly where
-        // the model used to run out of ids and start inventing them.
+        // Every result: the tail is where the model ran out of ids and started inventing them.
         for r in results {
             let year = r.year.map { " (\($0))" } ?? ""
             let rating = r.rating.map { String(format: " ★%.1f", $0) } ?? ""
-            // WATCHED only ever appears on a positive: the index knows nothing
-            // about titles the user doesn't own, and an absent marker must not
-            // be read as "not seen".
+            // WATCHED only on a positive: the index knows nothing about unowned titles.
             let watched = MediaServerIndex.shared.isWatched(r.mediaServerKeys) ? " [WATCHED]" : ""
             let owned = r.inLibraryArrId != nil ? " [OWNED]\(watched)" : ""
-            // MediaRef url form ("tmdb:12345") matches what the user
-            // can type into the search bar verbatim, and what the
-            // deep-link layer expects — one canonical string scheme
-            // for external IDs across read and write paths.
-            // TMDB series print `tmdbtv:N` — their own id space, resolved to a
-            // tvdbId only when something opens them. Before that case existed
-            // they printed "n/a", which meant the model had nothing to link a
-            // series with. Still "n/a" for a row that can't identify itself at
-            // all, rather than a `tvdb:0` that names nothing.
+            // The ref scheme the search bar and deep links accept; TMDB series print `tmdbtv:N`.
             let ref = r.mediaRef.isAddressable ? r.mediaRef.urlString : "n/a"
             out += "\n- \(r.title)\(year)\(rating)\(owned) — \(ref)"
         }

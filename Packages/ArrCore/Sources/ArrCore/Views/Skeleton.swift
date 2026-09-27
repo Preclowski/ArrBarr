@@ -1,14 +1,9 @@
 import SwiftUI
 
 // MARK: - Loading skeletons
-//
-// Placeholder shapes shown while a section's data is still loading, so a
-// detail surface fills in element-by-element instead of gating the whole
-// view behind one centred spinner. A gentle opacity pulse reads as
-// "loading" (a static grey bar reads as "broken"). Sizes roughly match the
-// real content so nothing jumps when the data lands.
+// The pulse reads as loading where a static grey bar reads as broken.
 
-/// A single rounded placeholder bar. `width: nil` fills the available width.
+/// `width: nil` fills the available width.
 struct SkeletonBar: View {
     var width: CGFloat? = nil
     var height: CGFloat = 11
@@ -23,8 +18,6 @@ struct SkeletonBar: View {
     }
 }
 
-/// Paragraph placeholder — `count` full-width lines, the last one short, so
-/// it reads as a block of prose (overview).
 struct SkeletonLines: View {
     var count: Int = 3
     var lineHeight: CGFloat = 10
@@ -38,7 +31,6 @@ struct SkeletonLines: View {
     }
 }
 
-/// Stack of full-width row placeholders — for season / track / episode lists.
 struct SkeletonRows: View {
     var count: Int = 4
     var rowHeight: CGFloat = 30
@@ -53,9 +45,7 @@ struct SkeletonRows: View {
     }
 }
 
-/// Horizontal cast-strip placeholder — circular headshot + name bar per slot.
-/// Pulses as one unit (raw shapes, not `SkeletonBar`, to avoid stacking the
-/// pulse modifier twice).
+/// Raw shapes, not `SkeletonBar`, so the pulse modifier isn't stacked twice.
 struct SkeletonCastRow: View {
     var count: Int = 6
 
@@ -84,6 +74,5 @@ private struct SkeletonPulse: ViewModifier {
 }
 
 extension View {
-    /// Gentle opacity pulse marking a placeholder as actively loading.
     func skeletonPulse() -> some View { modifier(SkeletonPulse()) }
 }

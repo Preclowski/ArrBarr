@@ -1,15 +1,9 @@
 import SwiftUI
 
-/// The sheet/window shown when the user drops (or opens, or magnet-clicks)
-/// something ArrBarr can download.
-///
-/// Four things and no more: what was dropped, which arr it belongs to, which of
-/// that arr's clients takes it, and whether to start it paused. The *category*
-/// is deliberately absent — it follows from the arr, and letting anyone edit it
-/// would only ever break the import it exists to enable.
+/// Sheet for a dropped, opened or magnet-clicked download. No category field on purpose:
+/// it follows from the arr, and editing it would break the import.
 public struct AddDownloadView: View {
-    /// Everything dropped in one go, already narrowed to a single protocol by
-    /// the caller: one arr choice covers the batch.
+    /// Already narrowed to one protocol by the caller, so one arr choice covers the batch.
     let drops: [DownloadDrop]
     let onFinished: () -> Void
 
@@ -28,14 +22,11 @@ public struct AddDownloadView: View {
         self.onFinished = onFinished
     }
 
-    /// The arrs offered as tiles: those that came back with at least one usable
-    /// client for this payload's protocol. Everything else — not configured,
-    /// unreachable, no matching client — simply isn't a choice.
+    /// Only arrs with at least one usable client for this protocol.
     private var arrs: [ServiceKind] {
         ServiceKind.arrKinds.filter { arr in destinations.contains { $0.arr == arr } }
     }
 
-    /// Clients of the selected arr. Only surfaced when there's a real choice.
     private var clientsForSelection: [DownloadDestination] {
         destinations.filter { $0.arr == selectedArr }
     }
@@ -88,17 +79,12 @@ public struct AddDownloadView: View {
             }
         }
         .padding(20)
-        // Fixed, not `minWidth`: the window sizes itself to this view's fitting
-        // size, so a minimum let a long release name drag the whole window
-        // wider — and release names are routinely 60+ characters. The name
-        // truncates in the middle instead (`payloadSummary`), which keeps both
-        // the show title and the quality/extension readable.
+        // Fixed, not `minWidth`: the window sizes to fit, so a long release name would widen it.
+        // The name truncates in the middle instead.
         .frame(width: 340)
         .environment(\.locale, configStore.currentLocale)
         .task { await resolve() }
-        // Selecting a different arr re-picks its first client and re-reads that
-        // client's own paused default — the checkbox has to keep telling the
-        // truth about whichever client is now on the hook.
+        // Re-reads the new client's paused default so the checkbox stays truthful.
         .onChange(of: selectedArr) { _, _ in
             selectedDestination = clientsForSelection.first
         }
@@ -130,8 +116,7 @@ public struct AddDownloadView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("No arr can take this", bundle: .module)
                 .font(.callout.weight(.medium))
-            // Says which of the two halves is missing rather than a generic
-            // "nothing configured": the fix is different for each.
+            // Names the missing half: the fix differs for each.
             Text(
                 kind == .usenet
                     ? "None of your configured arrs has a usenet download client that ArrBarr can also reach."
@@ -205,11 +190,7 @@ public struct AddDownloadView: View {
         paused = await DownloadDropService.shared.defaultPaused(for: destination, configs: configStore.downloadDropConfigs)
     }
 
-    /// Adds every payload to the chosen destination, then closes.
-    ///
-    /// A partial failure keeps the window open and names the count that failed:
-    /// closing on "3 of 5 added" would leave the user with no idea which two to
-    /// retry, and no way to retry them.
+    /// A partial failure keeps the window open and names the failed count, so the user can retry.
     private func submit() async {
         guard let destination = selectedDestination else { return }
         submitting = true

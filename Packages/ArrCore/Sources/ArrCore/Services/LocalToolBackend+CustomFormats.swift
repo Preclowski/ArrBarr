@@ -2,18 +2,10 @@ import Foundation
 import MediaKit
 
 // MARK: - Custom-format chat tools
-//
-// `list_custom_formats` and `describe_format` let the assistant explain a
-// user's TRaSH-style quality scoring setup — what each custom format
-// matches and where it earns/loses points across quality profiles. Both
-// are read-only (not in MCPToolWhitelist.isDestructive), so they run
-// without a confirm gate. Sonarr + Radarr share the v3 `/customformat`
-// and `/qualityprofile` endpoints, so one code path covers both.
 
 extension LocalToolBackend {
 
-    /// Resolve the `service` arg to a (config, source) pair. Returns nil
-    /// for a missing/unknown value so the caller can prompt the user.
+    /// nil for a missing/unknown value so the caller can prompt the user.
     private func customFormatTarget(_ args: JSONValue) -> (ServiceConfig, QueueItem.Source)? {
         switch Self.stringArg(args, key: "service").lowercased() {
         case "sonarr": return (sonarr, .sonarr)
@@ -22,16 +14,12 @@ extension LocalToolBackend {
         }
     }
 
-    /// Sonarr + Radarr both conform to `ArrAPIClient` and share the v3
-    /// custom-format / quality-profile endpoints, so an existential is
-    /// enough — `fetchCustomFormats()` / `fetchQualityProfiles()` are
-    /// protocol-extension methods that work the same on either.
+    /// Sonarr and Radarr share the v3 custom-format / quality-profile endpoints, so an existential is enough.
     private func arrAPIClient(for source: QueueItem.Source, config: ServiceConfig) -> any ArrAPIClient {
         ServiceHandles.arr(source, config: config)
     }
 
-    /// Single entry point for the merged `custom_formats` tool: no
-    /// `name`/`id` → list everything; either present → describe that one.
+    /// No `name`/`id` → list everything; either present → describe that one.
     func customFormats(_ args: JSONValue) async throws -> ToolCallOutput {
         let name = Self.stringArg(args, key: "name").trimmingCharacters(in: .whitespaces)
         let id = Self.optionalIntArg(args, key: "id")
@@ -98,7 +86,6 @@ extension LocalToolBackend {
 
         var out = "\(source.displayName) custom format: \(cf.name) (id \(cf.id))\n"
 
-        // Conditions.
         let specs = cf.specifications ?? []
         if specs.isEmpty {
             out += "\nConditions: (none defined)"
@@ -109,7 +96,6 @@ extension LocalToolBackend {
             }
         }
 
-        // Scores per quality profile.
         let profiles = (try? await client.fetchQualityProfiles()) ?? []
         let scored: [(String, Int)] = profiles.compactMap { profile in
             guard let item = profile.formatItems?.first(where: { $0.format == cf.id }),
@@ -133,8 +119,6 @@ extension LocalToolBackend {
         return ToolCallOutput(text: out)
     }
 
-    /// One readable line per specification: human label, negate/required
-    /// flags, and the matched value(s).
     nonisolated private static func describeSpecification(_ spec: ArrCustomFormatDetail.Specification) -> String {
         let label = spec.implementationName
             ?? spec.implementation.map(Self.humanizeImplementation)
@@ -144,8 +128,7 @@ extension LocalToolBackend {
         if spec.required == true { flags.append("required") }
         let flagPart = flags.isEmpty ? "" : " [\(flags.joined(separator: ", "))]"
 
-        // The meaningful field is usually the one literally named "value";
-        // fall back to joining any non-empty fields.
+        // Usually the field literally named "value"; else join any non-empty fields.
         let values = (spec.fields ?? []).compactMap { field -> String? in
             guard let v = field.value, let s = stringifyJSON(v), !s.isEmpty else { return nil }
             return s
@@ -155,8 +138,7 @@ extension LocalToolBackend {
         return "• \(title) (\(label))\(flagPart)\(valuePart)"
     }
 
-    /// "ReleaseTitleSpecification" → "Release Title". Best-effort prettifier
-    /// for when the API omits `implementationName`.
+    /// For when the API omits `implementationName`.
     nonisolated private static func humanizeImplementation(_ raw: String) -> String {
         let trimmed = raw.hasSuffix("Specification")
             ? String(raw.dropLast("Specification".count))
@@ -169,7 +151,6 @@ extension LocalToolBackend {
         return result.isEmpty ? raw : result
     }
 
-    /// Flatten a `JSONValue` field value to a compact display string.
     nonisolated private static func stringifyJSON(_ value: JSONValue) -> String? {
         switch value {
         case .null:           return nil

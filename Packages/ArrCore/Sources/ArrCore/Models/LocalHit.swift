@@ -1,13 +1,9 @@
 import Foundation
 
-/// One row the app already knows about, handed to the search surface as its
-/// local context: a live download from the queue, or an owned title from a
-/// loaded library. The same context on every tab — search is one surface,
-/// hosted once, and the tab underneath it does not change what it answers.
+/// Rows the app already knows about, handed to the search surface: a live download or an owned title.
+/// The same context on every tab.
 nonisolated public enum LocalHit: Identifiable {
-    /// A live download — progress and action chrome, rendered by `QueueSearchRow`.
     case queue(QueueRowEntry)
-    /// An owned title from the browsed library, rendered as an owned search row.
     case library(LibraryEntry)
 
     public var id: String {
@@ -17,9 +13,7 @@ nonisolated public enum LocalHit: Identifiable {
         }
     }
 
-    /// Every `(source, arr record id)` this hit already answers for. A queue
-    /// group answers for every item it packs — a season pack on screen means
-    /// the series row underneath it would be a duplicate.
+    /// A queue group answers for every item it packs, so the series row underneath would be a duplicate.
     var ownershipKeys: [OwnershipKey] {
         switch self {
         case .queue(let entry):
@@ -32,10 +26,7 @@ nonisolated public enum LocalHit: Identifiable {
     }
 }
 
-/// Arr-internal record ids only mean anything within one arr, so the source
-/// travels with the id. Without it, a Radarr movie #42 on screen would hide a
-/// Sonarr series #42 from the results — the one wrong answer this app must
-/// never give.
+/// Arr record ids only mean something within one arr: without the source, Radarr #42 would hide Sonarr #42.
 nonisolated struct OwnershipKey: Hashable, Sendable {
     let source: QueueItem.Source
     let arrId: Int
@@ -47,11 +38,7 @@ nonisolated struct OwnershipKey: Hashable, Sendable {
 }
 
 nonisolated public extension LocalHit {
-    /// The one local context: live queue rows that match the query, then owned
-    /// titles from every library already in memory (deduped against the queue
-    /// rows, which already answer for them). A library that hasn't loaded yet
-    /// contributes nothing — the lookup rows below still wear their ownership
-    /// badge, so nothing reads as "not owned".
+    /// Libraries not loaded yet contribute nothing; the lookup rows still carry their ownership badge.
     @MainActor
     static func hits(queue: QueueViewModel,
                      library: LibraryViewModel,
@@ -69,18 +56,12 @@ nonisolated public extension LocalHit {
         return queueRows + libraryRows
     }
 
-    /// Live queue rows that still match the query, Sonarr's grouped into packs.
-    ///
-    /// Matching is `TitleMatch.indexedFilter` over a per-item fold of title +
-    /// episode title + subtitle — the same matcher the library grid uses, so
-    /// "wall e" finds WALL·E in a queue row too. Folding per keystroke is fine
-    /// here: queue lists are tens of rows, not thousands.
+    /// Folding per keystroke is fine: queue lists are tens of rows, not thousands.
     @MainActor
     static func queueHits(viewModel: QueueViewModel,
                           sources: [QueueItem.Source],
                           query: String) -> [LocalHit] {
-        // A query with no letters or digits in it folds to nothing, and the
-        // matcher answers that by keeping every candidate — the whole queue.
+        // A query with no letters or digits folds to nothing, which the matcher treats as keep-everything.
         guard !TitleMatch.fold(query).isEmpty else { return [] }
         return sources.flatMap { source -> [LocalHit] in
             let matched = TitleMatch.indexedFilter(

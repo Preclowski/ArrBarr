@@ -1,14 +1,8 @@
 #if os(macOS)
 import SwiftUI
 
-/// The About window.
-///
-/// Not `orderFrontStandardAboutPanel`: that panel renders whatever you hand it
-/// as `.credits` inside its own scroll view, which turned the links into a
-/// stack of underlined blue web links fenced off by full-width rules, in three
-/// different type sizes. This is the same information laid out as a window —
-/// identity block, the three places to go, then the notices that have to be
-/// there but nobody reads.
+/// Not `orderFrontStandardAboutPanel`: it renders `.credits` in its own scroll view,
+/// turning the links into underlined web links between full-width rules.
 public struct AboutView: View {
     public init() {}
 
@@ -39,7 +33,6 @@ public struct AboutView: View {
         .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// Icon, name, version, byline — the block the system panel gets right.
     private var identity: some View {
         VStack(spacing: 6) {
             if let icon = NSImage(named: "AppIcon") {
@@ -53,8 +46,7 @@ public struct AboutView: View {
             Text(verbatim: Self.version)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                // Selectable: a version number exists to be pasted into a bug
-                // report.
+                // A version number exists to be pasted into a bug report.
                 .textSelection(.enabled)
             // The pretzel is the byline, not decoration — leave it be.
             Text("Made by 🥨", bundle: .module)
@@ -64,9 +56,7 @@ public struct AboutView: View {
         }
     }
 
-    /// The three destinations. Stacked and equal-width, not a wrapping row:
-    /// the labels differ in length by a factor of three across languages, so a
-    /// row wrapped into a ragged 1 + 2 arrangement that looked accidental.
+    /// Stacked, not a wrapping row: label lengths vary 3× across languages and wrapped raggedly.
     private var links: some View {
         VStack(spacing: 6) {
             linkButton("settings.website.button", symbol: "globe", url: "https://arrbarr.app")
@@ -104,11 +94,8 @@ public struct AboutView: View {
         .controlSize(.small)
     }
 
-    /// Attribution and licence notices. Both are required — CC BY wants the
-    /// credit and the licence named, TMDB wants its mark and this exact
-    /// sentence — so they are here, short and quiet. The long-form version
-    /// (including the "recoloured" modification notice) lives in
-    /// Settings → Acknowledgements.
+    /// Required: CC BY wants the credit and licence named, TMDB its mark and this exact
+    /// sentence. The long form lives in Settings → Acknowledgements.
     private var notices: some View {
         VStack(spacing: 3) {
             Divider()

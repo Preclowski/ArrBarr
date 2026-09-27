@@ -1,13 +1,7 @@
 import Foundation
 
-/// Which media server ArrBarr talks to. One at a time — the integration is a
-/// single connection, not a roster, so this is a picker value rather than a
-/// per-server config like `ServiceKind`.
-///
-/// Deliberately NOT a `ServiceKind` case. That enum drives queue aggregation,
-/// health reporting, the queue's section order, the brand-icon set and the
-/// secrets roster; a media server takes part in none of those, and widening it
-/// would touch every exhaustive switch in the app to buy nothing.
+/// Not a `ServiceKind` case: that enum drives queue aggregation, health, section order and
+/// the secrets roster, none of which a media server takes part in.
 nonisolated public enum MediaServerKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case plex, jellyfin, emby
 
@@ -30,18 +24,14 @@ nonisolated public enum MediaServerKind: String, Codable, CaseIterable, Identifi
     }
 }
 
-/// The single media-server connection. Mirrors `ServiceConfig`'s shape closely
-/// enough to be familiar in Settings, but carries `kind` (which server) and
-/// `userId` (resolved automatically, never typed) instead of a login pair.
+/// `userId` is resolved automatically, never typed.
 nonisolated public struct MediaServerConfig: Codable, Equatable, Sendable {
     public var enabled: Bool
     public var kind: MediaServerKind
     public var baseURL: String
-    /// Plex: `X-Plex-Token`. Jellyfin / Emby: an API key from the dashboard.
-    /// Persisted in `SecretStore`, blanked in the UserDefaults copy.
+    /// Plex: `X-Plex-Token`; Jellyfin / Emby: a dashboard API key. Kept in `SecretStore`.
     public var token: String
-    /// Jellyfin / Emby user whose play state we read. Resolved by
-    /// `testConnection()` from the token itself, so the user never enters it.
+    /// Resolved by `testConnection()` from the token itself.
     public var userId: String
 
     public init(enabled: Bool = false, kind: MediaServerKind = .plex,
@@ -53,9 +43,7 @@ nonisolated public struct MediaServerConfig: Codable, Equatable, Sendable {
         self.userId = userId
     }
 
-    /// Enabled, with a usable URL and a token. Unlike `ServiceConfig` there is
-    /// no keyless mode — every one of the three servers authenticates, so a
-    /// blank token means "not set up yet", not "open server".
+    /// No keyless mode: every one of the three servers authenticates.
     public var isConfigured: Bool {
         guard enabled, !token.isEmpty else { return false }
         guard let url = URL(string: baseURL),

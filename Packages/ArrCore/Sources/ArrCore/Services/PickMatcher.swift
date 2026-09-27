@@ -1,13 +1,10 @@
 import Foundation
 
-/// Picks the lookup hit that IS the title a model named, instead of trusting
-/// the arr's first hit — which for "The Power 2021" is The Power of the Dog and
-/// for "Burning 2018" is Mississippi Burning. Nil means none of the hits is it:
-/// the card is dropped and reported rather than shown as a stranger.
+/// Picks the hit that is the title the model named: the arr's first hit for "The Power 2021"
+/// is The Power of the Dog. nil drops the card rather than showing a stranger.
 nonisolated enum PickMatcher {
 
     struct Candidate: Sendable {
-        /// Display title first, then original and alternate titles.
         let titles: [String]
         let year: Int?
         let votes: Int?
@@ -24,8 +21,7 @@ nonisolated enum PickMatcher {
         guard let year else {
             return scored.max { ($0.score, $0.weight, -$0.index) < ($1.score, $1.weight, -$1.index) }?.index
         }
-        // Festival vs release year makes ±1 routine (Under the Skin is 2013 to
-        // a critic, 2014 to TMDB), so the better-known film wins a near-tie.
+        // Festival vs release year makes ±1 routine (Under the Skin: 2013 or 2014), so the better-known film wins a near-tie.
         let close = scored.filter { hit in
             guard let y = hit.year, abs(y - year) <= 1 else { return false }
             return hit.score >= 2 || y == year
@@ -41,8 +37,6 @@ nonisolated enum PickMatcher {
         (hit.weight - Double(abs((hit.year ?? year) - year)), -hit.index)
     }
 
-    /// 3: display title equal · 2: original/alternate title equal ·
-    /// 1: same work under a subtitle or a possessive prefix · 0: different work.
     static func titleScore(_ pick: String, _ titles: [String]) -> Int {
         let p = normalize(pick)
         guard !p.isEmpty else { return 0 }
@@ -62,9 +56,7 @@ nonisolated enum PickMatcher {
         return best
     }
 
-    /// Case, diacritics, punctuation, a leading article and a trailing
-    /// "(2016)" / "(US)" disambiguator all fold away: Sonarr names remakes
-    /// "Crashing (2017)" and the model writes "Crashing".
+    /// Sonarr names remakes "Crashing (2017)" and the model writes "Crashing".
     static func normalize(_ title: String) -> String {
         var t = stripDisambiguator(title)
             .folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive], locale: nil)
@@ -81,14 +73,11 @@ nonisolated enum PickMatcher {
         title.replacingOccurrences(of: #"\s*\((\d{4}|[A-Za-z]{2,3})\)\s*$"#, with: "", options: .regularExpression)
     }
 
-    /// The title after a "Name: " prefix — "I Am Not Your Guru" is
-    /// "Tony Robbins: I Am Not Your Guru".
     private static func tail(of title: String) -> String {
         guard let range = title.range(of: ": ") else { return "" }
         return String(title[range.upperBound...])
     }
 
-    /// The title before a subtitle separator (": ", " - ", " – ", " (").
     private static func head(of title: String) -> String {
         let bare = stripDisambiguator(title)
         guard let range = bare.range(of: #"\s*(:|\s-\s|\s–\s|\()"#, options: .regularExpression) else { return bare }

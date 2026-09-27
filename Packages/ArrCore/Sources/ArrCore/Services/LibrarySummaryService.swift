@@ -1,15 +1,11 @@
 import Foundation
 
-/// Thin, extension-safe entry point: given the four arr configs, fetch each
-/// configured library and return per-source summaries. Constructs the arr
-/// `actor` clients directly — deliberately avoids `LocalToolBackend` (TMDB,
-/// custom formats, discover) which is too heavy for a widget's memory budget.
+/// Extension-safe: builds the arr clients directly rather than `LocalToolBackend`,
+/// which is too heavy for a widget's memory budget.
 public actor LibrarySummaryService {
     public init() {}
 
-    /// Fetch summaries for the given configs, in `LibrarySummary.Source` order,
-    /// skipping unconfigured services. A service that errors is omitted (the
-    /// caller renders it as a stale/"—" row).
+    /// A service that errors is omitted; the caller renders it as a stale row.
     public func summaries(
         radarr: ServiceConfig,
         sonarr: ServiceConfig,
@@ -38,9 +34,8 @@ public actor LibrarySummaryService {
         _ config: ServiceConfig,
         _ body: @Sendable (ServiceConfig) async throws -> LibrarySummary
     ) async -> LibrarySummary? {
-        // isVisible (not isConfigured): an arr enabled with a URL but no API
-        // key would 401 and be silently dropped, yielding a blank widget. Gate
-        // it out so the "Set up a server" empty state shows instead.
+        // isVisible, not isConfigured: a keyless arr would 401 and leave a blank widget
+        // instead of the "Set up a server" state.
         guard config.isVisible else { return nil }
         return try? await body(config)
     }

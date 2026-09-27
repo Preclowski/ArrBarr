@@ -1,31 +1,19 @@
 import SwiftUI
 
-/// What the detail header's pencil menu deletes — the record being removed
-/// from the arr's library.
 struct MediaDeleteRequest: Identifiable, Hashable {
     let source: QueueItem.Source
-    /// Arr record id — movie id (Radarr/Whisparr), series id (Sonarr),
-    /// ARTIST id (Lidarr; an album is deleted from its artist in the arr).
+    /// Lidarr takes the ARTIST id: an album is deleted from its artist in the arr.
     let entityId: Int
-    /// Shown in the modal so the user confirms against a name, not an id.
     let title: String
     var id: String { "\(source.rawValue)-delete-\(entityId)" }
 }
 
-/// True modal for removing an in-library movie / series / artist, with the two
-/// choices the arrs themselves offer: delete the files on disk too, and add an
-/// import-list exclusion so a list doesn't put it straight back.
-///
-/// Same presentation split as `MediaEditPanel` — macOS hosts the card in
-/// `MediaDeleteModalOverlay` (scrim + bottom card, because `.sheet` doesn't
-/// render inside a MenuBarExtra popover), iOS presents the same choices as a
-/// native sheet. Nothing loads first: both flags default to the arr's own
-/// defaults (off), so the modal can appear in one frame.
+/// macOS hosts it in `MediaDeleteModalOverlay` because `.sheet` doesn't render in a MenuBarExtra popover;
+/// iOS uses a native sheet. Both flags default off like the arr's, so nothing loads first.
 struct MediaDeletePanel: View {
     let request: MediaDeleteRequest
     let onCancel: () -> Void
-    /// The arr accepted the delete — the record no longer exists, so the host
-    /// closes the modal AND leaves the detail surface behind it.
+    /// The record is gone, so the host closes the modal AND leaves the detail surface behind it.
     let onDeleted: () -> Void
 
     @EnvironmentObject private var configStore: ConfigStore
@@ -37,7 +25,6 @@ struct MediaDeletePanel: View {
     @State private var deleteError: String?
 
     #if os(iOS)
-    /// One Form row at the user's text size — the sheet is sized from this.
     @ScaledMetric(relativeTo: .body) private var formRowHeight: CGFloat = 44
     #endif
 
@@ -103,8 +90,6 @@ struct MediaDeletePanel: View {
     }
 
     private var fittedSheetHeight: CGFloat {
-        // Nav bar + the grouped section's own insets + grabber, then a row per
-        // switch and one more for each conditional section.
         let chrome: CGFloat = 150
         let extras = (deleteFiles ? formRowHeight : 0) + (deleteError == nil ? 0 : formRowHeight)
         return 2 * formRowHeight + chrome + extras
@@ -114,8 +99,7 @@ struct MediaDeletePanel: View {
     // MARK: - macOS
 
     private var macCard: some View {
-        // Same skeleton as the edit card — title row, form rows, CTA — because
-        // the two live under the same glyph and must read as one surface.
+        // Same skeleton as the edit card: both live under the same glyph and must read as one surface.
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text("detail.delete.button", bundle: .module)
@@ -145,8 +129,6 @@ struct MediaDeletePanel: View {
             }
             .padding(.horizontal, 14)
 
-            // Only while the files switch is on — the same place, colour and
-            // restraint as the edit card's "files will move" note.
             if deleteFiles {
                 Text("delete.filesWarning.label", bundle: .module)
                     .scaledFont(size: 10)
@@ -201,10 +183,8 @@ struct MediaDeletePanel: View {
         configStore.arrClient(for: request.source)
     }
 
-    /// The record's REST path — the same one the edit panel reads and writes.
     private func performDelete() async {
-        // Same gate as the edit panel: changing what is in the library is the
-        // Control side of the app.
+        // Changing what is in the library is the Control side of the app.
         guard StoreManager.shared.requirePro(.addTitle) else { return }
         deleting = true
         deleteError = nil
@@ -222,8 +202,7 @@ struct MediaDeletePanel: View {
 }
 
 #if os(macOS)
-/// macOS host for the delete card — the `MediaEditModalOverlay` twin. Appears
-/// straight away: unlike the edit modal it has nothing to fetch first.
+/// Unlike the edit modal it has nothing to fetch first.
 struct MediaDeleteModalOverlay: View {
     let request: MediaDeleteRequest
     let onDismiss: () -> Void

@@ -1,11 +1,7 @@
 import Foundation
 
-/// TMDB's per-episode score, for the episode detail's rating pill.
-///
-/// The series' own rating (TVDB, via Sonarr) says nothing about the episode on
-/// screen, and neither Sonarr nor TVDB ship a per-episode one — TMDB is the
-/// only source. The series' tmdb id is resolved from its tvdb id when Sonarr
-/// didn't ship one.
+/// TMDB's per-episode score: neither Sonarr nor TVDB ship one. The tmdb id is resolved
+/// from the tvdb id when Sonarr didn't ship it.
 enum EpisodeRatingProvider {
     struct Rating: Equatable, Sendable {
         let value: Double

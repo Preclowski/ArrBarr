@@ -1,11 +1,9 @@
 import SwiftUI
 import Markdown
 
-/// Ids the tools returned in this conversation, handed down to every message so
-/// the Markdown renderer can tell a real link from an invented one.
+/// Ids the tools returned in this conversation; links to anything else render as plain text.
 private struct ChatKnownLinkKeysKey: EnvironmentKey {
-    /// Empty means "nothing to verify against" — outside the chat (previews,
-    /// isolated renders) links behave as written rather than all vanishing.
+    /// nil (outside the chat) means nothing to verify against, so links behave as written.
     static let defaultValue: Set<String>? = nil
 }
 
@@ -16,24 +14,17 @@ public extension EnvironmentValues {
     }
 }
 
-// Renders assistant chat messages from Markdown using the official swift-markdown
-// parser (cmark-gfm). Handles paragraphs, headings, bold/italic/strikethrough/
-// inline-code, links, bullet/numbered lists, code blocks, block quotes and GFM
-// tables. Inline emphasis is baked into per-run fonts so it renders correctly
-// under the app's custom `.scaledFont` environment.
+// Assistant messages via swift-markdown (cmark-gfm). Emphasis is baked into per-run fonts
+// so it survives the custom `.scaledFont` environment.
 struct MarkdownMessage: View {
     let text: String
     var baseSize: CGFloat = 13
     @Environment(\.fontScale) private var scale
-    /// Ids the tools returned in this conversation. A link to anything else is
-    /// the model's invention and renders as plain text — see
-    /// `ChatLinkVerification`.
     @Environment(\.chatKnownLinkKeys) private var knownLinkKeys
 
     private var px: CGFloat { baseSize * scale }
 
-    /// Reveal state for `||spoiler||` spans — tapping the bubble toggles every
-    /// spoiler in the message at once (matches the previous behaviour).
+    /// One tap toggles every spoiler in the message.
     @State private var spoilersRevealed = false
 
     private var source: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -42,16 +33,11 @@ struct MarkdownMessage: View {
     var body: some View {
         let doc = Markdown.Document(parsing: source)
         Group {
-            // A message that is ENTIRELY spoiler gets the blurred block, never
-            // inline redaction. Inline redaction hides glyphs by colouring them
-            // clear, which is fine for a phrase inside a sentence and reads as a
-            // broken, empty bubble when it's the whole message — the block at
-            // least says "Tap to reveal".
+            // A whole-message spoiler gets the blurred block: inline redaction of the entire text reads as an empty bubble.
             if let hidden = fullyHiddenBody {
                 spoilerBlockView(hidden)
             }
-            // Prose-only messages render as ONE Text so a drag selects the whole
-            // answer (see `flattened`). Everything else keeps the stacked path.
+            // One Text so a drag selects the whole answer (see `flattened`).
             else if !hasSpoilers, let flat = flattened(doc) {
                 Text(flat)
                     .multilineTextAlignment(.leading)
@@ -64,8 +50,6 @@ struct MarkdownMessage: View {
                 }
             }
         }
-        // Tap to reveal/hide spoilers — only when the message has any, so normal
-        // messages keep their default tap/selection behaviour.
         .modifier(SpoilerRevealTap(active: hasSpoilers) {
             withAnimation(.easeInOut(duration: 0.25)) { spoilersRevealed.toggle() }
         })
@@ -73,17 +57,8 @@ struct MarkdownMessage: View {
 
     // MARK: - Whole-message selection
 
-    /// SwiftUI selection never crosses a `Text` boundary: a message built as a
-    /// stack of per-block views can only be selected one paragraph / one bullet
-    /// at a time. So when a message is *only* prose — headings, paragraphs,
-    /// simple lists — flatten it into a single AttributedString and let one drag
-    /// take the lot. Returns nil for anything that genuinely needs its own view
-    /// (code blocks, tables, block quotes, rules, nested lists), which keeps the
-    /// stacked renderer for those instead of degrading them.
-    ///
-    /// The only thing lost is the bullets' hanging indent — a wrapped bullet
-    /// wraps to the margin rather than under its own text — because a plain
-    /// `Text` has no way to express one.
+    /// SwiftUI selection never crosses a `Text` boundary, so prose-only messages flatten into one
+    /// AttributedString (losing only the bullets' hanging indent). nil for blocks that need their own view.
     private func flattened(_ doc: Markdown.Document) -> AttributedString? {
         var out = AttributedString()
         for (idx, block) in doc.blockChildren.enumerated() {
@@ -114,8 +89,6 @@ struct MarkdownMessage: View {
         var out = AttributedString()
         for (idx, item) in items.enumerated() {
             let blocks = Array(item.blockChildren)
-            // Nested lists / code inside a bullet need real views — bail out and
-            // let the whole message use the stacked path.
             guard blocks.allSatisfy({ $0 is Paragraph }) else { return nil }
             if idx > 0 { out += AttributedString("\n") }
             var marker = styled(ordered ? "\(idx + 1).  " : "•  ", size: baseSize, bold: false, italic: false)
@@ -129,8 +102,7 @@ struct MarkdownMessage: View {
         return out
     }
 
-    /// Vertical breathing room between blocks: an empty line whose own font size
-    /// *is* the gap, which is the only spacing control a single `Text` has.
+    /// An empty line whose font size is the gap: the only spacing control a single `Text` has.
     private func gap(_ points: CGFloat) -> AttributedString {
         var a = AttributedString("\n\n")
         a.font = .system(size: points * scale)
@@ -139,9 +111,7 @@ struct MarkdownMessage: View {
 
     // MARK: - Block rendering
 
-    // Returns AnyView because the block renderer recurses (block quotes, list
-    // items contain blocks) — a recursive `some View` defines its opaque type in
-    // terms of itself and won't compile.
+    // AnyView because the renderer recurses; a recursive `some View` won't compile.
     private func blockView(_ markup: BlockMarkup) -> AnyView {
         switch markup {
         case let h as Heading:
@@ -149,9 +119,7 @@ struct MarkdownMessage: View {
             return AnyView(Text(inline(h, size: baseSize + bump, bold: true))
                 .fixedSize(horizontal: false, vertical: true))
         case let p as Paragraph:
-            // A paragraph that is ENTIRELY one spoiler renders as a blurred
-            // block (real frosted blur, possible because it's its own view).
-            // Inline spoilers mid-paragraph fall back to the redaction bar.
+            // Its own view, so a real blur; inline spoilers fall back to the redaction bar.
             if let body = blockSpoilerBody(p) {
                 return AnyView(spoilerBlockView(body))
             }
@@ -230,9 +198,6 @@ struct MarkdownMessage: View {
 
     // MARK: - Block spoiler
 
-    /// The message's text when *all* of it is spoiler — nothing outside the
-    /// markers but whitespace. Returns nil for a message with any visible prose
-    /// (that one redacts inline, in place) and for one with no spoilers at all.
     private var fullyHiddenBody: String? {
         let segments = ChatSpoilerMarkup.parse(source)
         var hidden: [String] = []
@@ -241,16 +206,12 @@ struct MarkdownMessage: View {
             case .spoiler(let body):
                 hidden.append(body)
             case .text(let plain):
-                // Any real prose outside the markers and this isn't a
-                // whole-message spoiler.
                 guard plain.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
             }
         }
         return hidden.isEmpty ? nil : hidden.joined(separator: "\n\n")
     }
 
-    /// If a paragraph is exactly one `||spoiler||` (no other prose), returns the
-    /// inner text — it renders as a blurred, tap-to-reveal block.
     private func blockSpoilerBody(_ p: Paragraph) -> String? {
         let plain = p.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard plain.hasPrefix("||"), plain.hasSuffix("||") else { return nil }
@@ -314,19 +275,12 @@ struct MarkdownMessage: View {
             return inner
         case let link as Markdown.Link:
             var inner = concat(link, size: size, bold: bold, italic: italic)
-            // ONLY in-app links survive. A model asked for a markdown link will
-            // happily invent a plausible URL from memory — that is how a chat
-            // about your Radarr library produced a link to a rickroll — and we
-            // have no way to tell an invented URL from a real one. An external
-            // destination is therefore dropped and the text stays text: the app
-            // never hands the user off to a web page it can't vouch for.
+            // Only in-app links survive: models invent plausible external URLs from memory,
+            // and the app can't vouch for them.
             if let dest = link.destination, let url = URL(string: dest),
                url.scheme == ChatLink.scheme, linkIsTrustworthy(url) {
-                // `arrbarr://person/19292` carries no name, but the link's own
-                // text is the name — stamp it in so `PersonView` can title
-                // itself the moment it's pushed, instead of sitting blank until
-                // TMDB answers. The tap handler only ever sees the URL, which is
-                // why this has to happen at render time.
+                // The tap handler sees only the URL, so the name is stamped in at render time
+                // and `PersonView` can title itself before TMDB answers.
                 inner.link = Self.namingPersonLinks(url, label: link.plainText)
                 inner.foregroundColor = .accentColor
             }
@@ -340,20 +294,13 @@ struct MarkdownMessage: View {
         }
     }
 
-    /// Whether this in-app link points at an id some tool in this conversation
-    /// actually returned. The model invents ids when it has none — a "gaps in
-    /// your collection" answer names films that `check_titles` never printed an
-    /// id for — and an invented id opens a real, wrong film. Unverified links
-    /// render as ordinary text.
+    /// Models invent ids when they have none, and an invented id opens a real, wrong title.
     private func linkIsTrustworthy(_ url: URL) -> Bool {
         guard let knownLinkKeys else { return true }
         guard let link = ChatLink(url: url) else { return false }
         return ChatLinkVerification.isVerified(link, against: knownLinkKeys)
     }
 
-    /// Adds `?name=<link text>` to a person link that doesn't already carry one.
-    /// Everything else — media links, http links, malformed URLs — passes
-    /// through untouched.
     static func namingPersonLinks(_ url: URL, label: String) -> URL {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
@@ -379,9 +326,7 @@ struct MarkdownMessage: View {
         return a
     }
 
-    /// Like `styled`, but splits out `||spoiler||` spans and redacts them (text
-    /// hidden behind a solid bar) until the bubble is tapped to reveal. Keeps the
-    /// surrounding Markdown intact — spoilers no longer bypass the renderer.
+    /// Redacts `||spoiler||` spans until the bubble is tapped, keeping the surrounding Markdown.
     private func styledText(_ s: String, size: CGFloat, bold: Bool, italic: Bool) -> AttributedString {
         guard s.contains("||") else { return styled(s, size: size, bold: bold, italic: italic) }
         var result = AttributedString()
@@ -390,10 +335,7 @@ struct MarkdownMessage: View {
             case .text(let txt):
                 result += styled(txt, size: size, bold: bold, italic: italic)
             case .spoiler(let txt):
-                // Keep the REAL text (same glyph positions) so revealing doesn't
-                // reflow / jump the layout — just toggle its colour. Hidden: a
-                // subtle highlight bar with invisible text; selection is disabled
-                // on spoiler messages (see SpoilerRevealTap) so it can't be peeked.
+                // Keeps the real glyphs and only toggles colour so revealing doesn't reflow.
                 var a = styled(txt, size: size, bold: bold, italic: italic)
                 if !spoilersRevealed {
                     a.foregroundColor = .clear
@@ -406,16 +348,12 @@ struct MarkdownMessage: View {
     }
 }
 
-/// Applies a reveal tap only when the message carries spoilers, so ordinary
-/// messages keep their default tap/selection behaviour.
 private struct SpoilerRevealTap: ViewModifier {
     let active: Bool
     let toggle: () -> Void
     func body(content: Content) -> some View {
         if active {
-            // Disable selection on spoiler messages so the tap reveals (and so a
-            // drag-select can't peek at hidden glyphs); normal messages stay
-            // selectable.
+            // No selection on spoiler messages, so a drag-select can't peek at hidden glyphs.
             content
                 .textSelection(.disabled)
                 .contentShape(Rectangle())

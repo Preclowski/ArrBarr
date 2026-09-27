@@ -5,39 +5,23 @@ import Foundation
 // MARK: - Search result (unified)
 
 nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {
-    /// The external key this row is addressed by: tmdbId for Radarr/Whisparr,
-    /// tvdbId for Sonarr, a hashed MusicBrainz id for Lidarr.
-    ///
-    /// Named for what it is. It used to be called `id`, which made it both the
-    /// foreign key AND SwiftUI's row identity — two jobs that disagree the
-    /// moment a row can't fill it in. TMDB-sourced series left it `0`, so every
-    /// such row claimed the same identity (`ForEach` drew the first show over
-    /// and over) and every `map[result.id]` lookup silently asked about title
-    /// zero. `id` below is now identity; this is the key.
+    /// tmdbId for Radarr/Whisparr, tvdbId for Sonarr, a hashed MusicBrainz id for Lidarr.
+    /// Not the row identity (`id`): TMDB-sourced series leave it `0`.
     var externalId: Int
     var foreignId: String        // tmdbId/tvdbId as string — used in POST body
     let title: String
     let subtitle: String?        // nil for movies; "X seasons" for shows
     let year: Int?
     let rating: Double?          // primary score (TMDB for Radarr, value for Sonarr)
-    /// Vote count for the primary rating. Radarr-only — Sonarr's
-    /// lookup ratings object is just `{ value: Double }`. Drives the
-    /// Bayesian-quality tie-breaker in `SearchRelevance` (a 9.9-rated
-    /// film with 5 votes gets pulled toward the global mean; an 8.0
-    /// with 20 000 stays put). Nil for sources without vote data,
-    /// where the relevance scorer falls back to the raw rating.
+    /// Radarr-only: Sonarr's lookup ratings are just `{ value: Double }`. Feeds the Bayesian tie-breaker
+    /// in `SearchRelevance`; nil falls back to the raw rating.
     let votes: Int?
     let imdb: Double?            // Radarr only
     let rottenTomatoes: Double?  // Radarr only
     let metacritic: Double?      // Radarr only
-    /// `"ttNNNNNNN"` when the source reports one (Radarr / Sonarr). The
-    /// unified identity is TMDB/TVDB-keyed, so this is the ONLY thing an
-    /// `imdb:ttN` query can match on.
+    /// The identity is TMDB/TVDB-keyed, so this is the only thing an `imdb:ttN` query can match on.
     let imdbId: String?
-    /// Zero-based position in the arr's own `/lookup` response. That order
-    /// encodes upstream popularity (TMDB / TVDB rank it for us), which the
-    /// ranker used to discard wholesale by re-sorting on a continuous
-    /// score that essentially never ties. Kept as a mild ranking signal.
+    /// Position in the arr's `/lookup` response, which encodes upstream popularity; a mild ranking signal.
     let sourceRank: Int
     let overview: String?
     let runtime: Int?            // minutes
@@ -45,39 +29,16 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
     let network: String?         // Sonarr network / Radarr studio
     let certification: String?   // Radarr only
     var posterURL: URL?
-    /// True when `posterURL` points at the arr itself, whose `/MediaCover`
-    /// route answers 401 without the API key. Only library-sourced rows can
-    /// set it — a lookup row's artwork comes from TMDB/TVDB, which is public —
-    /// so it defaults to false and the row passes no key at all.
+    /// The arr's `/MediaCover` route answers 401 without the API key; lookup artwork (TMDB/TVDB) is public.
     var posterRequiresAuth: Bool = false
     let source: QueueItem.Source
-    /// Set when the backend has cross-referenced this result with the arr's
-    /// library and found a match. Carries the arr's internal record id so the
-    /// chat UI can route a tap to DetailView instead of the add flow.
-    /// `nil` for non-cross-referenced results (e.g. regular `*_search` calls).
+    /// The arr's record id when the result is already in the library, so a tap opens DetailView.
     var inLibraryArrId: Int?
-    /// Whether that library record's files are on disk — the ownership chip's
-    /// "Downloaded" vs "library". Set together with `inLibraryArrId` by
-    /// `withLibraryOwnership`.
     var libraryDownloaded: Bool = false
-    /// Lidarr only: true when this row is an ALBUM (`/album/lookup`), false
-    /// for artists (`/artist/lookup`). The two route differently on tap —
-    /// albums open/add the album, artists open the artist view — and the two
-    /// lookups return records with disjoint shapes, so the flag is stamped at
-    /// unify time rather than re-derived downstream.
+    /// Lidarr only: album vs artist. Stamped at unify time because the two lookups return disjoint shapes.
     let isLidarrAlbum: Bool
-    /// TMDB's own **series** id, for `.sonarr` rows only.
-    ///
-    /// `id` carries the tvdbId for series, which TMDB-sourced rows (person
-    /// filmography, `tmdb_discover_series`) simply do not have — they used to
-    /// arrive with `id: 0` and no way back to the show they came from, so the
-    /// add panel re-found the series by *title* and cheerfully opened a
-    /// different one. This is the identity that makes that lookup exact; it
-    /// is also what cast and trailer prefer, since both key on TMDB.
-    ///
-    /// Set on Sonarr lookup records too (SkyHook ships it), which is what
-    /// lets `SeriesIdentityResolver` verify that a `tmdb:N` lookup answered
-    /// about the show we asked about.
+    /// TMDB's series id, for `.sonarr` rows only. TMDB-sourced rows have no tvdbId, so this keeps the
+    /// lookup exact; `SeriesIdentityResolver` uses it to verify a `tmdb:N` answer.
     let tmdbTVId: Int?
 
     init(externalId: Int, foreignId: String, title: String, subtitle: String?,
@@ -114,13 +75,8 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         self.tmdbTVId = tmdbTVId
     }
 
-    /// Row identity: the source plus whatever external ref the row can prove.
-    ///
-    /// A composite string rather than the foreign key, because the foreign key
-    /// is not always known — a TMDB series carries a `tmdbtv:` ref and no
-    /// tvdbId at all. Rows that can't identify themselves at all fall back to
-    /// title + year, which is the weakest honest answer and still unique
-    /// enough for a list; it is never used to look anything up.
+    /// The foreign key is not always known (a TMDB series has only a `tmdbtv:` ref); the title + year
+    /// fallback is never used to look anything up.
     public var id: String {
         let ref = mediaRef
         guard ref.isAddressable else {
@@ -129,14 +85,8 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         return "\(source.rawValue):\(ref.urlString)"
     }
 
-    /// Stamp library ownership — arr record id and downloaded state, always
-    /// together. Used by every path that resolves results first and then
-    /// cross-references them against `ArrLibraryMaps`. `nil` clears both.
-    ///
-    /// A mutating copy rather than a field-by-field rebuild. The rebuild had
-    /// to name every property, so adding one silently dropped it here — the
-    /// failure mode being a freshly-added id that vanishes between the
-    /// mapping that set it and the row that needed it.
+    /// Arr record id and downloaded state, always together; `nil` clears both. A mutating copy so a new
+    /// property can't be silently dropped.
     func withLibraryOwnership(_ ownership: LibraryOwnership?) -> SearchResult {
         var copy = self
         copy.inLibraryArrId = ownership?.arrId
@@ -144,14 +94,7 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         return copy
     }
 
-    /// Keep the artwork the caller is already looking at.
-    ///
-    /// Enrichment replaces a TMDB-sourced row with the arr's own record, and
-    /// that record's poster comes from the arr (TVDB art for Sonarr). The
-    /// image therefore changed the instant a title was opened — which reads as
-    /// "this is a different show", and is indistinguishable from the bug where
-    /// it actually WAS a different show. The metadata upgrade is worth having;
-    /// the artwork swap is not.
+    /// Enrichment swaps in the arr's record, whose poster differs; a changed image reads as a different show.
     func withArtwork(from row: SearchResult) -> SearchResult {
         guard let poster = row.posterURL else { return self }
         var copy = self
@@ -159,10 +102,7 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         return copy
     }
 
-    /// Stamp the resolved tvdbId onto a TMDB-sourced series row (`id == 0`),
-    /// keeping `tmdbTVId` so cast and trailer still take the TMDB route.
-    /// Only `SeriesIdentityResolver`'s callers should produce this — the id
-    /// must have been proven, never matched by title.
+    /// Only for ids proven by `SeriesIdentityResolver`, never matched by title.
     func withTVDBId(_ tvdbId: Int) -> SearchResult {
         var copy = self
         copy.externalId = tvdbId
@@ -176,10 +116,7 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
 nonisolated enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     case movieOnly, movieAndCollection, none
     var id: String { rawValue }
-    /// Localized through the catalog, not returned raw. A bare English string
-    /// here reaches the UI via `Text(someString)`, which takes the
-    /// *non-localizing* StringProtocol overload — so the catalog is never
-    /// consulted and the label stays English in every language.
+    /// Localized here: `Text(someString)` takes the non-localizing overload, so a raw string stays English.
     var displayName: String {
         switch self {
         case .movieOnly: return String(localized: "search.movieOnly.button", bundle: .module)
@@ -192,11 +129,7 @@ nonisolated enum RadarrMonitorMode: String, CaseIterable, Identifiable {
 nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
     var id: String { rawValue }
-    /// Value Sonarr expects for `addOptions.monitor`. Sonarr's
-    /// `MonitorTypes` enum serialises to camelCase (`firstSeason`,
-    /// `latestSeason`) — sending our short `first`/`latest` raw values
-    /// makes Sonarr reject the POST with HTTP 400 ("could not be converted
-    /// to NzbDrone.Core.Tv.MonitorTypes"). The rest map 1:1.
+    /// Sonarr's `MonitorTypes` is camelCase (`firstSeason`, `latestSeason`); the raw values get a 400.
     var apiValue: String {
         switch self {
         case .first: return "firstSeason"
@@ -204,7 +137,6 @@ nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
         default: return rawValue
         }
     }
-    /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
         case .all: return String(localized: "search.all.button", bundle: .module)
@@ -218,13 +150,10 @@ nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// Lidarr `addOptions.monitor` for a new artist. Mirrors Lidarr's
-/// `MonitorTypes` (serialised lowercase/camelCase 1:1 — unlike Sonarr,
-/// `first`/`latest` need no remapping).
+/// Lidarr's `MonitorTypes` serialise 1:1; unlike Sonarr, `first`/`latest` need no remapping.
 nonisolated enum LidarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
     var id: String { rawValue }
-    /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
         case .all: return String(localized: "search.all.button", bundle: .module)
@@ -238,12 +167,10 @@ nonisolated enum LidarrMonitorMode: String, CaseIterable, Identifiable {
     }
 }
 
-/// Radarr's `minimumAvailability` — when a monitored movie becomes eligible
-/// for searching/downloading. Serialises 1:1 to Radarr v3's enum values.
+/// Radarr's `minimumAvailability`: when a monitored movie becomes eligible for searching.
 nonisolated enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
     case announced, inCinemas, released
     var id: String { rawValue }
-    /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
         case .announced: return String(localized: "edit.availability.announced.button", bundle: .module)
@@ -256,9 +183,6 @@ nonisolated enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
 nonisolated enum SonarrSeriesType: String, CaseIterable, Identifiable {
     case standard, daily, anime
     var id: String { rawValue }
-    /// Was `rawValue.capitalized` — cheap, and English-only forever: a
-    /// capitalized raw value can't be translated because it never existed as a
-    /// catalog key. See `RadarrMonitorMode.displayName`.
     var displayName: String {
         switch self {
         case .standard: return String(localized: "search.standard.button", bundle: .module)
@@ -271,10 +195,7 @@ nonisolated enum SonarrSeriesType: String, CaseIterable, Identifiable {
 // MARK: - Library entry → search row
 
 nonisolated extension SearchResult {
-    /// A Library-tab entry as a search row — what library-only search returns.
-    /// Owned by definition, so it arrives stamped: it opens the detail view,
-    /// and its chip reads "Downloaded" or "library" from the same file state
-    /// the Library tab shows.
+    /// Owned by definition, so it arrives stamped with the Library tab's file state.
     init(libraryEntry e: LibraryEntry) {
         self.init(
             externalId: e.externalId ?? 0,
@@ -287,8 +208,7 @@ nonisolated extension SearchResult {
             posterURL: e.posterURL, source: e.source
         )
         self = withLibraryOwnership(LibraryOwnership(arrId: e.arrId, isDownloaded: e.state == .complete))
-        // The grid's covers are the arr's own `/MediaCover` files behind the
-        // API key; a row that forgets that renders a placeholder.
+        // The grid's covers are the arr's own `/MediaCover` files behind the API key.
         self.posterRequiresAuth = e.posterRequiresAuth
     }
 }

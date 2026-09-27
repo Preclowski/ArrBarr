@@ -1,19 +1,13 @@
 import SwiftUI
 import MediaKit
 
-/// Per-track detail — the audio counterpart of `EpisodeDetailOverlay`,
-/// trimmed to what a track actually has: album-art hero with title /
-/// album / artist / duration, then the on-disk file's quality / size /
-/// custom-formats banner (or a quiet "missing" line). Pushed from the
-/// album view's track list; back pops to the album.
+/// Audio counterpart of `EpisodeDetailOverlay`, pushed from the album's track list.
 struct TrackDetailOverlay: View {
     let track: ArrTrack
-    /// The joined `/trackfile` record — nil when the track has no file
-    /// (or the file list hasn't loaded), which renders the missing state.
+    /// Nil (no file, or not loaded yet) renders the missing state.
     let file: ArrFile?
     let albumTitle: String?
-    /// Album's artist — rendered as a drill-in link when `onOpenArtist` is
-    /// wired (mirrors the album hero's artist line).
+    /// A drill-in link when `onOpenArtist` is wired.
     let artist: ArrArtist?
     let posterURL: URL?
     var posterAPIKey: String? = nil
@@ -23,8 +17,6 @@ struct TrackDetailOverlay: View {
     @Environment(\.isDetachedWindow) private var isDetachedWindow
     @State private var enlargedPoster: URL?
 
-    /// Header carries the track NAME (the thing the user tapped); the
-    /// track number moved into the hero's metadata column.
     private var navTitle: String { track.title ?? "—" }
 
     private var trackNumberLabel: String {
@@ -35,8 +27,7 @@ struct TrackDetailOverlay: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
-            // Self-drawn back header — the popover / detached window draw no
-            // NavigationStack chevron (same pattern as every detail surface).
+            // The popover and detached window draw no NavigationStack chevron.
             HStack(spacing: 6) {
                 FloatingBackButton(action: onClose)
                     .keyboardShortcut(.cancelAction)
@@ -86,12 +77,7 @@ struct TrackDetailOverlay: View {
             .buttonStyle(.plain)
             .disabled(posterURL == nil)
 
-            // The title lives in the header now; this column carries the
-            // context — artist (drill-in link), album, track number + length —
-            // mirroring the album hero's hierarchy.
             VStack(alignment: .leading, spacing: 4) {
-                // Library chip up top (title-level fact), matching the
-                // movie / episode / album heroes.
                 if file != nil {
                     LibraryStateBadge(isDownloaded: true)
                 }
@@ -137,13 +123,9 @@ struct TrackDetailOverlay: View {
         }
     }
 
-    /// On-disk file → the same quality / size / formats banner episodes use;
-    /// no file → the row-text vocabulary ("Missing") in a quiet line.
     @ViewBuilder
     private var fileSection: some View {
         if let file {
-            // Library chip lives in the hero now; the block is captioned
-            // by what it shows — same as movie / episode details.
             VStack(alignment: .leading, spacing: 6) {
                 DetailSectionHeader("Existing file")
                 ExistingFileBanner(file: file)

@@ -1,11 +1,7 @@
 import SwiftUI
 
-/// Build the colored rating chips for a SearchResult — same vocabulary
-/// as queue/search rows (IMDb yellow, RT red, MC green, ★ TMDB fallback).
 func discoverRatingChips(for result: SearchResult, imdbId: String? = nil) -> [RatingChip] {
-    // `linkTitle` is what makes a pill clickable (see `RatingChip`): without it
-    // the factories build an inert chip, which is why the Quiz's scores opened
-    // nothing while the detail card's did.
+    // Without `linkTitle` the factories build an inert, unclickable chip.
     let title = result.title
     var out: [RatingChip] = [
         result.imdb.flatMap { RatingChip.imdb($0, linkTitle: title, imdbId: result.imdbId ?? imdbId) },
@@ -22,30 +18,18 @@ func discoverRatingChips(for result: SearchResult, imdbId: String? = nil) -> [Ra
     return out
 }
 
-/// The immersive Quiz card: a single full-bleed poster with a bottom glass
-/// scrim carrying the title / meta / a short overview and a "Więcej" link
-/// that opens the full detail card. Swipe tint + stamp overlays give the
-/// drag its like/skip feedback. No hover-flip back face — details live on
-/// the detail card the "Więcej" link opens.
+/// The immersive Quiz card: full-bleed poster, bottom scrim with the metadata,
+/// and a "More" link to the full detail card.
 struct DiscoverCardView: View {
     let item: DiscoverItem
     var dragOffset: CGSize = .zero
-    /// Vertical space reserved at the bottom for the floating action
-    /// buttons so the metadata never slides under them.
     var bottomInset: CGFloat = 0
-    /// Opens the full movie/series detail card.
     var onMore: () -> Void
 
-    /// Dominant colour of the poster's lower edge — see `bottomGlassPanel`.
-    /// Resolved per poster URL, so the peek card has it in hand well before
-    /// it reaches the top of the deck.
+    /// Resolved per poster URL, so the peek card has it before reaching the top.
     @State private var posterTint: Color?
-    /// Director (movie) or creators (series) — the same byline the detail
-    /// card carries, in the same slot: under the ratings, above the synopsis.
     @State private var directors: [CastMember] = []
-    /// Resolved for TMDB-sourced cards, which carry no IMDb id — see
-    /// `TMDBClient.movieIMDbId`. Until it lands the IMDb pill opens a title
-    /// search, which is what it did before.
+    /// TMDB-sourced cards carry no IMDb id; until it lands the IMDb pill opens a title search.
     @State private var resolvedIMDbId: String?
     @EnvironmentObject private var configStore: ConfigStore
 
@@ -59,9 +43,6 @@ struct DiscoverCardView: View {
         self.onMore = onMore
     }
 
-    /// Credits for the card on screen. `CastProvider` caches and coalesces per
-    /// title, so a card the user swipes back to costs nothing, and a title they
-    /// open in detail afterwards is already resolved.
     private func loadCredits() async {
         let result = item.result
         switch item.kind {
@@ -87,7 +68,6 @@ struct DiscoverCardView: View {
             let w = geo.size.width
             let h = geo.size.height
             ZStack(alignment: .bottomLeading) {
-                // Full-bleed poster — fills the whole popover (2:3, no crop).
                 RemotePoster(
                     url: item.result.posterURL,
                     apiKey: nil,
@@ -99,34 +79,25 @@ struct DiscoverCardView: View {
                 )
                 .frame(width: w, height: h)
                 .clipped()
-                // Watched wedge only: a deck card carries no arr record, so
-                // there is no monitored flag to draw.
+                // Watched wedge only: a deck card has no arr record, so no monitored flag.
                 .posterMarks(watched: MediaServerIndex.shared.isWatched(item.result.mediaServerKeys),
                              monitored: nil, cornerRadius: 0, ribbonWidth: 14)
 
-                // Bottom scrim — transparent at the top, opaque glass at the
-                // bottom — so text + buttons read over any artwork.
                 bottomGlassPanel(h: h * 0.55)
                     .frame(maxHeight: .infinity, alignment: .bottom)
                     .allowsHitTesting(false)
 
-                // Title / meta / overview / "Więcej", lifted above the
-                // floating action buttons by `bottomInset`.
                 metadata
                     .padding(16)
                     .padding(.bottom, bottomInset)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             }
             .frame(width: w, height: h)
-            // Rounded corners / rim / shadow are intentionally absent: the
-            // card fills the popover and NSPopover masks it to the window's
-            // own rounded corners.
+            // No rounded corners: NSPopover masks the card to the window's own corners.
             .overlay(swipeTint.allowsHitTesting(false))
             .overlay(alignment: dragOffset.width > 0 ? .topLeading : .topTrailing) {
                 swipeStamp
             }
-            // Runs for the peek card too — it's rendered (behind the top card),
-            // so its tint is resolved before the user ever sees it.
             .task(id: item.result.posterURL) {
                 posterTint = await PosterTint.color(for: item.result.posterURL)
             }
@@ -143,9 +114,7 @@ struct DiscoverCardView: View {
                 .scaledFont(size: 19, weight: .semibold)
                 .foregroundStyle(.primary)
                 .lineLimit(2)
-            // Owned titles say so up front — without the badge a deliberate
-            // library pick reads as the quiz suggesting things you already
-            // have. Same chip the search results / detail views use.
+            // Without the badge a library pick reads as the quiz suggesting things you already have.
             if item.result.inLibraryArrId != nil {
                 LibraryStateBadge(isDownloaded: item.result.libraryDownloaded)
             }
@@ -161,8 +130,6 @@ struct DiscoverCardView: View {
                     ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                 }
             }
-            // Byline between the ratings and the synopsis, exactly where the
-            // detail card puts it (see `MediaHeaderCard`).
             DirectedByLine(people: directors,
                            labelKey: item.kind == .show ? "detail.createdBy.label" : "detail.directedBy.label")
             if let overview = item.result.overview, !overview.isEmpty {
@@ -175,9 +142,6 @@ struct DiscoverCardView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 1)
             }
-            // Why-this-card line: makes the pick legible ("Because you kept
-            // Sicario") and turns a miss from "the app is dumb" into "ah,
-            // that's why — no thanks". Absent when no source gave a reason.
             if let reason = item.reason, !reason.isEmpty {
                 HStack(spacing: 4) {
                     Image(systemName: "sparkles")
@@ -193,7 +157,6 @@ struct DiscoverCardView: View {
         }
     }
 
-    /// The "Więcej" affordance — opens the full detail / add card.
     private var moreButton: some View {
         Button(action: onMore) {
             HStack(spacing: 3) {
@@ -232,31 +195,15 @@ struct DiscoverCardView: View {
         ].compactMap { $0 }
     }
 
-    /// The scrim under the metadata: a dark base for legibility, washed with
-    /// this card's OWN poster colour.
-    ///
-    /// There is deliberately no `.regularMaterial` here any more. A material
-    /// takes its colour from whatever it samples behind itself — which, in the
-    /// deck's ZStack, is the *sibling card*, not this one. So every card's
-    /// panel was partly painted by its neighbour, and the sample settled a
-    /// beat after the swap: the card changed, then its colour caught up. No
-    /// amount of tint layered on top fixes that, because the lagging colour is
-    /// still underneath.
-    ///
-    /// Now both layers are values this card owns. `posterTint` is resolved
-    /// from its own pixels while it is still the hidden peek card, so it is
-    /// already correct the moment it reaches the top of the deck, and it
-    /// cross-fades rather than snapping when it does arrive.
+    /// No `.regularMaterial`: in the deck's ZStack it samples the sibling card and
+    /// settles a beat late. Both layers here are values this card owns.
     @ViewBuilder
     private func bottomGlassPanel(h: CGFloat) -> some View {
         ZStack {
-            // Legibility floor — independent of the artwork, so text contrast
-            // never depends on how bright a given poster happens to be.
             LinearGradient(
                 colors: [.clear, .black.opacity(0.55), .black.opacity(0.88)],
                 startPoint: .top, endPoint: .bottom
             )
-            // The card's own colour, over the top of that floor.
             LinearGradient(
                 colors: [.clear, (posterTint ?? .clear).opacity(0.4), (posterTint ?? .clear).opacity(0.62)],
                 startPoint: .top, endPoint: .bottom

@@ -20,10 +20,8 @@ nonisolated extension ArrCommand {
 }
 
 nonisolated public extension Array where Element == ArrImage {
-    /// The poster to draw and whether it needs the arr's API key. The media
-    /// server's artwork wins when it holds the title (its token rides in the
-    /// query, so no auth); otherwise the first image of `coverTypes`, preferring
-    /// the no-auth `remoteUrl` over the arr's own copy.
+    /// The media server's artwork wins (its token rides in the query); else the no-auth `remoteUrl`
+    /// before the arr's own copy.
     func posterURL(baseURL: String, coverTypes: [String] = ["poster"],
                    mediaServerKeys: [MediaServerExternalKey] = []) -> (URL?, Bool) {
         let arr = ownPosterURL(baseURL: baseURL, coverTypes: coverTypes)

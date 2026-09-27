@@ -2,32 +2,18 @@ import Foundation
 import os
 import MediaKit
 
-/// Why an arr didn't show up in the add window is invisible from the UI — the
-/// arr is simply absent, whether it wasn't configured, wasn't reachable, or had
-/// no matching client. This log is the only way to tell those apart.
+/// The only way to tell apart an arr that was unconfigured, unreachable or had no matching client.
 nonisolated private let dropLog = Logger(category: "DownloadDrop")
 
-/// Turns a dropped file or magnet link into an actual download.
-///
-/// The flow deliberately goes *through the arr*: the user picks which arr the
-/// media belongs to, that arr names its own download client and category, and
-/// we push the payload into the locally-configured client of the same kind
-/// using the credentials the user gave ArrBarr. Uploading straight to a client
-/// of our own choosing would work exactly once — the download would land and
-/// then sit there, never imported, because no arr is watching that category.
+/// Goes through the arr: pushing to a client of our choosing would leave the download unimported,
+/// because no arr watches that category.
 public actor DownloadDropService {
     nonisolated public static let shared = DownloadDropService()
 
     public init() {}
 
-    /// Every place this payload could go: one entry per (arr, download client)
-    /// pair that can speak the payload's protocol AND that ArrBarr itself has
-    /// credentials for. The arrs' client lists are `reference` store reads, so
-    /// reopening the sheet does not re-interrogate every arr.
-    ///
-    /// An arr we can't reach contributes nothing rather than failing the whole
-    /// resolve — with three arrs configured and one down, the user should still
-    /// be able to file a drop with the other two.
+    /// Pairs that speak the payload's protocol and that ArrBarr has credentials for. An unreachable arr
+    /// contributes nothing rather than failing the whole resolve.
     public func destinations(for kind: DownloadKind, configs: [ServiceKind: ServiceConfig]) async -> [DownloadDestination] {
         var result: [DownloadDestination] = []
         for arr in ServiceKind.arrKinds {
@@ -55,9 +41,7 @@ public actor DownloadDropService {
                 } else if configs[client.serviceKind!]?.isConfigured != true {
                     dropLog.notice("\(arr.rawValue, privacy: .public): \(client.implementation, privacy: .public) is not configured in ArrBarr")
                 }
-                // A client the arr uses but ArrBarr has no login for can't be
-                // reached, so offering it would produce a destination that
-                // fails at add time.
+                // Without an ArrBarr login the client can't be reached, and the drop would fail at add time.
                 guard let local = client.serviceKind,
                       configs[local]?.isConfigured == true else { continue }
                 result.append(DownloadDestination(arr: arr, client: client, serviceKind: local))
@@ -66,10 +50,7 @@ public actor DownloadDropService {
         return result
     }
 
-    /// Push one payload to a resolved destination.
-    ///
-    /// The category comes from the destination (i.e. from the arr), never from
-    /// the caller — it's the one value that must not be a UI choice.
+    /// The category comes from the destination (the arr), never from the caller.
     public func add(
         _ drop: DownloadDrop,
         to destination: DownloadDestination,
@@ -83,18 +64,14 @@ public actor DownloadDropService {
         try await client.add(drop, category: destination.client.category, paused: paused)
     }
 
-    /// What the "add paused" checkbox should start on: the client's own
-    /// preference, or off for the clients that have no such setting.
+    /// The client's own preference, or off for clients without one.
     public func defaultPaused(for destination: DownloadDestination, configs: [ServiceKind: ServiceConfig]) async -> Bool {
         guard let config = configs[destination.serviceKind],
               let client = Self.addSource(destination.serviceKind, config) else { return false }
         return await client.defaultAddPaused() ?? false
     }
 
-    /// The one place mapping a client kind to something that can be handed a
-    /// new download. Mirrors `DownloadProgressService.makeSource`; the two stay
-    /// separate because progress and adding are genuinely different
-    /// capabilities (an arr kind has the first, never the second).
+    /// Separate from `DownloadProgressService.makeSource`: an arr kind can report progress but never add.
     nonisolated private static func addSource(_ kind: ServiceKind, _ config: ServiceConfig) -> (any DownloadAddSource)? {
         switch kind {
         case .qbittorrent:  return QbittorrentClient(config: config)
@@ -111,15 +88,11 @@ public actor DownloadDropService {
         try await ServiceHandles.arr(QueueItem.Source(rawValue: arr.rawValue)!, config: config).fetchDownloadClients()
     }
 
-    /// Cheap identity for a config set — enough to notice a URL/key edit
-    /// without holding the configs themselves.
 }
 
 nonisolated public extension ServiceKind {
-    /// The arr kinds, in the order the add sheet lists them.
     nonisolated static var arrKinds: [ServiceKind] { [.sonarr, .radarr, .lidarr, .whisparr] }
 
-    /// SF Symbol shown on this arr's tile in the add sheet.
     var symbolName: String {
         switch self {
         case .sonarr:   return "tv"

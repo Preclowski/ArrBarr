@@ -1,66 +1,29 @@
 import SwiftUI
 
-/// Shared row chrome for poster + title + dot-joined metadata + trailing
-/// accessory. Powers both the search result rows (`SearchResultRow`)
-/// and the Upcoming tab rows (`UpcomingRowView`) so they stay
-/// pixel-identical structurally — the only differences should be what
-/// goes into `metadataSegments` and what trails on the right.
-///
-/// Why centralise this? Both rows previously hand-rolled the same
-/// HStack(poster, VStack(title, metadata), Spacer, accessory) layout
-/// plus the same hover-tint background. Diverged by ~2pt on padding /
-/// spacing across iterations and the user noticed; pulling it into one
-/// place keeps them in lock-step from now on.
+/// Shared poster + title + metadata + accessory row for Search and Upcoming, so their layout can't drift.
 struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: View, TrailingAccessory: View>: View {
     let posterURL: URL?
     let posterAPIKey: String?
-    /// Every caller so far is a list row at 26×38, comfortably inside the icon
-    /// tier even at @3x — but it is a parameter rather than a constant so a
-    /// future caller with a bigger poster doesn't silently get a soft one.
+    /// A parameter, not a constant, so a bigger poster doesn't silently get a soft thumbnail tier.
     let posterTier: PosterTier
     let posterSize: CGSize
     let posterCornerRadius: CGFloat
     let posterBlurred: Bool
-    /// SF Symbol shown when the poster URL fails to load. Empty string
-    /// (or whatever `RemotePoster` treats as missing) skips the fallback.
     let posterFallbackSymbol: String
-    /// Corner marks on the thumbnail — the media server's watched wedge and
-    /// the arr's monitored ribbon. `posterMonitored` is `nil` on rows that
-    /// don't know the flag (a search hit, an upcoming episode).
+    /// `posterMonitored` is `nil` on rows that don't know the flag (a search hit, an upcoming episode).
     let posterWatched: Bool
     let posterMonitored: Bool?
-    /// Already-formatted title — callers compose `Title (Year)` themselves
-    /// since the year-suffix rule differs (movies have year, episodes
-    /// don't).
+    /// Callers compose `Title (Year)` themselves: episodes have no year suffix.
     let title: String
     let metadataSegments: [String]
-    /// Optional per-segment tint aligned by index with `metadataSegments`;
-    /// `nil` (or a missing index — the array may be shorter) keeps the
-    /// default `.secondary`. Lets a row colour a status word (Library:
-    /// green Downloaded / red Missing) without forking the row chrome.
+    /// Aligned by index with `metadataSegments`; may be shorter. `nil` keeps `.secondary`.
     let metadataSegmentColors: [Color?]
-    /// Optional second metadata line, rendered below the first. Lets a row
-    /// split overflowing metadata across two lines (e.g. Upcoming on iOS:
-    /// episode info on line 1, rating/runtime/type on line 2). Empty = one line.
     let metadataSegments2: [String]
-    /// Optional pill / badge rendered inline next to the title — used
-    /// by Search rows to surface an "In library" tag without burning a
-    /// metadata segment (a coloured chip reads at a glance; an extra
-    /// "· In library" string does not). `nil` keeps the title alone.
     @ViewBuilder let titleBadge: () -> TitleBadge
-    /// Optional chip leading the FIRST metadata line (Library's status
-    /// chip). Rendered before the text segments, no separator dot — the
-    /// chip's own outline already sets it apart.
     @ViewBuilder let metadataBadge: () -> MetadataBadge
-    /// Same, for the SECOND metadata line — the Upcoming row's rating chip
-    /// leads the line the score used to sit inside as text.
     @ViewBuilder let metadataBadge2: () -> MetadataBadge2
-    /// Right-hand accessory. Pass `EmptyView()` if you don't want one.
     let trailing: () -> TrailingAccessory
     let onTap: () -> Void
-    /// When `true` the row is non-interactive (no hover tint, no tap).
-    /// Used by Upcoming rows that don't have a backing `entityId` —
-    /// nothing meaningful to drill into.
     let disabled: Bool
     init(
         posterURL: URL?,
@@ -105,20 +68,14 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
     }
 
     var body: some View {
-        // A non-interactive row is plain content, not a disabled Button — a
-        // disabled plain-style Button greys its whole label (title, poster,
-        // chips), which read as "unavailable" rather than "nothing to open".
+        // Not a disabled Button: that greys the whole label, which reads as "unavailable".
         if disabled {
             rowContent
         } else {
             Button(action: onTap) { rowContent }
                 .buttonStyle(.plain)
-                // Publish the row's hover state to the drill-in title chevron
-                // so it lights up on row hover, not on glyph hover.
+                // Row hover lights the title chevron, not just hovering the glyph.
                 .linkRowHover()
-                // Hover-tint dropped — chevron after the title now signals
-                // "tap to drill in" without depending on cursor state. Works
-                // identically on macOS (mouse) and iOS (touch).
         }
     }
 
@@ -134,8 +91,6 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
                     fallbackSymbol: posterFallbackSymbol
                 )
             }
-            // Sized off the thumbnail's width so a 26pt list poster gets a
-            // ribbon in proportion to the grid tile's.
             .posterMarks(watched: posterWatched, monitored: posterMonitored,
                          cornerRadius: posterCornerRadius,
                          ribbonWidth: max(5, posterSize.width * 0.2))
@@ -146,10 +101,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
                         .scaledFont(size: 12, weight: .medium)
                         .lineLimit(1)
                     titleBadge()
-                    // Chevron telegraphs "tap to drill in" without
-                    // depending on hover — works on iOS (no hover)
-                    // and clarifies macOS rows too. Skipped on
-                    // disabled rows (no tap target).
+                    // Hover-independent drill-in affordance, since iOS has no hover.
                     if !disabled {
                         LinkChevron(size: 9)
                     }
@@ -178,9 +130,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
         .contentShape(Rectangle())
     }
 
-    /// Does this row actually carry a metadata chip? Read off the TYPE, not
-    /// off an optional: the badge is a generic view now, and a row without one
-    /// is spelled `EmptyView` at compile time.
+    /// Read off the type: a row without a badge is `EmptyView` at compile time.
     private var hasMetadataBadge: Bool { MetadataBadge.self != EmptyView.self }
     private var hasMetadataBadge2: Bool { MetadataBadge2.self != EmptyView.self }
 
@@ -191,8 +141,6 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
                 if idx > 0 {
                     SeparatorDot()
                 }
-                // One line, always: an overlong segment truncates rather
-                // than wrapping into a narrow column.
                 Text(seg)
                     .lineLimit(1)
                     .foregroundStyle(
@@ -207,11 +155,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
 
 // MARK: - Badge-free initialisers
 //
-// The badges are generic rather than `AnyView` so SwiftUI keeps each row's
-// static structure and can update a row in place instead of rebuilding its
-// subtree — which is what type erasure costs in a scrolling list. Most rows
-// carry no badge at all, hence these: the generic parameter is pinned to
-// `EmptyView` and the argument disappears from the call site.
+// Generic badges rather than `AnyView` so SwiftUI updates rows in place in a scrolling list.
 extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
@@ -309,7 +253,6 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == Emp
 
 
 extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
-    /// Rows whose only chip leads the SECOND metadata line (Upcoming's score).
     init(
         posterURL: URL?,
         posterAPIKey: String?,

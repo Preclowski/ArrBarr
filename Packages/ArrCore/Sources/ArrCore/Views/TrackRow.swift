@@ -3,15 +3,9 @@ import MediaKit
 
 struct TrackRow: View {
     let track: ArrTrack
-    /// Tap → per-track detail (file quality / size) — the audio counterpart
-    /// of tapping an episode row.
     var onTap: (() -> Void)? = nil
 
-    /// Title colour. Flipped to match `EpisodeRow.episodeTitleStyle`
-    /// post-redesign: on-disk tracks (your library, ready to play)
-    /// take the brightest tone; missing tracks dim out from that
-    /// baseline. Audio releases drop all at once so there's no
-    /// "not aired" axis.
+    /// Matches `EpisodeRow.episodeTitleStyle`: on-disk tracks brightest, missing ones dimmed.
     private var trackTitleStyle: AnyShapeStyle {
         if track.hasFile == true { return AnyShapeStyle(Color.primary) }
         return AnyShapeStyle(Color.primary.opacity(0.75))
@@ -29,10 +23,7 @@ struct TrackRow: View {
                 .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(.tertiary)
                 .frame(width: 24, alignment: .leading)
-            // Text-colour signals state (matches EpisodeRow). No
-            // status icons — audio releases either exist on disk or
-            // they don't, the trailing duration + dim title carry
-            // that bit without a green check / empty circle pair.
+            // No status icons: a track is on disk or not, and the dimmed title carries that.
             Text(track.title ?? "—")
                 .scaledFont(size: 11)
                 .foregroundStyle(trackTitleStyle)

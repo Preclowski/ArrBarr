@@ -1,101 +1,47 @@
 import SwiftUI
 import MediaKit
 
-/// Compact full-popover episode detail. Pushed on top of `DetailView`
-/// when the user taps an `EpisodeRow`. Shows episode metadata, the
-/// download/on-disk file section and the header action cluster
-/// (search / bookmark / safari). Closes via the leading back chevron
-/// or Esc.
+/// Episode detail pushed on top of `DetailView` from an `EpisodeRow`.
 struct EpisodeDetailOverlay: View {
     let episode: ArrEpisode
     let seriesTitle: String
     let posterURL: URL?
     let posterRequiresAuth: Bool
     let apiKey: String?
-    /// Lazy-loaded file payload — `nil` until the parent fetches
-    /// `/episodefile/{id}` for an on-disk episode. Drives the
-    /// quality / size / customFormats chip strip.
-    /// Existing-file payload for upgrade-context rendering. Same shape
-    /// the season list already passes to `EpisodeRow` — taken straight
-    /// from `DetailView.sonarrEpisodeFiles` (works in demo too) instead
-    /// of the per-episode async `/episodefile/{id}` fetch we used to
-    /// fire, which returned nil in demo and broke the diff view.
+    /// Taken from the parent's already-loaded episode files, which also works in demo.
     let episodeFile: ArrFile?
-    /// ALL active queue items for this episode (usually 0 or 1; 2+ when the
-    /// same episode was grabbed twice). Powers the "new file" section that
-    /// sits alongside the existing file — both can be present (upgrade in
-    /// progress). With duplicates, every download renders its own block with
-    /// its own pause/cancel controls.
+    /// All active downloads for this episode; 2+ when it was grabbed twice, each then gets its own controls.
     let queueItems: [QueueItem]
-    /// Representative download — first of `queueItems`. Single-download
-    /// paths (CTA strip, toolbar trash, diff section) act on this.
     private var queueItem: QueueItem? { queueItems.first }
     let onClose: () -> Void
     let onSearch: ((Int) async -> Void)?
-    /// Pause/Resume/Cancel closures for the active queueItem — wired
-    /// by DetailView from the same `viewModel.pause/resume/delete`
-    /// pipeline the season list uses. Drives the sticky bottom CTA
-    /// strip on download/paused episodes.
-    // Async so the Pause/Resume CTA can show an in-flight spinner until the
-    // action (and its queue refresh) completes.
+    /// Async so the Pause/Resume CTA can show a spinner until the action and its queue refresh complete.
     let onPauseEpisode: ((QueueItem) async -> Void)?
     let onResumeEpisode: ((QueueItem) async -> Void)?
     let onDeleteEpisode: ((QueueItem) -> Void)?
-    /// Set when this episode was opened directly from queue (no series
-    /// view in the back stack). Tap on the series title fires this so
-    /// the caller can push a series DetailView. `nil` = series title is
-    /// inert text (matches the "opened from inside Series" flow).
+    /// Set when opened from the queue: tapping the series title pushes the series. `nil` = inert text.
     let onTapSeries: (() -> Void)?
-    /// Set when the season is reachable from here — tapping the hero's "Season N"
-    /// link drills to it (from the queue) or pops back to it (from the season
-    /// list). nil leaves the season as inert context text.
+    /// `nil` leaves "Season N" as inert text.
     let onTapSeason: (() -> Void)?
-    /// Optional series year for the nav-bar title (`Series (2019) · S03E04`).
-    /// Falls back to bare `Series · S03E04` when unknown.
     let seriesYear: Int?
-    /// Series facts the episode hero borrows — an episode has no genres or age
-    /// rating of its own, and the movie hero shows both.
+    /// Borrowed from the series — an episode has no genres or age rating of its own.
     var genres: [String] = []
     var certification: String? = nil
-    /// The series' TMDB / TVDB ids, for the episode's own TMDB score.
     var seriesTmdbId: Int? = nil
     var seriesTvdbId: Int? = nil
-    /// The series' assigned quality profile, drawn beside the state chips —
-    /// the same `ProfileChip` the movie hero carries. The series owns the
-    /// profile, so whoever fetched the series record resolves the name.
     var profileName: String? = nil
-    /// Provider ids of the SERIES, for the media server's watch state. Empty
-    /// when the host didn't resolve them — the wedge then simply stays off.
+    /// Provider ids of the SERIES, for the media server's watch state.
     var mediaServerKeys: [MediaServerExternalKey] = []
     /// The SERIES cast (TMDB has no per-episode credits worth the extra call).
-    /// Handed down by whoever already loaded it, so opening an episode from a
-    /// series the user was just looking at costs nothing.
     var cast: [CastMember] = []
-    /// URL of the arr's web UI for the active queue item — surfaced
-    /// as a CTA on the warning banner. Most `statusMessages` are only
-    /// actionable inside the arr's own UI (manual import, blocklist,
-    /// edit grab), so a one-click jump there is the actionable bit.
+    /// Most `statusMessages` are only actionable in the arr's own UI, so the warning banner links there.
     let warningActionURL: URL?
-    /// Detail fetch still in flight (opened straight from the queue, full
-    /// episode metadata not yet loaded) — show skeletons for the episode
-    /// title / overview instead of a bare dash, so the hero fills in rather
-    /// than gating behind a spinner. Defaults off for the from-series flow,
-    /// which always passes a fully-loaded episode.
     var isLoadingDetails: Bool = false
-    /// Monitored flag, passed in EXPLICITLY rather than read off `episode`.
-    /// This view is pushed via `.navigationDestination(item:)`, so `episode`
-    /// is the snapshot captured when the row was tapped — reading the flag
-    /// from it would give a bookmark that never changes after it's flipped.
-    /// The parent recomputes this from its live episode array on every body
-    /// pass. `nil` renders no bookmark.
+    /// Passed explicitly: `episode` is the snapshot captured by `.navigationDestination(item:)`,
+    /// so reading the flag from it would never change after a toggle.
     var monitored: Bool? = nil
-    /// Flips the episode's monitored flag — wired by the parent, which owns
-    /// the live episode array. nil renders the bookmark as inert state.
     var onToggleMonitored: ((Bool) async -> Void)? = nil
 
-    /// Pinned to the hero poster's top-right corner, matching `DetailView` /
-    /// `SeasonDetailView` — the bookmark is state about the episode, not a
-    /// header action.
     @ViewBuilder
     private var monitorPosterToggle: some View {
         if let monitored {
@@ -106,24 +52,15 @@ struct EpisodeDetailOverlay: View {
     @State private var isSearching = false
     @State private var ctaPendingDelete = false
     @State private var didSearch = false
-    /// Own poster lightbox — set when the user taps the hero poster.
     @State private var enlargedPoster: URL?
-    /// Manual-search ("Download") push target for this episode. Wrapped in a
-    /// distinct type so its `.navigationDestination` doesn't collide with the
-    /// parent DetailView's `ManualSearchTarget` destination in the same stack
-    /// (SwiftUI ignores all but the root-most destination for a given type).
+    /// Own wrapper type: SwiftUI ignores all but the root-most `.navigationDestination` for a type,
+    /// so reusing the parent's `ManualSearchTarget` would collide.
     @State private var manualSearchTarget: EpisodeReleaseSearch?
-    /// Pushed from a cast head. Owned here: this overlay is its own stack
-    /// entry, so the host's person destination sits below it and never shows.
+    /// Owned here: this overlay is its own stack entry, so the host's person destination would sit below it.
     @State private var personRef: PersonRef?
-    /// TMDB's score for THIS episode — the only per-episode rating there is.
     @State private var episodeRating: EpisodeRatingProvider.Rating?
-    /// Only for the TMDB key behind the episode rating; every other input to
-    /// this view is handed down by its host.
     @EnvironmentObject private var configStore: ConfigStore
-    /// The detached NSWindow draws no NavigationStack chevron, so we render our
-    /// own back header there (mirrors DetailView) — otherwise the episode detail
-    /// is a navigation trap with no way back.
+    /// The detached NSWindow draws no NavigationStack chevron; without our own back header this is a nav trap.
     @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     private var hasAired: Bool {
@@ -131,25 +68,16 @@ struct EpisodeDetailOverlay: View {
         return air <= Date()
     }
 
-    /// Nav-bar title carries the season/episode number in long form —
-    /// `Season 3 · Episode 5` (localized "Sezon 3 · Odcinek 5"). The
-    /// episode NAME lives in the content hero; the series identity is
-    /// the year-bearing drill-in link.
     private var navTitleString: String {
-        // Header carries only "Episode N" now — the season moved to a tappable
-        // link in the hero (see `content`).
         String(format: String(localized: "detail.episodeLld.label", bundle: .module),
                episode.episodeNumber ?? 0)
     }
 
-    /// "Season N" for the hero's season drill-in link.
     private var seasonLabel: String {
         String(format: String(localized: "detail.seasonLld.label", bundle: .module),
                episode.seasonNumber ?? 0)
     }
 
-    /// Series title with year for the content drill-in link —
-    /// `Series (2019)`. Year dropped when unknown.
     private var seriesTitleWithYear: String {
         if let year = seriesYear { return "\(seriesTitle) (\(year))" }
         return seriesTitle
@@ -212,17 +140,10 @@ struct EpisodeDetailOverlay: View {
     }
 
     var body: some View {
-        // No solid scrim — would kill the popover's native
-        // translucent chrome. Underlying series detail is opacity-
-        // hidden in DetailView while this overlay is up, so we don't
-        // need to mask it ourselves. The view fills the popover, lets
-        // glass shine through.
+        // No solid scrim — it would kill the popover's translucent chrome; DetailView hides itself underneath.
         VStack(spacing: 0) {
-            // macOS self-draws the header (back + title + Safari) on BOTH
-            // surfaces. The detached NSWindow renders no native chevron; the
-            // popover's chevron is suppressed because the parent DetailView hides
-            // the window toolbar — so without this the episode view is a back-less
-            // trap there. iOS keeps the native nav bar + `.toolbar`.
+            // macOS self-draws the header on both surfaces: the detached window has no chevron and the parent
+            // DetailView hides the popover's toolbar, so without it there is no way back.
             #if os(macOS)
             HStack(spacing: 6) {
                 FloatingBackButton(action: onClose)
@@ -247,8 +168,7 @@ struct EpisodeDetailOverlay: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
-            // 4pt (matches DetailView / SeasonDetailView headers) so the hero
-            // doesn't shift a few px down when pushing season → episode.
+            // 4pt, matching DetailView / SeasonDetailView, so the hero doesn't shift when pushing season → episode.
             .padding(.bottom, 4)
             #endif
             ScrollView {
@@ -258,13 +178,8 @@ struct EpisodeDetailOverlay: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-            // Sticky bottom CTA — same shape as `DetailView`'s
-            // `downloadCTAStrip`. Pause/Resume when downloading,
-            // Search when missing+aired, Safari as fallback / secondary.
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 if shouldShowCTAStrip {
-                    // Same floating-island treatment as DetailView's
-                    // strip — no material backdrop / top divider.
                     episodeCTAStrip
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
@@ -273,15 +188,11 @@ struct EpisodeDetailOverlay: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Full-screen poster: iOS covers all chrome (no header/back, tap to
-        // close); macOS overlays inside the popover.
         .posterLightbox(
             url: $enlargedPoster,
             apiKey: posterRequiresAuth ? apiKey : nil,
             aspectRatio: 2.0 / 3.0
         )
-        // Manual-search ("Download") drill-down — releases for this episode,
-        // diffed against the episode file on disk when there is one.
         .task(id: episode.id) {
             episodeRating = await EpisodeRatingProvider.rating(
                 tmdbId: seriesTmdbId, tvdbId: seriesTvdbId,
@@ -299,25 +210,15 @@ struct EpisodeDetailOverlay: View {
         .navigationTitle(navTitleString)
         .navigationBarTitleDisplayMode(.inline)
         #else
-        // macOS self-draws the header above; hide the native chevron + title so
-        // they aren't duplicated (and stay consistent with the parent DetailView).
         .toolbar(.hidden, for: .windowToolbar)
         #endif
-        // Secondary actions (Trash, Safari) lifted to the system
-        // toolbar — matches the DetailView pattern so the user finds
-        // them in the same place regardless of drill-down depth.
-        // `ToolbarItemGroup(placement: .primaryAction)` — same workaround
-        // as DetailView for the macOS multi-`.automatic`-item hides
-        // bug. Single placement, cluster ordered left-to-right.
+        // Single `.primaryAction` group: several `.automatic` items get hidden on macOS.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                // iOS-only: macOS already carries these in the self-drawn
-                // header above, and adding them here too would double them up.
                 #if os(iOS)
                 headerSearchMenu
                 #endif
-                // Detached window surfaces Safari in the self-drawn header above
-                // (the toolbar bar doesn't render in the hand-built NSWindow).
+                // The toolbar doesn't render in the hand-built detached NSWindow.
                 if !isDetachedWindow, let url = warningActionURL {
                     Button { PlatformURLOpener.open(url) } label: {
                         Image(systemName: "safari")
@@ -325,11 +226,8 @@ struct EpisodeDetailOverlay: View {
                     .help(Text("detail.openInBrowser.button", bundle: .module))
                     .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
                 }
-                // iOS: delete in the toolbar, to the RIGHT of Safari.
-                // macOS surfaces it next to the Resume CTA instead.
                 #if os(iOS)
-                // Single download only — with duplicates each block carries
-                // its own trash, so a toolbar-level one would be ambiguous.
+                // With duplicate downloads each block has its own trash, so a toolbar one would be ambiguous.
                 if queueItems.count == 1, onDeleteEpisode != nil {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
                         Image(systemName: "xmark")
@@ -337,17 +235,12 @@ struct EpisodeDetailOverlay: View {
                     .tint(.red)
                     .help(Text("queue.cancelDownload.button", bundle: .module))
                     .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
-                    // Destructive and irreversible — say what it actually does
-                    // before the user double-taps a bare trash can.
                     .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
                 }
                 #endif
             }
         }
-        // Inline confirmations — see InlineConfirm.swift for why we
-        // can't use `.confirmationDialog` inside MenuBarExtra panels.
-        // (Automatic search lost its confirm: picking it from the Search
-        // menu is already a deliberate two-step choice.)
+        // `.confirmationDialog` doesn't work inside MenuBarExtra panels (see InlineConfirm.swift).
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
             title: "Remove this download?",
@@ -358,23 +251,17 @@ struct EpisodeDetailOverlay: View {
                 if let q = queueItem { onDeleteEpisode?(q); onClose() }
             }
         )
-        // (Per-download cancel on the duplicate path confirms inside MultiRow —
-        // ConfirmCenter on macOS, native dialog on iOS — and deliberately does
-        // NOT close the overlay: the other download is still live.)
+        // Per-download cancel on the duplicate path deliberately does not close the overlay: the other download is still live.
     }
 
     private var shouldShowCTAStrip: Bool {
-        // Pause/resume only — Search lives in the header now, and duplicate
-        // grabs put the controls on each download block instead of the strip.
         queueItems.count == 1
             && (queueItem?.status == .downloading || queueItem?.status == .paused)
             && ((queueItem?.isPaused == true && onResumeEpisode != nil)
                 || (queueItem?.isPaused == false && onPauseEpisode != nil))
     }
 
-    /// Search moved to the header cluster — the strip only carries the
-    /// pause/cancel verbs, and only for a single active download (with
-    /// duplicates each block controls its own).
+    /// Only for a single active download; with duplicates each block controls its own.
     @ViewBuilder
     private var episodeCTAStrip: some View {
         let canPauseResume = queueItems.count == 1
@@ -385,8 +272,6 @@ struct EpisodeDetailOverlay: View {
             if canPauseResume, let q = queueItem {
                 ctaPauseResume(q: q)
                 #if os(macOS)
-                // macOS: destructive Cancel anchors the trailing edge, away
-                // from the primary verb. iOS keeps it in the nav toolbar.
                 if onDeleteEpisode != nil {
                     ctaCancelProminent
                 }
@@ -395,10 +280,7 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// The episode's Search choice, relocated to the header cluster. Aired
-    /// episodes only (searching indexers for a future episode is noise).
-    /// With no auto-search closure wired, a one-item menu would be pointless —
-    /// the glyph goes straight to the release list instead.
+    /// Aired episodes only. Without an auto-search closure a one-item menu is pointless, so the glyph opens the release list.
     @ViewBuilder
     private var headerSearchMenu: some View {
         if hasAired {
@@ -428,20 +310,14 @@ struct EpisodeDetailOverlay: View {
 
     @ViewBuilder
     private func ctaPauseResume(q: QueueItem) -> some View {
-        // Shared button: prominent glass capsule (Manual-search shape) with a
-        // progress ring glyph + in-flight spinner; tint follows status.
         // Action tint, not status tint — see DetailView.pauseResumeProminent.
         PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.isPaused ? .blue : .orange) {
             if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
         }
-        // The button's progress ring is the only place this episode's
-        // completion is shown on the CTA strip — publish it as the value so
-        // VoiceOver announces "Pause download, 62%".
+        // The ring is the only place this completion shows, so VoiceOver gets it as the value.
         .accessibilityValue(Text(max(0.0, min(1.0, q.progress)), format: .percent.precision(.fractionLength(0))))
     }
 
-    /// Compact icon-only trash — red glyph on neutral gray glass, matching
-    /// DetailView.cancelGlassCompact.
     @ViewBuilder
     private var ctaCancelProminent: some View {
         Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
@@ -454,22 +330,16 @@ struct EpisodeDetailOverlay: View {
         .tint(.red)
         .help(Text("queue.cancelDownload.button", bundle: .module))
         .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
-        // Destructive: spell out the consequence, since "Cancel download"
-        // alone doesn't say the client loses the transfer.
+        // "Cancel download" alone doesn't say the client loses the transfer.
         .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
     }
 
-    /// Episode name, or a dash once we know there isn't one. While the full
-    /// record is still loading the card skeletons it (empty title +
-    /// `metadataLoading`).
     private var episodeHeroTitle: String {
         if let title = episode.title, !title.isEmpty { return title }
         return isLoadingDetails ? "" : "—"
     }
 
-    /// The episode's own TMDB score, as the app's one rating pill. Empty until
-    /// it lands (or forever, without a TMDB key) — the card then simply has no
-    /// rating row, exactly as before.
+    /// Empty without a TMDB key; the card then has no rating row.
     private var ratingChips: [RatingChip] {
         guard let episodeRating else { return [] }
         return [RatingChip.tmdb(episodeRating.value, votes: episodeRating.votes)].compactMap { $0 }
@@ -479,8 +349,6 @@ struct EpisodeDetailOverlay: View {
         episode.airDateUtc.flatMap(parseArrDate).map { Self.airFormatter.string(from: $0) }
     }
 
-    /// Chips above the title: on disk, and "not aired yet" when that is the
-    /// news.
     @ViewBuilder
     private var heroBadges: some View {
         HStack(spacing: 4) {
@@ -499,19 +367,14 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// Has the media server played THIS episode? (Series-level watch state
-    /// says nothing about one episode — see `MediaServerIndex.isWatched`.)
+    /// Series-level watch state says nothing about one episode.
     private var isWatched: Bool {
         MediaServerIndex.shared.isWatched(mediaServerKeys,
                                           season: episode.seasonNumber,
                                           episode: episode.episodeNumber)
     }
 
-    /// Everything that sits ABOVE the episode name: the state chips, then the
-    /// series and season drill-ins. Not `titleBadge` — that slot renders in
-    /// the title's own line, which put "Downloaded" next to the episode name.
-    /// Either link can be absent: opened from inside the series there is
-    /// nothing to drill to.
+    /// Not `titleBadge`: that slot renders on the title's own line.
     @ViewBuilder
     private var seriesContextLinks: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -522,9 +385,7 @@ struct EpisodeDetailOverlay: View {
                         Text(seriesTitleWithYear)
                             .scaledFont(size: 12, weight: .medium)
                             .lineLimit(2)
-                            // The series name is a heading, not chrome:
-                            // `.secondary` over the popover's vibrant backdrop
-                            // read as half-faded.
+                            // `.secondary` reads as half-faded over the popover's vibrant backdrop.
                             .foregroundStyle(.primary)
                         LinkChevron(size: 9)
                             .accessibilityHidden(true)
@@ -559,12 +420,7 @@ struct EpisodeDetailOverlay: View {
     @ViewBuilder
     private var content: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // The SAME hero every other detail surface draws (movie, series,
-            // season, album). This screen used to hand-roll its own — poster,
-            // title, metadata line and synopsis all re-implemented — which is
-            // where the drift came from: a different poster tier and crop
-            // between the season screen and this one, a 17pt title against
-            // everyone else's 15pt, and no skeletons while the episode loaded.
+            // The shared hero every detail surface draws, so poster tier, crop and title size can't drift.
             MediaHeaderCard(
                 title: episodeHeroTitle,
                 runtime: episode.runtime,
@@ -577,17 +433,13 @@ struct EpisodeDetailOverlay: View {
                 posterRequiresAuth: posterRequiresAuth,
                 apiKey: apiKey,
                 fallbackSymbol: "tv",
-                // Spelled out rather than defaulted: the series, season and
-                // episode heroes must draw their artwork identically, and a
-                // default is one edit away from disagreeing.
+                // Spelled out, not defaulted: the series, season and episode heroes must draw artwork identically.
                 posterAspect: 2.0 / 3.0,
                 blurred: false,
                 onPosterTap: { url in
                     withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 },
                 posterCornerAction: AnyView(monitorPosterToggle),
-                // Series / season context stays where it was: above the
-                // episode name, in the column beside the poster.
                 aboveTitle: AnyView(seriesContextLinks),
                 watched: isWatched,
                 metadataLoading: isLoadingDetails
@@ -599,34 +451,13 @@ struct EpisodeDetailOverlay: View {
                 })
             }
 
-            // Combined file view — three modes:
-            //   1. New (downloading) + Existing (on disk) → diff
-            //      style: new file prominent, existing as `└─` sub-
-            //      line beneath, mirroring the movie-detail diff.
-            //   2. Only downloading → new-file section (no diff).
-            //   3. Only existing → ExistingFileBanner.
-            // Replaces the two stacked sections that hid the user's
-            // upgrade-vs-current comparison behind a `Divider`.
             if queueItem != nil || (episode.hasFile == true && episodeFile != nil) {
-                // No explicit Divider — the progress bar at the top
-                // of `DownloadProgressCard` reads as a natural
-                // horizontal rule between description and file
-                // section.
                 fileSection
             }
 
-            // Search / pause / cancel / safari all surfaced as the
-            // sticky bottom CTA strip (`episodeCTAStrip`) — body stays
-            // pure content (poster, metadata, file section).
         }
     }
 
-    /// Combined diff/file section. Chooses presentation by what's
-    /// available:
-    ///   - Both downloading + existing: diff (new file + `└─` old
-    ///     line + CF chip diff).
-    ///   - Downloading only: queue file section.
-    ///   - Existing only: ExistingFileBanner.
     @ViewBuilder
     private var fileSection: some View {
         if queueItems.count > 1 {
@@ -636,8 +467,6 @@ struct EpisodeDetailOverlay: View {
         } else if let q = queueItem {
             queueFileSection(q)
         } else if let existing = episodeFile {
-            // On disk, not downloading. The library chip lives in the hero
-            // now — this block is captioned by what it actually is.
             VStack(alignment: .leading, spacing: 6) {
                 DetailSectionHeader("Existing file")
                 ExistingFileBanner(file: existing)
@@ -645,12 +474,7 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// Duplicate-grab path: 2+ active downloads for this one episode. Every
-    /// download renders its own progress card with its OWN pause/cancel row
-    /// (the bottom CTA strip is suppressed — a single pause there would be
-    /// ambiguous). The on-disk file (upgrade target), when present, renders
-    /// once below — it's shared by both downloads, so per-block diffs would
-    /// just repeat it.
+    /// The bottom CTA strip is suppressed here (one pause would be ambiguous); the shared on-disk file renders once below.
     @ViewBuilder
     private var duplicateDownloadsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -670,8 +494,6 @@ struct EpisodeDetailOverlay: View {
                 duplicateDownloadBlock(q)
             }
             if let existing = episodeFile, episode.hasFile == true {
-                // Upgrade target shared by all the duplicate grabs above —
-                // same "Existing file" caption as the idle in-library block.
                 VStack(alignment: .leading, spacing: 6) {
                     DetailSectionHeader("Existing file")
                     ExistingFileBanner(file: existing)
@@ -680,11 +502,7 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// One duplicate download = one `MultiRow` (the same pause-ring + compact
-    /// card + context-menu row the movie multi-list uses — it was a hand-rolled
-    /// near-copy of it before), plus the episode-specific extras below: the
-    /// warning banner and the release name, which is what actually tells two
-    /// grabs of the same episode apart.
+    /// The release name is what tells two grabs of the same episode apart.
     @ViewBuilder
     private func duplicateDownloadBlock(_ q: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -705,18 +523,9 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// Diff variant — new file (downloading) up top with its full
-    /// presentation, existing file rolled into a `└─` sub-line that
-    /// carries quality/size/score + delta. CF chip diff (added /
-    /// removed) follows the new chip strip if the sets differ.
     @ViewBuilder
     private func queueFileWithDiff(new q: QueueItem, existing: ArrFile) -> some View {
-        // Sonarr ships existing-file metadata in a separate
-        // `/episodefile/{id}` payload (not on the QueueItem), so we
-        // tunnel it into the card via `existingOverride`. The card
-        // then renders the same in-header diff line every other
-        // surface uses — movie detail and episode detail wear
-        // identical chrome.
+        // Sonarr ships existing-file metadata in a separate `/episodefile/{id}` payload, not on the QueueItem.
         let existingTags = (existing.customFormats ?? []).map(\.name)
         VStack(alignment: .leading, spacing: 6) {
             DownloadingSectionHeader(item: q)
@@ -729,9 +538,7 @@ struct EpisodeDetailOverlay: View {
                     size: existing.size,
                     score: existing.customFormatScore,
                     formats: existingTags,
-                    // Last path component only — matches the queue path's
-                    // `existingFileName` and the episode tooltip so the old
-                    // name reads the same across detail / overview surfaces.
+                    // Last path component only, matching the queue's `existingFileName`.
                     filename: existing.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent }
                 )
             )
@@ -742,18 +549,9 @@ struct EpisodeDetailOverlay: View {
                     actionURL: warningActionURL
                 )
             }
-            // CF chips + diff AND the release-name block used to live here.
-            // The card's `UpgradeDiffView` now renders both the gained/lost
-            // format chips and the (untruncated) incoming + replaced file
-            // names, so repeating them here would just double up.
         }
     }
 
-    /// Section describing what's actively being downloaded for this
-    /// episode. Same shape as the on-disk file section so the user
-    /// reads both with a single mental model. Status pill + progress
-    /// bar at the top give the "is this happening now" answer at a
-    /// glance.
     @ViewBuilder
     private func queueFileSection(_ q: QueueItem) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -795,9 +593,7 @@ struct EpisodeDetailOverlay: View {
     }()
 }
 
-/// Distinct wrapper so the episode's manual-search `.navigationDestination`
-/// doesn't share a value type with the parent DetailView's `ManualSearchTarget`
-/// destination in the same NavigationStack (which SwiftUI can't disambiguate).
+/// SwiftUI can't disambiguate two `.navigationDestination`s for the same type in one stack.
 private struct EpisodeReleaseSearch: Identifiable, Hashable {
     let target: ManualSearchTarget
     var id: String { target.id }

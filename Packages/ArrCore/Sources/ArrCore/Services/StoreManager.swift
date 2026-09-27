@@ -1,50 +1,35 @@
 import Foundation
 import Combine
 
-/// Abstracts the purchase/entitlement source so ArrCore carries NO StoreKit
-/// code. The real implementation (`StoreKitBackend`) lives in the app targets
-/// behind `#if APPSTORE` and is injected via `StoreManager.use(_:)`.
+/// Keeps StoreKit out of ArrCore: `StoreKitBackend` lives in the app targets behind
+/// `#if APPSTORE` and is injected via `StoreManager.use(_:)`.
 public protocol PurchaseBackend: AnyObject {
     var isEntitled: Bool { get }
     var displayPrice: String? { get }
-    /// Called whenever entitlement changes (initial load, Transaction.updates).
+    /// Called on the initial load and on every Transaction.updates change.
     var onEntitlementChange: ((Bool) -> Void)? { get set }
-    /// Load product metadata + current entitlements + start the update listener.
     func start() async
-    /// Returns true if the user is now entitled.
     func purchase() async -> Bool
     func restore() async -> Bool
 }
 
-/// Single source of truth for Pro status + paywall presentation.
-///
-/// Defaults to UNLOCKED (`isPro == true`) when no backend is injected, so
-/// Debug builds and the GitHub/OSS distribution are fully functional with no
-/// payment code present.
+/// Unlocked when no backend is injected, so Debug and OSS builds carry no payment code.
 public final class StoreManager: ObservableObject {
     public static let shared = StoreManager()
 
-    /// Real entitlement from the backend (or `true` when no backend is injected
-    /// — Debug / OSS builds are fully unlocked).
     @Published private var entitled: Bool = true
 
-    /// Pro status as the UI sees it. Demo mode is always Pro so the preview can
-    /// showcase every gated feature (chat, queue actions, add-title) without
-    /// hitting the paywall. Outside demo it reflects the real entitlement.
+    /// Demo mode is always unlocked so it can showcase every gated feature.
     public var isPro: Bool { DemoMode.isActive || entitled }
 
-    /// Non-nil drives the paywall sheet. The value is the feature the user
-    /// just tried to use, for the contextual headline.
+    /// Non-nil drives the paywall; the feature just tried, for the contextual headline.
     @Published public var gatedFeature: ProFeature?
     @Published public private(set) var displayPrice: String?
 
     private var backend: PurchaseBackend?
 
-    /// `forTesting` only skips the shared-singleton expectation; behaviour is
-    /// identical. Production code uses `.shared`.
     public init(forTesting: Bool = false) {}
 
-    /// Inject the concrete backend (called once at app launch under #if APPSTORE).
     // periphery:ignore
     public func use(_ backend: PurchaseBackend) {
         self.backend = backend
@@ -59,7 +44,7 @@ public final class StoreManager: ObservableObject {
         }
     }
 
-    /// Gate check. Returns true to proceed; false sets `gatedFeature` (→ paywall).
+    /// Returns true to proceed; false sets `gatedFeature` (→ paywall).
     @discardableResult
     public func requirePro(_ feature: ProFeature) -> Bool {
         if isPro { return true }
@@ -67,7 +52,6 @@ public final class StoreManager: ObservableObject {
         return false
     }
 
-    /// Convenience for UI tap sites that don't branch on the result.
     public func gate(_ feature: ProFeature) { _ = requirePro(feature) }
 
     public func dismissPaywall() { gatedFeature = nil }

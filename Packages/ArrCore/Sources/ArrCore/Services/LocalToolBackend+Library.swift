@@ -1,29 +1,15 @@
 import Foundation
 import MediaKit
 
-// The library-facing tools: the two list tools and `check_titles`.
-//
-// All three read `LibraryIndex` rather than fetching, so a turn that lists,
-// suggests and checks pays for the library once. All three also answer the
-// question the model genuinely cannot answer on its own — "what do I already
-// own, and have I seen it" — and leave every judgement call (is this
-// *atmospheric*, is this *a drama*) to the model by shipping the facts inline.
-
 extension LocalToolBackend {
 
-    /// How many rows a filtered list may print before it starts counting
-    /// instead. Generous on purpose: one big result costs a fraction of what a
-    /// second LLM round costs, and paging a library through an agent is the
-    /// slowest way to answer anything.
+    /// Generous: one big result costs a fraction of a second LLM round.
     nonisolated static var libraryRowCap: Int { 100 }
-    /// Draw size for an unfiltered call.
     nonisolated static var librarySampleSize: Int { 40 }
 
     // MARK: - Shared parsing
 
-    /// `invalidSort` carries the raw string when `sortBy` was present but not
-    /// in the vocabulary — the tool reports it rather than silently returning
-    /// a differently-ordered answer than the model asked for.
+    /// `invalidSort` is reported rather than silently answering in a different order.
     nonisolated static func libraryQuery(_ args: JSONValue) -> (query: LibraryQuery, invalidSort: String?) {
         let rawSort = stringArg(args, key: "sortBy")
         let sort = rawSort.isEmpty ? nil : LibrarySort.parse(rawSort)
@@ -42,9 +28,7 @@ extension LocalToolBackend {
 
     nonisolated static let sortVocabulary = "rating, year, added, title, random — optionally suffixed .asc/.desc (e.g. 'rating' = rating.desc, 'year.asc')"
 
-    /// Watch state is only knowable with a media server connected. Everywhere
-    /// below, "no server" means the marker is simply absent — never a printed
-    /// "not watched", which would be a claim we can't back.
+    /// Without a media server the marker is absent, never a printed "not watched" we can't back.
     var watchStateAvailable: Bool { mediaServer.isConfigured }
 
     func isWatched(_ keys: [MediaServerExternalKey]) -> Bool {
@@ -135,12 +119,7 @@ extension LocalToolBackend {
 
     // MARK: - check_titles
 
-    /// Batch ownership + watch state for titles the model already has in hand.
-    ///
-    /// This is the tool that keeps the division of labour honest: the model
-    /// brings the taste ("essence of the 90s, romantic, not bleak"), this
-    /// brings the one fact it can't know. One call for twenty titles instead of
-    /// twenty lookups — the round trip, not the HTTP, is what costs.
+    /// One call for twenty titles: the round trip, not the HTTP, is what costs.
     func checkTitles(_ args: JSONValue) async throws -> ToolCallOutput {
         let wanted = Self.titleQueries(args)
         guard !wanted.isEmpty else {
@@ -164,8 +143,7 @@ extension LocalToolBackend {
                                          title: { $0.title }, year: { $0.year }) {
                 owned += 1
                 let id = hit.id.map { "movieId=\($0)" } ?? "movieId=?"
-                // Internal id AND external ref: the first is for the arr tools,
-                // the second is the only thing a chat link can be built from.
+                // Internal id for the arr tools; the external ref is the only thing a chat link can be built from.
                 let ref = hit.tmdbId.map { ", tmdb:\($0)" } ?? ""
                 let file = (hit.hasFile ?? false) ? "downloaded" : "not downloaded"
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
@@ -180,10 +158,7 @@ extension LocalToolBackend {
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
                 lines.append("• \(label) — in library as \(hit.title), \(id)\(ref)\(seasons)\(watch)")
             } else {
-                // No id of any kind for a title we don't own — check_titles
-                // matches against the library, it does not look anything up.
-                // Say so, because "no id" is precisely when the model is
-                // tempted to make one up for a link.
+                // Say "no id" explicitly: that is when the model is tempted to invent one for a link.
                 lines.append("• \(label) — NOT in library (no id — do not link this title)")
             }
         }
@@ -199,8 +174,7 @@ extension LocalToolBackend {
         return ToolCallOutput(text: out)
     }
 
-    /// `titles: ["Dune 2021", {title: "Andor", year: 2022}]` — both forms, since
-    /// a model that has just written prose will reach for bare strings.
+    /// Both forms, since a model that has just written prose reaches for bare strings.
     nonisolated static func titleQueries(_ value: JSONValue) -> [(title: String, year: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["titles"] else { return [] }
         return arr.compactMap { entry -> (String, Int?)? in
@@ -208,8 +182,7 @@ extension LocalToolBackend {
             case .string(let raw):
                 let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { return nil }
-                // "Dune 2021" — a trailing year is how a model writes this in
-                // prose, and it is the difference between the 1984 and the 2021.
+                // A trailing year is how a model writes this in prose, and it tells the 1984 from the 2021.
                 if let year = extractYear(from: trimmed), trimmed.hasSuffix(String(year)) {
                     let title = String(trimmed.dropLast(4)).trimmingCharacters(in: .whitespacesAndNewlines)
                     return title.isEmpty ? (trimmed, nil) : (title, year)
@@ -252,10 +225,7 @@ extension LocalToolBackend {
         return "• " + parts.joined(separator: " · ")
     }
 
-    /// Header + rows + the honest tail. Three things this never does: return an
-    /// empty answer to a title query (the nearest titles come back instead),
-    /// print the first N of a big library as if they were the answer (an
-    /// unfiltered call is labelled a sample), or hide that rows were cut.
+    /// Never returns empty for a title query, never passes a sample off as the answer, never hides cut rows.
     func libraryText<T>(
         serviceName: String, noun: String, nounPlural: String,
         total: Int, matched: Int, shown: [T],
@@ -280,9 +250,7 @@ extension LocalToolBackend {
 
         var out: String
         if query.isUnfiltered {
-            // The sample is for flavour — "what kind of shelf is this" — and
-            // saying so stops the model treating 40 rows out of 3000 as
-            // evidence that anything absent from them is not owned.
+            // Labelled a sample so the model doesn't treat a missing title as not owned.
             out = "\(serviceName) library — \(total) \(total == 1 ? noun : nounPlural). "
                 + "Here are \(shown.count) at random (ask again for a different draw). "
                 + "This sample says NOTHING about whether a particular title is owned — use check_titles for that:"

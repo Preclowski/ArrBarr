@@ -172,8 +172,8 @@ fastest via SwiftPM:
   `ServiceKind`). `MediaServerIndex` is a lock-guarded snapshot — not an actor —
   so poster resolution stays synchronous; it supplies artwork overrides, the
   Quiz's watch history, and the `media_server_*` tools. Control-gated.
-- **Season grouping**: `QueueGroup` wraps multiple `QueueItem`s; `.real` packs
-  share a downloadId, `.virtual` bundles have independent progress.
+- **Season grouping**: only Sonarr season packs (rows sharing one downloadId)
+  collapse into a `QueueGroup`; separate episodes of a series stay separate rows.
 - **Custom progress bars**: `GeometryReader` + `RoundedRectangle`, not
   `ProgressView` — SwiftUI's linear `ProgressView` ignores `.frame(height:)`.
 - **Tooltip popovers**: `.popover(isPresented:, arrowEdge: .trailing)` steals

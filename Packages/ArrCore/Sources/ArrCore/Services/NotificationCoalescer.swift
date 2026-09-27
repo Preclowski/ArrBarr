@@ -17,18 +17,10 @@ struct ScheduledTimer {
     let cancel: @MainActor () -> Void
 }
 
-/// The clock `NotificationCoalescer` schedules against.
-///
-/// Every deadline in this file is expressed through this seam so tests can drive
-/// the grouping policy on a virtual clock. Grouping is defined entirely by *when*
-/// things happen relative to each other, and asserting on that with real timers
-/// means racing the run loop: a machine under load can drift a "second episode
-/// arrives before the first one's deadline" setup right past the deadline and
-/// fail a test that has nothing wrong with it.
+/// The clock `NotificationCoalescer` schedules against, so tests can drive the
+/// grouping policy on a virtual clock instead of racing the run loop.
 protocol CoalescerScheduler {
-    /// Now, for the `seriesGroupingCap` bookkeeping. Must share a timeline with
-    /// `schedule` — a cap measured on a different clock than the timers would
-    /// drift apart.
+    /// Must share a timeline with `schedule`, or the cap drifts from the timers.
     var now: Date { get }
 
     func schedule(
@@ -37,13 +29,10 @@ protocol CoalescerScheduler {
     ) -> ScheduledTimer
 }
 
-/// Production scheduler: real `RunLoop.main` timers.
-///
-/// Added in `.common` run loop mode so they still fire while the menu-bar panel
-/// is tracking events — a plain `.default` timer pauses during scroll/interaction.
+/// `.common` run loop mode so timers still fire while the menu-bar panel tracks events.
 struct RunLoopCoalescerScheduler: CoalescerScheduler {
-    /// `nonisolated` so it can be spelled as a default argument, which Swift
-    /// evaluates outside the actor. Safe — there's no stored state to isolate.
+    /// `nonisolated` so it can be a default argument, which Swift evaluates
+    /// outside the actor; there's no stored state to isolate.
     nonisolated init() {}
 
     var now: Date { Date() }
@@ -60,29 +49,13 @@ struct RunLoopCoalescerScheduler: CoalescerScheduler {
     }
 }
 
-/// Groups queue-event notifications so a burst of grabs doesn't become a burst of
-/// banners. Two policies, because the arrs don't grab alike:
-///
-///  - **Movies / music (leading edge).** A grab is a single self-contained event,
-///    so the first one fires its banner immediately and any tail that follows
-///    within `burstWindow` folds into one batch. Nothing waits on a *maybe* —
-///    the one thing a banner will wait for is artwork already being downloaded,
-///    and only up to `NotificationArtwork`'s budget.
-///  - **Series (grouped).** A Sonarr season search grabs one release *per
-///    episode*, seconds apart, so the first grab is held for
-///    `seriesGroupingDelay` and each sibling slides the window. One episode →
-///    one banner, ten episodes → one batch banner. Bounded by
-///    `seriesGroupingCap` so a slow season search still gets delivered.
-///
-/// Either way there's no fixed 60 s floor — the old trailing-only design made
-/// *every* notification, even a lone movie grab, wait a full minute.
+/// Groups queue-event notifications. Movies/music fire the first grab at once and
+/// batch the tail; series hold the first grab so a season search's per-episode grabs join it.
 public final class NotificationCoalescer {
-    /// Original category — used for multi-item batches and as a back-compat
-    /// fallback. Has just the "Open in browser" action because one tap can't
-    /// meaningfully pause/remove a batch of items.
+    /// Multi-item batches: only "Open in browser", since one tap can't
+    /// meaningfully pause/remove a batch.
     public static let categoryIdentifier = "ARRBARR_QUEUE_EVENT"
-    /// Single-item notifications use one of these two categories so the
-    /// available action matches the item's current state.
+    /// Single-item categories, so the action matches the item's current state.
     public static let downloadingCategoryIdentifier = "ARRBARR_QUEUE_DOWNLOADING"
     public static let pausedCategoryIdentifier = "ARRBARR_QUEUE_PAUSED"
 
@@ -95,48 +68,27 @@ public final class NotificationCoalescer {
     public static let userInfoSourceKey = "arrSource"
     public static let userInfoQueueIdKey = "arrQueueId"
 
-    /// How long after the first grab of a burst we keep folding further grabs
-    /// for the same arr into one trailing batch. Short on purpose: it only exists
-    /// to collapse a season import's tail, not to delay the headline banner.
+    /// Short: it only collapses a burst's tail, not the headline banner.
     private let burstWindow: TimeInterval
 
-    /// Episodic arrs hold their first grab this long so siblings can join the
-    /// group. A Sonarr season search grabs one release *per episode* — separate
-    /// indexer query, separate download-client add — so they land seconds apart.
-    /// Firing the first one instantly (the movie/music rule) would split one
-    /// logical event into a headline banner plus a batch, which is exactly the
-    /// fragmentation this class exists to prevent. 5 s: long enough for back-to-
-    /// back episode grabs to catch up (each one slides the window), short enough
-    /// that the banner still reads as "just now".
+    /// Sonarr grabs a season one release per episode, seconds apart; 5 s lets
+    /// siblings join (each slides the window) while the banner still reads as "just now".
     private let seriesGroupingDelay: TimeInterval
-    /// The grouping window *slides* — each new episode restarts it — so a slow
-    /// season search still collapses into one banner. This caps how long that
-    /// sliding can defer delivery, so a very drawn-out grab can't postpone the
-    /// notification indefinitely.
+    /// Caps how long the sliding window can defer delivery.
     private let seriesGroupingCap: TimeInterval
 
-    /// Where a finished group goes. `nil` ⇒ the real `UNUserNotificationCenter`
-    /// banner. Tests substitute a recorder: `post` talks straight to the system
-    /// notification centre, so without this seam the grouping decisions — which
-    /// are the whole point of this class — can't be observed at all.
+    /// `nil` ⇒ the real `UNUserNotificationCenter` banner; tests substitute a recorder.
     private let deliver: (@MainActor (QueueItem.Source, [QueueItem]) -> Void)?
 
     private let configStore: ConfigStore
     private let scheduler: any CoalescerScheduler
-    /// Grabs waiting to be posted, per source. For an *episodic* source this
-    /// holds the whole group (nothing has been shown yet). For the leading-edge
-    /// sources it holds only the tail — the first grab was already posted.
+    /// Episodic sources hold the whole group; leading-edge sources hold only
+    /// the tail, the first grab having already been posted.
     private var pending: [QueueItem.Source: [QueueItem]] = [:]
-    /// Per-source burst timer. Non-nil ⇒ a group is already forming for that arr,
-    /// so a new grab joins it instead of firing its own banner.
     private var burstTimers: [QueueItem.Source: ScheduledTimer] = [:]
-    /// When the current group for a source began — drives `seriesGroupingCap`.
     private var groupStartedAt: [QueueItem.Source: Date] = [:]
 
-    /// How long a source holds a grab before posting, or `nil` for "post the
-    /// first one immediately and batch the tail". Only episodic arrs wait: a
-    /// movie or album grab is a single self-contained event with no siblings
-    /// coming, so making it wait would be pure latency for no grouping benefit.
+    /// `nil` ⇒ post the first grab immediately and batch the tail.
     private func groupingDelay(for source: QueueItem.Source) -> TimeInterval? {
         switch source {
         case .sonarr, .whisparr: return seriesGroupingDelay
@@ -144,9 +96,6 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// The timings default to the production policy. They're injectable, along
-    /// with the `scheduler`, so tests can run this exact logic on a virtual clock
-    /// instead of waiting out a real 5 s hold and 60 s cap.
     init(
         configStore: ConfigStore,
         burstWindow: TimeInterval = 8,
@@ -163,7 +112,6 @@ public final class NotificationCoalescer {
         self.deliver = deliver
     }
 
-    /// Route a finished group through the seam, falling back to a real banner.
     private func emit(source: QueueItem.Source, items: [QueueItem]) {
         if let deliver {
             deliver(source, items)
@@ -174,15 +122,11 @@ public final class NotificationCoalescer {
 
     func enqueue(_ item: QueueItem) {
         let source = item.source
-        // Start the poster download at the earliest moment we know a banner is
-        // coming. For an episodic arr that is a whole grouping window before
-        // the banner is due, so the artwork is usually already on disk by the
-        // time `post` asks for it.
+        // Prefetch now: for an episodic arr that's a whole window before `post`
+        // asks for the artwork.
         NotificationArtwork.prefetch(item, apiKey: posterAPIKey(for: item))
 
         guard let delay = groupingDelay(for: source) else {
-            // Movies / music — leading edge: show the first grab now, fold any
-            // tail that follows into one trailing batch.
             if burstTimers[source] == nil {
                 emit(source: source, items: [item])
                 startBurstTimer(for: source, after: burstWindow)
@@ -192,8 +136,6 @@ public final class NotificationCoalescer {
             return
         }
 
-        // Series — hold everything and let siblings catch up. Each new episode
-        // slides the window, bounded by how long this group has already waited.
         pending[source, default: []].append(item)
         let startedAt = groupStartedAt[source] ?? scheduler.now
         groupStartedAt[source] = startedAt
@@ -202,20 +144,8 @@ public final class NotificationCoalescer {
         startBurstTimer(for: source, after: min(delay, remainingCap))
     }
 
-    /// Fires a sequence of representative sample banners — wired to the "Send
-    /// test notification" button in Settings. Covers each variant so the user
-    /// can see how every kind of notification renders without waiting for
-    /// real grab events:
-    ///   1. New grab, downloading (Sonarr)
-    ///   2. Upgrade with score delta (Radarr)
-    ///   3. New grab, paused — actions show "Start downloading" (Lidarr)
-    ///   4. Needs attention (failed Sonarr)
-    ///   5. Season batch — one title, count in the subtitle (3 Sonarr episodes)
-    ///   6. Mixed batch — no shared title, count as the headline (3 Radarr items)
-    /// They're staggered ~1.2s apart so macOS shows each one rather than
-    /// collapsing them into a single grouped banner instantly. Same arr
-    /// `threadIdentifier` means Notification Center will still group them
-    /// under each arr afterwards.
+    /// Sample banners for the Settings test button. Staggered ~1.2s so macOS
+    /// shows each rather than collapsing them into one grouped banner.
     func postTest() {
         let stages: [(QueueItem.Source, [QueueItem])] = [
             (.sonarr, [Self.sampleNewGrabSonarr()]),
@@ -303,8 +233,6 @@ public final class NotificationCoalescer {
         )
     }
 
-    /// The batch shape that actually happens in the wild: one season search,
-    /// N episodes of one series.
     private static func sampleSeasonBatchSonarr() -> [QueueItem] {
         (1...3).map { episode in
             QueueItem(
@@ -368,9 +296,6 @@ public final class NotificationCoalescer {
         ]
     }
 
-    /// Open (or restart) the grouping window for `source`. Restarting is what
-    /// makes the episodic window *slide*: each new episode pushes delivery out
-    /// by another `delay`.
     private func startBurstTimer(for source: QueueItem.Source, after delay: TimeInterval) {
         burstTimers[source]?.cancel()
         burstTimers[source] = scheduler.schedule(after: delay) { [weak self] in
@@ -378,9 +303,7 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// Post whatever accumulated for `source` and close the group — one banner
-    /// for a lone grab, one batch banner for several. Empty means a leading-edge
-    /// source whose first grab was the whole burst: already shown, nothing left.
+    /// Empty means a leading-edge source whose first grab was the whole burst.
     private func flush(_ source: QueueItem.Source) {
         burstTimers[source]?.cancel()
         burstTimers[source] = nil
@@ -391,19 +314,11 @@ public final class NotificationCoalescer {
         emit(source: source, items: items)
     }
 
-    /// Announce one arr health problem.
-    ///
-    /// Posted straight through rather than queued: the coalescer's windows exist
-    /// because grabs arrive in bursts (a season pack is 24 of them), and health
-    /// errors do not — they are rare, individually meaningful, and each names a
-    /// different thing to go and fix. Grouping them would only hide detail.
-    ///
-    /// The identifier is derived from the message so the system replaces rather
-    /// than stacks if the same problem is somehow announced twice.
+    /// Not coalesced: health errors are rare and each names a different fix. The
+    /// identifier comes from the message so a repeat replaces rather than stacks.
     func postHealthIssue(source: QueueItem.Source, message: String) {
         let content = UNMutableNotificationContent()
-        // The one notification that really is *about* the arr rather than
-        // about a title, so its name stays in the text.
+        // The one notification about the arr rather than a title, so its name stays.
         content.title = source.displayName
         content.body = message
         content.sound = configuredSound
@@ -420,9 +335,8 @@ public final class NotificationCoalescer {
         UNUserNotificationCenter.current().add(req)
     }
 
-    /// Builds and delivers the banner. Asynchronous only because the artwork
-    /// may still be downloading — see `NotificationArtwork.attachment`, which
-    /// bounds that wait so a slow poster can delay a banner but never lose it.
+    /// Async only because the artwork may still be downloading;
+    /// `NotificationArtwork.attachment` bounds that wait.
     private func post(source: QueueItem.Source, items: [QueueItem]) {
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -447,20 +361,15 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// The arr's key, but only for artwork the arr itself serves. A TMDB or
-    /// TheTVDB URL takes no key, and appending one would change the cache key
-    /// for a poster the rest of the app already holds.
+    /// Only for artwork the arr itself serves: a key on a TMDB/TheTVDB URL would
+    /// change the cache key for a poster the app already holds.
     private func posterAPIKey(for item: QueueItem) -> String? {
         guard item.posterRequiresAuth else { return nil }
         return configStore.config(for: item.source).apiKey
     }
 
-    /// Maps the user's `notificationSoundName` preference onto a
-    /// `UNNotificationSound`:
-    ///   - `""`            → system default
-    ///   - `silentSoundName` → no sound (`nil`)
-    ///   - otherwise        → the named sound. macOS resolves bare names
-    ///     against `/System/Library/Sounds` when suffixed with `.aiff`.
+    /// `""` → system default, `silentSoundName` → no sound. macOS resolves bare
+    /// names against `/System/Library/Sounds` when suffixed with `.aiff`.
     private var configuredSound: UNNotificationSound? {
         let name = configStore.notificationSoundName
         switch name {
@@ -498,13 +407,8 @@ public final class NotificationCoalescer {
         return content
     }
 
-    /// A batch keeps the same three-line shape as a single item wherever it can.
-    /// When every grab in the group belongs to one title — a season search, an
-    /// album's tracks, which is what a batch nearly always is — the title line
-    /// stays the title and the count moves into the middle line, so the banner
-    /// reads identically to the single-item case. Only a genuinely mixed batch
-    /// falls back to a count as the headline, because there is no one title to
-    /// put there.
+    /// A single-title batch keeps the single-item shape with the count in the
+    /// middle line; only a mixed batch uses the count as the headline.
     private func makeMultiItemContent(
         source: QueueItem.Source, items: [QueueItem], baseURL: String
     ) async -> UNMutableNotificationContent {
@@ -526,8 +430,6 @@ public final class NotificationCoalescer {
         content.categoryIdentifier = Self.categoryIdentifier
         content.threadIdentifier = "arrbarr.\(source.rawValue)"
         content.relevanceScore = Self.relevance(for: .downloading)
-        // A shared title has a poster worth showing; a mixed batch does not,
-        // so it gets the arr's mark.
         let art = sharedTitle == nil
             ? NotificationArtwork.attachment(for: source)
             : await NotificationArtwork.attachment(
@@ -541,35 +443,15 @@ public final class NotificationCoalescer {
 
     // MARK: - Text formatting
 
-    /// Three lines, thinnest to thickest information:
-    ///
-    /// ```
-    /// Pioneer One (2010)                  ← title:    the thing
-    /// Upgrade · S01E03                    ← subtitle: what happened to it
-    /// HDTV-720p · +60 → +720 · 1,2 GB     ← body:     the release
-    /// ```
-    ///
-    /// The arr's name is gone from the text entirely — the attachment carries
-    /// it now (`NotificationArtwork`) — and so are the custom-format tags,
-    /// which never fit and whose whole content is summarised by the score they
-    /// add up to.
-    ///
-    /// Middle line: the event, then the finer coordinate if the item has one
-    /// (an episode does, a movie doesn't). Both pieces drop out silently when
-    /// they don't apply.
+    /// Title / subtitle (event + episode code) / body (release). The arr's name
+    /// is carried by the attachment, not the text.
     static func subtitleText(for item: QueueItem) -> String {
         var parts = [intentLabel(for: item)]
         if let code = episodeCode(for: item) { parts.append(code) }
         return parts.joined(separator: " · ")
     }
 
-    /// Bottom line: `<Quality> · <Score> · <Size>`, fields dropping out when
-    /// missing rather than rendering empty separators.
-    ///
-    /// The score sits between the other two rather than after them because all
-    /// three describe the same thing — how good this release is — and quality
-    /// and score are the pair you read together. An upgrade spends that one
-    /// slot on the move it makes (`+60 → +720`) instead of the bare new value.
+    /// `<Quality> · <Score> · <Size>`; an upgrade shows its score move instead.
     static func bodyText(for item: QueueItem) -> String {
         var parts: [String] = []
         if let q = item.quality, !q.isEmpty { parts.append(q) }
@@ -578,15 +460,10 @@ public final class NotificationCoalescer {
         return parts.joined(separator: " · ")
     }
 
-    /// Bottom line of a batch: total size of the group. There is no one
-    /// quality or score to report across N releases, and the sum is the one
-    /// number that is meaningfully different from a single grab's.
     static func batchBodyText(_ items: [QueueItem]) -> String {
         sizeText(items.reduce(Int64(0)) { $0 + $1.sizeTotal }) ?? ""
     }
 
-    /// "6 episodes" / "6 tracks" / "6 downloads" — the unit the arr deals in,
-    /// so a Sonarr batch doesn't call episodes "items".
     static func countText(source: QueueItem.Source, count: Int) -> String {
         let key = switch source {
         case .sonarr, .whisparr: "unit.episodes"
@@ -597,28 +474,19 @@ public final class NotificationCoalescer {
         return String.localizedStringWithFormat(format, count)
     }
 
-    /// `S01E03`, or `S01` for a whole-season grab. nil when the item has no
-    /// episode coordinates at all — a movie or an album, where the title line
-    /// already names the thing completely.
     static func episodeCode(for item: QueueItem) -> String? {
         item.seasonNumber.map { EpisodeCode.string(season: $0, episode: item.episodeNumber) }
     }
 
-    /// `+60 → +720`, and only for an upgrade that actually knows what it is
-    /// replacing. nil otherwise, which is what tells `bodyText` to print the
-    /// plain score instead.
+    /// nil for a non-upgrade or an unknown old score, which makes `bodyText`
+    /// print the plain score.
     static func scoreMoveText(for item: QueueItem) -> String? {
         guard item.isUpgrade, let old = item.existingCustomFormatScore else { return nil }
         return "\(signedScore(old)) → \(signedScore(item.customFormatScore))"
     }
 
-    /// How high this sits in a notification summary. Failures outrank grabs:
-    /// one needs the user, the other is a receipt.
-    ///
-    /// Deliberately not paired with `interruptionLevel = .timeSensitive`, which
-    /// would be the matching lever — that one needs the Time Sensitive
-    /// Notifications entitlement, and asking for it changes provisioning for
-    /// both the DMG and the App Store build.
+    /// Not paired with `interruptionLevel = .timeSensitive`: that needs an
+    /// entitlement that changes provisioning for both DMG and App Store builds.
     static func relevance(for status: QueueItem.Status) -> Double {
         switch status {
         case .warning, .failed: return 1.0
@@ -627,7 +495,6 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// Intent badge for the subtitle: fresh grab vs upgrade vs failed/warning.
     static func intentLabel(for item: QueueItem) -> String {
         switch item.status {
         case .warning, .failed:
@@ -639,8 +506,6 @@ public final class NotificationCoalescer {
         }
     }
 
-    /// Sign prefix makes the value scan as a quality delta, which is how
-    /// arr communities talk about custom-format scores.
     static func signedScore(_ n: Int) -> String {
         if n > 0 { return "+\(n)" }
         return "\(n)"
@@ -656,7 +521,6 @@ public final class NotificationCoalescer {
 }
 
 public enum ArrActivityURLBuilder {
-    /// Constructs `<baseURL>/activity/queue` — the same path on Radarr, Sonarr and Lidarr web UIs.
     public static func queueURL(forBase base: String) -> URL? {
         guard !base.isEmpty else { return nil }
         let trimmed = base.hasSuffix("/") ? String(base.dropLast()) : base

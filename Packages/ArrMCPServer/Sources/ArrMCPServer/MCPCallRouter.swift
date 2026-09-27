@@ -3,10 +3,7 @@ import MCP
 import Logging
 import MediaKit
 
-/// Wires a configured `LocalToolBackend` + tool catalog into an MCP `Server`.
-/// One router can build many servers (one per HTTP session). The caller (the
-/// HTTP host) owns `server.start(transport:)` — `makeServer()` only configures
-/// and registers handlers, mirroring the SDK's own conformance host.
+/// One router builds a server per HTTP session; the HTTP host owns `server.start(transport:)`.
 struct MCPCallRouter {
     let backend: LocalToolBackend
     let catalog: [MCPTool]
@@ -35,22 +32,11 @@ struct MCPCallRouter {
                     content: [.text(text: "Tool '\(name)' is disabled.", annotations: nil, _meta: nil)],
                     isError: true)
             }
-            // Arrival only. The call's outcome — ran / declined / refused /
-            // failed — is logged once for every caller by
-            // `LocalToolBackend.callTool`, so duplicating it here would double
-            // every line in the audit trail. This one just says the request
-            // came in over MCP rather than from the in-app chat.
+            // Arrival only: `LocalToolBackend.callTool` logs every call's outcome.
             logger.debug("tools/call", metadata: ["tool": .string(name)])
 
-            // Destructive tools (indexer search / monitor → start downloads,
-            // library mutations) require interactive, per-call confirmation via
-            // MCP elicitation. The backend decides WHICH tools are gated and
-            // refuses to run them unconfirmed; this closure is only the HOW —
-            // the elicitation round-trip. We FAIL CLOSED: if the client can't
-            // confirm (didn't advertise elicitation) or the user declines, the
-            // tool does NOT run. An automated third-party client therefore gets
-            // read-only access by default and can never trigger downloads/grabs
-            // unattended.
+            // Fails closed: without elicitation support or with a decline, a destructive tool
+            // does not run, so an unattended client can never trigger downloads.
             let confirm: ToolConfirmationHandler = { call in
                 do {
                     let result = try await server.requestElicitation(
@@ -84,9 +70,7 @@ struct MCPCallRouter {
                         annotations: nil, _meta: nil)],
                     isError: true)
             } catch {
-                // Use the sanitized `localizedDescription` — interpolating the
-                // raw error serializes a URLError's userInfo, which embeds the
-                // internal arr base URL (host:port/path). Don't disclose topology.
+                // Not the raw error: a URLError's userInfo embeds the internal arr base URL.
                 return CallTool.Result(
                     content: [.text(text: "Error: \(error.localizedDescription)", annotations: nil, _meta: nil)],
                     isError: true)

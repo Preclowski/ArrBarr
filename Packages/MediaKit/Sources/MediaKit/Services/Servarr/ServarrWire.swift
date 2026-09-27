@@ -618,10 +618,8 @@ struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
     subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
 }
 
-/// An indexer as configured *in the arr* (`/indexer`). ArrBarr reads two things
-/// from it: the id a release carries, and the `baseUrl` field, whose path holds
-/// the Prowlarr indexer id when the indexer was synced from Prowlarr
-/// ("http://prowlarr:9696/14/api").
+/// An indexer as configured in the arr. When synced from Prowlarr, `baseUrl`'s path
+/// holds the Prowlarr indexer id ("http://prowlarr:9696/14/api").
 public struct ArrIndexerDefinition: Codable, Sendable, Identifiable {
     public let id: Int
     public let name: String?
@@ -632,7 +630,6 @@ public struct ArrIndexerDefinition: Codable, Sendable, Identifiable {
         public let value: JSONValue?
     }
 
-    /// The Prowlarr-side id, when this indexer came from Prowlarr.
     public var prowlarrIndexerID: Int? {
         guard let base = fields?.first(where: { $0.name == "baseUrl" }),
               case let .string(url)? = base.value,

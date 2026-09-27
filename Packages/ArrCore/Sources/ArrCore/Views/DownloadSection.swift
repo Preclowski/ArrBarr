@@ -1,32 +1,18 @@
 import SwiftUI
 
-/// "Option B" download section: minimalist, no card chrome.
-///
-/// - Single item: one progress line + thin bar; if upgrade, a NEW/OLD
-///   two-line diff and a monospaced release-name footer.
-/// - Multiple items (ungrouped episodes for the same series): a header line
-///   summarising the queue, then a stacked list of compact rows. The
-///   originally-clicked row gets an accent left border so the user keeps
-///   their bearings.
+/// Detail-view download section: one progress card for a single item, or a summary
+/// header over compact rows for several episodes of one series.
 struct DownloadSection: View {
     let items: [QueueItem]
     let focused: QueueItem
     var showCustomFormats: Bool = false
     var showListingBadges: Bool = false
     var listCollapsible: Bool = false
-    /// Per-item drill-down for the multi-row variant — fires when the
-    /// user taps an episode row in a season-pack download list.
     var onTapItem: ((QueueItem) -> Void)? = nil
-    /// Per-item queue actions for the multi-row variant. Wired by
-    /// DetailView to QueueViewModel.pause/resume/delete.
     var onPauseItem: ((QueueItem) -> Void)? = nil
     var onResumeItem: ((QueueItem) -> Void)? = nil
     var onDeleteItem: ((QueueItem) -> Void)? = nil
-    /// Optional URL resolver — when present, the warning banner on
-    /// each row turns its messages into an "Open in browser" CTA
-    /// pointed at the arr's own UI. Closure form (instead of a
-    /// pre-baked URL) so the multi-row variant can compute per-row
-    /// URLs without recomputing for the single-item case.
+    /// Resolves the arr web URL per row, for the warning banner's "Open in browser" action.
     var arrWebURLForItem: ((QueueItem) -> URL?)? = nil
 
     @State private var listExpanded: Bool
@@ -63,9 +49,6 @@ struct DownloadSection: View {
 
     var body: some View {
         if items.count <= 1 {
-            // Same caption treatment as the "Existing file" block below it —
-            // the two sections read as symmetric siblings. The multi-item
-            // variant keeps its own "In queue · N downloads" header line.
             VStack(alignment: .leading, spacing: 6) {
                 DownloadingSectionHeader(item: focused)
                 singleItemBlock(focused)
@@ -79,9 +62,6 @@ struct DownloadSection: View {
 
     @ViewBuilder
     private func singleItemBlock(_ item: QueueItem) -> some View {
-        // Inline action cluster moved out — sticky pause/⋯ now lives
-        // in `DetailView`'s header (Apple toolbar idiom, see
-        // `headerActions`). Single-item block reverts to plain content.
         singleItemContent(item)
     }
 
@@ -91,17 +71,8 @@ struct DownloadSection: View {
             if showListingBadges {
                 listingBadges(item)
             }
-            // Status + progress + `└─ OLD` upgrade sub-line all in
-            // one card. Replaces the previous NEW/OLD grid render
-            // that sat outside the card — the `└─` pattern matches
-            // every other surface (queue tooltip, episode tooltip)
-            // and the user only needs to read one diff format.
-            // Status chips are up on the section header now.
             DownloadProgressCard(item: item, showUpgradeDiff: true, showHeader: true, showStatusRow: false)
-            // No quality · time · size · client meta line under the
-            // card — the card carries quality / size / score and the
-            // client in its own header. Repeating those tokens below
-            // was the duplicate the user spotted.
+            // No meta line under the card: it already carries quality, size, score and client.
             if !item.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(
                     messages: item.statusMessages,
@@ -110,16 +81,7 @@ struct DownloadSection: View {
                 )
             }
 
-            // External NEW/OLD upgradeDiff grid dropped — the `└─ OLD`
-            // sub-line rendered inside `DownloadProgressCard` (via
-            // `showUpgradeDiff: true`) handles the upgrade context
-            // with the same tree-branch pattern every other surface
-            // uses. One diff format, one source of truth.
-            // Upgrade context — formats + filenames live inside the
-            // grid above (`UpgradeDiffTable` extends to render
-            // "Formaty" and "Plik" rows under Jakość/Rozmiar/Score).
-            // So we just render the standalone strip + filename when
-            // there's NO active upgrade, to avoid double-rendering.
+            // Upgrades show formats and filenames inside the card's diff; don't render them twice.
             if !item.isUpgrade {
                 if showCustomFormats, !item.customFormats.isEmpty {
                     CustomFormatChips(
@@ -132,9 +94,6 @@ struct DownloadSection: View {
         }
     }
 
-    /// Wrapper that defers to the public `ListingBadgesView`. Kept so the
-    /// DownloadSection's existing `if showListingBadges` block doesn't need
-    /// to reach into the public namespace.
     @ViewBuilder
     private func listingBadges(_ item: QueueItem) -> some View {
         ListingBadgesView(item: item)
@@ -163,8 +122,7 @@ struct DownloadSection: View {
                     Text(String.localizedStringWithFormat(NSLocalizedString("unit.downloads", bundle: .module, comment: ""), items.count))
                         .scaledFont(size: 11)
                         .foregroundStyle(.secondary)
-                    // No aggregate size — each row carries its own
-                    // quality · size spec, exactly like the queue list.
+                    // No aggregate size: each row carries its own spec, like the queue list.
                     Spacer()
                 }
                 .contentShape(Rectangle())

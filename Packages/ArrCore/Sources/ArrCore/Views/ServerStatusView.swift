@@ -1,11 +1,7 @@
 import SwiftUI
 import MediaKit
 
-/// Settings → Status: a glanceable server dashboard, one page deep in Settings.
-/// Rolls up connection health for every configured service, arr `/health`
-/// warnings, live queue activity, and disk space across root mounts — the
-/// "is my homelab OK?" glance. Read-only: it observes the shared health/queue
-/// singletons and owns only the `/diskspace` fetch (`ServerStatusModel`).
+/// Read-only: observes the shared health/queue singletons and owns only the `/diskspace` fetch.
 struct ServerStatusView: View {
     @State private var status = ServerStatusModel()
 
@@ -54,9 +50,7 @@ struct ServerStatusView: View {
             serviceIcon(service)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
-                // "Plex", not "Media server": the row sits next to Radarr and
-                // Sonarr, which name themselves, and the connected server is
-                // the thing whose health this is.
+                // "Plex", not "Media server": the arrs beside it name themselves.
                 Text(verbatim: Self.rowTitle(service))
                 if let detail = Self.detailText(snapshot.state) {
                     Text(verbatim: detail)
@@ -92,9 +86,7 @@ struct ServerStatusView: View {
         }
     }
 
-    /// Brand mark from `ServiceIcons.xcassets`, sized like the arr icons beside
-    /// it and inheriting the same foreground — dimming it to `.secondary` made
-    /// OpenAI and TMDB read as a lesser class of service than the arrs.
+    /// Same foreground as the arr icons; `.secondary` made OpenAI and TMDB read as lesser services.
     private func brandMark(_ name: String) -> some View {
         Image(name, bundle: .module)
             .renderingMode(.template)
@@ -114,8 +106,7 @@ struct ServerStatusView: View {
         }
     }
 
-    /// Warning + error count from the arr's `/health` records (nil for
-    /// non-arr services, which don't report health warnings).
+    /// nil for non-arr services, which don't report health warnings.
     private func warningCount(_ service: MonitoredService) -> Int? {
         guard let source = Self.arrSource(service) else { return nil }
         return QueueViewModel.shared.health.records(for: source)
@@ -295,11 +286,7 @@ struct ServerStatusView: View {
 
     // MARK: - Data helpers
 
-    /// Every configured monitored service, in display order: arrs, then
-    /// download clients, then the AI services.
-    /// Display name for a status row. Everything names itself except the media
-    /// server, whose `displayName` has to stay generic (the enum case carries
-    /// no kind — there is only ever one connection, and it lives in config).
+    /// The media server's `displayName` stays generic: there is only ever one connection, kept in config.
     private static func rowTitle(_ service: MonitoredService) -> String {
         guard case .mediaServer = service else { return service.displayName }
         return ConfigStore.shared.mediaServer.kind.displayName
@@ -310,15 +297,12 @@ struct ServerStatusView: View {
         return MonitoredService.allCases.filter { $0.isConfigured(in: store) }
     }
 
-    /// Queue items still in flight across every arr.
     private static func activeItems() -> [QueueItem] {
         QueueViewModel.shared.queues.values
             .flatMap { $0 }
             .filter { $0.status != .completed }
     }
 
-    /// Actionable `/health` records (warning + error) across every arr, each
-    /// tagged with its source for the row label.
     private static func warningItems() -> [(source: QueueItem.Source, record: ArrHealth)] {
         let health = QueueViewModel.shared.health
         return QueueItem.Source.allCases.flatMap { source in

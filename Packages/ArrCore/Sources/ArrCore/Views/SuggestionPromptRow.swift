@@ -1,12 +1,7 @@
 import SwiftUI
 
-/// Full-width pill row used in the chat empty state under "OR ASK".
-/// Tapping it injects the underlying prompt into the chat (same as
-/// typing and pressing return).
 struct SuggestionPromptRow: View {
-    /// Catalog key, not a `LocalizedStringKey`: the row identifies the line it
-    /// is showing by it (see the cross-fade below), and `LocalizedStringKey`
-    /// isn't `Hashable`.
+    /// The row keys its cross-fade on it, and `LocalizedStringKey` isn't `Hashable`.
     let titleKey: String
     let onTap: () -> Void
 
@@ -18,11 +13,8 @@ struct SuggestionPromptRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack {
-                // The pill stays; only the sentence inside it changes. Keyed by
-                // the text and laid out in a ZStack so the outgoing and
-                // incoming lines can overlap for the length of the cross-fade
-                // instead of taking turns in the row's layout — which is what
-                // made a changing suggestion look like a new row sliding in.
+                // Keyed by text in a ZStack so outgoing and incoming lines overlap during the cross-fade
+                // instead of reading as a new row sliding in.
                 ZStack(alignment: .leading) {
                     Text(LocalizedStringKey(titleKey), bundle: .module)
                         .font(.system(size: 13))

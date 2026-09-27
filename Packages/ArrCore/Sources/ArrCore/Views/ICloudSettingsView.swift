@@ -1,19 +1,11 @@
 import SwiftUI
 
-/// Settings pane for iCloud sync: a master on/off toggle plus live status
-/// (account availability, last sync time, last error) and a static summary of
-/// what syncs. Reachable only in App Store builds (the sidebar entry and iOS
-/// link are `#if APPSTORE`-gated in SettingsView).
+/// Reachable only in App Store builds (entries are `#if APPSTORE` in SettingsView).
 struct ICloudSettingsView: View {
     @ObservedObject private var config = ConfigStore.shared
     @ObservedObject private var coordinator = ICloudSettingsView.coordinator
 
-    /// A non-optional coordinator for the view to observe. Falls back to a
-    /// stopped instance when the shared one was never created (e.g. previews,
-    /// non-APPSTORE), so status simply reads "Off / Never". It is a cached
-    /// static (not `@StateObject`) because a computed `shared ?? fallback`
-    /// would create a fresh throwaway every render when `shared` is nil,
-    /// breaking observation.
+    /// Cached static fallback: a computed `shared ?? fallback` would create a throwaway every render and break observation.
     @MainActor private static var coordinator: KVSyncCoordinator = {
         KVSyncCoordinator.shared ?? KVSyncCoordinator(
             defaults: WidgetDataStore.groupDefaults() ?? .standard,

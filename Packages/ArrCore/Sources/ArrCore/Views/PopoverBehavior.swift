@@ -3,24 +3,8 @@ import SwiftUI
 #if os(macOS)
 import AppKit
 
-/// SwiftUI's `.popover(isPresented:)` wraps an `NSPopover` whose default
-/// `behavior` is `.transient`. Transient popovers close on *any* click
-/// outside their content — and that click is consumed by the dismissal,
-/// not delivered to whatever the user was actually trying to interact with.
-///
-/// For hover-revealed informational popovers (queue/group row tooltips)
-/// that's the wrong trade: users expect clicking the row to open detail,
-/// or clicking a button to fire its action — not "click once to close
-/// the floating panel, click again to do the thing".
-///
-/// `.applicationDefined` makes the popover ignore those outside clicks
-/// entirely. The view that owns it has to close it explicitly when the
-/// hover state changes (which we already do via `showTooltip = false`
-/// in `onHover { ... }`).
-///
-/// Usage: attach `.popoverBehavior(.applicationDefined)` to the popover's
-/// content view. The modifier walks up the AppKit window chain to find
-/// the hosting NSPopover and tweaks it after presentation.
+/// SwiftUI popovers default to `.transient`, whose outside-click dismissal eats
+/// the click. Hover tooltips set `.applicationDefined` and close on hover-out.
 public extension View {
     func popoverBehavior(_ behavior: NSPopover.Behavior) -> some View {
         background(PopoverBehaviorAdjuster(behavior: behavior))
@@ -28,14 +12,7 @@ public extension View {
 }
 #endif
 
-/// Hover-revealed informational tooltip popover. Centralises the
-/// "set NSPopover.behavior to .applicationDefined" contract — without
-/// it, clicking the underlying row would close the tooltip instead of
-/// firing the row's action (see `PopoverBehavior` above). Every
-/// in-app tooltip presenter (Queue / Search / Episode rows, season
-/// packs, upcoming items) routes through here so future tooltip
-/// additions can't accidentally inherit `.transient` and re-introduce
-/// the click-eaten-by-dismissal bug.
+/// Every tooltip presenter routes through here so none inherits `.transient`.
 public extension View {
     func tooltipPopover<Content: View>(
         isPresented: Binding<Bool>,
@@ -45,9 +22,7 @@ public extension View {
         #if os(macOS)
         modifier(TooltipPopover(isPresented: isPresented, arrowEdge: arrowEdge, tooltip: content))
         #else
-        // iOS has no hover — SwiftUI would render this as a modal sheet,
-        // which is wrong UX for a tooltip. Tap on the row already opens
-        // DetailView with the same (and more) information.
+        // iOS has no hover; SwiftUI would present a sheet, and a tap opens DetailView anyway.
         self
         #endif
     }
@@ -58,10 +33,8 @@ private struct TooltipPopover<TooltipContent: View>: ViewModifier {
     @Binding var isPresented: Bool
     let arrowEdge: Edge
     @ViewBuilder let tooltip: () -> TooltipContent
-    /// A tooltip is a floating window: it outranks whatever is drawn over the
-    /// row, so a modal alert has to be able to shut it up. Gating the binding
-    /// (rather than only the hover timers that set it) closes one that is
-    /// already on screen and blocks any that resolve while it is suppressed.
+    /// Gating the binding closes a tooltip already on screen when a modal alert
+    /// appears, and blocks any that resolve while suppressed.
     @Environment(\.suppressRowTooltip) private var suppressed
 
     func body(content: Content) -> some View {
@@ -89,23 +62,15 @@ private struct PopoverBehaviorAdjuster: NSViewRepresentable {
     func makeNSView(context: Context) -> NSView { NSView() }
 
     func updateNSView(_ nsView: NSView, context: Context) {
-        // `updateNSView` fires on every body re-evaluation of the popover's
-        // content — which means every queue refresh once a row is hovered.
-        // Setting `popover.behavior` is idempotent, but re-dispatching it
-        // ~10×/s caused visible flicker of the *outer* menubar popover when
-        // the lookup escaped to a parent window. Configure exactly once via
-        // a Coordinator latch.
+        // Configure once: this runs on every queue refresh, and re-dispatching caused
+        // the outer menubar popover to flicker when the lookup escaped to a parent window.
         guard !context.coordinator.didConfigure else { return }
         let coord = context.coordinator
         DispatchQueue.main.async {
             guard let popover = Self.popover(hosting: nsView) else { return }
             popover.behavior = behavior
-            // Clear the hosting view's layer background so NSPopover's
-            // native translucent chrome shows through — same trick the
-            // main menubar popover uses in AppDelegate. Without this the
-            // NSHostingController paints `windowBackgroundColor` and the
-            // tooltip ends up visibly lighter than the parent popover,
-            // which reads as a chrome mismatch.
+            // Clear the layer background so NSPopover's translucent chrome shows
+            // through instead of a lighter `windowBackgroundColor`.
             if let host = popover.contentViewController?.view {
                 host.wantsLayer = true
                 host.layer?.backgroundColor = .clear
@@ -114,14 +79,8 @@ private struct PopoverBehaviorAdjuster: NSViewRepresentable {
         }
     }
 
-    /// SwiftUI's popover hosting window keeps a reference to its
-    /// `NSPopover` via the (private) `popover` KVC key. The key has been
-    /// stable across macOS releases since the API was introduced; if it
-    /// ever changes the lookup silently no-ops and we fall back to the
-    /// transient default — no crash. We deliberately do NOT walk up to the
-    /// `parent` chain: that traversal can escape to the menubar popover's
-    /// own NSWindow and clobber its behavior, manifesting as a full-popover
-    /// flicker on every queue refresh.
+    /// Uses the private `popover` KVC key (no-ops if it changes). Never walks the
+    /// `parent` chain: that can reach the menubar popover's window and clobber it.
     private static func popover(hosting view: NSView) -> NSPopover? {
         guard let window = view.window else { return nil }
         return window.value(forKey: "popover") as? NSPopover

@@ -1,13 +1,7 @@
 import SwiftUI
 
 // MARK: - Chip primitives
-//
-// Pulled out of QueueRowView.swift — these chrome bits are shared
-// across queue rows, tooltips, detail views, and search results. One
-// file makes the visual language easier to keep in sync.
 
-/// Custom-format chips plus an optional score chip, wrapping with
-/// `TooltipFlowLayout`. Used inside tooltips and detail surfaces.
 @ViewBuilder
 func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     if !tags.isEmpty || (score ?? 0) != 0 {
@@ -23,11 +17,7 @@ func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     }
 }
 
-/// "queued" pill — sits on rows that are actively downloading or
-/// queued for download. Outline (stroke + clear fill) so it reads
-/// as a quieter status tag than the filled chips elsewhere on the
-/// row. Orange tint matches in-flight semantics used in the rest
-/// of the app for paused / processing states.
+/// Outlined so it reads as a quieter status tag than the filled chips.
 struct InQueueBadge: View {
     init() {}
 
@@ -45,13 +35,6 @@ struct InQueueBadge: View {
     }
 }
 
-/// Source identity chip — capsule with the arr's SF Symbol plus its
-/// display name ("Radarr" / "Sonarr" / "Lidarr" / "Whisparr"). Used
-/// as the title-slot badge inside the queue-search status-grouped
-/// layout, replacing `InLibraryBadge` / `NewBadge` whose meaning is
-/// now encoded by the section header. The arr's name is spelled out
-/// (not just the glyph) so the chip carries the same identity the
-/// per-arr section headers use elsewhere in the app.
 struct SourceGlyphChip: View {
     let source: QueueItem.Source
     init(source: QueueItem.Source) {
@@ -70,15 +53,8 @@ struct SourceGlyphChip: View {
     }
 }
 
-/// "library" pill rendered next to titles whenever the item is
-/// already on the user's arr. Outline-only — quieter than the
-/// solid-fill genre / rating chips so the badge reads as a status
-/// tag, not a content tag. Accent-tinted to match the chevron
-/// drill-in affordance these rows already use.
 public extension LibraryEntry.FileState {
-    /// Status tint matching the arr web UIs' state colours: green =
-    /// downloaded, orange = partially downloaded, red = missing. Unmonitored
-    /// stays untinted (the surface showing it is already dimmed).
+    /// Matches the arr web UIs' state colours; unmonitored stays untinted (its surface is already dimmed).
     var chipColor: Color? {
         switch self {
         case .complete: return .green
@@ -91,8 +67,6 @@ public extension LibraryEntry.FileState {
         }
     }
 
-    /// One status word, or the x/y count for partially-downloaded series and
-    /// artists. `have`/`total` are only read for the counted states.
     func statusText(have: Int?, total: Int?, locale: Locale) -> String {
         switch self {
         case .complete:
@@ -110,14 +84,10 @@ public extension LibraryEntry.FileState {
     }
 }
 
-/// How much of a title is on disk, as one chip. The Library tab's rows, tiles
-/// and tooltips draw it from a `LibraryEntry`; the detail heroes compute the
-/// same state from the arr's own payload. One mapping, so "Downloaded" is the
-/// same word and the same green everywhere.
+/// One mapping, so "Downloaded" is the same word and green on library rows and detail heroes alike.
 struct MediaStateChip: View {
     let state: LibraryEntry.FileState
-    /// Files on disk / files expected — only rendered for the counted states
-    /// (a series part-way through, a movie is complete or it isn't).
+    /// Only rendered for the counted states.
     var have: Int? = nil
     var total: Int? = nil
     let locale: Locale
@@ -137,12 +107,8 @@ struct MediaStateChip: View {
     }
 }
 
-/// The one ownership chip: "Downloaded" (green) when the title is on disk,
-/// "library" when it's on the arr but not downloaded yet. Never both — they
-/// used to sit side by side, or disagree between a row and its detail view.
+/// "Downloaded" when on disk, "library" when on the arr but not downloaded — never both.
 struct LibraryStateBadge: View {
-    /// Rows get it from `SearchResult.libraryDownloaded` (stamped from
-    /// `LibraryOwnership`); calendar / episode / track pass their own file state.
     let isDownloaded: Bool
 
     @Environment(\.locale) private var locale
@@ -177,10 +143,7 @@ struct InLibraryBadge: View {
     }
 }
 
-/// Score slot for a custom-format strip: the signed coloured number set
-/// in a chip's exact metrics (same padding, same 9 pt line) so it
-/// baseline-aligns with the TagChips beside it — but with NO stroke, so
-/// it doesn't read as one more format.
+/// Same metrics as a chip so it baseline-aligns with the TagChips beside it.
 struct ScoreChip: View {
     let score: Int
 
@@ -192,23 +155,11 @@ struct ScoreChip: View {
         ScoreLabel(score: score, size: 9, weight: .semibold)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            // Outlined in its OWN colour, like every other tinted chip — it
-            // used to be the one borderless chip in a strip of outlined ones,
-            // which read as a missing box rather than a deliberate one.
             .chipOutline(ScoreLabel.color(score))
     }
 }
 
-/// Quality-profile chip. One component, every surface (hero title row,
-/// library/upcoming tooltips).
-///
-/// Filled rather than outlined, and deliberately *un*tinted. It shares a
-/// strip with the custom-format chips, the accent-tinted "library" badge
-/// and the orange "queued" badge, so it does have to stay distinguishable —
-/// but it earns that from the fill, the way `SourceGlyphChip` does, instead
-/// of from a hue. The purple this replaces was the only saturated colour in
-/// the strip and read as an alert rather than a label. Text metrics stay
-/// `TagChip`'s so it still baseline-aligns with the chips beside it.
+/// Filled and untinted: it earns distinction from the fill, not a hue that would read as an alert.
 struct ProfileChip: View {
     let name: String
 
@@ -227,8 +178,7 @@ struct ProfileChip: View {
 }
 
 extension View {
-    /// The one chip outline. A tinted chip is outlined in ITS tint, never in a
-    /// neutral grey — the border is part of the same signal as the text.
+    /// A tinted chip is outlined in its own tint, never a neutral grey.
     func chipOutline(_ color: Color, opacity: Double = 0.30) -> some View {
         overlay(
             RoundedRectangle(cornerRadius: Tokens.Radius.chip)
@@ -236,9 +186,7 @@ extension View {
         )
     }
 
-    /// Fill for the un-outlined chips. Outlined chips centre a 0.75 pt stroke
-    /// on their edge, so half of it draws outside the frame — the fill grows
-    /// by that half so filled and outlined chips read the same size.
+    /// Outlined chips centre a 0.75 pt stroke on their edge, so the fill grows by half of it to match size.
     func filledChipBackground() -> some View {
         background(
             RoundedRectangle(cornerRadius: Tokens.Radius.chip)
@@ -248,10 +196,6 @@ extension View {
     }
 }
 
-/// Outline state chip — tinted semibold text with a stronger tinted
-/// stroke than `TagChip`. The ONE rendering for ownership/download-state
-/// words ("Downloaded", "Missing", "8/10") — Library rows/tiles/tooltips
-/// and the Upcoming tooltip all draw their state through this.
 struct StateChip: View {
     let text: String
     var color: Color = .secondary
@@ -274,10 +218,7 @@ struct StateChip: View {
     }
 }
 
-/// A tag-style capsule with explicit colour-with-opacity background.
-/// We avoid `.quaternary` (hierarchical material) because inside a
-/// popover that container resolves to a much darker tone and the
-/// chips render as solid black pills.
+/// Explicit colour background: `.quaternary` resolves near-black inside a popover.
 struct TagChip: View {
     let text: String
     var color: Color
@@ -288,18 +229,10 @@ struct TagChip: View {
     }
 
     var body: some View {
-        // Stroke mirrors the text tint — neutral chips keep the
-        // primary outline, but the green/red diff chips and the
-        // ±score chip need the border to read in the same colour
-        // family or the row stops feeling like a colour-coded diff.
         let strokeColor: Color = (color == .primary) ? .primary : color
         Text(text)
             .scaledFont(size: 9, weight: .medium)
-            // `Color.primary`, not the hierarchical `.primary` shape style: the
-            // latter resolves against the enclosing style, so a chip inside a
-            // secondary block (tooltip grids, detail sections — where most of
-            // these live) came out as dim as the prose around it. A tag is
-            // content, not commentary, so it carries its own weight.
+            // `Color.primary`, not the hierarchical `.primary` style, which dims inside secondary blocks.
             .foregroundStyle(color == .primary ? Color.primary : color)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
@@ -307,10 +240,6 @@ struct TagChip: View {
     }
 }
 
-/// Wrapping layout for chip rows — flows children left-to-right and
-/// wraps to the next line when the proposed width is exhausted.
-/// Lighter than SwiftUI's `LazyVGrid` (no row-major alignment) which
-/// is what you want for tag lists where each tag has its own width.
 struct TooltipFlowLayout: Layout {
     var spacing: CGFloat
 

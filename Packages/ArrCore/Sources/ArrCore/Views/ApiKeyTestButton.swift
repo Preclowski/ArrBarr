@@ -1,13 +1,9 @@
 import SwiftUI
 
-/// "Test Connection" button for Settings (OpenAI / TMDB). Same chrome and label
-/// as the arr / download-client test in `ServiceFields` so every credential
-/// field tests the same way: a `GlassButtonStyle` button + an inline ✓ / ✗.
+/// Same chrome as the arr / download-client test in `ServiceFields`.
 struct ApiKeyTestButton: View {
-    /// Validation work — throws on an invalid key / unreachable endpoint.
     let test: () async throws -> Void
-    /// When set, the result is written through to the shared `ConnectionHealth`
-    /// and a persistent status dot is shown (OpenAI / TMDB).
+    /// When set, the result is written to the shared `ConnectionHealth` and a status dot is shown.
     var service: MonitoredService? = nil
 
     @State private var state: TestState = .idle

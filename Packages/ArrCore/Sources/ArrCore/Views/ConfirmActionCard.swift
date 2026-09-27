@@ -1,16 +1,7 @@
 import SwiftUI
 
-/// In-chat banner that gates a destructive LLM tool call. Shows a
-/// human-readable description of what's about to happen — not the
-/// raw JSON args, which read as line-noise even for power users —
-/// then Confirm / Cancel. Cancel returns "(cancelled by user)" so
-/// the model can adjust its plan.
-///
-/// The description is tool-specific; we map known tool names to a
-/// natural-language template so the user sees "Monitor season 4 and
-/// start search" instead of `{"seasonNumber":4,"seriesId":241,…}`.
-/// For unknown tools we fall back to the tool name plus arg count
-/// — still cleaner than a JSON dump.
+/// In-chat gate for a destructive tool call: a plain-language description instead of raw JSON args.
+/// Cancel returns "(cancelled by user)" so the model can adjust its plan.
 struct ConfirmActionCard: View {
     let call: ToolCall
     let onConfirm: () -> Void
@@ -31,9 +22,6 @@ struct ConfirmActionCard: View {
         )
     }
 
-    /// Human-readable summary of what the tool will do. Switches on
-    /// tool name; arg substitutions use `String(format:)` so the
-    /// localized template gets the numbers inlined.
     private var humanDescription: String {
         switch call.name {
         case "sonarr_monitor_season":
@@ -66,10 +54,7 @@ struct ConfirmActionCard: View {
 
     // MARK: - Arg accessors
 
-    /// Seasons targeted by `sonarr_monitor_season`. Reads the
-    /// `seasonNumbers` array, falling back to a legacy single
-    /// `seasonNumber`, so the gate copy lists every season the model
-    /// is about to grab ("season(s) 10 and 11") instead of just one.
+    /// Falls back to a single `seasonNumber` so the copy lists every season the model will grab.
     private func seasonNumbers() -> [Int] {
         guard case .object(let dict) = call.arguments else { return [] }
         if case .array(let arr)? = dict["seasonNumbers"] {
@@ -107,17 +92,8 @@ struct ConfirmActionCard: View {
     }
 }
 
-/// Common destructive-action warning card. Same orange-shielded chrome
-/// the chat uses to gate tool calls — reused inline / in popovers on
-/// detail surfaces so the user always sees the same shape when they're
-/// about to do something irreversible (search consumes indexer quota,
-/// remove deletes the download client entry).
-///
-/// `message` is a fully-formed sentence (already localized by the
-/// caller). `confirmLabelKey` is a localization key from the module's
-/// strings catalogue — defaults to "Confirm", but the destructive flows
-/// in season/episode rows pass "Search" / "Remove" to mirror the verb in
-/// their alert message.
+/// Orange-shield warning card shared by chat and detail surfaces. `message` arrives
+/// already localized; `confirmLabelKey` is a catalog key.
 struct InlineConfirmCard: View {
     let message: Text
     let confirmLabelKey: LocalizedStringKey
@@ -125,8 +101,7 @@ struct InlineConfirmCard: View {
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
-    /// Verbatim message — used by chat for tool-call descriptions
-    /// (already localized strings, no key lookup).
+    /// Verbatim message, already localized (chat tool-call descriptions).
     init(
         message: String,
         confirmLabelKey: LocalizedStringKey = "Confirm",
@@ -154,9 +129,7 @@ struct InlineConfirmCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 8) {
                     Spacer()
-                    // Custom capsules with the full padded area as the hit target
-                    // (`.contentShape` on the padded label + `.plain` style) — the
-                    // native button styles left only the text tappable here.
+                    // Custom capsules with `.contentShape` on the padded label: native styles left only the text tappable.
                     Button(role: .cancel, action: onCancel) {
                         Text("Cancel", bundle: .module)
                             .scaledFont(size: 12, weight: .medium)
@@ -194,16 +167,8 @@ struct InlineConfirmCard: View {
     }
 }
 
-/// The app's one confirmation alert: a dimming scrim and a centred card with a
-/// title, a sentence and the two answers. Every modal yes/no inside a surface
-/// renders through this — the queue's `ConfirmCenter` requests and the detail
-/// surfaces' `.inlineConfirm` — so a confirmation reads the same wherever it is
-/// raised, and no caller styles its own.
-///
-/// Deliberately plain: no orange shield (that belongs to `InlineConfirmCard`,
-/// which sits *inside* chat content and has to announce itself against the
-/// message flow). An alert already owns the screen; the destructive verb on the
-/// red button is the warning.
+/// The app's one in-surface confirmation alert (`ConfirmCenter` and `.inlineConfirm`).
+/// No shield: an alert already owns the screen; the red verb is the warning.
 struct ConfirmAlertOverlay: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
@@ -240,9 +205,7 @@ struct ConfirmAlertOverlay: View {
 
     var body: some View {
         ZStack {
-            // Heavier than the old sheet's scrim: the card is small and sits in
-            // the middle of the content it interrupts, so the dimming is what
-            // separates them.
+            // The card is small and centred in the content it interrupts; the dimming separates them.
             Rectangle()
                 .fill(.black.opacity(0.32))
                 .contentShape(Rectangle())
@@ -257,9 +220,7 @@ struct ConfirmAlertOverlay: View {
     }
 
     private var card: some View {
-        // Laid out like the macOS 26 system alert — leading text, tinted rather
-        // than filled destructive answer — since the real one can't be used:
-        // dismissing it closes the MenuBarExtra panel underneath.
+        // Mimics the macOS 26 system alert, which can't be used: dismissing it closes the MenuBarExtra panel.
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title, bundle: .module)
@@ -297,14 +258,11 @@ struct ConfirmAlertOverlay: View {
             }
         }
         .padding(20)
-        // Real Liquid Glass, not a material: the alert floats over the list and
-        // should refract it, which a blurred grey plate cannot do.
+        // Liquid Glass, not a material: the alert should refract the list beneath it.
         .glassEffect(.regular, in: .rect(cornerRadius: 26, style: .continuous))
         .shadow(color: .black.opacity(0.30), radius: 18, y: 4)
     }
 
-    /// Equal-width capsules — an alert's two answers carry the same weight in
-    /// the layout even when one of them is the dangerous one.
     private func answerButton(_ key: LocalizedStringKey, weight: Font.Weight,
                               foreground: Color, background: Color,
                               action: @escaping () -> Void) -> some View {

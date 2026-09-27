@@ -93,7 +93,6 @@ public actor ResourceStore {
         }
     }
 
-    /// cached → revalidated → one element per matching invalidation or commit.
     public nonisolated func observe<V>(_ resource: Resource<V>, maxAge: Duration? = nil,
                                        priority: RequestPriority = .interactive) -> AsyncStream<Fetched<V>> {
         AsyncStream { continuation in

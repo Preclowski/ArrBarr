@@ -1,14 +1,9 @@
 import Foundation
 import MediaKit
 
-/// Demo-mode people fixtures — the person view, cast-head taps and People
-/// search work offline against the same curated open-movie world as the rest
-/// of demo mode. `People` and `SearchViewModel.fetchPeople` branch here when
-/// `DemoMode.isActive`.
 extension DemoMocks {
 
-    /// Synthetic TMDB person ids, far outside any real range so a demo id can
-    /// never collide with live data after a mode switch.
+    /// Far outside any real range, so a demo id never collides with live data after a mode switch.
     enum DemoPerson: Int, CaseIterable {
         case derekDeLint = 990_001   // Tears of Steel lead
         case jamesRich   = 990_002   // Pioneer One lead
@@ -111,8 +106,7 @@ extension DemoMocks {
         )
     }
 
-    /// `id: 0` mirrors the real TMDB path — a series row carries its TMDB id,
-    /// not a tvdbId, until something resolves it.
+    /// `id: 0` like the real TMDB path: a series row has no tvdbId until something resolves it.
     private static func demoSeriesRow(
         tmdbTVId: Int, title: String, year: Int, rating: Double,
         seed: String, role: String, ownedId: Int?

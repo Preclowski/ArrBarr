@@ -1,11 +1,6 @@
 import Foundation
 import MediaKit
 
-// Arr-side tool implementations: per-arr search / list / calendar /
-// monitor / search-episodes. Lives in an extension so the core actor
-// stays focused on init + dispatch + the small generic helpers it
-// shares across every tool.
-
 extension LocalToolBackend {
     // MARK: - Tool implementations
 
@@ -19,20 +14,8 @@ extension LocalToolBackend {
                             yearAware: true, rich: { .searchMovieResults($0) })
     }
 
-    /// Curated-recommendation tool. The LLM passes its own taste picks
-    /// (title + optional year) and we resolve each through the arr's
-    /// lookup endpoint so the chat surfaces rich cards (poster / ratings /
-    /// in-library state) instead of a markdown list the user can't act on.
-    ///
-    /// Why this exists: `tmdb_discover_*` filters by genre/year/popularity
-    /// and is algorithmic — it's poor for taste-based queries ("something
-    /// in the mood of Mr. Robot"). The model's own training-data
-    /// associations are usually better. This tool gives the model a way
-    /// to *present* those picks as interactive cards.
-    ///
-    /// Dual-channel output: condensed text to the model (one line per
-    /// pick + library state, so it knows what was actually surfaced and
-    /// what couldn't be resolved), full SearchResults to the UI.
+    /// Resolves the model's own taste picks through the arr lookup so the chat shows actionable cards;
+    /// `tmdb_discover_*` is algorithmic and poor at taste-based queries.
     func suggestTitles(_ args: JSONValue) async throws -> ToolCallOutput {
         let kind = Self.stringArg(args, key: "kind").lowercased()
         guard kind == "series" || kind == "movie" else {
@@ -42,13 +25,9 @@ extension LocalToolBackend {
         guard !items.isEmpty else {
             return ToolCallOutput(text: "suggest_titles needs a non-empty 'items' array of {title, year?} picks.")
         }
-        // 15 used to be the cap, which was fine until libraries got deep: a
-        // curated 3000-film shelf owns most of any canonical fifteen, so the
-        // model had to guess again and again to accumulate a handful of unowned
-        // picks. Resolving 40 in parallel is cheap; another round is not.
+        // A deep library owns most canonical picks, so resolving 40 at once beats another round.
         let capped = Array(items.prefix(40))
-        // Ownership is a fact, not a judgement, so it is safe to drop here —
-        // unlike genre or mood, which stay with the model.
+        // Ownership is a fact, not a judgement, so it is safe to drop here — unlike genre or mood.
         let excludeOwned = Self.optionalBoolArg(args, key: "exclude_owned") ?? false
 
         let source: QueueItem.Source = (kind == "series") ? .sonarr : .radarr
@@ -58,20 +37,12 @@ extension LocalToolBackend {
         }
         let client = SearchClient(config: config, source: source)
 
-        // Library map fetched in parallel with the per-pick lookups. Each
-        // resolved SearchResult carries its arr-side metadata id (tvdbId
-        // for series, tmdbId for movies) in `.id`; we look that up in the
-        // map to set `inLibraryArrId` for items the user already owns.
-        // RichToolResultView reads that field to route the tap to
-        // DetailView instead of SearchAddPanel — without this, cards for
-        // owned series/movies surface as "add me" instead of "open me".
+        // Owned cards need `inLibraryArrId` so a tap opens DetailView instead of SearchAddPanel.
         async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
             ? sonarrLibraryByTVDBId()
             : radarrLibraryByTMDBId()
 
-        // Parallel lookups — each is a single HTTP. Order in the output
-        // preserves the model's curation (which is signal: a curator's
-        // ordering reflects relevance), so we collect by index.
+        // Collected by index: the model's ordering is relevance signal.
         var resolved: [(index: Int, result: SearchResult)] = []
         var missing: [(index: Int, label: String)] = []
 
@@ -107,9 +78,7 @@ extension LocalToolBackend {
         missing.sort { $0.index < $1.index }
 
         let libraryMap = await libraryMapFetch
-        // Tag any resolved card that maps to an arr library record. .id
-        // is tvdbId for series / tmdbId for movies — matches the library
-        // map's keys exactly.
+        // `.id` is tvdbId for series / tmdbId for movies, the library map's keys.
         let tagged = resolved.map { entry -> SearchResult in
             guard let ownership = libraryMap[entry.result.externalId] else { return entry.result }
             return entry.result.withLibraryOwnership(ownership)
@@ -117,11 +86,7 @@ extension LocalToolBackend {
         let afterOwned = excludeOwned ? tagged.filter { $0.inLibraryArrId == nil } : tagged
         let droppedAsOwned = tagged.count - afterOwned.count
 
-        // Cross-call memory: without it, a big library turns every retry into
-        // the same lone survivor — each guessed batch overlaps the canon, the
-        // canon is owned, and the one unowned pick resurfaces call after call
-        // (five rounds of The Power of the Dog, verbatim user report). Repeats
-        // are cut from the cards and reported, and the model is told to stop.
+        // Cross-call memory: in a big library every retry otherwise resurfaces the same lone unowned pick.
         let results = afterOwned.filter { !surfacedSuggestionIds.contains($0.id) }
         let repeatCount = afterOwned.count - results.count
         for r in results { surfacedSuggestionIds.insert(r.id) }
@@ -152,12 +117,7 @@ extension LocalToolBackend {
         return ToolCallOutput(text: text, rich: rich)
     }
 
-    /// Aggregated health check across every configured arr. Each arr's
-    /// `/health` endpoint returns the warnings + errors its own UI shows in
-    /// the bell icon — disconnected indexers, missing root folders, full
-    /// disk, etc. The model gets a per-arr one-line summary; full-detail
-    /// messages are inlined only when there's something to report so the
-    /// output stays compact when everything's green.
+    /// Messages are inlined only when there is something to report, to keep a green result compact.
     func healthCheck() async throws -> ToolCallOutput {
         let configured: [(QueueItem.Source, ServiceConfig)] = [
             (.sonarr, sonarr), (.radarr, radarr),
@@ -167,14 +127,12 @@ extension LocalToolBackend {
         let clientLines = await downloadClientHealthLines()
 
         guard !configured.isEmpty else {
-            // No arrs, but download clients might still be set up.
             if clientLines.isEmpty {
                 return ToolCallOutput(text: "No services are configured.")
             }
             return ToolCallOutput(text: (["Download clients:"] + clientLines).joined(separator: "\n"))
         }
 
-        // Each fetch is one HTTP — fan out in parallel.
         var report: [(source: QueueItem.Source, records: [ArrHealth], error: String?)] = []
         await withTaskGroup(of: (QueueItem.Source, Result<[ArrHealth], Error>).self) { group in
             for (source, cfg) in configured {
@@ -218,7 +176,6 @@ extension LocalToolBackend {
                 summary += "\(warningCount) warning\(warningCount == 1 ? "" : "s")"
             }
             lines.append(summary)
-            // Inline each message so the model has enough detail to relay.
             for rec in entry.records {
                 let kind = (rec.type ?? "info").lowercased()
                 let msg = rec.message ?? "(no message)"
@@ -232,10 +189,6 @@ extension LocalToolBackend {
         return ToolCallOutput(text: lines.joined(separator: "\n"))
     }
 
-    /// Probe every configured download client's connection in parallel.
-    /// `testConnection()` returns a version/status string on success or
-    /// throws when unreachable / auth-failed. Returns one summary line per
-    /// configured client; empty array when none are set up.
     private func downloadClientHealthLines() async -> [String] {
         let dc = downloadClients
         let probes: [(String, DownloadClientKind, ServiceConfig)] = [
@@ -269,14 +222,6 @@ extension LocalToolBackend {
     }
 
     nonisolated private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
-        // qBittorrent and Deluge authenticate with a session cookie, so when
-        // they aren't handed a URLSession they build their own — and a
-        // URLSession keeps *itself* alive until it is invalidated. `health` is
-        // read-only, so it isn't behind the destructive-tool gate and an MCP
-        // client is free to poll it every 30s; letting those two clients own
-        // their sessions stranded one apiece per call, cookie jar and delegate
-        // queue included. Own the session here and tear it down on the way out.
-        // The other four run on `URLSession.shared` and have nothing to leak.
         switch kind {
         case .qbittorrent:  return try await QbittorrentClient(config: cfg).testConnection()
         case .transmission: return try await TransmissionClient(config: cfg).testConnection()
@@ -287,28 +232,13 @@ extension LocalToolBackend {
         }
     }
 
-    /// A throwaway session with private cookie storage for the two clients that
-    /// log in with a cookie, nil for the rest. Per-probe rather than one shared
-    /// jar: qBittorrent's SID and Deluge's session cookie would otherwise share
-    /// storage whenever both live on the same host.
-
     // MARK: - Lifecycle control tools (monitor + search)
 
-    /// Flip season monitoring. When enabling, ALWAYS fire a SeasonSearch
-    /// right after — chat callers say things like "pobierz mi 3 sezon"
-    /// or "monitor S3 of X" and they expect the download to start.
-    /// We don't expose an opt-out for the search part: the previous
-    /// `alsoSearch` arg let the model default it to false and tell the
-    /// user "search queued" anyway. Now there's no override, and the
-    /// result text reports the actual outcome of each step so the model
-    /// can't fabricate success.
+    /// Enabling always fires a SeasonSearch: with an opt-out the model defaulted it off and still
+    /// claimed "search queued". The result reports each step's real outcome.
     func sonarrMonitorSeason(_ args: JSONValue) async throws -> ToolCallOutput {
         let seriesId = Self.intArg(args, key: "seriesId")
-        // Accept either a `seasonNumbers` array (multi) or a legacy
-        // single `seasonNumber`. Chat requests like "pobierz 10 i 11
-        // sezon" name MORE THAN ONE season; the old single-int schema
-        // silently dropped every season past the first. Sonarr's
-        // SeasonSearch command is per-season, so we loop one call each.
+        // Chat requests often name several seasons; SeasonSearch is per-season, so one call each.
         var seasons = Self.intArrayArg(args, key: "seasonNumbers")
         if seasons.isEmpty, let single = Self.optionalIntArg(args, key: "seasonNumber") {
             seasons = [single]
@@ -328,8 +258,7 @@ extension LocalToolBackend {
 
         func list(_ xs: [Int]) -> String { xs.map(String.init).joined(separator: ", ") }
 
-        // Step 1: flip monitoring on each season, recording per-season
-        // success so a single rejected season doesn't sink the rest.
+        // A single rejected season doesn't sink the rest.
         var monitored: [Int] = []
         var monitorFailed: [Int] = []
         var lastMonitorError = ""
@@ -353,9 +282,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "PARTIAL: stopped monitoring season(s) \(list(monitored)); FAILED for \(list(monitorFailed)) (\(lastMonitorError)). No search triggered.")
         }
 
-        // Step 2: fire a SeasonSearch for each season that's now
-        // monitored. Report the actual per-season outcome explicitly so
-        // the model can't paper over a partial failure.
+        // Report the per-season outcome so the model can't paper over a partial failure.
         var searched: [Int] = []
         var searchFailed: [Int] = []
         var lastSearchError = ""
@@ -380,8 +307,6 @@ extension LocalToolBackend {
         return ToolCallOutput(text: "PARTIAL: " + parts.joined(separator: "; ") + ". Tell the user EXACTLY which seasons worked and which didn't — do not claim full success. For rejected searches they should retry shortly or use the season's search button in DetailView. DO NOT call sonarr_search_episodes as a workaround — it grabs per-episode releases instead of a season pack.")
     }
 
-    /// Manual indexer search for one or more episodes by id. Mirrors
-    /// the UI's per-episode magnifying-glass action.
     func sonarrSearchEpisodesTool(_ args: JSONValue) async throws -> ToolCallOutput {
         let ids = Self.intArrayArg(args, key: "episodeIds")
         guard !ids.isEmpty else {
@@ -398,9 +323,7 @@ extension LocalToolBackend {
         }
     }
 
-    /// Force a Radarr indexer search for one movie. Useful for retry /
-    /// upgrade prompts ("this stuck, try again", "try to grab a better
-    /// quality"). Radarr's monitored flag isn't changed.
+    /// Radarr's monitored flag isn't changed.
     func radarrSearchMovieTool(_ args: JSONValue) async throws -> ToolCallOutput {
         let movieId = Self.intArg(args, key: "movieId")
         guard movieId > 0 else {
@@ -409,13 +332,8 @@ extension LocalToolBackend {
         guard radarr.isConfigured else {
             return ToolCallOutput(text: "Radarr is not configured.")
         }
-        // Validate against the library BEFORE posting: Radarr answers 200 to
-        // a MoviesSearch for an id it has never heard of, so an unvalidated
-        // call reports "Search queued" while doing nothing — which is exactly
-        // how "add Perfect Blue" ended as a confirmed no-op. The classic
-        // confusion is a tmdbId in the movieId slot; when that tmdbId maps to
-        // an OWNED movie we correct it silently, otherwise we say plainly
-        // that this tool cannot add.
+        // Radarr answers 200 to a MoviesSearch for an unknown id, so validate first. A tmdbId in the
+        // movieId slot that maps to an owned movie is corrected silently.
         let movies = await LibraryIndex.shared.movies(config: radarr)
         let resolvedId: Int
         let title: String
@@ -436,12 +354,7 @@ extension LocalToolBackend {
         }
     }
 
-    /// List albums by artistId, optionally filtered by `albumType`
-    /// (Album / Single / EP / Live / Compilation / Soundtrack / Other).
-    /// Compact text per album: `id, title, type, year, monitored,
-    /// have/total tracks`. Capped to 40 to keep output bounded for
-    /// prolific artists; trailing note tells the model how many were
-    /// dropped.
+    /// Capped to 40 albums; a trailing note tells the model how many were dropped.
     func lidarrGetArtistAlbums(_ args: JSONValue) async throws -> ToolCallOutput {
         let artistId = Self.intArg(args, key: "artistId")
         guard artistId > 0 else {
@@ -477,9 +390,7 @@ extension LocalToolBackend {
             let total = rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0
             return "• albumId=\(rec.id.map(String.init) ?? "?") · \(rec.title)\(yearPart)\(typePart) · \(mon) \(have)/\(total) tracks"
         }
-        // Name the artist, don't just echo the id back. An id-only header
-        // ("Artist 1 has 36 albums") is unverifiable: if the id was wrong, the
-        // model can't tell, and its only recovery is to start guessing again.
+        // Name the artist: an id-only header gives the model no way to notice a wrong id.
         let name = await artistName(id: artistId)
         let who = name.map { "\($0) (artistId=\(artistId))" } ?? "artistId=\(artistId)"
         var out = "\(who) has \(filtered.count) album\(filtered.count == 1 ? "" : "s")"
@@ -488,9 +399,7 @@ extension LocalToolBackend {
         if filtered.count > cap {
             out += "\n(\(filtered.count - cap) more not shown — narrow with albumType to see them all.)"
         }
-        // Same cards the rest of the chat gets, for the one library the chat
-        // could only answer in prose. Covers come from Lidarr, so the shown
-        // slice is what the rail renders — no second fetch.
+        // Covers come from Lidarr, so the shown slice is what the rail renders — no second fetch.
         let cards = shown.compactMap { rec in
             rec.id.map { id in ChatAlbum(
                 id: id,
@@ -505,22 +414,17 @@ extension LocalToolBackend {
         return ToolCallOutput(text: out, rich: .albums(artist: name, albums: Array(cards)))
     }
 
-    /// Name for a Lidarr artist id — best effort, purely so the albums answer
-    /// can say whose albums these are.
     private func artistName(id: Int) async -> String? {
         guard let artists = try? await lidarrClient.fetchAllArtists() else { return nil }
         return artists.first { $0.id == id }?.artistName
     }
 
-    /// Helper: extract YYYY from an ISO-ish release date.
     nonisolated static func yearFromReleaseDate(_ raw: String?) -> Int? {
         guard let raw, raw.count >= 4 else { return nil }
         return Int(raw.prefix(4))
     }
 
-    /// Mirror of `sonarrMonitorSeason`: when state=true we ALWAYS fire
-    /// the search. No opt-out arg — same reasoning, chat 'monitor album'
-    /// requests always mean 'monitor and grab'.
+    /// Like `sonarrMonitorSeason`, state=true always fires the search.
     func lidarrMonitorAlbum(_ args: JSONValue) async throws -> ToolCallOutput {
         let albumId = Self.intArg(args, key: "albumId")
         guard albumId > 0 else {
@@ -547,8 +451,6 @@ extension LocalToolBackend {
         }
     }
 
-    /// Standalone search trigger — same as the search component of
-    /// `lidarr_monitor_album(state: true)` but no monitoring flip.
     func lidarrSearchAlbumTool(_ args: JSONValue) async throws -> ToolCallOutput {
         let albumId = Self.intArg(args, key: "albumId")
         guard albumId > 0 else {
@@ -565,12 +467,8 @@ extension LocalToolBackend {
         }
     }
 
-    /// Pull `items: [{title, year?, tmdbId?}]` out of the JSON-RPC arguments.
-    /// Permissive — drops malformed entries silently so a model that
-    /// fumbles one item doesn't kill the whole call. No `reason` field:
-    /// model-authored reasons came back as plot blurbs on every card and
-    /// visibly slowed generation, so card reasons are computed-only now
-    /// (anchors, library decks).
+    /// Drops malformed entries so one fumbled item doesn't kill the call. No `reason` field:
+    /// model-written reasons became plot blurbs and slowed generation.
     nonisolated static func suggestItems(_ value: JSONValue) -> [(title: String, year: Int?, tmdbId: Int?)] {
         guard case .object(let dict) = value, case .array(let arr) = dict["items"] else { return [] }
         func intValue(_ raw: JSONValue?) -> Int? {
@@ -588,17 +486,13 @@ extension LocalToolBackend {
         }
     }
 
-    /// The lookup term for one pick: an exact `tmdb:` ref when the model
-    /// supplied the id (one exact hit, no wrong-remake risk — both arrs
-    /// resolve it), else title-plus-year prose.
+    /// An exact `tmdb:` ref when the model supplied the id (no wrong-remake risk), else title plus year.
     nonisolated static func lookupTerm(title: String, year: Int?, tmdbId: Int?) -> String {
         if let tmdbId { return "tmdb:\(tmdbId)" }
         return year.map { "\(title) \($0)" } ?? title
     }
 
-    /// Condensed text for the model: surfaced picks + library state +
-    /// missing labels. Kept under ~300 tokens for 15 items so it doesn't
-    /// eat the local LLM's context window.
+    /// Kept under ~300 tokens for 15 items to spare the local LLM's context window.
     nonisolated static func formatSuggestionsCondensed(
         resolved: [SearchResult],
         missing: [String],
@@ -611,9 +505,7 @@ extension LocalToolBackend {
         if !resolved.isEmpty {
             let lines = resolved.map { r -> String in
                 let yearPart = r.year.map { " (\($0))" } ?? ""
-                // Watch state rides along with ownership — the media server
-                // only knows titles that are on the shelf, so an unowned pick
-                // never carries a marker either way.
+                // The media server only knows owned titles, so an unowned pick never carries a marker.
                 let watched = MediaServerIndex.shared.isWatched(r.mediaServerKeys) ? ", watched" : ""
                 let state = (r.inLibraryArrId != nil) ? " [in library\(watched)]" : ""
                 return "• \(r.title)\(yearPart)\(state)"
@@ -627,30 +519,23 @@ extension LocalToolBackend {
         return out.joined(separator: "\n")
     }
 
-    /// Detect a 4-digit year in the query and surface year-matching hits to
-    /// the top of the result list. Helps when TMDB's popularity ranking
-    /// buries upcoming / niche entries under same-titled hits from years ago.
+    /// Surfaces year-matching hits first: TMDB's popularity ranking buries upcoming or niche entries.
     nonisolated static func searchWithYearAwareness(client: SearchClient, query: String) async throws -> [SearchResult] {
         let primary = try await client.lookup(query: query)
         guard let year = extractYear(from: query) else { return primary }
-        // If we already have year-matching hits in the primary list, surface them.
         let matched = primary.filter { $0.year == year }
         let rest = primary.filter { $0.year != year }
         if !matched.isEmpty {
             return matched + rest
         }
-        // Year wasn't found in the year-tagged search. Re-query without the
-        // year so TMDB's lookup has a cleaner term, then filter by year.
+        // Re-query without the year so the lookup has a cleaner term, then filter by year.
         let bareQuery = query
             .replacingOccurrences(of: String(year), with: "")
             .trimmingCharacters(in: CharacterSet(charactersIn: " ()[]-,"))
         guard bareQuery != query, !bareQuery.isEmpty else { return primary }
         let secondary = try await client.lookup(query: bareQuery)
         let secondaryYear = secondary.filter { $0.year == year }
-        // Merge: year-matching from broader search first, then everything else.
-        // Keyed on row identity, not the foreign key: a TMDB-sourced series
-        // has no foreign key yet, so every one of them used to look like the
-        // same row and all but the first were dropped.
+        // Keyed on row identity, not the foreign key: TMDB-sourced series have no foreign key yet.
         var seen = Set<String>()
         var merged: [SearchResult] = []
         for r in secondaryYear + primary + secondary where seen.insert(r.id).inserted {
@@ -660,7 +545,6 @@ extension LocalToolBackend {
     }
 
     nonisolated static func extractYear(from query: String) -> Int? {
-        // Look for any 4-digit run that's a plausible year (1900..currentYear+5).
         let now = Calendar.current.component(.year, from: Date())
         guard let regex = try? NSRegularExpression(pattern: #"\b(19|20)\d{2}\b"#) else { return nil }
         let ns = query as NSString
@@ -673,11 +557,6 @@ extension LocalToolBackend {
         return nil
     }
 
-    /// Render the per-season slice for `sonarr_get_series` output. With
-    /// no filter it shows a condensed strip ("S1 ✓ 10/10, S2 ✓ 8/10, S3
-    /// ✗ 0/0 upcoming") capped to keep tokens sane. With a filter it
-    /// drops to a single targeted line. Empty when the record has no
-    /// season data (shouldn't happen for live Sonarr, possible in demo).
     nonisolated static func seasonsSummary(for rec: ArrSeries, filter: Int?) -> String {
         let seasons = rec.seasons?.filter { $0.seasonNumber > 0 } ?? []
         guard !seasons.isEmpty else { return "" }
@@ -687,7 +566,6 @@ extension LocalToolBackend {
             }
             return " · " + Self.formatSeasonLine(s)
         }
-        // Cap to first 12 to keep the output compact for long-running shows.
         let shown = seasons.prefix(12).map(Self.formatSeasonLine).joined(separator: ", ")
         let trailing = seasons.count > 12 ? ", …" : ""
         return " · seasons: \(shown)\(trailing)"
@@ -700,15 +578,10 @@ extension LocalToolBackend {
         return "S\(s.seasonNumber) \(mon) \(have)/\(total)"
     }
 
-    /// Unified calendar across every configured arr (or one, via the
-    /// optional `service` arg). Replaces the four per-arr calendar tools —
-    /// fans out the fetches in parallel, merges, sorts by air date.
     func getCalendar(_ args: JSONValue) async throws -> ToolCallOutput {
         let requested = Self.stringArg(args, key: "service").lowercased()
 
-        // Resolve which (source, config) pairs to query. Whisparr only
-        // participates when the AI-access toggle is on (matches the guard
-        // every other whisparr tool uses).
+        // Whisparr only when the AI-access toggle is on, like every other whisparr tool.
         let all: [(QueueItem.Source, ServiceConfig)] = [
             (.sonarr, sonarr), (.radarr, radarr),
             (.lidarr, lidarr), (.whisparr, whisparr),
@@ -762,12 +635,8 @@ extension LocalToolBackend {
             filterMatch: { rec, q in (rec.artistName ?? "").lowercased().contains(q) },
             line: { r in
                 let name = r.artistName ?? "(untitled)"
-                // artistId FIRST, and unmissable: `lidarr_get_artist_albums`
-                // requires it, and this is the only tool that can supply it.
-                // While these rows printed just the MusicBrainz foreignArtistId,
-                // the model had no way to satisfy that requirement — so it
-                // guessed small integers, got some other artist's albums, and
-                // spiralled trying to reconcile the mismatch.
+                // artistId first: `lidarr_get_artist_albums` requires it and only this tool supplies it;
+                // without it the model guessed ids.
                 let ids = [r.id.map { "artistId=\($0)" }, r.foreignArtistId.map { "foreignArtistId=\($0)" }]
                     .compactMap { $0 }.joined(separator: " · ")
                 let albumCount = r.statistics?.albumCount.map { " · \($0) album\($0 == 1 ? "" : "s")" } ?? ""
@@ -822,19 +691,8 @@ extension LocalToolBackend {
 
     // MARK: - Download queue
 
-    /// Lists the active download queue across every configured arr. Items
-    /// already carry both the incoming release's quality/format metadata AND
-    /// the existing library file's (`existing*` fields, populated during queue
-    /// unification), so the model gets everything it needs to explain an
-    /// upgrade in a single call — no extra API round-trips beyond
-    /// `fetchQueue()`.
-    ///
-    /// Sonarr and Radarr used to be the whole list, which meant a Lidarr
-    /// download was missing from an answer that read as complete — the popover
-    /// aggregates all four, so the tool disagreeing with the UI is worse than
-    /// it sounds. Whisparr rides the same `aiKnowsAboutWhisparr` gate as its
-    /// own tools: an arr the user hid from the model must not leak back in via
-    /// a queue listing.
+    /// Queue items carry both incoming and existing-file metadata, so upgrades are explained in one call.
+    /// Whisparr rides the `aiKnowsAboutWhisparr` gate: an arr hidden from the model must not leak in here.
     func listDownloadQueue(_ args: JSONValue) async throws -> ToolCallOutput {
         let configured: [(QueueItem.Source, ServiceConfig)] = [
             (.sonarr, sonarr), (.radarr, radarr), (.lidarr, lidarr),
@@ -845,7 +703,6 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "No arr is configured.")
         }
 
-        // One HTTP per arr — fan out in parallel, tolerate one side failing.
         var items: [QueueItem] = []
         var failures: [String] = []
         await withTaskGroup(of: (QueueItem.Source, Result<[QueueItem], Error>).self) { group in
@@ -873,7 +730,6 @@ extension LocalToolBackend {
         if !filter.isEmpty {
             items = items.filter { $0.title.lowercased().contains(filter) }
         }
-        // Stable order: upgrades first, then by title.
         items.sort { lhs, rhs in
             if lhs.isUpgrade != rhs.isUpgrade { return lhs.isUpgrade }
             return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
@@ -883,8 +739,6 @@ extension LocalToolBackend {
         return ToolCallOutput(text: text, rich: .downloadQueue(items))
     }
 
-    /// Pure, unit-tested formatter: one line per queue item, with an
-    /// `UPGRADE: old → new` diff fragment for upgrade rows.
     nonisolated static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = []) -> String {
         var sections: [String] = []
 
@@ -918,8 +772,7 @@ extension LocalToolBackend {
         return sections.joined(separator: "\n\n")
     }
 
-    /// Builds the `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`
-    /// fragment for an upgrade row. Returns nil if there's no meaningful diff.
+    /// `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`; nil when nothing differs.
     nonisolated static func upgradeDiffFragment(_ item: QueueItem) -> String? {
         var parts: [String] = []
 

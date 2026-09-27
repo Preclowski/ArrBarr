@@ -2,33 +2,20 @@ import Foundation
 import MediaKit
 import os
 
-/// The Radarr / Sonarr / Lidarr / Whisparr libraries every tool, the Library
-/// grid and Spotlight read — through MediaKit's store, so there is one cache.
-///
-/// The store holds each list under its instance's library tag: a `warm` TTL
-/// is the backstop, and imports (SignalR), adds and edits invalidate the tag,
-/// so "I just grabbed it, do I have it?" is answered by an event rather than by
-/// guessing a short TTL. Concurrent cold reads coalesce in the store.
-///
-/// A version is the store's revision of that tag: it moves on every commit
-/// and invalidation, and it lives in the gateway, so two gateways (tests) never
-/// see each other's.
+/// Arr libraries read through MediaKit's store: imports, adds and edits invalidate the library tag, with
+/// a `warm` TTL as backstop. A version is the store's revision of that tag, per gateway.
 nonisolated public struct LibraryIndex: Sendable {
 
     public static let shared = LibraryIndex()
 
-    /// What one read produced. `failed` is the only thing that tells "the arr is
-    /// unreachable" from "the library is genuinely empty" — the Library tab's
-    /// error state depends on the difference; `stale` means the records are the
-    /// store's old copy, so the caller should ask again.
+    /// `failed` tells "unreachable" from "genuinely empty"; `stale` means the store's old copy, so ask again.
     public struct Read<Record: Sendable>: Sendable {
         public let records: [Record]
         public let failed: Bool
         public let stale: Bool
     }
 
-    /// Same value means the records behind it are the same, so re-unifying a
-    /// 3000-title library would be pure waste.
+    /// Same value means the same records, so there is nothing to re-unify.
     public struct Version: Equatable, Sendable {
         let store: ObjectIdentifier?
         let instance: InstanceID?
@@ -46,8 +33,7 @@ nonisolated public struct LibraryIndex: Sendable {
         return Version(store: ObjectIdentifier(gateway.store), instance: instance, tick: tick)
     }
 
-    /// Mark a source's library changed, so the next read goes to the arr — and
-    /// falls back to the stored records if that fails, instead of an empty library.
+    /// On failure the next read falls back to the stored records instead of an empty library.
     public func invalidate(_ source: QueueItem.Source, config: ServiceConfig) async {
         guard config.isConfigured else { return }
         let (gateway, instance) = await Self.scope(source, config)
@@ -56,7 +42,6 @@ nonisolated public struct LibraryIndex: Sendable {
 
     // MARK: - Reads
 
-    /// `revalidate: false` takes whatever the store holds, however old, and says so in `stale`.
     public func moviesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<ArrMovie> {
         let read = await Self.read(.radarr, config) { try await RadarrClient(config: config).fetchAllMoviesFetched(revalidate: revalidate) }
         if !read.failed { LibraryStats.shared.setMovieCount(read.records.count) }
@@ -93,8 +78,7 @@ nonisolated public struct LibraryIndex: Sendable {
         await whisparrMoviesRead(config: config, revalidate: revalidate).records
     }
 
-    /// A throw leaves nothing to serve (the store already fell back to its stored
-    /// row when it had one, and says so in `degraded`).
+    /// The store already fell back to its stored row when it had one, and says so in `degraded`.
     private static func read<Record: Sendable>(_ source: QueueItem.Source, _ config: ServiceConfig,
                                                _ fetch: () async throws -> Fetched<[Record]>) async -> Read<Record> {
         guard config.isConfigured else { return Read(records: [], failed: false, stale: false) }

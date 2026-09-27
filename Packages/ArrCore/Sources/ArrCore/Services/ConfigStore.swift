@@ -49,77 +49,34 @@ public final class ConfigStore: ObservableObject {
     @Published public var transmission: ServiceConfig = .empty
     @Published public var rtorrent: ServiceConfig = .empty
     @Published public var deluge: ServiceConfig = .empty
-    /// How often the queue is refetched while the panel is open.
-    ///
-    /// Hard-locked, and deliberately slow. It used to be a Settings picker
-    /// defaulting to 5 s, which on a queue of a hundred-plus rows meant twelve
-    /// full `/queue` fetches a minute — plus one round-trip to every download
-    /// client each time — purely so the progress bars would move. The bars now
-    /// interpolate between readings from the rate that was true at the last one
-    /// (`QueueItem.interpolatedProgress(at:)`), so the fetch only has to keep
-    /// the *facts* current, and 30 s does that. Everything that is a real
-    /// change — a row appearing, finishing, failing — arrives by SignalR push
-    /// long before the next tick.
+    /// Hard-locked and slow on purpose: progress bars interpolate between readings
+    /// and real changes arrive by SignalR push, so the fetch only keeps facts current.
     public let foregroundInterval: TimeInterval = 30
-    /// Fallback poll while the panel is closed, used ONLY when realtime has
-    /// gone quiet for every source — a healthy hub skips it entirely (see
-    /// `QueueViewModel.realtimeCoversEverySource`). Also hard-locked: it is a
-    /// safety net, not a preference, and the picker invited people to tune a
-    /// number that is almost never reached.
+    /// Fallback poll while the panel is closed, used only when realtime has gone
+    /// quiet for every source.
     public let backgroundInterval: TimeInterval = 30
-    /// How long a realtime connection may stay silent before ArrBarr stops
-    /// trusting it and polls instead.
-    ///
-    /// Silence is meaningful because Servarr's `RefreshMonitoredDownloads` task
-    /// runs on a fixed schedule (1 minute by default) and ends in an
-    /// unconditional queue broadcast — so a healthy hub pushes even when the
-    /// queue is idle, and a hub that has said nothing for minutes is a hub that
-    /// has stopped working. Below that server-side cycle the tolerance only
-    /// creates false alarms, so 5 minutes it is.
-    ///
-    /// Hard-locked — it used to be a Settings picker (1m / 5m / 15m), but the
-    /// row could not be labelled in a way anyone could act on: understanding it
-    /// requires knowing that Servarr pushes on its own timer and that ArrBarr
-    /// skips polling while it does. Old stored values are ignored.
+    /// Silence before realtime is distrusted. Servarr's `RefreshMonitoredDownloads`
+    /// broadcasts the queue every minute by default, so a healthy hub is never quiet this long.
     public let realtimeSilenceTimeout: TimeInterval = 300
-    /// Banner when an arr reports a new *error*-level health problem.
-    ///
-    /// Off by default. Every other notification in this app follows something
-    /// the user asked for — they added the download that just finished. A health
-    /// error is the app volunteering, and a stream nobody opted into is the
-    /// stream people mute wholesale, taking the useful ones with it.
+    /// Off by default: unlike every other notification, the user never asked for this one.
     @Published public var notifyHealth: Bool = false
     @Published public var notifyRadarr: Bool = true
     @Published public var notifySonarr: Bool = true
     @Published public var notifyLidarr: Bool = true
-    /// Sound played for queue-event notifications. `""` = system default,
-    /// `ConfigStore.silentSoundName` = no sound, otherwise the bare name of a
-    /// sound in `/System/Library/Sounds` (e.g. `"Glass"`). See
-    /// `NotificationCoalescer` for how it maps to a `UNNotificationSound`.
+    /// `""` = system default, `ConfigStore.silentSoundName` = no sound, otherwise
+    /// the bare name of a sound in `/System/Library/Sounds`.
     @Published public var notificationSoundName: String = ""
     @Published public var blurWhisparrPosters: Bool = true
-    /// Draw the media server's watched mark on covers. On by default; off for
-    /// anyone who reads a played corner as clutter rather than as information.
     @Published public var showWatchedIndicator: Bool = true
     /// App Store builds gate enabling Whisparr behind an 18+ confirmation.
-    /// Once the user confirms, this stays `true` and they aren't asked again.
     @Published public var whisparrAgeConfirmed: Bool = false
-    /// Multiplier applied to every `.scaledFont(size:)` site in the UI.
-    /// `1.0` is the native sizing the views were designed against;
-    /// `1.10` / `1.20` give bigger-text accessibility presets without
-    /// touching every font definition. Plumbed through environment so
-    /// any view can opt in just by switching `.font(.system(size:))`
-    /// → `.scaledFont(size:)`.
+    /// Multiplier applied to every `.scaledFont(size:)` site; `1.0` is the native sizing.
     @Published public var fontScale: Double = 1.0
     @Published public var aiKnowsAboutWhisparr: Bool = false
     @Published public var launchAtLogin: Bool = false
-    /// macOS only: when true the app runs as a regular, Dock-icon app showing a
-    /// real window (titlebar + traffic lights), and the menu-bar icon is hidden.
-    /// When false (default) it's a menu-bar-only accessory. Ignored on iOS.
+    /// macOS only: run as a regular Dock app with a real window and no menu-bar icon.
     @Published public var detachedWindow: Bool = false
-    /// macOS only: a clicked Spotlight result opens the title's detail inside
-    /// ArrBarr (default) instead of the arr's web UI in the browser. iOS always
-    /// opens in-app — it has a window to host the detail either way.
+    /// macOS only: a clicked Spotlight result opens the detail in-app instead of the arr's web UI.
     @Published public var spotlightOpensInApp: Bool = true
     @Published public var iCloudSyncEnabled: Bool = true
     @Published public var appLanguage: String = "system"
@@ -128,64 +85,37 @@ public final class ConfigStore: ObservableObject {
     @Published public var arrOrder: [String] = ConfigStore.defaultArrOrder
     @Published public var showTonight: Bool = true
     @Published public var showNeedsYou: Bool = true
-    /// "Show warnings": when on, warning/notice-level arr health checks (broken
-    /// indexer, update available, …) join the always-shown errors in the
-    /// "Needs you" list; when off, only errors surface. (Legacy name —
-    /// originally an indexer-only toggle; the persisted key is unchanged so
-    /// existing preferences carry over.)
+    /// Warning-level health checks join the always-shown errors in "Needs you".
+    /// Legacy name from an indexer-only toggle; the persisted key is kept.
     @Published public var showWarnings: Bool = true
-    /// By-title queue grouping: off / collapsed (default) / expanded — see
-    /// `QueueTitleGroupingMode`. Collapsed vs expanded only sets the default
-    /// disclosure state of the groups.
-    // `queueTitleGrouping` and `collapsedArrs` moved to `QueueUIState` — an
-    // `@Observable` model, so collapsing a queue section no longer invalidates
-    // every view that observes this store.
     @Published public var tonightHours: Int = 168
-    /// How many "This week" rows stay visible without expanding.
     /// 0 = all (no Show more/less at all).
     @Published public var tonightVisibleCount: Int = 3
-    /// Last `WelcomeContent.currentVersion` the user dismissed. `nil` means
-    /// they've never seen the welcome screen — first launch shows the
-    /// firstRun variant.
+    /// `nil` means the welcome screen was never seen; first launch shows the firstRun variant.
     @Published public var welcomeSeenVersion: String? = nil
     @Published public var aiEnabled: Bool = false
     @Published public var chatProvider: ChatProvider = .foundationModels
     @Published public var openai: OpenAIConfig = .empty
-    /// Empty string disables TMDB-backed chat tools (`tmdb_search_person`,
-    /// `tmdb_person_credits`, `tmdb_discover_*`). When non-empty, the chat
-    /// tool catalog appends those tools so the LLM can search by actor /
-    /// genre / decade.
+    /// Empty disables the TMDB-backed chat tools.
     @Published public var tmdbApiKey: String = ""
 
-    /// Prowlarr, purely as a name service: the *arrs report an indexer as
-    /// "NZBgeek (Prowlarr)" or whatever the sync template says, and Prowlarr is
-    /// the only place that knows what the user actually called it. Optional —
-    /// without it the list falls back to the arr's own spelling.
+    /// Used only as a name service: the arrs report indexers under the sync
+    /// template's name, and only Prowlarr knows what the user called them.
     @Published public var prowlarr: ServiceConfig = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
 
-    /// The one media server (Plex / Jellyfin / Emby) ArrBarr reads artwork and
-    /// watch state from. Disabled by default — the whole feature is opt-in.
+    /// The one media server (Plex / Jellyfin / Emby) for artwork and watch state.
     @Published public var mediaServer: MediaServerConfig = .empty
 
-    // MARK: - MCP server (mock)
-    //
-    // MCP-server config (enable, bind address, bearer auth, per-tool opt-out).
-    // The Settings "MCP" pane reads/writes these; on macOS the AppDelegate's
-    // MCPServerController restarts the real server whenever they change.
+    // MARK: - MCP server
+    // On macOS the AppDelegate restarts `MCPServerController` whenever these change.
     @Published public var mcpEnabled: Bool = false
-    /// Bind target as a single `host:port` string. Defaults to localhost only;
-    /// the user must opt into `0.0.0.0` to expose on the network.
+    /// Defaults to localhost only; `0.0.0.0` is an explicit opt-in.
     @Published public var mcpHostPort: String = "127.0.0.1:8080"
-    /// Secure by default: the server requires a bearer token unless the user
-    /// explicitly opts out (and the server refuses non-loopback binds without it).
+    /// The server also refuses non-loopback binds without auth.
     @Published public var mcpRequireAuth: Bool = true
-    /// Bearer token for the MCP server. Backed by the Keychain (the secret never
-    /// lives in UserDefaults); this property mirrors it for the Settings UI.
+    /// Mirrors the Keychain; the token never lives in UserDefaults.
     @Published public var mcpAuthToken: String = MCPTokenStore.read() ?? ""
-    // Live server status moved to `MCPServerStatusModel` — see that file for
-    // why a lifecycle push should not invalidate every observer of this store.
-    /// Tool names the user has switched OFF. Empty = every catalog tool is
-    /// exposed (the sensible default), so we only have to store the opt-outs.
+    /// Tool names the user switched off; empty = every catalog tool is exposed.
     @Published public var mcpDisabledTools: Set<String> = []
 
     public static let needsYouOrderKey = "needsyou"
@@ -209,16 +139,8 @@ public final class ConfigStore: ObservableObject {
         return Locale(identifier: appLanguage)
     }
 
-    /// Apply the persisted in-app language to the *process* so that model- and
-    /// service-layer `String(localized:)` / `NSLocalizedString` (download
-    /// statuses, history labels, notifications) resolve in the chosen language —
-    /// not just SwiftUI `Text`, which follows `environment(\.locale)`. Without
-    /// this, those eager lookups fall back to the system language whenever the
-    /// in-app language differs from it (the override is persisted in the demo /
-    /// group suite, never in `.standard`, which is what Foundation consults).
-    ///
-    /// Call as early as possible at launch, before the first localized lookup.
-    /// Changing the language still needs a relaunch (the UI already says so).
+    /// Apply the in-app language to the process so model-layer `String(localized:)`
+    /// follows it too; Foundation only reads `.standard`, never the group suite. Call before the first lookup.
     nonisolated public static func applyAppLanguageToProcess() {
         let lang = resolveDefaults().string(forKey: appLanguageKey) ?? "system"
         if lang == "system" {
@@ -228,16 +150,10 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
-    /// AI is usable only when enabled AND the selected provider has what it
-    /// needs. Foundation Models is keyless (its real device/OS availability is
-    /// checked at runtime by the provider); the OpenAI path needs a key — an
-    /// enabled-but-keyless OpenAI config is treated as "AI off" (chat hidden,
-    /// Settings shows the error).
+    /// Foundation Models is keyless; an enabled-but-keyless OpenAI config counts as AI off.
     public var aiConfigured: Bool {
         guard aiEnabled else { return false }
-        // Demo mode runs the chat on DemoChatProvider (see ChatViewModelFactory),
-        // which needs neither an API key nor on-device Apple Intelligence — so the
-        // chat is available regardless of provider/OS as long as AI is enabled.
+        // Demo chat runs on DemoChatProvider, which needs no key and no Apple Intelligence.
         if DemoMode.isActive { return true }
         switch chatProvider {
         case .foundationModels: return FoundationModelsAvailability.isSupported
@@ -245,9 +161,7 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
-    /// Font scale actually applied to the UI. iOS has no user-facing text-size
-    /// picker (the shared sizes read a touch small on phone), so it uses a
-    /// fixed modest bump; macOS uses the user's preset as-is.
+    /// iOS has no text-size picker and the shared sizes read small on phone, so a fixed bump.
     public var effectiveFontScale: Double {
         #if os(iOS)
         return 1.1
@@ -260,23 +174,12 @@ public final class ConfigStore: ObservableObject {
     var defaultsForGateway: UserDefaults { defaults }
     /// The MediaKit assembly for this profile; created on first use, rebuilt when demo mode toggles.
     @MainActor public internal(set) lazy var gateway = ServiceGateway(configStore: self)
-    /// Follows the backing store — see `useStore`. A `let` here is what let
-    /// demo mode write into the real profile's secrets.
+    /// Follows the backing store (`useStore`) so demo mode never writes the real profile's secrets.
     private var secrets: SecretStore
     private var cancellables: Set<AnyCancellable> = []
 
-    /// Backing store for `ConfigStore.shared`: the demo suite while demo is
-    /// active, otherwise the App Group suite (falling back to `.standard` if
-    /// the entitlement isn't present — e.g. in unit tests).
-    ///
-    /// Performs the one-shot `.standard` → group migration here so it is
-    /// guaranteed to run before the first config read, with no fragile
-    /// app-launch call site to forget. Gated to the host app process:
-    /// `UserDefaults.standard` is per-bundle, so a widget extension's
-    /// `.standard` is a *different, empty* container — letting the extension
-    /// migrate would set the done-flag with zero keys copied and strand an
-    /// existing user's settings. Extensions read the group suite directly via
-    /// `WidgetDataStore` and never reach this path.
+    /// Demo suite while demo is active, otherwise the App Group suite (`.standard` in tests).
+    /// Only the host app migrates: an extension's `.standard` is a different, empty container.
     nonisolated public static func resolveDefaults() -> UserDefaults {
         if DemoMode.isActive, let demo = DemoMode.demoDefaults { return demo }
         guard let group = WidgetDataStore.groupDefaults() else { return .standard }
@@ -284,16 +187,11 @@ public final class ConfigStore: ObservableObject {
         return group
     }
 
-    /// True when running inside an app extension (e.g. the widget). App
-    /// extension bundles are wrapped in a `.appex` directory.
     nonisolated static var isAppExtension: Bool {
         Bundle.main.bundleURL.pathExtension == "appex"
     }
 
-    /// One-shot copy of every `ArrBarr.*` key from `source` into the App Group
-    /// `group` suite. Idempotent (guarded by `groupMigrationDoneKey` in `group`),
-    /// prefix-scoped (only `ArrBarr.*`), and demo-suite-agnostic (it only ever
-    /// touches the two suites passed in — never the demo suite).
+    /// Idempotent, `ArrBarr.*`-scoped copy into the group suite; never touches the demo suite.
     public nonisolated static func migrateToGroupSuite(from source: UserDefaults, to group: UserDefaults) {
         guard !group.bool(forKey: groupMigrationDoneKey) else { return }
         for (key, value) in source.dictionaryRepresentation() where key.hasPrefix("ArrBarr.") {
@@ -337,13 +235,9 @@ public final class ConfigStore: ObservableObject {
     private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
     private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
     private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
-    // nonisolated: read from the nonisolated migration helpers below (and the
-    // widget extension under Swift 6 strict concurrency), so it must not inherit
-    // the class's @MainActor isolation.
+    // nonisolated: read by the migration helpers and the widget extension.
     nonisolated private static let groupMigrationDoneKey = "ArrBarr.groupMigrationDone"
     nonisolated private static let secretsMigratedKey = "ArrBarr.secretsMigratedToKeychain"
-    /// Exposed for testing only — lets tests assert on the done-flag key name
-    /// without making it fully public.
     // periphery:ignore
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
     // periphery:ignore
@@ -356,59 +250,31 @@ public final class ConfigStore: ObservableObject {
         self.defaults = defaults
         let store = secrets ?? Self.makeDefaultSecretStore(defaults: defaults)
         self.secrets = store
-        // Branch on the store we actually got, not on the capability flags: an
-        // injected store (tests, previews) must never be mistaken for the
-        // Keychain, and the plaintext sweep below would alias onto itself if the
-        // "Keychain" were really another UserDefaults store.
+        // Branch on the store we got, not capability flags: an injected store must never
+        // be mistaken for the Keychain, or the plaintext sweep would alias onto itself.
         if store is KeychainSecretStore {
-            // Signed with a real team identity: the Keychain is reachable and
-            // prompt-free, so no secret may stay in plaintext. Two legacy
-            // locations, drained in order — the pre-SecretStore config blobs,
-            // then the UserDefaults secret store that unentitled builds use.
             Self.migrateSecretsToKeychain(defaults: defaults, secrets: store)
             Self.migratePlaintextSecretsIntoKeychain(defaults: defaults, keychain: store)
         } else {
-            // Ad-hoc / self-signed build: the data-protection Keychain rejects us
-            // outright, so secrets live in UserDefaults. If a previous build
-            // pushed them into the Keychain (and blanked them here), pull them
-            // back out once.
+        // Ad-hoc builds can't reach the Keychain; pull back secrets an earlier build moved there.
             Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
         }
         applyValues(from: defaults)
         setupSinks()
     }
 
-    /// Production secret backend: the data-protection Keychain whenever this
-    /// binary's signature actually provisions the shared access group.
-    /// `keychainSharingAvailable` decides that with a silent probe that cannot
-    /// prompt (see `AppCapabilities`). The build flavor is deliberately not part
-    /// of the test — the signature is the only thing that governs whether the
-    /// Keychain answers at all.
-    ///
-    /// Ad-hoc / self-signed builds — every OSS config today — fail the probe and
-    /// fall back to UserDefaults: they can't reach the data-protection Keychain
-    /// at all, and the legacy file Keychain is off-limits because its ACL is
-    /// pinned to a signature that changes on every rebuild (login-password
-    /// prompt each time).
+    /// The data-protection Keychain when the signature provisions the access group
+    /// (silent probe); ad-hoc builds fall back to UserDefaults, since the file Keychain would prompt on every rebuild.
     nonisolated static func makeDefaultSecretStore(defaults: UserDefaults) -> SecretStore {
-        // Demo mode is an isolated profile, and that has to include secrets.
-        // The Keychain is process-wide — it has no notion of which UserDefaults
-        // suite is in play — so demo gets a store backed by the demo suite
-        // instead. Without this, editing any service while demo was on wrote
-        // into the REAL profile's secrets, and a field that happened to be
-        // empty deleted one. That is exactly how the Plex token vanished.
+        // The Keychain is process-wide, so demo needs its own suite-backed store
+        // or demo edits would overwrite (and blank) the real profile's secrets.
         if DemoMode.isActive { return UserDefaultsSecretStore(defaults: defaults) }
         return AppCapabilities.keychainSharingAvailable
             ? KeychainSecretStore()
             : UserDefaultsSecretStore(defaults: defaults)
     }
 
-    /// One-time recovery for builds that fell back to UserDefaults: if an earlier
-    /// build migrated secrets INTO the Keychain (and blanked them here), read
-    /// them back out into `secrets` so the app still works, then clear the
-    /// migration flag so it never runs again. Cannot prompt — `KeychainSecretStore`
-    /// is data-protection-only, so an unentitled read just fails silently and
-    /// leaves the flag set for the next launch to retry.
+    /// Cannot prompt: an unentitled read just fails and leaves the flag for the next launch.
     nonisolated static func recoverSecretsFromKeychainIfNeeded(defaults: UserDefaults, secrets: SecretStore) {
         guard defaults.bool(forKey: secretsMigratedKey) else { return }
         let keychain = KeychainSecretStore()
@@ -430,11 +296,7 @@ public final class ConfigStore: ObservableObject {
         if recoveredAny { defaults.set(false, forKey: secretsMigratedKey) }
     }
 
-    /// Load every published value from `defaults`. Called once at init (before
-    /// sinks exist, so no spurious writes) and again by `useStore` on a live
-    /// swap (sinks are torn down first there, so still no spurious writes).
-    /// (Exception: on iOS it normalizes the `AppleLanguages` key, a harmless
-    /// write to the target store.)
+    /// Called with sinks torn down, so assignments here are never persisted back.
     private func applyValues(from defaults: UserDefaults) {
         self.radarr = loadService(.radarr)
         self.sonarr = loadService(.sonarr)
@@ -454,11 +316,8 @@ public final class ConfigStore: ObservableObject {
         self.blurWhisparrPosters = defaults.object(forKey: Self.blurWhisparrPostersKey) != nil ? defaults.bool(forKey: Self.blurWhisparrPostersKey) : true
         self.showWatchedIndicator = defaults.object(forKey: Self.showWatchedIndicatorKey) != nil ? defaults.bool(forKey: Self.showWatchedIndicatorKey) : true
         self.whisparrAgeConfirmed = defaults.bool(forKey: Self.whisparrAgeConfirmedKey)
-        // `defaults.double(forKey:)` returns 0.0 when the key isn't set,
-        // which we treat as "use the default 1.0". Validating against
-        // the picker's options would silently reset old saved values when
-        // the option list changes — we accept any positive double so
-        // upgrades don't kick the user back to Default.
+        // Accept any positive value rather than validating against the picker,
+        // so changing the option list never resets saved values.
         let storedScale = defaults.double(forKey: Self.fontScaleKey)
         self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
@@ -471,8 +330,7 @@ public final class ConfigStore: ObservableObject {
         self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
         self.appearance = defaults.string(forKey: Self.appearanceKey) ?? "system"
         #if os(iOS)
-        // iOS has no language picker — always follow the system language, and
-        // clear any per-app override an older build may have left behind.
+        // iOS has no language picker; clear any per-app override an older build left behind.
         self.appLanguage = "system"
         defaults.removeObject(forKey: "AppleLanguages")
         #endif
@@ -481,27 +339,17 @@ public final class ConfigStore: ObservableObject {
         self.showNeedsYou = defaults.object(forKey: Self.showNeedsYouKey) != nil ? defaults.bool(forKey: Self.showNeedsYouKey) : true
         self.showWarnings = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
         #if os(iOS)
-        // iOS settings are intentionally minimal: warnings are off (errors
-        // only) and the theme always follows the system (no pickers for
-        // either). Polling cadence is no longer among them — it is hard-locked
-        // to `foregroundInterval` on every platform now.
         self.showWarnings = false
         self.appearance = "system"
         #endif
-        // Hard-coded to 7 days (168h). Old stored values from when the
-        // picker was UI-exposed are ignored — users get the new
-        // default regardless.
         self.tonightHours = 168
         self.tonightVisibleCount = defaults.object(forKey: Self.tonightVisibleCountKey) != nil
             ? defaults.integer(forKey: Self.tonightVisibleCountKey) : 3
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
         self.aiEnabled = defaults.object(forKey: Self.aiEnabledKey) != nil
             ? defaults.bool(forKey: Self.aiEnabledKey) : false
-        // Default to Apple Intelligence, but coerce to OpenAI on devices that
-        // don't support Foundation Models — otherwise the stored value stays
-        // `.foundationModels` while the Settings picker (which hides the
-        // unsupported option) visually highlights OpenAI, so the UI lies AND
-        // the chat resolves to an Unavailable provider.
+        // Coerce to OpenAI where Foundation Models is unsupported: the picker hides that
+        // option, so a stored `.foundationModels` would show OpenAI but resolve to Unavailable.
         let storedProvider = ChatProvider(rawValue: defaults.string(forKey: Self.chatProviderKey) ?? "") ?? .foundationModels
         self.chatProvider = (storedProvider == .foundationModels && !FoundationModelsAvailability.isSupported)
             ? .openai
@@ -526,20 +374,14 @@ public final class ConfigStore: ObservableObject {
             self.prowlarr = cfg
         }
         self.prowlarr.apiKey = secrets.read(.prowlarrKey) ?? self.prowlarr.apiKey
-        // Prowlarr had no Enabled switch before it got its own Settings page,
-        // so a URL typed into the old field pair persisted as `enabled: false`
-        // — which `isConfigured` rejects, leaving the credentials inert.
-        // Anything already pointed at a server counts as on.
+        // Prowlarr configs saved before it had an Enabled switch persisted as `enabled: false`.
         if !self.prowlarr.enabled, !self.prowlarr.baseURL.isEmpty { self.prowlarr.enabled = true }
         self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
         self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
-        // Default-true migration: an absent key means the user never touched
-        // the toggle (the sink only writes on change), so they get the new
-        // secure default. An explicit stored false is respected.
+        // An absent key means the toggle was never touched (sinks write only on change).
         self.mcpRequireAuth = (defaults.object(forKey: Self.mcpRequireAuthKey) as? Bool) ?? true
         self.mcpAuthToken = MCPTokenStore.read() ?? ""
         self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
-        // Drop legacy username/password keys (replaced by the Keychain token).
         defaults.removeObject(forKey: "ArrBarr.mcpAuthUsername")
         defaults.removeObject(forKey: "ArrBarr.mcpAuthPassword")
     }
@@ -595,9 +437,7 @@ public final class ConfigStore: ObservableObject {
             guard let self else { return }
             self.defaults.set(val, forKey: Self.iCloudSyncEnabledKey)
             guard AppCapabilities.isAppStore else { return }
-            // Preferences (KVS): start/stop the live coordinator.
             KVSyncCoordinator.shared?.setEnabled(val)
-            // Secrets (iCloud Keychain): rewrite items to the new sync state.
             self.secrets.reapplySyncAttribute(for: SecretKey.syncable)
         }.store(in: &cancellables)
         $arrOrder.dropFirst().sink { [weak self] val in
@@ -631,12 +471,8 @@ public final class ConfigStore: ObservableObject {
         $appLanguage.dropFirst().sink { [weak self] val in
             guard let self else { return }
             self.defaults.set(val, forKey: Self.appLanguageKey)
-            // Write AppleLanguages to `.standard` (NOT the suite): Foundation only
-            // consults `.standard` for process language, and CFBundle snapshots it
-            // at process start — so this lands before the "restart required" prompt's
-            // relaunch, making model-layer String(localized:) honor the new language
-            // after a single restart. `applyAppLanguageToProcess()` keeps it in sync
-            // at launch for existing installs.
+            // `.standard`, not the suite: Foundation reads process language only from there,
+            // snapshotted at launch, so it takes effect after one restart.
             if val == "system" {
                 UserDefaults.standard.removeObject(forKey: "AppleLanguages")
             } else {
@@ -697,57 +533,35 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
     }
 
-    /// Re-point the backing store to the demo suite (`on == true`) or the real
-    /// profile, in place, reloading all values. Used by the demo toggle on both
-    /// platforms so demo edits never reach `.standard`.
     public func useDemoStore(_ on: Bool) {
         useStore(on ? (DemoMode.demoDefaults ?? .standard) : (WidgetDataStore.groupDefaults() ?? .standard))
-        // Mirror demo state into the group suite so the widget extension (a
-        // separate process that can't see the app's `.standard`) renders demo
-        // data too, and nudge WidgetKit to pick it up immediately.
+        // The widget extension can't see the app's `.standard`; mirror demo state into the group suite.
         WidgetDataStore.setDemoActive(on)
         #if canImport(WidgetKit)
         WidgetCenter.shared.reloadAllTimelines()
         #endif
     }
 
-    /// Swap to an explicit backing store and reload. Internal seam for tests.
-    /// Tears down sinks BEFORE reloading so the reload assignments don't fire
-    /// persistence writes or side effects (notably the `launchAtLogin` sink,
-    /// which would otherwise (de)register the real login item from the new
-    /// store's value). `setupSinks()` re-subscribes with `dropFirst()`, so the
-    /// freshly-loaded values are not re-persisted.
+    /// Test seam. Tears down sinks before reloading so the reload fires no writes or side
+    /// effects (the `launchAtLogin` sink would re-register the real login item).
     func useStore(_ target: UserDefaults) {
         guard target !== defaults else { return }
         cancellables.removeAll()
         defaults = target
-        // The secret store follows the suite. It used to be fixed at init, so
-        // after a swap the app read and wrote the OTHER profile's secrets: in
-        // demo mode every save went to the real profile, and any save whose
-        // token field was empty deleted the real one for good.
         secrets = Self.makeDefaultSecretStore(defaults: target)
         applyValues(from: target)
         setupSinks()
-        // The queue's own state follows the suite too — otherwise the demo
-        // toggle leaves it reading the real profile.
         QueueUIState.shared.use(target)
     }
 
-    /// Reload all published values from the current backing store without
-    /// re-firing persistence writes. Used by `KVSyncCoordinator` after it applies
-    /// inbound iCloud changes into UserDefaults.
     public func reloadFromDefaults() {
         cancellables.removeAll()
         applyValues(from: defaults)
         setupSinks()
     }
 
-    /// Seed demo configs once. The demo instances look configured — a demo URL
-    /// and key — so every gate reads them the way it reads a real profile, and
-    /// the gateway answers them from the bundled fixtures. Whisparr is seeded
-    /// off (opt-in, age gated). The seed-done flag lives in the current backing
-    /// store, so wiping the demo suite re-arms it. Caller guards on demo being
-    /// active (see DemoMode.seedConfigsIfNeeded).
+    /// Demo instances get a demo URL and key so every gate reads them like a real profile.
+    /// The seed-done flag lives in the demo suite, so wiping it re-arms the seed.
     func seedDemoConfigsIfNeeded() {
         guard !defaults.bool(forKey: DemoMode.seedDoneKey) else { return }
         for kind in [ServiceKind.radarr, .sonarr, .lidarr, .whisparr, .qbittorrent, .sabnzbd] where config(for: kind).baseURL.isEmpty {
@@ -755,40 +569,26 @@ public final class ConfigStore: ObservableObject {
                                              apiKey: "demo", username: "demo", password: "demo"))
         }
         if tmdbApiKey.isEmpty { tmdbApiKey = "demo" }
-        // Turn the AI chat on so the demo showcases it out of the box. The chat
-        // runs on DemoChatProvider (no key / no Apple Intelligence needed); the
-        // aiConfigured demo-override makes the tab appear regardless of provider.
         if !aiEnabled { aiEnabled = true }
         defaults.set(true, forKey: DemoMode.seedDoneKey)
     }
 
-    /// Pause/resume go straight to the download client, so they need one that
-    /// is configured and not known to be down. `.unknown` (not yet probed)
-    /// stays allowed; only a confirmed `.down` gates. The away-from-home case —
-    /// arrs public, clients LAN-only — keeps the queue and delete, and hides
-    /// the actions that would just fail.
+    /// Pause/resume go straight to the download client; only a confirmed `.down` gates,
+    /// `.unknown` (not yet probed) stays allowed.
     public func canControlDownload(_ proto: QueueItem.DownloadProtocol) -> Bool {
         guard let kind = selectedDownloadClient(for: proto) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         return true
     }
 
-    /// `true` when the user has supplied a TMDB v3 API key. Drives whether the
-    /// discovery chat tools are advertised to the LLM.
     public var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
 
-    /// Settings' "Test connection" for Prowlarr — throws when the server can't
-    /// be reached or the key is refused.
     public func testProwlarr() async throws {
         _ = try await ProwlarrClient().testConnection()
     }
 
     public func config(for source: QueueItem.Source) -> ServiceConfig { config(for: source.serviceKind) }
 
-    /// True when posters from this source should render blurred (currently
-    /// only Whisparr, gated by `blurWhisparrPosters`). Eight or so views
-    /// previously inlined `source == .whisparr && blurWhisparrPosters`; this
-    /// keeps the policy in one place.
     public func shouldBlurPoster(for source: QueueItem.Source) -> Bool {
         source == .whisparr && blurWhisparrPosters
     }
@@ -823,19 +623,14 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
-    /// Every service config in one map — what the drop flow needs, since it has
-    /// to look at arrs and download clients together (an arr names the client;
-    /// the client's own config carries the credentials to reach it).
+    /// The drop flow needs arrs and download clients together: the arr names the client,
+    /// the client's config carries its credentials.
     public var downloadDropConfigs: [ServiceKind: ServiceConfig] {
         Dictionary(uniqueKeysWithValues: ServiceKind.allCases.map { ($0, config(for: $0)) })
     }
 
-    /// The download client a pause/resume would actually be routed to for a
-    /// given protocol — the first configured one in the SAME priority order
-    /// `QueueAggregator.performUsenet` / `performTorrent` use. `nil` when none
-    /// is configured. Pause/resume go straight to this client (not via the
-    /// arr), so its reachability is what gates those controls — distinct from
-    /// delete, which the arr performs server-side.
+    /// Same priority order as `QueueAggregator.performUsenet` / `performTorrent`; this
+    /// client's reachability gates pause/resume, unlike delete, which the arr performs.
     public func selectedDownloadClient(for proto: QueueItem.DownloadProtocol) -> ServiceKind? {
         switch proto {
         case .usenet:
@@ -873,10 +668,7 @@ public final class ConfigStore: ObservableObject {
         let known = Set(defaultArrOrder)
         var seen = Set<String>()
         var result = (stored ?? []).filter { known.contains($0) && seen.insert($0).inserted }
-        // Migration for users from <0.7.x: prepend "tonight" then "needsyou"
-        // so they sit at the top by default (matching the previous layout
-        // where the Tonight banner was above and Needs you sat first in the
-        // queue tab). Other missing keys get appended in canonical order.
+        // Users from <0.7.x: put "tonight" and "needsyou" on top; other missing keys append.
         if !seen.contains(needsYouOrderKey) {
             result.insert(needsYouOrderKey, at: 0)
             seen.insert(needsYouOrderKey)
@@ -900,10 +692,8 @@ public final class ConfigStore: ObservableObject {
         return cfg
     }
 
-    /// Extension-safe config read. The widget process must NOT construct
-    /// `ConfigStore.shared` (it is @MainActor and spins up Combine sinks,
-    /// keychain migration, and LaunchAtLogin). This decodes a single service's
-    /// config straight from a `UserDefaults` suite.
+    /// Extension-safe: the widget must not construct `ConfigStore.shared` (MainActor,
+    /// Combine sinks, Keychain migration, LaunchAtLogin).
     public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         load(kind, from: defaults)
     }
@@ -924,10 +714,8 @@ public final class ConfigStore: ObservableObject {
         }
     }
 
-    /// Load a service config from `defaults` and merge its secrets back in from
-    /// the secret store.
     private func loadService(_ kind: ServiceKind) -> ServiceConfig {
-        var cfg = Self.load(kind, from: defaults)   // non-secret fields (secrets blank)
+        var cfg = Self.load(kind, from: defaults)
         cfg.apiKey = secrets.read(.apiKey(for: kind)) ?? cfg.apiKey
         cfg.password = secrets.read(.password(for: kind)) ?? cfg.password
         return cfg
@@ -935,15 +723,11 @@ public final class ConfigStore: ObservableObject {
 
     // MARK: - One-shot migration of plaintext secrets into the SecretStore
 
-    /// One-shot: pull secrets out of legacy plaintext config/openai/tmdb values
-    /// in `defaults` into `secrets`, then blank them in `defaults`. Idempotent.
     nonisolated static func migrateSecretsToKeychain(defaults: UserDefaults, secrets: SecretStore) {
         guard !defaults.bool(forKey: secretsMigratedKey) else { return }
         var allVerified = true
 
-        /// Write `value`, read it back, and only then report success. A failed
-        /// read-back (e.g. Keychain write rejected for missing entitlement) marks
-        /// the migration incomplete so the plaintext copy is preserved.
+        /// A failed read-back keeps the plaintext copy and marks the migration incomplete.
         func store(_ value: String, _ key: SecretKey) -> Bool {
             guard !value.isEmpty else { return true }
             secrets.set(value, for: key)
@@ -994,27 +778,8 @@ public final class ConfigStore: ObservableObject {
         if allVerified { defaults.set(true, forKey: secretsMigratedKey) }
     }
 
-    /// Lift every secret still sitting in the plaintext `UserDefaultsSecretStore`
-    /// into the Keychain, now that the Keychain is reachable. This is the upgrade
-    /// path for an install that previously ran an ad-hoc build (or any build
-    /// before the Keychain was enabled outside the App Store) — without it the
-    /// user would open the app to blank API keys.
-    ///
-    /// Deliberately NOT flag-guarded: it is idempotent and free in the steady
-    /// state (every lookup misses on the first `UserDefaults` read, so the
-    /// Keychain is not touched at all), which also makes it self-healing if a
-    /// Keychain write failed on an earlier launch.
-    ///
-    /// The delete ordering is paranoid on purpose: write → read back → and only
-    /// then drop the plaintext copy. A rejected or unverifiable write leaves the
-    /// plaintext value exactly where it was and is retried next launch, so no
-    /// secret can be lost in the gap.
-    ///
-    /// Two suites are swept. `MCPTokenStore` builds its store on `.standard`
-    /// while ConfigStore uses the App Group suite, so the MCP bearer token lives
-    /// in a different plist from everything else. The `.standard` sweep is
-    /// skipped in demo mode — the demo profile must never reach into the real
-    /// one.
+    /// Not flag-guarded: idempotent and free in steady state, so it self-heals a failed write.
+    /// Also sweeps `.standard`, where `MCPTokenStore` keeps its token, except in demo mode.
     nonisolated static func migratePlaintextSecretsIntoKeychain(defaults: UserDefaults,
                                                                keychain: SecretStore) {
         var suites: [UserDefaults] = [defaults]
@@ -1022,9 +787,7 @@ public final class ConfigStore: ObservableObject {
 
         func lift(_ key: SecretKey, from plaintext: UserDefaultsSecretStore) {
             guard let value = plaintext.read(key) else { return }
-            // Keychain already authoritative for this key (the steady state after
-            // the first successful run, or after `migrateSecretsToKeychain` just
-            // moved it): the plaintext copy is a stale duplicate — drop it.
+        // Keychain already authoritative: the plaintext copy is a stale duplicate.
             if let existing = keychain.read(key), !existing.isEmpty {
                 plaintext.delete(key)
                 return

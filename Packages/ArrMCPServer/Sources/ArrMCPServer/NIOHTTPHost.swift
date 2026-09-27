@@ -5,14 +5,8 @@ import MCP
 @preconcurrency import NIOPosix
 @preconcurrency import NIOHTTP1
 
-/// A swift-nio HTTP host that fronts the MCP SDK's `StatefulHTTPServerTransport`.
-///
-/// Adapted from the SDK's own conformance host (`MCPConformance/HTTPApp.swift`):
-/// it binds `host:port`, routes each request by `Mcp-Session-Id` to a per-session
-/// transport, creates a session on `initialize`, and streams SSE responses. The
-/// two notable deviations: `start()` returns once bound (it does not block on the
-/// channel's close future, so the controller can manage lifecycle), and request
-/// handling is not pinned to the main actor.
+/// A swift-nio HTTP host fronting the MCP SDK's `StatefulHTTPServerTransport`, adapted
+/// from the SDK's conformance host. Unlike it, `start()` returns once bound.
 actor NIOHTTPHost {
     struct Configuration: Sendable {
         var host: String
@@ -37,12 +31,10 @@ actor NIOHTTPHost {
     private var sessions: [String: SessionContext] = [:]
     private var cleanupTask: Task<Void, Never>?
 
-    /// How long a connection may stay silent before we hang up. Long enough to
-    /// keep normal keep-alive reuse working; a response still in flight (an SSE
-    /// stream is silent by design) vetoes the close — see `HTTPHandler`.
+    /// A response still in flight (an SSE stream is silent by design) vetoes the close.
     private static let readIdleTimeout = TimeAmount.seconds(120)
-    /// Ceiling on simultaneously open connections. A real MCP client uses one
-    /// or two; this only bites on a client that opens sockets and never talks.
+    /// A real MCP client uses one or two; this only bites on a client that
+    /// opens sockets and never talks.
     private static let maxConcurrentConnections = 64
 
     nonisolated let logger: Logger
@@ -68,30 +60,22 @@ actor NIOHTTPHost {
 
     // MARK: - Lifecycle
 
-    /// Binds and starts accepting connections, then RETURNS (does not block).
+    /// Binds and starts accepting connections, then returns.
     func start() async throws {
-        // Starting twice would orphan the first group, and an orphaned group
-        // never dies — see the shutdown note in `stop()`.
+        // Starting twice would orphan the first group, which never dies (see `stop()`).
         guard group == nil else { throw MCPError.internalError("MCP HTTP host already started") }
         let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
         self.group = group
 
         do {
-            // One limiter per bind, shared by every child channel it accepts.
             let limiter = ConnectionLimiter(limit: Self.maxConcurrentConnections)
             let readIdleTimeout = Self.readIdleTimeout
             let bootstrap = ServerBootstrap(group: group)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
-                    // Idle handler goes in first so it sees raw reads on the
-                    // socket, i.e. before HTTP framing has decided anything.
-                    //
-                    // Installed through `syncOperations` because NIO marks
-                    // `IdleStateHandler` explicitly non-`Sendable`; the async
-                    // `addHandler` would have to hand it to the event loop from
-                    // outside, while this path runs inline on the loop the
-                    // initializer is already on.
+                    // Idle handler first, so it sees raw reads. `syncOperations` because
+                    // `IdleStateHandler` is non-`Sendable` and this runs inline on the loop.
                     channel.eventLoop.makeCompletedFuture {
                         try channel.pipeline.syncOperations
                             .addHandler(IdleStateHandler(readTimeout: readIdleTimeout))
@@ -105,17 +89,13 @@ actor NIOHTTPHost {
             let channel = try await bootstrap.bind(host: configuration.host, port: configuration.port).get()
             self.channel = channel
             cleanupTask = Task { [weak self] in await self?.sessionCleanupLoop() }
-            // Lifecycle, so `.notice` — swift-log `.info` maps to os `.info`,
-            // which is never persisted, and "was the server even listening?"
-            // is a question asked after the fact.
+            // `.notice`: swift-log `.info` maps to os `.info`, which is never persisted.
             logger.notice("MCP HTTP host bound", metadata: [
                 "host": "\(configuration.host)", "port": "\(configuration.port)",
                 "endpoint": "\(configuration.endpoint)"])
         } catch {
-            // The bind fails routinely — EADDRINUSE, because the default 8080
-            // is also qBittorrent's (and Jenkins') WebUI port. The controller
-            // drops this host when we throw, so `stop()` would never run and
-            // the group we just spawned would leak its threads forever.
+            // The bind fails routinely (8080 is also qBittorrent's WebUI port), and the
+            // controller drops this host on throw, so the group would leak its threads.
             await stop()
             throw error
         }
@@ -128,10 +108,8 @@ actor NIOHTTPHost {
         await closeAllSessions()
         try? await channel?.close()
         channel = nil
-        // Shutting the group down explicitly is mandatory, not tidiness:
-        // `MultiThreadedEventLoopGroup.deinit` only asserts — it does NOT reap
-        // the threads — so a group that is merely dropped leaks
-        // `System.coreCount` detached OS threads for the life of the process.
+        // Mandatory: `MultiThreadedEventLoopGroup.deinit` only asserts, so a dropped
+        // group leaks `System.coreCount` OS threads for the life of the process.
         try? await group?.shutdownGracefully()
         group = nil
         if wasBound { logger.notice("MCP HTTP host stopped") }
@@ -153,14 +131,8 @@ actor NIOHTTPHost {
         }
 
         if request.method.uppercased() == "POST", let body = request.body, Self.isInitialize(body: body) {
-            // Validate (bearer auth included) BEFORE spending a session on the
-            // caller: `createSessionAndHandle` builds a tool backend and starts
-            // a `Server` first, and the transport only runs the pipeline inside
-            // its own `handleRequest` — i.e. after all that work. The transport
-            // re-runs the pipeline on the same request; validators are pure
-            // values, so it reaches the identical verdict.
-            // `sessionID` is nil and `isInitializationRequest` true here, which
-            // is exactly the context the transport builds pre-initialize.
+            // Validate (bearer auth included) before `createSessionAndHandle` builds a
+            // backend and a `Server`; the transport's own validation only runs after that.
             let context = HTTPValidationContext(httpMethod: "POST", sessionID: nil,
                                                 isInitializationRequest: true)
             if let rejection = validationPipeline?.validate(request, context: context) {
@@ -219,7 +191,6 @@ actor NIOHTTPHost {
     private func closeSession(_ sessionID: String) async {
         guard let session = sessions.removeValue(forKey: sessionID) else { return }
         await session.transport.disconnect()
-        // Per-connection churn, not lifecycle — `.debug`.
         logger.debug("Closed session", metadata: ["sessionID": "\(sessionID)"])
     }
 
@@ -244,9 +215,8 @@ actor NIOHTTPHost {
 
 // MARK: - Connection cap
 
-/// Counts live child connections across the whole bind. Child channels are
-/// spread over every event loop in the group, so this can't live on either the
-/// actor or a single loop — hence the lock.
+/// Child channels span every event loop in the group, hence a lock rather
+/// than actor or loop confinement.
 private final class ConnectionLimiter: @unchecked Sendable {
     private let lock = NSLock()
     private var count = 0
@@ -254,7 +224,6 @@ private final class ConnectionLimiter: @unchecked Sendable {
 
     init(limit: Int) { self.limit = limit }
 
-    /// Takes a slot, or returns false when the cap is reached (caller hangs up).
     func acquire() -> Bool {
         lock.lock(); defer { lock.unlock() }
         guard count < limit else { return false }
@@ -270,27 +239,20 @@ private final class ConnectionLimiter: @unchecked Sendable {
 
 // MARK: - NIO HTTP handler
 
-/// Thin NIO adapter: converts NIO HTTP types to/from the SDK's framework-agnostic
-/// `HTTPRequest`/`HTTPResponse`, delegating all logic to `NIOHTTPHost`.
 private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
     typealias InboundIn = HTTPServerRequestPart
     typealias OutboundOut = HTTPServerResponsePart
 
     private let app: NIOHTTPHost
     private let limiter: ConnectionLimiter
-    /// Hard cap on accumulated request-body size. MCP JSON-RPC payloads are
-    /// tiny; this bounds the memory + pre-auth JSON parse a single request can
-    /// drive — without it a client could stream a multi-GB body (buffered whole
-    /// before any validation/auth runs) and exhaust memory.
+    /// Bounds memory and the pre-auth JSON parse; the body is buffered whole
+    /// before any validation runs.
     private static let maxBodyBytes = 1 * 1024 * 1024  // 1 MB
     private struct RequestState { var head: HTTPRequestHead; var bodyBuffer: ByteBuffer; var oversized = false }
     private var requestState: RequestState?
-    /// True from the moment a complete request is handed off until its response
-    /// has been written in full. Vetoes the idle close below: an SSE response
-    /// legitimately sends nothing for hours while we hold the stream open.
+    /// Vetoes the idle close: an SSE response legitimately sends nothing for hours.
     private var responseInFlight = false
-    /// Whether this connection holds a slot in `limiter` — false when we were
-    /// over the cap and closed immediately, which keeps the release exactly-once.
+    /// False when over the cap and closed at once, keeping the release exactly-once.
     private var holdsConnectionSlot = false
 
     // All mutable state above is touched only on the channel's event loop
@@ -300,7 +262,6 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
 
     func channelActive(context: ChannelHandlerContext) {
         guard limiter.acquire() else {
-            // At the cap — hang up now rather than let sockets pile up.
             context.close(promise: nil)
             return
         }
@@ -313,10 +274,8 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
         context.fireChannelInactive()
     }
 
-    /// `IdleStateHandler` upstream tells us nothing has been read for a while.
-    /// Reclaim the connection unless we still owe the client a response —
-    /// otherwise a client that connects and never speaks pins a file descriptor
-    /// (and whatever body we've buffered) for as long as the app runs.
+    /// Reclaims a silent connection unless a response is still owed, so a client
+    /// that never speaks can't pin a file descriptor.
     func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
         if let idle = event as? IdleStateHandler.IdleStateEvent, case .read = idle, !responseInFlight {
             context.close(promise: nil)
@@ -332,8 +291,7 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
         case .body(var buffer):
             guard let state = requestState, !state.oversized else { return }
             if state.bodyBuffer.readableBytes + buffer.readableBytes > Self.maxBodyBytes {
-                // Over the cap — stop buffering, free what we held, and reject
-                // on `.end` (writing a response mid-stream here isn't clean).
+                // Reject on `.end`; writing a response mid-stream isn't clean.
                 requestState?.oversized = true
                 requestState?.bodyBuffer.clear()
                 return

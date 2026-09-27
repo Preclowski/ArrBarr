@@ -1,10 +1,7 @@
 import SwiftUI
 import MediaKit
 
-/// Known arr availability/run states ("released", "inCinemas", "continuing",
-/// …) mapped to localized labels; unknown values fall back to the
-/// capitalized raw string. Shared by the Library tooltip and the movie
-/// detail's existing-file banner so both spell the states identically.
+/// Shared by the Library tooltip and the existing-file banner; unknown values fall back to the capitalized raw string.
 enum ArrReleaseStatusLabel {
     static func text(_ raw: String?, locale: Locale) -> String? {
         guard let raw, !raw.isEmpty else { return nil }
@@ -25,15 +22,12 @@ enum ArrReleaseStatusLabel {
     }
 }
 
-/// Banner describing the file an arr already has on disk for this item —
-/// built from the arr's `ArrFile`.
 struct ExistingFileBanner: View {
     let quality: String?
     let size: Int64?
     let customFormatScore: Int?
     let customFormats: [String]
     let fileName: String?
-    /// Extra file facts, mirroring the Library tooltip.
     var releaseGroup: String?
     var languages: String?
 
@@ -48,8 +42,7 @@ struct ExistingFileBanner: View {
         self.languages = languages
     }
 
-    /// The file an arr already has: a movie's `movieFile`, an episode file, or a track file (Lidarr sends
-    /// only an absolute `path`, so the name falls back to its last component).
+    /// Lidarr sends only an absolute `path`, so the name falls back to its last component.
     init(file: ArrFile) {
         let languages = (file.languages ?? []).compactMap(\.name)
         self.init(
@@ -64,10 +57,7 @@ struct ExistingFileBanner: View {
     }
 
     var body: some View {
-        // Key-value grid for Jakość / Rozmiar / Ocena — the same labels,
-        // order and styling as the download section's `UpgradeDiffTable`,
-        // so the on-disk file and the incoming release read as the same
-        // kind of table.
+        // Same labels and order as `UpgradeDiffTable`, so on-disk file and incoming release read alike.
         VStack(alignment: .leading, spacing: 5) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
                 if let q = quality, !q.isEmpty {
@@ -82,8 +72,6 @@ struct ExistingFileBanner: View {
                         value(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
                     }
                 }
-                // Same rows, same order as the Library tooltip: group,
-                // languages, release status — then chips + filename below.
                 if let releaseGroup, !releaseGroup.isEmpty {
                     GridRow {
                         label("Release group")
@@ -99,12 +87,6 @@ struct ExistingFileBanner: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Chips + filename carry no labels — self-describing values,
-            // matching the download spec block (chip strip, then release
-            // name, both full-width under the key-value grid). The score
-            // rides as the strip's trailing chip — the same placement every
-            // tooltip / queue row gives it (it used to be a labelled grid
-            // row here, the one surface that differed).
             if !customFormats.isEmpty || (customFormatScore ?? 0) != 0 {
                 TooltipFlowLayout(spacing: 4) {
                     ForEach(customFormats, id: \.self) { cf in
@@ -116,8 +98,7 @@ struct ExistingFileBanner: View {
                 }
             }
             if let name = fileName, !name.isEmpty {
-                // Never truncated; a lone filename renders primary (only the
-                // old side of a diff goes secondary).
+                // Never truncated.
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(.primary)

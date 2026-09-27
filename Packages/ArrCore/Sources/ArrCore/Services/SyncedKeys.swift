@@ -1,9 +1,7 @@
 import Foundation
 
-/// The explicit opt-in allowlist of UserDefaults keys mirrored across devices
-/// via iCloud KVS. Secrets are NOT here — they sync via iCloud Keychain. Keys
-/// not listed (platform-specific prefs, MCP server, one-shot/migration flags)
-/// stay device-local.
+/// UserDefaults keys mirrored via iCloud KVS; anything unlisted stays device-local.
+/// Secrets sync via iCloud Keychain instead.
 enum SyncedKeys {
     static let all: Set<String> = {
         var keys: Set<String> = [

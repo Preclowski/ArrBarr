@@ -3,9 +3,7 @@ import Foundation
 import FoundationModels
 #endif
 
-/// Whether the on-device model is actually usable on THIS device — not just a
-/// recent-enough OS, but Apple Intelligence supported AND enabled. The Settings
-/// AI provider picker hides the Foundation Models option when this is false.
+/// Apple Intelligence supported AND enabled, not just a recent-enough OS.
 enum FoundationModelsAvailability {
     nonisolated static var isSupported: Bool {
         #if canImport(FoundationModels)
@@ -15,8 +13,6 @@ enum FoundationModelsAvailability {
     }
 }
 
-// FoundationModels is available on macOS 26+ and iOS 26+.
-// On older SDK hosts this file compiles as a stub that reports unavailability.
 #if canImport(FoundationModels)
 import FoundationModels
 import MediaKit
@@ -24,10 +20,7 @@ import MediaKit
 struct FoundationModelsProvider: LLMProvider {
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
-    /// Closure called when a destructive tool needs user confirmation.
-    /// ChatViewModelFactory wires this to `ChatViewModel.awaitConfirm`
-    /// so the FM path uses the same ConfirmActionCard surface as the
-    /// OpenAI path. Return value: args-to-proceed or nil for cancel.
+    /// Uses the same ConfirmActionCard as the OpenAI path; returns args to proceed, or nil to cancel.
     private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     init(
@@ -43,12 +36,8 @@ struct FoundationModelsProvider: LLMProvider {
         return false
     }
 
-    /// One round-trip to the on-device LLM.
-    ///
-    /// The provider executes all tool calls synchronously inside `DynamicMCPTool.call`,
-    /// then drains both calls and results from `DynamicMCPToolBox`. The returned
-    /// `LLMResponse` carries `toolResults` so `ChatViewModel` knows the calls are
-    /// already done and should only render them, not re-execute.
+    /// Tool calls already ran inside `DynamicMCPTool.call`; `toolResults` tells `ChatViewModel` to render,
+    /// not re-execute.
     func respond(
         prompt: String,
         tools: [LLMTool],
@@ -58,18 +47,11 @@ struct FoundationModelsProvider: LLMProvider {
         let instructions = Self.buildInstructions(tools: tools)
         let session = LanguageModelSession(tools: toolImpls, instructions: instructions)
 
-        // Replay the last few user turns so the model has context.
-        // We skip assistant messages because replaying them via `respond(to:)`
-        // would cause the session to generate spurious replies — we only feed
-        // user content for context.
+        // Only user turns: replaying assistant messages via `respond(to:)` generates spurious replies.
         for msg in history.suffix(6) where msg.role == .user {
             _ = try? await session.respond(to: msg.content)
         }
-        // The replay above re-feeds past user turns purely to seed context. If
-        // any of them nudges the model into a tool call, those calls land in
-        // the shared box too — drain and DISCARD them here so only the real
-        // prompt's calls reach the UI. Otherwise stale tool cards re-render on
-        // every message.
+        // Tool calls triggered by the context replay would re-render as stale cards on every message.
         _ = await DynamicMCPToolBox.shared.drainResults()
 
         let result = try await session.respond(to: prompt)
@@ -84,11 +66,7 @@ struct FoundationModelsProvider: LLMProvider {
     // MARK: - Private
 
     nonisolated private static func buildInstructions(tools: [LLMTool]) -> Instructions {
-        // Foundation Models sees only a single stringified `json` argument on
-        // each DynamicMCPTool, so the framework can't expose the real schema
-        // to the model. We compensate by spelling each tool's JSON schema out
-        // in the system prompt — the model is then expected to produce a JSON
-        // payload matching that shape inside the `json` arg.
+        // Foundation Models sees one stringified `json` argument per tool, so each schema is spelled out here.
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         let toolBlock = tools.map { t -> String in
@@ -177,9 +155,6 @@ struct FoundationModelsProvider: LLMProvider {
 
 // MARK: - DynamicMCPToolBox
 
-/// Actor that collects (tool call, result) pairs recorded by `DynamicMCPTool.call(arguments:)`
-/// during a single LLM session. ChatViewModel drains it after `respond` returns
-/// and renders them as `.tool` messages without re-executing.
 actor DynamicMCPToolBox {
     nonisolated static let shared = DynamicMCPToolBox()
     private var pendingCalls: [ToolCall] = []
@@ -204,13 +179,7 @@ actor DynamicMCPToolBox {
 
 // MARK: - DynamicMCPTool
 
-/// A Foundation Models `Tool` that wraps any `LLMTool` spec at runtime.
-///
-/// Because Foundation Models requires `@Generable` argument structs to be
-/// statically known at compile time, all dynamic tools share one argument
-/// struct: a single `json` string field. The tool performs the real MCP call
-/// synchronously inside `call(arguments:)` and records both call and result
-/// in `DynamicMCPToolBox`.
+/// `@Generable` arguments must be known at compile time, so every dynamic tool shares one `json` string field.
 struct DynamicMCPTool: Tool {
 
     let spec: LLMTool
@@ -222,7 +191,6 @@ struct DynamicMCPTool: Tool {
 
     @Generable
     struct Arguments {
-        /// A JSON-encoded object whose keys match the tool's input schema.
         @Guide(description: "JSON object string with arguments matching the tool's input schema.")
         let json: String
     }
@@ -237,10 +205,7 @@ struct DynamicMCPTool: Tool {
         }
         let toolCall = ToolCall(name: spec.name, arguments: argsValue)
 
-        // Destructive-tool gate, presentation half (mirror of the OpenAI path
-        // in ChatViewModel). The backend refuses to RUN an unconfirmed tool;
-        // this surfaces the ConfirmActionCard first and then hands the answer
-        // down through ToolConfirmationContext, which the backend reads.
+        // Presentation half of the destructive-tool gate; the backend refuses to run an unconfirmed tool.
         let preApproved: JSONValue?
         if MCPToolWhitelist.isDestructive(spec.name) {
             guard let args = await confirmDestructive(toolCall) else {
@@ -254,9 +219,6 @@ struct DynamicMCPTool: Tool {
         }
         let confirmedArgs = preApproved ?? argsValue
 
-        // Same shape as ChatViewModel's: hand back the approval we already
-        // hold, and fall back to asking when the backend gates something we
-        // didn't.
         let confirmAgain = confirmDestructive
         let confirm: ToolConfirmationHandler = { pending in
             if let preApproved { return .approved(preApproved) }
@@ -288,8 +250,7 @@ struct DynamicMCPTool: Tool {
 
 // MARK: - Stub (no FoundationModels SDK)
 
-/// Stub used when compiling on a host or SDK that does not include
-/// FoundationModels (macOS < 26 SDK). Reports unavailable at runtime.
+/// Stub for SDKs without FoundationModels; reports unavailable at runtime.
 public struct FoundationModelsProvider: LLMProvider {
     public init(
         invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Servarr SignalR hub over the injected socket transport. Ported from `RealtimeUpdates.SignalRConnection`.
+/// Servarr SignalR hub over the injected socket transport.
 public actor SignalRSource {
     public enum FrameOutcome: Equatable, Sendable { case events([DataEvent]), close, ignored }
 

@@ -1,12 +1,7 @@
 import SwiftUI
 
-/// Text-field modifiers that apply the right iOS keyboard / autofill /
-/// capitalisation hints per field type. No-op on macOS (the system
-/// keyboard concepts don't apply), but the call site stays clean
-/// instead of sprouting `#if os(iOS)` everywhere.
+/// iOS keyboard / autofill / capitalisation hints per field type; no-op on macOS.
 public extension View {
-    /// URL field — `.URL` keyboard, no autocorrect, no capitalisation,
-    /// AutoFill hint set so the system can fill known endpoints.
     func urlField() -> some View {
         self
             .autocorrectionDisabled(true)
@@ -17,8 +12,6 @@ public extension View {
             #endif
     }
 
-    /// Username field — defaults to plain text, no caps, AutoFill for
-    /// usernames.
     func usernameField() -> some View {
         self
             .autocorrectionDisabled(true)
@@ -28,8 +21,6 @@ public extension View {
             #endif
     }
 
-    /// Password field — wraps a `SecureField`. Sets AutoFill hint so
-    /// iOS Keychain offers stored credentials.
     func passwordField() -> some View {
         self
             #if os(iOS)
@@ -38,9 +29,7 @@ public extension View {
             #endif
     }
 
-    /// API key / token — opaque secret. No autocorrect, no caps,
-    /// AutoFill = .oneTimeCode keeps the system from offering normal
-    /// passwords (different shape than what the user wants to paste).
+    /// `.oneTimeCode` keeps iOS from offering saved passwords for a pasted key.
     func apiKeyField() -> some View {
         self
             .autocorrectionDisabled(true)
@@ -49,8 +38,6 @@ public extension View {
             #endif
     }
 
-    /// Technical identifier (model name, slug, etc.) — no autocorrect,
-    /// no capitalisation, default keyboard.
     func technicalField() -> some View {
         self
             .autocorrectionDisabled(true)

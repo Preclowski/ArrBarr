@@ -1,15 +1,10 @@
 import Foundation
 
-/// Canonical list of chat tools advertised to the LLM. Single source of truth
-/// for tool names, descriptions and input schemas. Both LocalToolBackend (the
-/// in-process implementation) and ChatViewModelFactory (which advertises the
-/// tools to the LLM provider) read from here.
+/// Canonical tool names, descriptions and input schemas, read by both
+/// LocalToolBackend and ChatViewModelFactory.
 nonisolated public enum ChatToolCatalog {
 
-    /// Returns the catalog gated on what's actually configured. Each `include*`
-    /// flag should mirror `ConfigStore.<arr>.isConfigured` (and
-    /// `tmdbEnabled && <arr>.isConfigured` for the TMDB tools) so the LLM
-    /// doesn't see and call into services that would just error out.
+    /// Gated on what's configured so the LLM doesn't call services that would just error.
     public static func tools(
         includeSonarr: Bool = true,
         includeRadarr: Bool = true,
@@ -29,45 +24,31 @@ nonisolated public enum ChatToolCatalog {
         }
         if includeTMDBMovies { arr.append(contentsOf: tmdbMovieTools) }
         if includeTMDBSeries { arr.append(contentsOf: tmdbSeriesTools) }
-        // suggest_titles resolves through Sonarr / Radarr lookups, so it
-        // only makes sense when at least one of those arrs is configured.
+        // suggest_titles resolves through Sonarr / Radarr lookups.
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: suggestTools)
         }
-        // list_download_queue spans every arr; expose it whenever any one of
-        // them is configured.
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: queueTools)
         }
-        // Unified calendar spans every configured arr; expose it whenever
-        // at least one is configured (the tool's optional `service` arg
-        // narrows it).
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: calendarTools)
         }
-        // `health` checks arrs AND download clients; surface whenever any
-        // arr is configured (download clients ride along inside).
         if includeSonarr || includeRadarr || includeLidarr || includeWhisparr {
             arr.append(contentsOf: healthTools)
         }
-        // Single-title detail lookup (overview + optional cast) for movies /
-        // series.
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: titleDetailsTools)
         }
-        // Custom-format tool targets Sonarr / Radarr (both v3 customformat API).
         if includeSonarr || includeRadarr {
             arr.append(contentsOf: customFormatTools)
         }
-        // Media-server tools stand alone: they read Plex / Jellyfin / Emby and
-        // touch no arr, so they are gated only on that connection existing.
         if includeMediaServer {
             arr.append(contentsOf: mediaServerTools)
         }
         return arr
     }
 
-    /// Convert the catalog into `LLMTool` values for provider advertisement.
     public static func llmTools(
         includeSonarr: Bool = true,
         includeRadarr: Bool = true,
@@ -87,21 +68,15 @@ nonisolated public enum ChatToolCatalog {
 
     // MARK: - Tool directory (for the Settings → MCP pane)
 
-    /// One tool as presented in the MCP settings pane: its wire name, a short
-    /// human helper line, and the apps it touches (drives the row of brand
-    /// icons). Separate from the LLM-facing `MCPTool.description` (which is a
-    /// long prompt-engineered blurb) — this `summary` is a one-liner for a
-    /// human skimming the list.
+    /// Settings-pane row; `summary` is a human one-liner, separate from the
+    /// LLM-facing `MCPTool.description`.
     public struct MCPToolInfo: Identifiable {
         public let name: String
-        /// Short helper line (a localization key resolved by the pane).
+    /// Localization key resolved by the pane.
         public let summary: String
-        /// Apps the tool drives — rendered as a row of brand icons.
         public let services: [ServiceKind]
-        /// SF Symbol shown instead of brand icons. Set for tools that drive
-        /// something outside the `ServiceKind` roster — the media server has
-        /// no brand mark in the icon set, and inventing one per server would
-        /// mean three more assets for a row of a settings list.
+        /// SF Symbol for tools outside the `ServiceKind` roster (the media server
+        /// has no brand mark in the icon set).
         public let systemImage: String?
         public var id: String { name }
 
@@ -114,9 +89,7 @@ nonisolated public enum ChatToolCatalog {
         }
     }
 
-    /// Flat directory of every catalog tool, in catalog order. The pane shows
-    /// all of them regardless of what's configured — toggling a tool here is
-    /// about the MCP surface, independent of whether that arr is set up.
+    /// All tools regardless of configuration: toggling here is about the MCP surface.
     public static var toolDirectory: [MCPToolInfo] {
         [
             .init(name: "sonarr_search", summary: "Search TV series to add", services: [.sonarr]),
@@ -155,8 +128,6 @@ nonisolated public enum ChatToolCatalog {
         ]
     }
 
-    /// Flat list of every tool name — used to compute "all enabled" defaults
-    /// and the on/off summary count in the MCP pane.
     public static var allToolNames: [String] { toolDirectory.map(\.name) }
 
     // MARK: - Sonarr
@@ -555,12 +526,8 @@ nonisolated public enum ChatToolCatalog {
 
     // MARK: - Curated suggestions (model-knowledge picks → rich cards)
     //
-    // `suggest_titles` is the right answer for taste-based queries — "in
-    // the style of", "similar to", "in the mood for". The model picks
-    // titles from its own training-data associations (typically better
-    // than TMDB's algorithmic discover for these queries) and the tool
-    // resolves each through the Sonarr/Radarr lookup so the chat shows
-    // real, tappable cards with posters, ratings, and in-library state.
+    // For taste-based queries the model picks from its own associations; the tool
+    // resolves each through the arr lookup into real, tappable cards.
 
     private static let suggestTools: [MCPTool] = [
         MCPTool(

@@ -5,8 +5,6 @@ import MediaKit
 struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
     private let session: URLSession
-    /// Human-readable language the assistant should reply in by default
-    /// (e.g. "Polish"). Sourced from the app's language setting.
     private let replyLanguage: String
     private static let log = Logger(category: "Chat")
 
@@ -18,9 +16,7 @@ struct OpenAIProvider: LLMProvider {
 
     var isAvailable: Bool { config.isConfigured }
 
-    /// Lightweight key/endpoint check: `GET {baseURL}/models` with the Bearer
-    /// key. 200 means the key + base URL are valid; throws otherwise. Used by the
-    /// Settings "Test key" button.
+    /// `GET {baseURL}/models` with the Bearer key.
     func testConnection() async throws {
         let base = config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + "/models") else { throw OpenAIError.empty }
@@ -41,15 +37,12 @@ struct OpenAIProvider: LLMProvider {
             tools: tools,
             history: history,
             replyLanguage: replyLanguage,
-            // Read at request time, not at init: the user can regenerate or
-            // switch the profile off mid-session and the very next turn obeys.
-            // Empty when tools is empty — a tool-less call (taste-profile
-            // generation itself) must not see the previous profile.
+            // Read per request so a regenerated or disabled profile applies on the next turn. Tool-less calls
+            // (taste-profile generation itself) must not see the previous profile.
             tasteProfile: tools.isEmpty ? nil : TasteProfileStore.shared.promptBlock()
         )
         body.stream = true
-        // Hidden reasoning is the quiz's whole wait: a flash model spent 77 s
-        // thinking before the first tool-call byte. Each host has its own
+        // Hidden reasoning is the quiz's whole wait (77 s measured on a flash model). Each host has its own
         // switch; an unknown host gets none rather than a field it may reject.
         let host = URL(string: config.baseURL)?.host?.lowercased() ?? ""
         if host.hasSuffix("deepseek.com") {
@@ -66,9 +59,7 @@ struct OpenAIProvider: LLMProvider {
         req.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("https://github.com/Preclowski/ArrBarr", forHTTPHeaderField: "HTTP-Referer")
         req.setValue("ArrBarr", forHTTPHeaderField: "X-Title")
-        // LLM completions can take a while (slow/free endpoints, reasoning
-        // models, multi-round tool loops). The 60s URLSession default was too
-        // tight and surfaced as "chat timed out"; give it generous headroom.
+        // Reasoning models and multi-round tool loops outrun URLSession's 60 s default.
         req.timeoutInterval = 120
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
@@ -77,9 +68,7 @@ struct OpenAIProvider: LLMProvider {
         let (bytes, response) = try await session.bytes(for: req)
         guard let http = response as? HTTPURLResponse else { throw OpenAIError.empty }
 
-        // One reader for both shapes: SSE `data:` lines feed the accumulator,
-        // anything else is kept as the plain JSON body (error payloads, and
-        // endpoints that ignore `stream`).
+        // SSE `data:` lines feed the accumulator; anything else is the plain JSON body (errors, non-streaming hosts).
         var stream = ChatCompletionStream()
         var plainBody = ""
         var loggedReasoning = false
@@ -134,19 +123,8 @@ struct OpenAIProvider: LLMProvider {
 
     // MARK: - History window
 
-    /// Which slice of the conversation goes to the model.
-    ///
-    /// Not a plain `suffix(n)`: one tool round costs at least two messages, so a
-    /// fixed message count silently evicts the user's actual QUESTION after a
-    /// few rounds — the model then sees nothing but its own tool traffic and
-    /// keeps digging, which is exactly how a "list this artist's albums" turn
-    /// span out into six rounds of unrelated calls. So the current turn (from
-    /// the last user message on) is kept whole and earlier context only fills
-    /// what's left of the budget.
-    ///
-    /// If a single turn is longer than the budget, the user message is still
-    /// pinned and the MIDDLE of the turn is what gets dropped — the question and
-    /// the freshest results are the two things worth keeping.
+    /// Not `suffix(n)`: tool rounds would evict the user's question and the model keeps digging. The
+    /// current turn is kept whole (over budget, its middle is dropped); earlier context fills the rest.
     static func window(_ history: [ChatMessage], budget: Int = 16) -> [ChatMessage] {
         guard history.count > budget else { return history }
         let turnStart = history.lastIndex { $0.role == .user } ?? history.startIndex
@@ -217,12 +195,7 @@ struct OpenAIProvider: LLMProvider {
 
         var msgs: [ChatCompletionsRequest.Message] = [systemMessage]
         let history = Self.window(history)
-        // Track the tool-call IDs emitted by assistant messages WITHIN this
-        // window. Trimming can begin mid tool-sequence, slicing off the
-        // `assistant`+`tool_calls` that a `tool` result answers — and OpenAI
-        // rejects an orphaned tool message ("messages with role 'tool' must be
-        // a response to a preceding message with 'tool_calls'"). Only emit a
-        // tool result whose call survived into this window.
+        // OpenAI rejects a `tool` message whose `tool_calls` fell outside the window, so track the ids emitted here.
         var emittedToolCallIDs = Set<String>()
         for msg in history {
             switch msg.role {
@@ -251,8 +224,6 @@ struct OpenAIProvider: LLMProvider {
                 }
             case .tool:
                 let tcID = msg.toolCall?.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
-                // Drop orphaned tool results (their assistant call fell outside
-                // the window) so the request stays well-formed.
                 guard emittedToolCallIDs.contains(tcID) else { continue }
                 msgs.append(.init(
                     role: "tool",
@@ -262,12 +233,8 @@ struct OpenAIProvider: LLMProvider {
                 ))
             }
         }
-        // An empty prompt means "continue from the tool results already in the
-        // history" — the mid-loop rounds. Those results are ALREADY here as
-        // properly-roled `tool` messages; appending a copy as a `user` turn (the
-        // old behaviour) told the model the human had just pasted a tool log at
-        // it, which reads as a fresh instruction and is what sent it off calling
-        // more tools instead of answering.
+        // Empty prompt = continue from tool results already in history; a `user` copy of them reads as
+        // a fresh instruction and sends the model off calling more tools.
         if !prompt.isEmpty {
             msgs.append(.init(role: "user", content: prompt, tool_calls: nil, tool_call_id: nil))
         }
@@ -290,7 +257,6 @@ enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
     var errorDescription: String? {
         switch self {
         case .http(let status, let body):
-            // Try to surface the OpenAI/OpenRouter-style {"error":{"message":"..."}}.
             if let data = body.data(using: .utf8),
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let err = obj["error"] as? [String: Any],
@@ -369,8 +335,6 @@ struct ChatCompletionsResponse: Decodable, Sendable {
     }
 }
 
-/// Lets whoever runs a turn watch tool-call arguments while the model is still
-/// writing them. Called with the arguments accumulated so far.
 enum ToolCallStreamContext {
     @TaskLocal nonisolated static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
 }
@@ -409,7 +373,6 @@ nonisolated struct ChatCompletionChunk: Decodable, Sendable {
     }
 }
 
-/// Folds streamed chunks back into the message a non-streamed call returns.
 nonisolated struct ChatCompletionStream {
     struct PendingCall {
         var id: String?
@@ -425,7 +388,6 @@ nonisolated struct ChatCompletionStream {
         calls.keys.sorted().compactMap { calls[$0] }.filter { !$0.name.isEmpty }
     }
 
-    /// Returns the calls whose arguments grew with this chunk.
     mutating func apply(_ chunk: ChatCompletionChunk) -> [PendingCall] {
         sawChunk = true
         var touched: [PendingCall] = []

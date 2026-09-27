@@ -1,13 +1,9 @@
 import SwiftUI
 import MediaKit
 
-/// Hashable marker for "push the series DetailView for this queue item"
-/// nav action. Lives next to `EpisodeQuickDetail` since the only place
-/// that pushes one is the episode hero's series-title tap.
 public struct SeriesPushRequest: Hashable {
     public let queueItemId: String
-    /// Carried verbatim so the destination can render DetailView without
-    /// having to refetch the QueueItem from the view model.
+    /// Carried verbatim so DetailView needn't refetch the item.
     public let item: QueueItem
 
     public init(item: QueueItem) {
@@ -23,67 +19,39 @@ public struct SeriesPushRequest: Hashable {
     }
 }
 
-/// A series' (season, episode) slot — the key queue rows are resolved to
-/// episode ids through, since a queue row carries the numbers, not the id.
+/// Queue rows carry season/episode numbers, not the episode id.
 struct EpisodeSlot: Hashable {
     let season: Int
     let episode: Int
 }
 
-/// Direct-entry episode detail used when the user taps a Sonarr queue
-/// row that's for a specific episode. Skips the intermediate Series
-/// (DetailView) level — the user lands straight on the episode they
-/// were downloading. The series view is reachable via the "series name
-/// >" chevron-tap in the EpisodeDetailOverlay hero, which pushes
-/// DetailView through a local `.navigationDestination(item:)`.
-///
-/// Owns the Sonarr fetch (series details + episodes + episode file map)
-/// so EpisodeDetailOverlay below can render the same hero / sticky CTA
-/// it does inside DetailView. Stub data built from the queue row lets
-/// the hero render immediately while the fetch is in flight.
+/// Opens straight on the episode a Sonarr queue row downloads; the hero's
+/// series link pushes DetailView. Renders from a queue-row stub while loading.
 struct EpisodeQuickDetail: View {
     let item: QueueItem
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
-    /// Pops this episode push — the pusher clears the binding that presented
-    /// it, exactly as the sibling `DetailView` destination does.
-    ///
-    /// NOT `@Environment(\.dismiss)`: reading it inside a `navigationDestination`
-    /// body re-invalidates that body on every display cycle, which pinned the
-    /// whole popover — this view, the season screen pushed on top of it and
-    /// every episode row in it — at ~85 body passes a second.
+    /// Not `@Environment(\.dismiss)`: reading it in a `navigationDestination`
+    /// body re-renders it every display cycle (~85 Hz).
     var onBack: () -> Void
 
     @State private var sonarrDetail: ArrSeries?
-    /// Series cast for the episode screen — see `EpisodeDetailOverlay.cast`.
     @State private var cast: [CastMember] = []
-    /// The series' quality-profile name, for the episode hero's chip.
     @State private var profileName: String?
     @State private var fullEpisode: ArrEpisode?
     @State private var episodeFileMap: [Int: ArrFile] = [:]
     @State private var loadError: String?
-    /// Series drill-down. Owned HERE (not at the root NavigationStack)
-    /// so the series push nests as a CHILD of this episode view: the
-    /// back chevron then pops series → episode → queue, instead of
-    /// collapsing straight to the queue. Sibling `navigationDestination`
-    /// bindings at the root don't nest, which is what broke "back".
+    /// Owned here, not at the root stack: sibling root destinations don't nest,
+    /// so back would skip the episode.
     @State private var seriesPush: SeriesPushRequest?
-    /// All of the series' episodes (kept from `load`) so the hero's season link
-    /// can push a fully-populated `SeasonDetailView`.
     @State private var allEpisodes: [ArrEpisode] = []
-    /// Season drill-down — pushed when the user taps the hero's "Season N" link.
-    /// Nests under THIS view (like `seriesPush`) so back returns to the episode.
+    /// Nests under this view like `seriesPush`, so back returns to the episode.
     @State private var seasonPush: SeasonDrill?
-    /// Season art from the media server — what `SeasonDetailView` shows.
     @State private var mediaServerSeasonPoster: URL?
-    /// (season, episode) → episode id, rebuilt with `allEpisodes` in `load`.
-    /// See `seasonQueueByEpisodeId`, which resolves queue rows to episodes on
-    /// every body pass and can't afford a linear scan of a long series.
-    /// Only ids live here, never episode payloads: `monitored` is flipped
-    /// optimistically in `allEpisodes`, and a second copy of the episodes would
-    /// be one more thing to keep in sync (and to render stale).
+    /// Ids only, never episodes: `monitored` is flipped optimistically in
+    /// `allEpisodes`, and a second copy would render stale.
     @State private var episodeIdBySlot: [EpisodeSlot: Int] = [:]
 
     init(
@@ -97,10 +65,7 @@ struct EpisodeQuickDetail: View {
     }
 
     var body: some View {
-        // No full-view spinner: render the overlay immediately from the stub
-        // built off the queue row (hero = series · SxxExx · poster · download
-        // status); `isLoadingDetails` skeletons the episode title / overview
-        // until the Sonarr fetch lands.
+        // No spinner: the queue-row stub renders now; `isLoadingDetails` skeletons the rest.
         EpisodeDetailOverlay(
             episode: displayEpisode,
             seriesTitle: sonarrDetail?.title ?? splitTitleAndYear(item.title).title,
@@ -136,12 +101,10 @@ struct EpisodeQuickDetail: View {
             profileName: profileName,
             mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
             isLoadingDetails: fullEpisode == nil && loadError == nil,
-            // Live off `displayEpisode` (which tracks the `fullEpisode` state),
-            // not a captured value — the stub carries `monitored: nil` so no
-            // bookmark shows until the real record lands.
+            // The stub carries `monitored: nil`, so no bookmark until the real record lands.
             monitored: displayEpisode.monitored,
             onToggleMonitored: { monitored in
-                // Guard against the pre-fetch stub (id 0 isn't a real episode).
+                // id 0 is the pre-fetch stub.
                 guard let epId = fullEpisode?.id, epId != 0 else { return }
                 fullEpisode?.monitored = monitored
                 if let idx = allEpisodes.firstIndex(where: { $0.id == epId }) {
@@ -156,8 +119,6 @@ struct EpisodeQuickDetail: View {
             }
         )
         .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
-        // Series push nests under THIS view (see `seriesPush`), so back
-        // returns to the episode rather than the queue.
         .navigationDestination(item: $seriesPush) { req in
             DetailView(
                 item: req.item,
@@ -165,7 +126,6 @@ struct EpisodeQuickDetail: View {
                 viewModel: viewModel
             )
         }
-        // Season push nests under THIS view too, so back returns to the episode.
         .navigationDestination(item: $seasonPush) { drill in
             SeasonDetailView(
                 drill: drill,
@@ -188,7 +148,7 @@ struct EpisodeQuickDetail: View {
                         try await configStore.sonarrClient.setSeasonMonitored(
                             seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
                     } catch {}
-                    // Refetch either way — the flip cascades every episode flag.
+                    // Refetch: the flip cascades to every episode flag.
                     await load()
                 },
                 onSetEpisodeMonitored: { episodeId, monitored in
@@ -211,9 +171,7 @@ struct EpisodeQuickDetail: View {
             await MediaServerIndex.shared.loadSeasonPosters(for: keys)
             mediaServerSeasonPoster = MediaServerIndex.shared.seasonPosterURL(for: keys, season: season)
         }
-        // When the episode leaves the queue (import done / removed) while the
-        // detail is open, refetch so the overlay swaps the stale download view
-        // for the on-disk file (fresh `fullEpisode.hasFile` + episode-file map).
+        // Import done: refetch so the stale download view gives way to the on-disk file.
         .onChange(of: isInLiveQueue) { _, stillQueued in
             if !stillQueued, item.arrQueueId != 0 {
                 Task { await load() }
@@ -221,26 +179,14 @@ struct EpisodeQuickDetail: View {
         }
     }
 
-    /// Resolved exactly as `DetailView` does — media-server artwork first — so
-    /// the same title can't wear two different crops depending on the entry point.
+    /// Same resolution as `DetailView`, so a title never wears two crops.
     private var seriesPosterURL: URL? {
         arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore,
                      mediaServerKeys: sonarrDetail?.mediaServerKeys ?? []) ?? item.posterURL
     }
 
-    /// Live queue rows pulled from the view model, mirroring `DetailView`. The
-    /// `item` handed in via `navigationDestination` is a static open-time
-    /// snapshot (the binding never re-reads the queue), so reading the pool
-    /// here lets every background refresh advance the progress bar.
-    ///
-    /// ALL active downloads for this episode (same series + season/episode),
-    /// not just the row the view was opened on — a duplicate grab stays
-    /// visible in the overlay. The opened row is moved to the front so the
-    /// hero keeps tracking it. Empty once every row leaves the queue (import
-    /// finished / removed) — we deliberately DON'T fall back to the captured
-    /// snapshot, which is frozen at e.g. "importing"; empty lets
-    /// `EpisodeDetailOverlay` fall through to the on-disk file section
-    /// (which the `onChange` refetch below populates).
+    /// Read live: the pushed `item` is a frozen snapshot. Empty once the rows
+    /// leave the queue, never the snapshot (it would freeze at "importing").
     private var liveQueueItems: [QueueItem] {
         var matches = viewModel.items(for: item.source).filter {
             $0.arrQueueId != 0
@@ -256,29 +202,17 @@ struct EpisodeQuickDetail: View {
         return matches
     }
 
-    /// Whether the opened row is still a live queue row — flips false the moment
-    /// the import completes and the arr drops it, cueing a detail refetch.
     private var isInLiveQueue: Bool {
         viewModel.items(for: item.source)
             .contains { $0.id == item.id || $0.arrQueueId == item.arrQueueId }
     }
 
-    /// Either the fetched-from-Sonarr episode (full data) or a stub
-    /// built straight from queue metadata so the hero has something to
-    /// render while the fetch is in flight.
     private var displayEpisode: ArrEpisode {
         fullEpisode ?? ArrEpisode(placeholderSeason: item.seasonNumber, episode: item.episodeNumber)
     }
 
-    /// episode-id → all active queue items for this series — feeds
-    /// SeasonDetailView's per-episode download indicators when pushed from
-    /// the hero's season link. List-valued so duplicate grabs stay visible.
-    ///
-    /// Runs inside the `navigationDestination` closure, i.e. on every body pass
-    /// of this view — which is every queue tick. The season/episode → id lookup
-    /// therefore goes through `episodeIdBySlot` rather than a linear scan of
-    /// `allEpisodes`: on a 450-episode series like Law & Order the scan turned
-    /// each pass into `queue × 450` comparisons.
+    /// Runs on every queue tick, so it uses `episodeIdBySlot` instead of scanning
+    /// `allEpisodes` (450-episode series made that `queue × 450`).
     private var seasonQueueByEpisodeId: [Int: [QueueItem]] {
         guard let id = item.entityId else { return [:] }
         var map: [Int: [QueueItem]] = [:]
@@ -313,8 +247,6 @@ struct EpisodeQuickDetail: View {
                     guard let sn = ep.seasonNumber, let en = ep.episodeNumber else { return nil }
                     return (EpisodeSlot(season: sn, episode: en), ep.id)
                 },
-                // A series that lists the same slot twice keeps the first record,
-                // which is the one the episode list renders.
                 uniquingKeysWith: { first, _ in first }
             )
             self.fullEpisode = episodes.first {

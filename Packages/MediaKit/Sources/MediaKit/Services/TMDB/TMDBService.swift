@@ -51,9 +51,7 @@ public struct TMDBService: Sendable {
     public func tvCredits(id: Int) -> Resource<TMDBCredits> {
         json(plan("tvCredits", path: "/tv/{id}/aggregate_credits", values: ["id": String(id)]), tags: [tvTag(id)], freshness: .archival)
     }
-    /// One episode's record — the only place TMDB carries a per-EPISODE score
-    /// (`vote_average`). The series' own rating says nothing about the episode
-    /// on screen, and Sonarr/TVDB ship no episode rating at all.
+    /// The only per-episode score anywhere (`vote_average`); Sonarr/TVDB ship none.
     public func tvEpisode(id: Int, season: Int, episode: Int) -> Resource<TMDBEpisode> {
         json(plan("tvEpisode", path: "/tv/{id}/season/{season}/episode/{episode}",
                   values: ["id": String(id), "season": String(season), "episode": String(episode)]),

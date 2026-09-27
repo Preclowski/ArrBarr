@@ -23,8 +23,6 @@ struct UpcomingTabContent: View {
                         ForEach(groupedUpcoming, id: \.date) { group in
                             Text(group.label)
                                 .scaledFont(size: 11, weight: .semibold)
-                                // Same level as every other section title —
-                                // see `DetailSectionHeader`.
                                 .foregroundStyle(.primary)
                                 .padding(.horizontal, 12)
                                 .padding(.top, group.isFirst ? 8 : 14)
@@ -40,8 +38,6 @@ struct UpcomingTabContent: View {
             }
         }
         .scrollBounceBehavior(.basedOnSize)
-        // Content blurs softly under the floating glass chrome instead of
-        // being cut off by it — same treatment as the queue.
         .scrollEdgeEffectStyle(.soft, for: .top)
         .frame(maxHeight: .infinity)
     }

@@ -56,18 +56,8 @@ nonisolated public enum AppMessages {
 }
 
 public enum DetailRequest {
-    /// Build a synthetic `QueueItem` suitable for handing to
-    /// `DetailView`. `source` + `entityId` (the **arr-internal**
-    /// record id, NOT the foreign TMDB/TVDB/MBID) is what the detail
-    /// panel needs to refetch the full record — MediaRef carries the
-    /// external identity, which is a different thing and not
-    /// interchangeable with the internal id without a library-map
-    /// lookup. See `tap(_:)` below for the router that uses both.
-    /// `seasonNumber` / `episodeNumber` make it an EPISODE lookup: the hosts
-    /// route a Sonarr item that carries them to the episode screen (macOS) or
-    /// let `DetailView` auto-drill to it (iOS), instead of stopping at the
-    /// series. The Upcoming rows pass them so tapping tonight's episode opens
-    /// that episode.
+    /// `entityId` is the arr-internal record id, not the TMDB/TVDB/MBID. Season and
+    /// episode numbers make it an episode lookup.
     public static func syntheticItem(
         source: QueueItem.Source,
         entityId: Int,
@@ -105,13 +95,8 @@ public enum DetailRequest {
         )
     }
 
-    /// Synthetic item that opens the Lidarr ARTIST surface instead of the
-    /// album detail. Lidarr's addable/search entity is the artist, so both
-    /// the in-library search tap and the post-add navigation carry an
-    /// artist id — handing that to the album-shaped `DetailView` fetched
-    /// `/album/{artistId}` and landed on an unrelated album. The marker
-    /// lives in the synthetic `id` prefix (see `isLidarrArtistLookup`);
-    /// real queue rows keep `lidarr-<queueId>` ids and are never artists.
+    /// Opens the Lidarr ARTIST surface; the marker lives in the synthetic `id`
+    /// prefix (see `isLidarrArtistLookup`).
     public static func syntheticArtistItem(
         artistId: Int,
         name: String,
@@ -150,12 +135,8 @@ public enum DetailRequest {
         DetailRouter.shared.open(item)
     }
 
-    /// The one place that knows "a Lidarr ARTIST is not a Lidarr ALBUM".
-    ///
-    /// Lidarr's addable/search entity is the artist, so an artist id handed to
-    /// the album-shaped `DetailView` fetched `/album/{artistId}` and landed on
-    /// an unrelated record. Three call sites each carried their own copy of
-    /// that branch; this is it, once.
+    /// Lidarr's search entity is the artist; handing its id to the album-shaped
+    /// `DetailView` fetches `/album/{artistId}`, an unrelated record.
     public static func open(source: QueueItem.Source, arrId: Int, title: String,
                             posterURL: URL? = nil, posterRequiresAuth: Bool = false,
                             isLidarrAlbum: Bool = false) {
@@ -163,8 +144,7 @@ public enum DetailRequest {
                   posterRequiresAuth: posterRequiresAuth, isLidarrAlbum: isLidarrAlbum))
     }
 
-    /// The item `open` posts, for hosts that push it themselves — the history
-    /// list opens a title on its own navigation stack so Back returns to it.
+    /// For hosts that push the item themselves, so Back returns to them.
     public static func item(source: QueueItem.Source, arrId: Int, title: String,
                             posterURL: URL? = nil, posterRequiresAuth: Bool = false,
                             isLidarrAlbum: Bool = false) -> QueueItem {
@@ -178,23 +158,12 @@ public enum DetailRequest {
                              posterRequiresAuth: posterRequiresAuth)
     }
 
-    /// Tap-router for a `SearchResult`. Owns the "is it in the
-    /// library?" decision so individual call sites stop reimplementing
-    /// the same `if let arrId = ... { detail } else { addPanel }`
-    /// branch (Queue search row, chat result card, library card —
-    /// all three had near-identical 8-line copies of this logic).
-    ///
-    /// In library → drill into DetailView via the arr-internal id.
-    /// Not in library → open SearchAddPanel with the search result so
-    /// the user gets the same hero card + form as the `+` flow.
+    /// In library → DetailView via the arr-internal id; otherwise SearchAddPanel.
     public static func tap(_ result: SearchResult, addOrigin: SearchAddRouter.Origin = .search) {
         guard let arrId = result.inLibraryArrId else {
             SearchAddRequest.post(result, origin: addOrigin)
             return
         }
-        // Library-side rows came through `fetchLibraryOwnership`, which
-        // doesn't require auth on poster URLs (they resolve against the arr's
-        // own image cache via public CDN paths).
         open(source: result.source, arrId: arrId, title: result.title,
              posterURL: result.posterURL, posterRequiresAuth: false,
              isLidarrAlbum: result.isLidarrAlbum)
@@ -202,11 +171,7 @@ public enum DetailRequest {
 }
 
 public extension QueueItem {
-    /// True for the synthetic "open Lidarr artist" items built by
-    /// `DetailRequest.syntheticArtistItem`. `DetailView` branches on this to
-    /// render the artist surface (album list) instead of treating `entityId`
-    /// as an album id. Real queue rows carry `lidarr-<queueId>` ids, so the
-    /// prefix can't collide.
+    /// Real queue rows carry `lidarr-<queueId>` ids, so the prefix can't collide.
     var isLidarrArtistLookup: Bool {
         source == .lidarr && id.hasPrefix("detail-lookup-lidarr-artist-")
     }

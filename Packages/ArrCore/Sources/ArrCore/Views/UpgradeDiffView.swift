@@ -1,28 +1,19 @@
 import SwiftUI
 import MediaKit
 
-/// Side-by-side "current file → incoming release" upgrade comparison:
-/// quality, custom-format score and size per side, plus the gained (green)
-/// and lost (red) custom formats wrapped below. Extracted from the chat
-/// queue card so the tooltip and detail surfaces can show the same diff.
+/// Side-by-side "current file → incoming release" comparison with gained and lost custom formats.
 struct UpgradeDiffView: View {
     struct Side {
         let quality: String?
         let score: Int?
         let size: Int64?
         let formats: [String]
-        /// Release / on-disk file name. Rendered (untruncated) only when
-        /// the view is asked to `showFilenames`.
         var filename: String? = nil
     }
 
     let current: Side
     let incoming: Side
-    /// Detail and tooltip surfaces (wide) show the full file names; the
-    /// narrow chat card leaves them off to stay compact.
     let showFilenames: Bool
-    /// Names each column (current file / new file). For surfaces where nothing
-    /// around the diff already says which side is which.
     let labeled: Bool
 
     init(current: Side, incoming: Side, showFilenames: Bool = false, labeled: Bool = false) {
@@ -32,8 +23,6 @@ struct UpgradeDiffView: View {
         self.labeled = labeled
     }
 
-    /// Build from a queue row's `existing*` (current on-disk file) and
-    /// release fields (the incoming download).
     init(item: QueueItem, showFilenames: Bool = false) {
         self.current = Side(
             quality: item.existingQuality,
@@ -53,10 +42,8 @@ struct UpgradeDiffView: View {
         self.labeled = false
     }
 
-    /// Ways to build a side out of the *library* payloads (as opposed to the
-    /// queue's `existing*` fields above) — what manual search compares its
-    /// candidates against. Mirrors `ExistingFileBanner.init(file:)` so the banner
-    /// and the diff can't disagree about what's on disk.
+    /// Library payloads as sides, for manual search. Mirrors `ExistingFileBanner.init(file:)`
+    /// so the banner and the diff agree about what's on disk.
     static func side(file: ArrFile) -> Side {
         Side(quality: file.quality?.name,
              score: file.customFormatScore,
@@ -65,7 +52,6 @@ struct UpgradeDiffView: View {
              filename: file.relativePath ?? file.path.map { URL(fileURLWithPath: $0).lastPathComponent })
     }
 
-    /// A manual-search candidate as the *incoming* side.
     static func side(release: ArrRelease) -> Side {
         Side(quality: release.qualityName,
              score: release.customFormatScore,
@@ -76,11 +62,7 @@ struct UpgradeDiffView: View {
 
     private var gained: [String] { Set(incoming.formats).subtracting(current.formats).sorted() }
     private var lost: [String] { Set(current.formats).subtracting(incoming.formats).sorted() }
-    /// Formats both files carry. Shown plain (no sign, `.primary`) so the
-    /// strip describes the whole incoming file rather than only its edits —
-    /// "what am I getting" is as much a part of the comparison as "what
-    /// changed", and a chip list that silently omitted the unchanged ones
-    /// read as a much thinner file than it is.
+    /// Shown plain so the strip describes the whole incoming file, not only its edits.
     private var unchanged: [String] { Set(incoming.formats).intersection(current.formats).sorted() }
 
 
@@ -92,7 +74,6 @@ struct UpgradeDiffView: View {
         #endif
     }
 
-    /// macOS / wide surfaces: current → incoming side by side.
     private var sideBySideBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
@@ -104,10 +85,6 @@ struct UpgradeDiffView: View {
                 column(side: incoming, title: labeled ? Text("queue.newFile.button", bundle: .module) : nil)
             }
             if !gained.isEmpty || !lost.isEmpty || !unchanged.isEmpty {
-                // Wrap inline with the shared flow layout + diff-coloured
-                // TagChips: green = gained, red = lost, plain = carried over
-                // by both files. Same colour language as every other
-                // custom-format diff in the app.
                 TooltipFlowLayout(spacing: 3) {
                     ForEach(gained, id: \.self) { TagChip(text: "+\($0)", color: .green) }
                     ForEach(lost, id: \.self) { TagChip(text: "−\($0)", color: .red) }
@@ -121,17 +98,11 @@ struct UpgradeDiffView: View {
     }
 
     #if os(iOS)
-    /// True while a finger is held down — peeks at the current (old) file.
     @GestureState private var comparing = false
 
-    /// iOS: show only the NEW file by default; press-and-hold to peek the
-    /// current one. Saves the cramped two-column layout on a narrow screen
-    /// and turns the comparison into a deliberate gesture.
+    /// iOS: the new file only; press and hold to peek at the current one.
     private var iosPeekBody: some View {
         let side = comparing ? current : incoming
-        // Custom formats follow the peek too: show only the displayed side's
-        // formats (NEW by default, CURRENT while held) instead of stacking
-        // gained + lost at once.
         let sideFormats = (comparing ? current.formats : incoming.formats).sorted()
         let otherFormats = Set(comparing ? incoming.formats : current.formats)
         return VStack(alignment: .leading, spacing: 6) {
@@ -146,11 +117,6 @@ struct UpgradeDiffView: View {
                 Spacer(minLength: 0)
             }
             column(side: side)
-            // Formats for the shown side only — NEW lists the incoming file's
-            // formats (gains, absent from the old file, in green +); CURRENT
-            // (while held) lists the old file's (losses, absent from the new
-            // file, in red −). Unchanged formats stay plain. The strip flips
-            // with the peek instead of showing old + new simultaneously.
             if !sideFormats.isEmpty {
                 TooltipFlowLayout(spacing: 3) {
                     ForEach(sideFormats, id: \.self) { f in
@@ -163,8 +129,6 @@ struct UpgradeDiffView: View {
                 }
             }
             if showFilenames, let name = side.filename, !name.isEmpty {
-                // New/only file primary; the "current" side drops to
-                // secondary while comparing.
                 Text(name)
                     .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(comparing ? AnyShapeStyle(.secondary) : AnyShapeStyle(.primary))
@@ -180,8 +144,7 @@ struct UpgradeDiffView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.15), value: comparing)
-        // minimumDistance 0 → fires on touch-down; `updating` resets to false
-        // on release, so the old file shows only while held.
+        // minimumDistance 0 fires on touch-down; `updating` resets on release.
         .gesture(
             DragGesture(minimumDistance: 0)
                 .updating($comparing) { _, state, _ in state = true }
@@ -189,9 +152,7 @@ struct UpgradeDiffView: View {
     }
     #endif
 
-    /// Incoming release name on top, the file it replaces as a `└─` sub-line.
-    /// Rendered untruncated (wraps instead of clipping) — the long original
-    /// name is the whole point of showing it.
+    /// Untruncated: the long original name is the point of showing it.
     @ViewBuilder
     private var filenames: some View {
         let incomingName = incoming.filename
@@ -199,8 +160,6 @@ struct UpgradeDiffView: View {
         if (incomingName?.isEmpty == false) || (currentName?.isEmpty == false) {
             VStack(alignment: .leading, spacing: 3) {
                 if let name = incomingName, !name.isEmpty {
-                    // Incoming = primary; the ⇱ outgoing line below is
-                    // secondary.
                     Text(name)
                         .scaledFont(size: 11, design: .monospaced)
                         .foregroundStyle(.primary)
@@ -229,14 +188,10 @@ struct UpgradeDiffView: View {
                     .scaledFont(size: 10, weight: .semibold)
                     .foregroundStyle(.primary)
             }
-            // Under a column title the quality is a value, not a heading.
             Text(side.quality ?? "—")
                 .scaledFont(size: 12, weight: title == nil ? .semibold : .regular)
             if let score = side.score {
-                // Deliberately uncoloured. Tinting a side by its own sign, or
-                // by which side "won", put a third meaning on green inside a
-                // view whose whole job is to show a change — the delta by the
-                // arrow is the one number allowed to be coloured here.
+                // Uncoloured: the delta by the arrow is the only number allowed a colour here.
                 Text(verbatim: ScoreLabel.text(score))
                     .scaledFont(size: 10, monospacedDigit: true)
                     .foregroundStyle(.secondary)

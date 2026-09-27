@@ -3,22 +3,13 @@ import SwiftUI
 import AppKit  // NSEvent.modifierFlags — ⌘-click detection on macOS.
 #endif
 
-/// The queue rendered as a native `List` so every row is a real cell with
-/// native swipe actions (swipe-left → Delete). Shared by the iOS tab and the
-/// macOS popover; the host owns the surrounding chrome (search bar / filter
-/// bar, nav).
-///
-/// Why a dedicated view instead of reusing `QueueSectionView`: `List` only
-/// turns its *direct* children into rows. A section must therefore emit its
-/// header and each row as separate List elements — which is exactly what this
-/// view does via `Section { ForEach } header:`.
+/// The queue as a native `List`. `List` only turns its direct children into rows,
+/// so each header and row is emitted as its own element.
 struct QueueListView: View {
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
-    /// The queue's own view state. Read straight off the shared model rather
-    /// than through the environment: it is a singleton either way, and this
-    /// keeps the widget / hosting-view boundaries that already re-inject
-    /// `configStore` by hand out of it.
+    /// Read off the singleton, not the environment, so the widget / hosting-view
+    /// boundaries that re-inject `configStore` by hand stay out of it.
     private var queueUI: QueueUIState { .shared }
 
     let onShowDetail: (QueueItem) -> Void
@@ -28,63 +19,34 @@ struct QueueListView: View {
     var onShowHistory: ((QueueItem.Source) -> Void)? = nil
 
     #if os(macOS)
-    /// 30s auto-collapse timer for the expanded "Next week" peek. Local to the
-    /// list now (was a binding threaded from PopoverContentView); it survives
-    /// body re-evals while the queue list stays mounted.
+    /// 30s auto-collapse timer for the expanded "Next week" peek.
     @State private var bannerCollapseTask: Task<Void, Never>?
     #endif
 
-    /// Queue multi-select. The native `List` stays the container, but selection
-    /// is driven by us (tap-to-toggle, checkbox semantics) — macOS `List(selection:)`
-    /// *replaces* the selection on a plain click instead of toggling. The mode flag
-    /// is host-owned (toggled from the tab "⋯" menu); `selected` holds the chosen
-    /// `QueueRowEntry.id`s (a season-pack group row selects its whole pack).
-    ///
-    /// Three ways in / around a selection (macOS):
-    ///   • ⋯ menu → "Select multiple" flips `selecting` (0 selected to start).
-    ///   • ⌘-click a row (normal mode) enters selecting *and* selects that row —
-    ///     the standard Finder/Mail affordance, no menu detour (`rowTapped`).
-    ///   • Click-drag down a run of rows paints a contiguous range
-    ///     (`dragSelectGesture`). macOS click-drag never scrolls (that's the
-    ///     wheel / two-finger event stream), so the paint gesture and scrolling
-    ///     don't fight — which is what keeps this solid rather than a hack.
+    /// Selection is driven by us (checkbox semantics): macOS `List(selection:)`
+    /// replaces the selection on a plain click instead of toggling.
     @Binding var selecting: Bool
     @State private var selected = Set<String>()
-    /// By-title groups the user toggled AWAY from the mode's default
-    /// disclosure state (collapsed default → holds the expanded ones, and
-    /// vice versa). Keyed by the group's stable title key, so it survives
-    /// members joining/leaving on realtime refreshes; in-memory only, so a
-    /// fresh popover session starts back at the default.
+    /// By-title groups toggled away from the mode's default disclosure state,
+    /// keyed by title so it survives members joining/leaving on refresh.
     @State private var toggledTitleGroups = Set<String>()
-    /// Last individually-toggled row — the anchor a ⇧-click extends from
-    /// (Finder semantics). Cleared when selecting mode ends.
+    /// Anchor a ⇧-click extends from (Finder semantics).
     @State private var lastAnchorID: String?
 
     #if os(macOS)
-    /// Live frame of every selectable row in GLOBAL coordinates, harvested via
-    /// `onGeometryChange` on each row. Global (not a named space, not a
-    /// PreferenceKey): macOS `List` hosts every row in its own AppKit cell, so
-    /// a `.coordinateSpace(name:)` declared on the List never resolves inside
-    /// the rows and preferences don't reliably climb out of them — both came
-    /// back garbage, which is what made drag-painting select the wrong rows.
-    /// Only populated while `selecting` (the reporter is gated), cleared on exit.
+    /// Row frames in GLOBAL coordinates: macOS `List` hosts each row in its own
+    /// AppKit cell, so a named coordinate space or PreferenceKey doesn't resolve there.
     @State private var rowFrames: [String: CGRect] = [:]
-    /// Drag-to-select scratch state. `dragBaseline` is the selection snapshot at
-    /// the drag's start — every change re-derives from it, so dragging back up
-    /// *un-paints* rows instead of leaving a smear. nil ⇒ no drag in flight.
+    /// Selection snapshot at drag start; every change re-derives from it so
+    /// dragging back un-paints rows. nil ⇒ no drag in flight.
     @State private var dragBaseline: Set<String>?
     @State private var dragAnchorID: String?
-    /// Add vs. remove for this drag, decided by the anchor row's state at the
-    /// start: begin on an unselected row → painting *adds*; on a selected row →
-    /// painting *removes* (drag-to-deselect).
+    /// Starting on a selected row makes the drag deselect instead of add.
     @State private var dragPaintAdding = true
     #endif
 
-    /// The ONE listRowInsets every section header uses. Explicit + non-all-zero
-    /// (the macOS plain List substitutes a default ~16pt leading for an all-zero
-    /// `EdgeInsets()`, but honors this verbatim including `leading: 0`). Combined
-    /// with each header's `.padding(.horizontal, queueRowH)`, this puts every
-    /// chevron at exactly `queueRowH` — they line up.
+    /// Explicit and non-all-zero: macOS plain List substitutes a ~16pt leading
+    /// for an all-zero `EdgeInsets()` but honors `leading: 0` here.
     static let headerRowInsets = EdgeInsets(top: 6, leading: 0, bottom: 4, trailing: 0)
 
     private enum Entry: Hashable {
@@ -95,12 +57,10 @@ struct QueueListView: View {
         case arr(QueueItem.Source)
     }
 
-    /// Drives the rendered order from `arrOrder`, mirroring the old
-    /// section-list logic so banners keep their user-chosen position.
     private var orderedEntries: [Entry] {
         configStore.arrOrder.compactMap { key -> Entry? in
             #if os(macOS)
-            // "Next week" peek — macOS-only (iOS has a dedicated Upcoming tab).
+            // macOS-only; iOS has a dedicated Upcoming tab.
             if key == ConfigStore.tonightOrderKey {
                 guard configStore.showTonight, !viewModel.tonight.isEmpty else { return nil }
                 return .tonight
@@ -118,15 +78,9 @@ struct QueueListView: View {
     }
 
     var body: some View {
-        // Native multi-select: bind the List's own selection while in selecting
-        // mode (nil otherwise, so a normal click still opens the detail).
         List {
-            // No Sections — every header + row is a plain List row. macOS List
-            // gives Sections inconsistent spacing / leading insets / expand
-            // animations (different for single-row groups like Needs-you vs
-            // multi-row arr groups), which is exactly what skewed the chevrons,
-            // the closed-section heights and the open animation. Flat rows are
-            // uniform.
+            // No Sections: macOS List gives them inconsistent spacing, insets and
+            // expand animations per group size; flat rows stay uniform.
             ForEach(orderedEntries, id: \.self) { entry in
                 switch entry {
                 #if os(macOS)
@@ -144,47 +98,24 @@ struct QueueListView: View {
             }
         }
         #if os(macOS)
-        // Tear down the "Next week" auto-collapse timer when the list unmounts
-        // (tab switch / filtering swaps this view out) so it can't fire a stray
-        // collapse off-screen or strand an uncancellable task across remounts.
+        // Cancel the auto-collapse timer so it can't fire off-screen or leak across remounts.
         .onDisappear { bannerCollapseTask?.cancel(); bannerCollapseTask = nil }
         #endif
         .listStyle(.plain)
-        // No separator lines anywhere — rows hide theirs via `plainQueueRow`; this
-        // also kills the section-boundary line between arrs.
         .listSectionSeparator(.hidden)
         .scrollContentBackground(.hidden)
-        // Propagate the away-from-LAN state so each row hides its mutating
-        // controls (the header chip is the single explanation).
         .environment(\.queueOffline, viewModel.isFullyOffline)
-        // 1, not 0: rows carry their own padding, so the floor only has to stay
-        // out of the way — but macOS backs `List` with an `NSTableView`, whose
-        // `rowHeight` must be POSITIVE. A zero floor made SwiftUI's list
-        // coordinator push `setRowHeight: 0` on every graph update; AppKit
-        // rejected it ("ERROR: Negative values for rowHeight not allowed
-        // (0.000)"), the context never converged, and the hosting view
-        // re-rendered at display rate — ~77 body passes a second for everything
-        // in the popover, including whatever detail screen was pushed on top.
+        // 1, not 0: macOS backs `List` with an `NSTableView` whose rowHeight must be
+        // positive; 0 made AppKit reject it and the list re-render at display rate.
         .environment(\.defaultMinListRowHeight, 1)
-        // macOS List indents scroll content by default; zero it so rows /
-        // banners are genuinely full-width (each brings its own padding).
-        // No placement filter — newer macOS adds horizontal margins beyond
-        // `.scrollContent` alone, which read as oversized side gaps on rows.
+        // No placement filter: newer macOS adds horizontal margins beyond
+        // `.scrollContent` alone.
         .contentMargins(.horizontal, 0)
-        // Kill the top inset under the iOS search drawer + tighten the gap
-        // above the first arr section header (the "dziura pod searchem").
         .contentMargins(.top, 0, for: .scrollContent)
         #if os(iOS)
         .listSectionSpacing(.compact)
         #endif
-        // Multi-select action bar, shown only while selecting. Entry is the
-        // "⋯" menu either way (host owns `selecting`). macOS pins it under the
-        // popover's toolbar; iOS puts it at the bottom, just above the tab bar,
-        // where the platform keeps editing actions.
         #if os(iOS)
-        // iOS puts edit-mode actions in the system chrome: count as the title,
-        // Select all / Done in the navigation bar, actions in the bottom bar.
-        // The floating pill is a macOS answer to a popover that has neither.
         .navigationTitle(selecting ? selectionCountLabel : "")
         .toolbar { if selecting { selectionToolbar } }
         #else
@@ -194,8 +125,6 @@ struct QueueListView: View {
         }
         .scrollEdgeEffectStyle(.soft, for: .top)
         #endif
-        // Drop the selection set whenever selecting mode ends (menu toggle,
-        // Cancel, or the queue emptying out from under us).
         .onChange(of: selecting) { _, on in
             if !on {
                 selected.removeAll()
@@ -209,7 +138,6 @@ struct QueueListView: View {
             if count == 0, selecting { selecting = false }
         }
         #if os(macOS)
-        // Holding ⌥ peeks at hidden rows.
         .onModifierKeysChanged(mask: .option) { _, keys in
             queueUI.optionKeyHeld = keys.contains(.option)
         }
@@ -219,16 +147,9 @@ struct QueueListView: View {
 
     // MARK: - Multi-select
 
-    /// Floating action bar shown while selecting: cancel · count · resume ·
-    /// pause · delete, all acting on the current selection (actions no-op / dim
-    /// at 0). The count reads as a proper sentence ("3 items selected") rather
-    /// than a bare number, and the bar wears the bright, opaque
-    /// `.selectionModeBar()` pill so it's obvious at a glance that the queue is
-    /// in multi-select mode — the earlier translucent glass melted into the
-    /// popover's dark vibrancy.
     #if os(iOS)
-    /// Edit-mode chrome. Labelled buttons, not bare glyphs: three greyed-out
-    /// symbols with nothing selected gave no way to learn what they do.
+    /// Labelled buttons, not bare glyphs: greyed-out symbols with nothing
+    /// selected gave no way to learn what they do.
     @ToolbarContentBuilder
     private var selectionToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
@@ -275,6 +196,8 @@ struct QueueListView: View {
     }
     #endif
 
+    /// Opaque `.selectionModeBar()` pill: translucent glass melted into the
+    /// popover's dark vibrancy.
     private var selectionActionBar: some View {
         HStack(spacing: 14) {
             Button { exitSelection() } label: {
@@ -312,8 +235,7 @@ struct QueueListView: View {
                 .accessibilityLabel(Text("queue.delete.button", bundle: .module))
             }
             .buttonStyle(.plain)
-            // Uniform white glyphs on the frosted glass (was green/orange/red) —
-            // the shapes carry the meaning; colour read as noise on the pill.
+            // Uniform white: the shapes carry the meaning; colour read as noise on the pill.
             .foregroundStyle(.white)
             .scaledFont(size: 15, weight: .semibold)
             .disabled(selected.isEmpty)
@@ -326,8 +248,6 @@ struct QueueListView: View {
         .padding(.top, 8)
     }
 
-    /// Localized, correctly-pluralized "N items selected" (Polish gets the full
-    /// one/few/many/other spread from the catalog).
     private var selectionCountLabel: String {
         String.localizedStringWithFormat(
             NSLocalizedString("queue.selectedItemsCount", bundle: .module, comment: ""),
@@ -335,26 +255,18 @@ struct QueueListView: View {
         )
     }
 
-    /// Per-row selection state driving the circle overlaid on the poster.
     private func selectionState(for entry: QueueRowEntry) -> RowSelectionState {
         guard selecting else { return .hidden }
         return selected.contains(entry.id) ? .selected : .unselected
     }
 
-    /// Toggle this row's membership in the selection — checkbox semantics, so a
-    /// plain click (no ⌘) adds or removes it. We drive `selected` ourselves
-    /// rather than `List(selection:)`, whose macOS single-click *replaces* the
-    /// selection (Finder-style) instead of toggling.
     private func toggleSelection(_ entry: QueueRowEntry) {
         if selected.contains(entry.id) { selected.remove(entry.id) }
         else { selected.insert(entry.id) }
     }
 
-    /// Central row-tap router. In selecting mode any tap toggles — except a
-    /// ⇧-click (macOS), which extends the selection from the last-toggled row
-    /// to this one (Finder range semantics). Outside it, a ⌘-click (macOS)
-    /// *enters* selecting with this row already picked — the standard
-    /// Finder/Mail affordance — while a plain click opens the detail.
+    /// Selecting: tap toggles, ⇧-click extends from the anchor. Otherwise ⌘-click
+    /// enters selecting with this row picked, a plain click opens the detail.
     private func rowTapped(_ entry: QueueRowEntry, defaultTarget: QueueItem) {
         if selecting {
             #if os(macOS)
@@ -379,9 +291,7 @@ struct QueueListView: View {
     }
 
     #if os(macOS)
-    /// ⇧-click: select every row between the anchor and the clicked row
-    /// (inclusive, additive — it never deselects, like Finder). The anchor
-    /// stays put so successive ⇧-clicks re-extend from the same start.
+    /// Additive like Finder; the anchor stays put so successive ⇧-clicks re-extend.
     private func selectRange(from anchor: String, to target: String) {
         let ids = orderedSelectableEntries.map(\.id)
         guard let ai = ids.firstIndex(of: anchor), let ti = ids.firstIndex(of: target) else {
@@ -391,8 +301,7 @@ struct QueueListView: View {
         selected.formUnion(ids[min(ai, ti)...max(ai, ti)])
     }
 
-    /// Fallback toggle by id (anchor vanished from the list, e.g. the row
-    /// finished and left the queue mid-selection).
+    /// Fallback when the anchor left the queue mid-selection.
     private func toggleSelection(target: String) {
         if selected.contains(target) { selected.remove(target) }
         else { selected.insert(target) }
@@ -405,11 +314,8 @@ struct QueueListView: View {
         withAnimation(.snappy(duration: 0.18)) { selecting = false }
     }
 
-    /// Every selectable row in display order — arr-section rows only (headers,
-    /// Needs-you and Next-week rows aren't selectable). One source of truth for
-    /// both `selectedItems()` and the drag range math. Title-group headers are
-    /// deliberately not selectable, and a collapsed group's hidden children
-    /// aren't either — selecting inside a group requires expanding it.
+    /// Arr-section rows in display order. Headers and a collapsed group's
+    /// hidden children aren't selectable.
     private var orderedSelectableEntries: [QueueRowEntry] {
         orderedEntries.flatMap { entry -> [QueueRowEntry] in
             guard case .arr(let source) = entry else { return [] }
@@ -422,8 +328,6 @@ struct QueueListView: View {
         }
     }
 
-    /// Resolve the selected `QueueRowEntry.id`s to their underlying items
-    /// (a group row contributes its whole pack).
     private func selectedItems() -> [QueueItem] {
         orderedSelectableEntries
             .filter { selected.contains($0.id) }
@@ -435,7 +339,6 @@ struct QueueListView: View {
             }
     }
 
-    /// Run an async per-item action over the selection, then leave selecting mode.
     private func bulk(_ action: @escaping (QueueItem) async -> Void) {
         let items = selectedItems()
         exitSelection()
@@ -445,17 +348,8 @@ struct QueueListView: View {
     // MARK: - Drag-to-select (macOS)
 
     #if os(macOS)
-    /// Paint a contiguous range of rows as the pointer drags down (or up) a run
-    /// of them. Attached per-row so the anchor is known without hit-testing the
-    /// start point; the *current* row is resolved from the harvested frame map.
-    /// Everything runs in GLOBAL coordinates — the one space that means the
-    /// same thing inside and outside the List's per-row AppKit hosting cells.
-    ///
-    /// Robustness comes from re-deriving the whole selection from `dragBaseline`
-    /// on every change (drag reversal un-paints) and from macOS click-drag not
-    /// being the scroll gesture — so this never has to arm-wrestle the List for
-    /// the drag stream. `minimumDistance: 6` keeps a plain click a tap (toggle),
-    /// not a zero-length paint.
+    /// Global coordinates are the one space that means the same inside and outside
+    /// the List's per-row cells. macOS click-drag never scrolls, so this doesn't fight the List.
     private func dragSelectGesture(anchor: String) -> some Gesture {
         DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { value in
@@ -467,15 +361,12 @@ struct QueueListView: View {
                 applyDragSelection(to: value.location.y)
             }
             .onEnded { _ in
-                // The drag's start row becomes the ⇧-click anchor, so a
-                // follow-up shift-click extends from where the paint began.
                 lastAnchorID = dragAnchorID
                 dragAnchorID = nil
                 dragBaseline = nil
             }
     }
 
-    /// Re-derive `selected` = baseline ± the anchor…current row range.
     private func applyDragSelection(to y: CGFloat) {
         guard let anchor = dragAnchorID, let baseline = dragBaseline else { return }
         let ids = orderedSelectableEntries.map(\.id)
@@ -489,11 +380,8 @@ struct QueueListView: View {
         selected = next
     }
 
-    /// Row whose vertical band contains `y`; if `y` sits in a gap (a section
-    /// header between two arr groups), the nearest row by edge distance — so the
-    /// range never collapses just because the pointer crossed a header. Only
-    /// rows in `valid` count — `rowFrames` can hold a stale entry for a row
-    /// that left the queue mid-drag (its reporter unmounts without removing it).
+    /// Nearest row when `y` falls in a header gap. Only `valid` ids count:
+    /// `rowFrames` can keep a stale entry for a row that left mid-drag.
     private func rowID(near y: CGFloat, among valid: Set<String>) -> String? {
         var nearest: (id: String, dist: CGFloat)?
         for (id, rect) in rowFrames where valid.contains(id) {
@@ -508,11 +396,7 @@ struct QueueListView: View {
 
     // MARK: - Sections
 
-    /// How far a stale arr's rows sit back. Enough to read as "not live" next
-    /// to a section that answered, not so far that the titles stop being
-    /// legible — the queue is still what the user came to look at.
     private static let staleRowOpacity: Double = 0.5
-    /// Hidden rows shown on request (⌥ / Show hidden) sit further back than stale ones.
     private static let hiddenRowOpacity: Double = 0.35
 
     private func rowOpacity(isStale: Bool, items: [QueueItem]) -> Double {
@@ -522,42 +406,30 @@ struct QueueListView: View {
     @ViewBuilder
     private func arrSection(_ source: QueueItem.Source) -> some View {
         let arrError = viewModel.error(for: source)
-        // A failed refresh keeps the last-good snapshot (QueueViewModel
-        // `freshOrKept`). Show it here — dimmed, read-only — instead of
-        // blanking the section; the header carries the error and explains the
-        // staleness. Whether the failure is an outage, a 502 from a reverse
-        // proxy, or split-DNS junk while away, the user still sees what was
-        // last there rather than an empty list.
+        // A failed refresh keeps the last-good snapshot; show it dimmed and read-only
+        // rather than blanking the section.
         let isStale = arrError != nil
-        // Unreachable (transport / 502 / split-DNS) is the calm away case; a
-        // *reachable* error (401/500 — the arr answered) stays a loud, actionable
-        // problem. The two get different chrome below.
+        // Unreachable (transport / 502 / split-DNS) is the calm away case; a reachable
+        // error (401/500) stays a loud, actionable problem.
         let isUnreachable = viewModel.lastUnreachable.contains(source)
-        // Offline sections stay collapsible (chevron + tap), unlike a genuine error.
         let collapsed = (arrError == nil || isUnreachable) && queueUI.isCollapsed(source)
-        // Header + rows as plain List rows (no Section wrapper). Same inset and
-        // mechanism as the Needs-you / Next-week headers → chevrons line up.
         sectionHeader(source, error: arrError, isUnreachable: isUnreachable, collapsed: collapsed)
             .plainQueueRow(insets: Self.headerRowInsets)
         if !collapsed {
                 let rows = displayRows(for: source)
                 if rows.isEmpty {
                     if isUnreachable {
-                        // Calm "can't reach this server" line instead of a blank
-                        // body — quiet, no error styling.
                         Text("queue.serverUnreachable.label", bundle: .module)
                             .scaledFont(size: 12)
                             .foregroundStyle(.tertiary)
                             .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
                     } else if !isStale {
-                        // "Queue empty" only when the arr actually answered.
                         Text("queue.queueEmpty.button", bundle: .module)
                             .scaledFont(size: 12)
                             .foregroundStyle(.tertiary)
                             .plainQueueRow(insets: EdgeInsets(top: 6, leading: 14, bottom: 6, trailing: 14))
                     }
-                    // A reachable error with nothing cached → render nothing; the
-                    // header badge already explains it.
+                    // A reachable error with nothing cached renders nothing; the header badge explains it.
                 } else {
                     ForEach(rows) { display in
                         displayRowView(display, isStale: isStale)
@@ -566,10 +438,6 @@ struct QueueListView: View {
             }
     }
 
-    /// One display row → its List rows. A pass-through entry stays a single
-    /// swipeable row; a title group emits a disclosure header plus (when
-    /// expanded) its member rows under it, with a small leading indent that
-    /// marks them as the group's children.
     @ViewBuilder
     private func displayRowView(_ display: QueueDisplayRow, isStale: Bool) -> some View {
         switch display {
@@ -593,9 +461,8 @@ struct QueueListView: View {
             onToggle: {
                 withAnimation(.smooth(duration: 0.22)) { toggleTitleGroup(group) }
             },
-            // Series-level detail: episode coords stripped so DetailView opens
-            // the title, whose download section lists every sibling — that IS
-            // the group's "dedicated view".
+            // Episode coords stripped so DetailView opens the title, whose download
+            // section lists every sibling.
             onShowDetail: { onShowDetail(group.representative.seasonContext()) },
             onPauseAll: { [weak viewModel] in
                 let items = group.allItems
@@ -611,9 +478,6 @@ struct QueueListView: View {
             }
         )
         .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
-        // A stale arr's rows are last-known state, not live state: dim them so
-        // that reads at a glance, instead of leaving them looking as current as
-        // the sections that did answer.
         .opacity(rowOpacity(isStale: isStale, items: group.allItems))
         #if os(iOS)
         header
@@ -634,8 +498,7 @@ struct QueueListView: View {
     }
 
     #if os(iOS)
-    /// Same confirm the header's context menu posts — the swipe button must
-    /// not hard-delete N downloads without one.
+    /// The swipe button must not hard-delete N downloads without the header's confirm.
     private func requestGroupDeleteConfirm(_ group: QueueTitleGroup) {
         let items = group.allItems
         ConfirmCenter.request(PendingConfirm(
@@ -648,34 +511,20 @@ struct QueueListView: View {
     }
     #endif
 
-    /// A queue row plus its swipe actions. Native `.swipeActions` are **iOS-only**:
-    /// on macOS the same SwiftUI `List` + swipe-to-delete throws an AppKit
-    /// `NSTableView` layout exception when the deleted row's batch update comes
-    /// out inconsistent (confirmed from a crash report — `_NSViewLayout` →
-    /// `_crashOnException`). macOS already deletes via the row's hover action, so
-    /// the swipe there was both crashy and redundant. `allowsFullSwipe: false` so
-    /// a full swipe *reveals* the button instead of auto-committing a destructive
-    /// delete (also dodges the same auto-commit race on iOS).
+    /// Native `.swipeActions` are iOS-only: on macOS swipe-to-delete on a `List` crashes
+    /// in an `NSTableView` layout exception. No full swipe, so delete never auto-commits.
     @ViewBuilder
     private func swipeableRow(for entry: QueueRowEntry, isStale: Bool, indented: Bool = false) -> some View {
         let content = rowView(for: entry)
-            // Per-section offline: a stale/unreachable arr's rows can't be acted
-            // on, so block their right-click menu (and poster control) even when
-            // only THIS arr is down — the List-level value only covers all-arrs.
+            // Per-section offline: the List-level value only covers all-arrs being down.
             .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
-            // See `titleGroupHeader`: last-known rows read as dimmed.
             .opacity(rowOpacity(isStale: isStale, items: entry.allItems))
-            // Members of an expanded title group keep the list's shared
-            // leading edge; the child marker is a bare 24pt TRAILING inset —
-            // the rows end short of the right edge, under the header's
-            // chevron column, which is enough to read them as the group's.
+            // Group members keep the shared leading edge; a trailing inset marks them as children.
             .padding(.trailing, indented ? 24 : 0)
         #if os(iOS)
         let row = content.plainQueueRow()
         row
             .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                // Icon-only, Apple-Mail style. Hidden when fully offline OR this
-                // arr's data is stale — the delete can't reach the arr.
                 if !viewModel.isFullyOffline, !isStale {
                     Button(role: .destructive) {
                         deleteClosure(for: entry)()
@@ -685,9 +534,6 @@ struct QueueListView: View {
                     .accessibilityLabel(Text("queue.delete.button", bundle: .module))
                 }
             }
-            // Leading swipe → pause/resume: only with a configured download
-            // client AND a downloading/paused item, mirroring the row's hover/CTA
-            // gating; suppressed when fully offline or stale.
             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                 let rep = repItem(for: entry)
                 if !viewModel.isFullyOffline, !isStale, canControl(rep), rep.status == .downloading || rep.status == .paused {
@@ -701,16 +547,10 @@ struct QueueListView: View {
                 }
             }
         #else
-        // macOS: no native swipe — delete / pause live in the row's hover actions.
-        // While selecting, the row also reports its frame (drag hit-testing) and
-        // carries the drag-to-paint gesture. Both are dropped in normal mode so
-        // they can't interfere with the detail-tap / hover affordances.
         if selecting {
             content
-                // Direct state write instead of a PreferenceKey — preferences
-                // don't reliably climb out of the List's per-row hosting cells
-                // on macOS, and `onGeometryChange` re-fires as the row scrolls
-                // (its global frame changes), keeping the map live.
+                // Direct state write: preferences don't reliably climb out of the
+                // List's per-row hosting cells on macOS.
                 .onGeometryChange(for: CGRect.self) { proxy in
                     proxy.frame(in: .global)
                 } action: { frame in
@@ -729,16 +569,12 @@ struct QueueListView: View {
         QueueHeaderRow(
             icon: AnyView(ServiceIcon(source: source, size: 12).foregroundStyle(.secondary)),
             title: source.displayName,
-            // Count only when healthy; per-arr health surfaces as "Needs you"
-            // rows now (not a hover badge here).
             count: error == nil ? itemCount(source) : nil,
             hiddenCount: error == nil ? hiddenCount(source) : 0,
             onToggleHidden: {
                 withAnimation(.smooth(duration: 0.22)) { queueUI.showHiddenQueueItems.toggle() }
             },
             collapsed: collapsed,
-            // Offline is a collapsible state like any other — only a genuine
-            // (reachable) error hides the chevron.
             showChevron: error == nil || isUnreachable,
             onToggle: {
                 guard error == nil || isUnreachable else { return }
@@ -746,8 +582,6 @@ struct QueueListView: View {
             }
         ) {
             if isUnreachable {
-                // Calm, muted "offline" — the expected away/proxy case, not an
-                // alarm. No orange, no HTTP code; the body shows the last state.
                 Label { Text("offline.indicator.label", bundle: .module).textCase(.lowercase) } icon: { Image(systemName: "network.slash") }
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
@@ -764,10 +598,8 @@ struct QueueListView: View {
         }
     }
 
-    /// "Needs you" as a header row + one sibling row per entry (like arr
-    /// sections) — so collapse animates as native row insert/remove instead of
-    /// one growing cell (kills the "content slides from the top" jump), and the
-    /// header chevron lines up with the others.
+    /// Header row plus sibling rows so collapse animates as native row
+    /// insert/remove instead of one growing cell.
     @ViewBuilder
     private func needsYouSection() -> some View {
         let collapsed = queueUI.isCollapsed(ConfigStore.needsYouOrderKey)
@@ -798,18 +630,14 @@ struct QueueListView: View {
                 .first
             if let match { onShowDetail(match) }
         }
-        // arr-level issue rows (needs.item == nil) have no queue detail to push;
-        // the popover wires onNeedsYouTap to open the arr's queue page instead.
     }
 
     #if os(macOS)
-    /// "Next week" peek — a header row + each upcoming item as a SIBLING List row
-    /// (like the arr / Needs-you sections), so collapse animates as native row
-    /// insert/remove instead of one growing cell sliding content in from the top.
+    /// Sibling rows, like `needsYouSection`, so collapse animates as row insert/remove.
     @ViewBuilder
     private func tonightSection() -> some View {
         let items = viewModel.tonight
-        // 0 = "always show all" (Settings) — the expander never renders then.
+        // 0 = "always show all" (Settings).
         let limit = configStore.tonightVisibleCount
         let visible = (viewModel.tonightExpanded || limit == 0) ? items : Array(items.prefix(limit))
         let overflow = items.count - visible.count
@@ -836,9 +664,7 @@ struct QueueListView: View {
                     timeString: item.airDateCompact(locale: configStore.currentLocale),
                     onTap: { openUpcomingDetail(item) }
                 )
-                // A little air between the header and the first content row.
                 .padding(.top, offset == 0 ? 4 : 0)
-                // Align the rows under the moon, past the chevron column.
                 .padding(.leading, QueueHeaderMetrics.contentIndent)
                 .padding(.trailing, Tokens.Spacing.queueRowH)
                 .plainQueueRow()
@@ -848,8 +674,6 @@ struct QueueListView: View {
                     .padding(.leading, QueueHeaderMetrics.contentIndent)
                     .plainQueueRow()
             } else if viewModel.tonightExpanded && limit != 0 && items.count > limit {
-                // Symmetric collapse — before this, an expanded peek could
-                // only be un-expanded by waiting out the 30 s auto-collapse.
                 tonightShowLessButton
                     .padding(.leading, QueueHeaderMetrics.contentIndent)
                     .plainQueueRow()
@@ -857,8 +681,6 @@ struct QueueListView: View {
         }
     }
 
-    /// Overflow expander — reveals the hidden upcoming rows and arms the 30s
-    /// auto-collapse timer.
     private var tonightShowMoreButton: some View {
         Button {
             withAnimation(.smooth(duration: 0.22)) {
@@ -897,9 +719,7 @@ struct QueueListView: View {
         .padding(.top, 2)
     }
 
-    /// Sends the tonight-banner item into the detail pipeline — a synthetic
-    /// `QueueItem` posted via `DetailRequest`, picked up by the popover's
-    /// `DetailRouter` observer (same shape as `UpcomingRowView.openDetail`).
+    /// Picked up by the popover's `DetailRouter` observer.
     private func openUpcomingDetail(_ item: UpcomingItem) {
         guard let entityId = item.entityId else { return }
         DetailRequest.post(
@@ -913,8 +733,6 @@ struct QueueListView: View {
         )
     }
 
-    /// 30s auto-collapse for the expanded "Next week" peek. Any new expand
-    /// cancels the prior timer and restarts the countdown.
     private func scheduleBannerCollapse() {
         bannerCollapseTask?.cancel()
         bannerCollapseTask = Task { [viewModel] in
@@ -956,8 +774,6 @@ struct QueueListView: View {
                 onPause: { [weak viewModel] in Task { await viewModel?.pause(item) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(item) } },
                 onDelete: deleteClosure(for: entry),
-                // Row tap is routed through `rowTapped`: toggle while selecting,
-                // ⌘-click to enter-and-select, plain click opens the detail.
                 onShowDetail: { rowTapped(entry, defaultTarget: item) },
                 selectionState: selectionState(for: entry)
             )
@@ -968,9 +784,6 @@ struct QueueListView: View {
                 onPause: { [weak viewModel] in Task { await viewModel?.pause(rep) } },
                 onResume: { [weak viewModel] in Task { await viewModel?.resume(rep) } },
                 onDelete: deleteClosure(for: entry),
-                // Same routing as the single row; the plain-click target is the
-                // season context (episode coords stripped) — DetailView shows the
-                // season, not one episode.
                 onShowDetail: { rowTapped(entry, defaultTarget: rep.seasonContext()) },
                 selectionState: selectionState(for: entry)
             )
@@ -987,11 +800,8 @@ struct QueueListView: View {
         }
     }
 
-    // Swipe-only helpers — only the iOS row renders swipe actions; macOS uses
-    // hover actions, so these would otherwise warn as unused there.
+    // Only the iOS row renders swipe actions; on macOS these would warn as unused.
     #if os(iOS)
-    /// Representative item for an entry (single → itself, group → rep). Used
-    /// to gate the leading pause/resume swipe.
     private func repItem(for entry: QueueRowEntry) -> QueueItem {
         switch entry {
         case .single(let item): return item
@@ -1001,8 +811,7 @@ struct QueueListView: View {
 
     private func canControl(_ item: QueueItem) -> Bool { configStore.canControlDownload(item.downloadProtocol) }
 
-    /// Toggle pause/resume on the entry's representative (the whole download /
-    /// season pack shares its downloadId, so acting on the rep covers it).
+    /// A season pack shares its downloadId, so acting on the rep covers it.
     private func pauseResumeClosure(for entry: QueueRowEntry) -> () -> Void {
         let item = repItem(for: entry)
         return { [weak viewModel] in
@@ -1031,8 +840,6 @@ struct QueueListView: View {
         }
     }
 
-    /// The rendered rows: base entries plus the optional by-title layer
-    /// (`queueTitleGrouping` setting; `off` keeps the flat list).
     private func displayRows(for source: QueueItem.Source) -> [QueueDisplayRow] {
         let base = entries(for: source)
         guard queueUI.queueTitleGrouping != .off else {
@@ -1041,7 +848,6 @@ struct QueueListView: View {
         return QueueGrouping.groupByTitle(base)
     }
 
-    /// Disclosure state = the mode's default XOR "user toggled this one".
     private func isGroupExpanded(_ group: QueueTitleGroup) -> Bool {
         let defaultExpanded = queueUI.queueTitleGrouping == .expanded
         return toggledTitleGroups.contains(group.id) ? !defaultExpanded : defaultExpanded
@@ -1065,11 +871,7 @@ struct QueueListView: View {
 // MARK: - Row chrome helper
 
 private extension View {
-    /// Strip the default List cell chrome so queue rows look the same as the
-    /// old ScrollView layout (full-bleed, transparent, no separators). Zero
-    /// horizontal inset — each row/banner brings its own padding, so the List
-    /// must not add more on top (that's what widened the rows + put side
-    /// margins on the Tonight banner).
+    /// Zero horizontal inset: each row brings its own padding.
     func plainQueueRow(insets: EdgeInsets = EdgeInsets()) -> some View {
         self
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1080,9 +882,7 @@ private extension View {
 }
 
 #if os(macOS)
-/// A single row in the "Next week" peek: air time, source glyph, title,
-/// optional subtitle. Its own view so the `tonightSection` builder stays under
-/// the 100ms type-check warn threshold.
+    /// Its own view to keep `tonightSection` under the type-check warn threshold.
 private struct TonightBannerRow: View {
     let item: UpcomingItem
     let timeString: String
@@ -1111,8 +911,6 @@ private struct TonightBannerRow: View {
         }
         .buttonStyle(.plain)
         .disabled(item.entityId == nil)
-        // Same long-hover tooltip (and queue/library routing) as the
-        // Upcoming tab's rows — one calendar entry, one tooltip everywhere.
         .upcomingTooltip(item: item)
     }
 }

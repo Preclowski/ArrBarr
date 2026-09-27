@@ -1,12 +1,7 @@
 import Foundation
 
-/// De-duplication between what the HOST already shows locally (live queue rows
-/// or the browsed library) and the arr-lookup rows rendered under them. A row
-/// the user can already see must not repeat below it — but ONLY that row drops.
-///
-/// Add-new hits, titles owned by a *different* arr, and owned titles the local
-/// match missed all stay: hiding an owned title reads as "you don't own it",
-/// the one wrong answer this app must never give.
+/// Drops only the lookup rows the host already shows locally. Owned titles the local match
+/// missed must stay: hiding one reads as "you don't own it".
 nonisolated enum SearchResultDedup {
     static func removingLocalDuplicates(
         results: [SearchResult],

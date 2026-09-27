@@ -149,7 +149,6 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     // MARK: - Download-client progress
 
-    /// One live stream over the configured download clients; `staleGrace` keeps the bars steady across a blip.
     /// Every arr's download ids, so one progress fetch serves all of them.
     private let progressIDs = OSAllocatedUnfairLock<[QueueItem.Source: Set<String>]>(initialState: [:])
     /// The queue streams publish per arr within moments of each other; one reading serves the lot.

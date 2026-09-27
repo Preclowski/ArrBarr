@@ -1,21 +1,17 @@
 import Foundation
 import MediaKit
 
-/// Row-level answers the manual-search list needs from a release: what the
-/// file covers and what to print as its name.
 nonisolated public extension ArrRelease {
     var qualityName: String? { quality?.name }
     var isTorrent: Bool { (`protocol` ?? "").caseInsensitiveCompare("torrent") == .orderedSame }
     var sizeBytes: Int64 { size ?? 0 }
     var isRejected: Bool { rejected == true && !(rejections ?? []).isEmpty }
-    /// Short protocol badge text — "Torrent" / "NZB".
     var protocolLabel: String { isTorrent ? "Torrent" : "NZB" }
 
-    /// What one release covers. `.episodes` carries its own already-formatted
-    /// label ("E04", "E01–05"); `.pack` is localised by the view.
+    /// `.episodes` carries a formatted label ("E04", "E01–05"); `.pack` is localised by the view.
     enum Scope: Sendable, Equatable { case pack, episodes(String) }
 
-    /// nil when the search has no such axis — a movie, or a single episode.
+    /// nil for a movie or a single episode.
     var scope: Scope? {
         if fullSeason == true { return .pack }
         let numbers = (episodeNumbers ?? []).sorted()
@@ -24,10 +20,8 @@ nonisolated public extension ArrRelease {
         return .episodes(first == last ? start : start + "–" + String(format: "%02d", last))
     }
 
-    /// The release name minus the leading series name and `SxxExx` marker —
-    /// both already on screen (the header and the scope badge), and both
-    /// eating the width where the tokens that actually differ live. Falls back
-    /// to the raw title whenever the marker isn't where we expect it.
+    /// Drops the series name and `SxxExx`, both already on screen; raw title when
+    /// the marker isn't where expected.
     var shortTitle: String {
         guard let marker = title.range(of: "[Ss][0-9]{1,3}([Ee][0-9]{1,4})*(-?[Ee][0-9]{1,4})*",
                                        options: .regularExpression) else { return title }
@@ -35,16 +29,13 @@ nonisolated public extension ArrRelease {
         return rest.count >= 8 ? String(rest) : title
     }
 
-    /// The indexer's name as a human would say it. Indexers synced from
-    /// Prowlarr arrive in the *arr named "NZBgeek (Prowlarr)" — the suffix says
-    /// how the *arr learned about it, which is nobody's business on a button.
+    /// Prowlarr-synced indexers arrive as "NZBgeek (Prowlarr)"; the suffix is dropped.
     var indexerName: String? {
         guard let indexer, !indexer.isEmpty else { return nil }
         return ArrRelease.strippingProwlarrSuffix(indexer)
     }
 
-    /// The fallback spelling when Prowlarr can't be asked: the *arr's label
-    /// without the one suffix we can remove without guessing.
+    /// Fallback when Prowlarr can't be asked.
     static func strippingProwlarrSuffix(_ name: String) -> String {
         guard let suffix = name.range(of: " (Prowlarr)", options: [.caseInsensitive, .backwards, .anchored],
                                       range: name.index(name.endIndex, offsetBy: -min(11, name.count))..<name.endIndex)
@@ -54,8 +45,6 @@ nonisolated public extension ArrRelease {
 
 }
 
-/// Identifies what to run a manual search for: `source` picks the arr client,
-/// `release` is the `/release` query.
 nonisolated public struct ManualSearchTarget: Identifiable, Hashable, Sendable {
     public let source: QueueItem.Source
     public let title: String
@@ -63,9 +52,7 @@ nonisolated public struct ManualSearchTarget: Identifiable, Hashable, Sendable {
 
     public var id: String { "\(source.rawValue)-\(release)" }
 
-    /// The searched season, for a whole-season search. The same `/release`
-    /// endpoint also returns per-episode releases, so ReleaseListView offers a
-    /// packs-only filter for these.
+    /// `/release` also returns per-episode releases, hence ReleaseListView's packs-only filter.
     public var season: Int? {
         if case let .season(_, season) = release { return season }
         return nil

@@ -26,7 +26,6 @@ public struct LiveValue<Element: Codable & Sendable>: Sendable {
     public let elements: [Element]
     /// Each instance's rows after the overlay; a failed instance keeps its last good slice.
     public let slices: [InstanceID: LiveSlice<Element>]
-    /// The oldest slice's measurement.
     public let measuredAt: Date
     public let partial: Set<InstanceID>
     /// Why each instance in `partial` failed this cycle.
@@ -170,11 +169,8 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         wake()
     }
 
-    /// Optimistic overlay; the store is untouched. The pump keeps ticking while an effect waits to be confirmed.
-    ///
-    /// `.status` patches the row until the source reports the same status, and ghosts it at its last position while
-    /// the source omits it, until expiry or until a new row `succeeds` it. `.removed` hides the row until expiry,
-    /// even if the source briefly returns it.
+    /// Optimistic overlay; the store is untouched. `.status` patches (or ghosts) the row until the source
+    /// agrees, expiry or a successor; `.removed` hides it until expiry.
     public func apply(_ effect: PendingEffect) {
         pending.removeAll { $0.effect.elementID == effect.elementID && $0.effect.instance == effect.instance }
         pending.append((effect, clock.now.addingTimeInterval(effect.lifetime.seconds)))

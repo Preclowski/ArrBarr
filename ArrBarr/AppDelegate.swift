@@ -14,13 +14,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var aboutWindow: NSWindow?
     private var welcomeWindow: NSWindow?
     private var paywallWindow: NSWindow?
-    /// The add-download window, and the batches still waiting for it. See
-    /// `enqueueDrops` for why a mixed drop becomes more than one batch.
+    /// Mixed drops queue as more than one batch — see `enqueueDrops`.
     private var addDownloadWindow: NSWindow?
     private var pendingDropBatches: [[DownloadDrop]] = []
     private let statusItemDropTarget = StatusItemDropTarget()
-    /// Local rightMouseDown monitor backing the status-item context menu —
-    /// kept so it could be removed, though it lives for the app's lifetime.
     private var statusItemRightClickMonitor: Any?
     private let configStore = ConfigStore.shared
     private let queueVM = QueueViewModel.shared
@@ -28,35 +25,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
     private var dropMessages: Task<Void, Never>?
 
-    /// Held for the whole process lifetime to keep macOS App Nap from throttling
-    /// our polling timers and the notification-flush timer. A menu-bar accessory
-    /// (`LSUIElement`) with no visible window is App Nap's prime target — left
-    /// unchecked it stretches the 30 s background poll to minutes when idle and
-    /// makes grab notifications land long after the download actually started.
-    /// `.userInitiatedAllowingIdleSystemSleep` suppresses App Nap for *our*
-    /// process while still letting the Mac sleep normally (we never keep the
-    /// machine awake — just ourselves un-napped while it's running).
+    /// Held for the process lifetime: an accessory app with no visible window is App Nap's prime target,
+    /// which stretches the 30 s poll to minutes. Still lets the Mac sleep.
     private var antiAppNap: (any NSObjectProtocol)?
 
-    /// Route swift-log (MCP server, NIO) into os.Logger. Runs exactly once;
-    /// must happen before the first `Logger` is created (hence `mcpController`
-    /// is lazy and first touched in `wireMCPServer`).
+    /// Must run before the first `Logger` is created, hence `mcpController` is lazy.
     private static let bootstrapLogging: Void = {
         LoggingSystem.bootstrap { OSLogForwardingHandler(label: $0) }
     }()
 
-    /// App-lifecycle events. The process is a menu-bar accessory that is
-    /// launched at login, lives for days and is never watched while it starts,
-    /// so "did it come up, in which mode, and what did the OS hand it later" is
-    /// only answerable from the log.
+    /// Launched at login and never watched while it starts, so lifecycle is only answerable from the log.
     nonisolated private static let log = Logger(category: "Lifecycle")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         registerNotificationCategories()
         UNUserNotificationCenter.current().delegate = self
 
-        // Opt out of App Nap for our lifetime so the queue-poll and
-        // notification timers actually keep their cadence in the menu bar.
         antiAppNap = ProcessInfo.processInfo.beginActivity(
             options: .userInitiatedAllowingIdleSystemSleep,
             reason: "Keep arr queue polling and download notifications timely"
@@ -64,28 +48,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         DemoMode.seedConfigsIfNeeded(configStore)
 
-        // Drive the whole app's appearance from the preset. On macOS the
-        // per-scene `.preferredColorScheme` doesn't reach the menu-bar popover
-        // or the NSHostingController-backed windows; `NSApp.appearance` does,
-        // and applies to every window at once.
+        // `.preferredColorScheme` doesn't reach the menu-bar popover or the hosted windows; `NSApp.appearance` does.
         applyAppearance(configStore.appearance)
         configStore.$appearance
             .sink { [weak self] in self?.applyAppearance($0) }
             .store(in: &cancellables)
 
-        // Dock-icon vs menu-bar-only mode. The sink fires once on subscribe
-        // with the current value (the initial apply), then on every toggle.
+        // The sink fires once on subscribe with the current value, then on every toggle.
         configStore.$detachedWindow
             .removeDuplicates()
             .sink { [weak self] in self?.applyWindowMode($0) }
             .store(in: &cancellables)
 
-        // Paywall presentation (App Store builds). The gate lives in ArrCore as
-        // a published `gatedFeature`. We deliberately do NOT present it as a
-        // sheet inside the MenuBarExtra panel — that panel auto-dismisses the
-        // instant it resigns key, which happens the moment StoreKit's purchase
-        // UI takes focus. So mirror the Settings/About pattern and host the
-        // paywall in a real NSWindow that survives focus changes.
+        // Hosted in a real NSWindow: the MenuBarExtra panel auto-dismisses when StoreKit's purchase UI takes focus.
         StoreManager.shared.$gatedFeature
             .receive(on: RunLoop.main)
             .sink { [weak self] feature in
@@ -93,17 +68,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             .store(in: &cancellables)
 
-        // Drops onto the panel / detached window arrive as a notification (the
-        // SwiftUI side can't reach the window plumbing) and land in the same
-        // add window as every other entry point.
+        // The SwiftUI side can't reach the window plumbing, so drops arrive as a message.
         dropMessages = Task { [weak self] in
             for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.DropDownloads.self) {
                 self?.enqueueDrops(message.urls.compactMap(DownloadDrop.init(url:)))
             }
         }
 
-        // The menu-bar icon accepts drops too — installed on a delay because
-        // SwiftUI creates the status item after this callback returns.
+        // Installed on a delay because SwiftUI creates the status item after this callback returns.
         statusItemDropTarget.install()
         installStatusItemRightClickMenu()
 
@@ -116,9 +88,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         Task.detached { await AppCaches.purgeExpired() }
 
-        // Index the library into Spotlight (search "american pie" → result).
-        // `--clear-intents` instead wipes ArrBarr's own Spotlight entries and
-        // skips reindexing — a one-shot way to clear stale icons.
+        // `--clear-intents` wipes ArrBarr's Spotlight entries and skips reindexing.
         if CommandLine.arguments.contains("--clear-intents") {
             Task { @MainActor in
                 await SpotlightIndexer.clearIndex()
@@ -128,16 +98,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             SpotlightIndexer.reindex(configStore: configStore)
         }
 
-        // Warm the chat empty-state poster deck (sample URLs + prefetch their
-        // images) so opening Chat shows it instantly instead of loading on
-        // first entry. No-op unless the chat tab is available.
         LibraryPosterSampler.warmUp(configStore: configStore)
 
-        // Wake handler — WebSockets don't survive a Mac sleep cycle
-        // reliably; the OS can take 30-90 s to surface the dead socket,
-        // during which SignalR pushes silently drop. Force a tear-and-
-        // rebuild of every realtime connection right after wake so the
-        // data the user sees on the next panel open is current.
+        // WebSockets don't reliably survive sleep and the OS can take 30-90 s to surface the dead socket,
+        // so force a reconnect right after wake.
         NSWorkspace.shared.notificationCenter.addObserver(
             forName: NSWorkspace.didWakeNotification,
             object: nil,
@@ -178,23 +142,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             options: [.destructive]
         )
 
-        // Multi-item batch — only "Open" is meaningful; pause/remove can't
-        // target a specific item from a batched banner.
+        // A batched banner can't target one item, so only "Open".
         let batchCategory = UNNotificationCategory(
             identifier: NotificationCoalescer.categoryIdentifier,
             actions: [openAction],
             intentIdentifiers: [],
             options: []
         )
-        // Single item that's currently downloading.
         let downloadingCategory = UNNotificationCategory(
             identifier: NotificationCoalescer.downloadingCategoryIdentifier,
             actions: [openAction, pauseAction, removeAction],
             intentIdentifiers: [],
             options: []
         )
-        // Single item that's currently paused (or queued waiting on the
-        // download client).
         let pausedCategory = UNNotificationCategory(
             identifier: NotificationCoalescer.pausedCategoryIdentifier,
             actions: [openAction, resumeAction, removeAction],
@@ -208,8 +168,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - MCP server
 
-    /// Mirror the server's live status into ConfigStore (for the Settings pane)
-    /// and (re)start/stop it whenever the relevant config changes.
     private func wireMCPServer() {
         Task {
             await mcpController.setStatusHandler { [weak self] status in
@@ -239,10 +197,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let cs = configStore
         guard cs.mcpEnabled else { Task { await mcpController.stop() }; return }
         if cs.mcpRequireAuth && cs.mcpAuthToken.isEmpty {
-            // First enable: mint a token instead of starting a server whose
-            // auth can never pass (the validator fails closed on an empty
-            // token). Persists to the Keychain via the ConfigStore sink, and
-            // the publisher re-triggers this method with the token in place.
+            // Mint a token rather than start a server whose auth can never pass (the validator fails closed on empty).
             cs.mcpAuthToken = MCPTokenStore.generate()
             return
         }
@@ -269,15 +224,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Spotlight
 
-    /// Re-index when the app is re-activated so posters cached while browsing
-    /// get picked up (cached-only thumbnails). Throttled inside `reindex`.
+    /// Picks up posters cached while browsing. Throttled inside `reindex`.
     func applicationDidBecomeActive(_ notification: Notification) {
         SpotlightIndexer.reindex(configStore: configStore)
     }
 
-    /// A Spotlight result was clicked. By default it opens the title's detail
-    /// inside ArrBarr; `spotlightOpensInApp = false` restores the old behaviour
-    /// (the item's page in the arr's web UI).
+    /// Opens the title's detail in ArrBarr, or the arr's web UI when `spotlightOpensInApp` is off.
     func application(_ application: NSApplication,
                      continue userActivity: NSUserActivity,
                      restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void) -> Bool {
@@ -285,13 +237,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
               let id = userActivity.userInfo?[CSSearchableItemActivityIdentifier] as? String else {
             return false
         }
-        // Falls through to the browser when the preference is off, and also
-        // when the identifier is unparseable (nothing to navigate to in-app).
+        // Also falls through when the identifier is unparseable (a stale entry from an older id format).
         guard configStore.spotlightOpensInApp, let ref = SpotlightIndexer.parse(id) else {
-            // Two different reasons land here — the preference is off, or the
-            // identifier didn't parse (a stale index entry from an older id
-            // format). They look identical to the user: the browser opens, or
-            // nothing does.
             Self.log.notice(
                 "spotlight hit → browser (opensInApp=\(self.configStore.spotlightOpensInApp, privacy: .public), parsed=\(SpotlightIndexer.parse(id) != nil, privacy: .public))"
             )
@@ -309,13 +256,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    /// Host the hit in the same window detached mode uses — the MenuBarExtra
-    /// panel can't be opened programmatically, so menu-bar mode gets a real
-    /// window too (self-closing × in the tab bar; activation policy untouched).
-    /// `DetailRequest` is a NotificationCenter post, so a *freshly built*
-    /// window needs a beat for `PopoverContentView`'s listener to mount before
-    /// the post lands — same cold-start race iOS works around. An already-open
-    /// window takes it immediately.
+    /// The MenuBarExtra panel can't be opened programmatically, so this uses the detached window. A freshly
+    /// built window needs a beat for `PopoverContentView`'s listener to mount before the post lands.
     private func openSpotlightDetail(source: QueueItem.Source, entityId: Int) {
         let wasOpen = mainWindow != nil
         openMainWindow()
@@ -340,7 +282,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             StoreManager.shared.dismissPaywall()
         }
         .environmentObject(configStore)
-        // Standalone scene → self-inject the font-scale preset.
         .appFontScale(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
@@ -356,7 +297,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.paywallWindow = nil
-                // Closing the window cancels the gate so state stays consistent.
                 StoreManager.shared.dismissPaywall()
             }
         }
@@ -373,24 +313,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Dropped / opened downloads
 
-    /// Every way a torrent, nzb or magnet can reach us: dropped on the Dock
-    /// icon, opened from Finder ("Open With"), or clicked as a `magnet:` link
-    /// in a browser. LaunchServices funnels all three through here.
-    ///
-    /// Anything we can't download is ignored rather than refused — the same
-    /// drag may carry a stray file alongside the torrents, and failing the
-    /// whole batch for it would be hostile.
+    /// Dock drop, Finder "Open With" and `magnet:` links all land here. Undownloadable items are ignored,
+    /// not refused: a drag may carry a stray file alongside the torrents.
     func application(_ application: NSApplication, open urls: [URL]) {
         enqueueDrops(urls.compactMap(DownloadDrop.init(url:)))
     }
 
-    /// Show the add window for these payloads.
-    ///
-    /// Torrent and usenet payloads are handled as separate batches: one window
-    /// asks one question ("which arr?"), and that answer can't be shared across
-    /// protocols — a `.nzb` and a `.torrent` reach different clients even
-    /// within the same arr. Mixed drops therefore queue, and the second batch's
-    /// window opens when the first one closes.
+    /// Torrent and usenet go in separate batches: a `.nzb` and a `.torrent` reach different clients even within one arr,
+    /// so one "which arr?" answer can't cover both. The second batch opens when the first window closes.
     func enqueueDrops(_ drops: [DownloadDrop]) {
         guard !drops.isEmpty else { return }
         for kind in DownloadKind.allCases {
@@ -402,10 +332,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func showNextDropBatch() {
         guard !pendingDropBatches.isEmpty else { return }
-        // One window at a time — the queued batches drain as it closes. If one
-        // is already up, surface it: dropping a second file and seeing nothing
-        // happen reads as "the drop was lost", when it's really waiting behind
-        // the question already on screen.
+        // One window at a time. Surface the open one, or a second drop looks lost.
         if let existing = addDownloadWindow {
             existing.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -417,8 +344,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.addDownloadWindow?.close()
         }
         .environmentObject(configStore)
-        // Standalone scene → self-inject the font-scale preset (see
-        // `appFontScale`) or every scaledFont here silently renders at 1.0.
+        // Standalone scene: without the injected font-scale preset every scaledFont renders at 1.0.
         .appFontScale(configStore)
 
         let hosting = NSHostingController(rootView: view)
@@ -426,10 +352,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         win.title = String(localized: "Add download", bundle: .arrCore)
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
-        // Size the content before centring: an `NSHostingController` reports a
-        // zero-sized view until SwiftUI lays out, and centring a zero frame can
-        // park the window off the visible area — where it's key, invisible, and
-        // looks exactly like a hang.
+        // Size before centring: `NSHostingController` reports zero size until layout, and centring a zero frame
+        // can park the window off-screen, where it looks like a hang.
         win.setContentSize(hosting.view.fittingSize == .zero ? NSSize(width: 420, height: 260) : hosting.view.fittingSize)
         win.center()
         if let screen = NSScreen.main, !screen.visibleFrame.intersects(win.frame) {
@@ -438,9 +362,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 y: screen.visibleFrame.midY - win.frame.height / 2
             ))
         }
-        // A `.regular` app already activates on Dock drop; an accessory one
-        // (menu-bar mode) does not, and its window would open behind whatever
-        // the user was in. `.floating` keeps it reachable in both modes.
+        // An accessory app doesn't activate on Dock drop, so the window would open behind the user's app.
         win.level = .floating
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
@@ -459,12 +381,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Status-item right-click menu
 
-    /// Right-click on the menu-bar icon opens a small context menu (Settings /
-    /// About / Quit) instead of the panel. `MenuBarExtra(.window)` has no
-    /// native affordance for this, so a local monitor watches for right-clicks
-    /// landing in the status item's window. The class-name match is the same
-    /// unavoidable non-public-API sniffing `StatusItemDropTarget` does;
-    /// failure degrades to "right-click opens the panel", never a crash.
+    /// `MenuBarExtra(.window)` has no right-click affordance, so a local monitor sniffs the status item's window class;
+    /// failure degrades to right-click opening the panel.
     private func installStatusItemRightClickMenu() {
         statusItemRightClickMonitor = NSEvent.addLocalMonitorForEvents(matching: [.rightMouseDown]) { [weak self] event in
             guard let self,
@@ -473,7 +391,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                   let contentView = window.contentView
             else { return event }
             NSMenu.popUpContextMenu(self.statusItemContextMenu(), with: event, for: contentView)
-            // Swallow the event so the panel doesn't also toggle underneath.
             return nil
         }
     }
@@ -509,9 +426,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - About
 
-    /// Our own About window — see `AboutView` for why the system panel went.
-    /// Hosted like Settings and the paywall: a real `NSWindow`, so it survives
-    /// the menu-bar panel closing the moment focus moves.
+    /// Hosted in a real `NSWindow` so it survives the menu-bar panel closing on focus loss.
     func showAbout() {
         if let win = aboutWindow {
             win.makeKeyAndOrderFront(nil)
@@ -521,8 +436,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let hosting = NSHostingController(rootView: AboutView().environmentObject(configStore))
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "settings.about.button", bundle: .arrCore)
-        // No resize: the content is a fixed-width column, and a resizable
-        // About window is a window with nothing to do with the extra space.
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
@@ -558,20 +471,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let win = NSWindow(contentViewController: hosting)
         let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
         win.title = String(localized: "ArrBarr Settings", bundle: .arrCore) + (shortVersion.isEmpty ? "" : " v\(shortVersion)")
-        // System-Settings-style sidebar layout: the window needs to be
-        // resizable so the NavigationSplitView behaves (a fixed-size split
-        // view fights its column constraints and can't reveal the sidebar
-        // toggle). Traffic-light cluster fully enabled, like native Settings.
+        // Resizable, or the NavigationSplitView fights its column constraints and can't reveal the sidebar toggle.
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
         win.setContentSize(NSSize(width: 780, height: 540))
         win.contentMinSize = NSSize(width: 700, height: 470)
         win.isReleasedWhenClosed = false
-        // The Settings UI is a hand-built two-column layout (a custom vibrant
-        // sidebar + a detail column). fullSizeContentView + a transparent
-        // titlebar let that content fill the whole window, so the sidebar
-        // material reaches the top-left with the traffic-lights floating on it
-        // (System Settings look). Title text hidden — the section name shows in
-        // the detail column's own top bar.
+        // Full-size content + transparent titlebar so the custom sidebar material reaches the top-left under the traffic lights.
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.title = ""
@@ -593,10 +498,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - Welcome
 
     private func showWelcomeIfNeeded() {
-        // Upgrade from a pre-welcome build: they already configured services
-        // before the welcome screen existed. Showing first-run would be
-        // confusing; silently mark them caught up so the next major-update
-        // welcome still fires.
+        // Pre-welcome builds already configured services: mark them caught up so the next major-update welcome still fires.
         let isUpgradeFromPreWelcome = configStore.welcomeSeenVersion == nil
             && hasAnyConfiguredArr
         if isUpgradeFromPreWelcome && !WelcomeContent.shouldForceShow() {
@@ -608,8 +510,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var hasAnyConfiguredArr: Bool {
-        // A demo-seeded user has `enabled = true` but no `baseURL`; only count
-        // real configurations.
+        // A demo-seeded user has `enabled = true` but no `baseURL`.
         !configStore.radarr.baseURL.isEmpty
             || !configStore.sonarr.baseURL.isEmpty
             || !configStore.lidarr.baseURL.isEmpty
@@ -634,41 +535,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             variant: variant,
             onDismiss: { [weak self] in self?.welcomeWindow?.performClose(nil) },
             onAddService: { [weak self] in
-                // Open Settings on top of the welcome window — don't close
-                // welcome. The user can configure and come back to finish
-                // the tour.
                 self?.openSettings()
             },
             onTryDemo: { [weak self] in self?.enableDeveloperModeAndRelaunch() },
             onFinish: { [weak self] in
-                // Close welcome. The MenuBarExtra icon is already
-                // visible — user clicks it themselves to land on the
-                // panel they just learned about.
                 self?.welcomeWindow?.performClose(nil)
             }
         ).environmentObject(configStore)
-        // Standalone scene → self-inject the font-scale preset.
         .appFontScale(configStore)
 
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "Welcome to ArrBarr", bundle: .arrCore)
-        // Apple "What's New" style: no titlebar text, content extends under
-        // the title bar (we draw our own close button in the top-right), and
-        // the user can drag the window from anywhere on the background.
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.isMovableByWindowBackground = true
         win.standardWindowButton(.miniaturizeButton)?.isHidden = true
         win.standardWindowButton(.zoomButton)?.isHidden = true
-        // We draw our own X close button in the content's top-right corner —
-        // hide the standard traffic-light close so the window has just one
-        // unambiguous dismiss control.
         win.standardWindowButton(.closeButton)?.isHidden = true
-        // MUST match WelcomeView's `.frame(width:height:)` — a mismatch leaves
-        // a strip of NSWindow background showing through where the SwiftUI
-        // content stops, which reads as "window inside the window".
+        // Must match WelcomeView's `.frame(width:height:)`, or NSWindow background shows around the content.
         win.setContentSize(NSSize(width: 400, height: 440))
         win.isReleasedWhenClosed = false
         win.center()
@@ -691,11 +577,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func enableDeveloperModeAndRelaunch() {
-        // Welcome-screen handoff: only flip the developer-mode flag, matching
-        // `--demo` launch-arg semantics. Fixtures stay off until the user
-        // explicitly toggles "Demo mode" inside the now-visible Developer
-        // options section. The two flags are evaluated once at process start,
-        // so we relaunch to take effect.
+        // Only flips developer mode, like `--demo`; both flags are read once at process start, so relaunch.
         UserDefaults.standard.set(true, forKey: DeveloperMode.key)
 
         let alert = NSAlert()
@@ -721,12 +603,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard response == .alertFirstButtonReturn else { return false }
 
         UserDefaults.standard.set(enabled, forKey: DemoMode.key)
-        // Re-point the live store now (belt-and-suspenders before relaunch).
         configStore.useDemoStore(enabled)
         if !enabled {
-            // Wipe the demo profile entirely (configs + seed flag) so the next
-            // enable re-seeds a clean demo. Targets ONLY the demo suite — the
-            // real profile in `.standard` is never touched.
+            // Only the demo suite — the real profile in `.standard` is never touched.
             DemoMode.resetDemoStore()
         }
         relaunchSelf()
@@ -744,35 +623,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - Detached window (Dock-icon mode)
 
-    /// The real, titlebar'd window shown in detached mode. Hosts the same
-    /// `PopoverContentView` as the menu-bar panel, on the same shared models.
     private var mainWindow: NSWindow?
 
-    /// Set the activation policy *before* the first window appears so the app
-    /// doesn't visibly flip from accessory to Dock on launch. The window itself
-    /// is created later in `applicationDidFinishLaunching` once the UI is up.
+    /// Set before the first window appears so the app doesn't visibly flip from accessory to Dock on launch.
     func applicationWillFinishLaunching(_ notification: Notification) {
         if configStore.detachedWindow {
             NSApp.setActivationPolicy(.regular)
         }
     }
 
-    /// Pure function of the `detachedWindow` preference: pick the activation
-    /// policy and show/hide the real window. The menu-bar icon is toggled
-    /// independently in SwiftUI via `MenuBarExtra(isInserted:)` bound to the
-    /// same flag, so the two surfaces are never visible at once.
+    /// The menu-bar icon is toggled separately via `MenuBarExtra(isInserted:)` on the same flag.
     private func applyWindowMode(_ detached: Bool) {
         if detached {
             NSApp.setActivationPolicy(.regular)
             openMainWindow()
         } else {
-            mainWindow?.close()   // willClose handler nils the reference
+            mainWindow?.close()
             NSApp.setActivationPolicy(.accessory)
         }
     }
 
-    /// Show (or re-show) the detached window. Idempotent: an existing window is
-    /// just brought to front.
     func openMainWindow() {
         if let win = mainWindow {
             win.makeKeyAndOrderFront(nil)
@@ -780,57 +650,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // PopoverContentView draws on a clear background — in the menu-bar
-        // panel the system supplies the vibrant glass behind it. The detached
-        // window must supply that backdrop itself, otherwise the clear content
-        // sits on a flat opaque window. A behind-window `NSVisualEffectView`
-        // gives the same material the popover uses (rendered as Liquid Glass on
-        // macOS 26), so the two surfaces look identical.
+        // PopoverContentView draws on clear; the menu-bar panel supplies the glass, so this window must supply its own.
         let view = PopoverContentView(
             viewModel: queueVM,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onShowAbout: { [weak self] in self?.showAbout() },
             onQuit: { NSApp.terminate(nil) },
-            // No native traffic lights in the detached window — PopoverContentView
-            // adds an × as the last item of the tab bar's right island instead.
-            // This just closes (hides) the window; `applicationShouldHandleReopen`
-            // reopens it from the Dock and `detachedWindow` stays true (no re-attach).
             onCloseWindow: { [weak self] in self?.mainWindow?.close() }
         )
         .environmentObject(configStore)
         .background(WindowGlassBackground().ignoresSafeArea())
-        // This window is a hand-built NSWindow where NavigationStack's automatic
-        // `< Back` chevron does not render (only the MenuBarExtra scene gets it
-        // for free). Flag the content so DetailView draws its own in-content back
-        // button here, while the menu-bar panel keeps the native chevron.
+        // NavigationStack's back chevron doesn't render in a hand-built NSWindow; DetailView draws its own here.
         .environment(\.isDetachedWindow, true)
-        // NOTE: we intentionally leave `hosting.sceneBridgingOptions` at its
-        // default ([]). Bridging would push SwiftUI's `.navigationTitle` and
-        // `.toolbar` items into the titlebar — but the NavigationStack automatic
-        // `< Back` chevron never bridges to a hand-built NSWindow anyway
-        // (verified empirically), and bridging the rest only duplicated the
-        // title + surfaced toolbar buttons we don't want up there. DetailView
-        // draws its own back button + title in-content instead (`.isDetachedWindow`).
+        // `sceneBridgingOptions` stays []: the back chevron never bridges to a hand-built NSWindow anyway,
+        // and bridging the rest only duplicated the title and toolbar buttons.
         let hosting = NSHostingController(rootView: view)
-        // Drop the titlebar safe-area inset so the SwiftUI content fills to the very
-        // top — the tab bar then sits on the SAME row as the traffic lights, which
-        // float top-left. PopoverContentView adds a leading inset in detached mode
-        // so the tabs/header clear the lights (they sit beside the tabs, not above).
+        // No titlebar inset: the tab bar shares the traffic lights' row; PopoverContentView insets the leading edge.
         if #available(macOS 13.3, *) { hosting.safeAreaRegions = [] }
         let win = NSWindow(contentViewController: hosting)
-        // Empty title: `.fullSizeContentView` + transparent, hidden titlebar makes
-        // the bar itself invisible, but a non-empty `title` can still paint text
-        // over the content header. Keep it blank so nothing overlaps.
+        // A non-empty title can still paint over the content header with a hidden titlebar.
         win.title = ""
-        // Fixed 400×600 (PopoverContentView is a hard-sized, internally-scrolling
-        // layout — no `.resizable`, which would only add empty gutters).
-        // `.fullSizeContentView` + transparent titlebar lets the glass backdrop
-        // fill the whole window including under the (now SwiftUI-owned) titlebar.
-        //
-        // Hide the whole native traffic-light cluster — the detached window draws
-        // its own × in the tab bar's right island (see PopoverContentView). We keep
-        // `.titled` + `.closable` so the window can still become key (text fields
-        // focus) and Cmd-W works, but no system buttons are shown.
+        // Fixed size: PopoverContentView is hard-sized. `.titled` + `.closable` stay so text fields can focus
+        // and Cmd-W works, though the system buttons are hidden.
         win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.standardWindowButton(.closeButton)?.isHidden = true
         win.standardWindowButton(.miniaturizeButton)?.isHidden = true
@@ -844,10 +685,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         win.isReleasedWhenClosed = false
         win.center()
 
-        // Red close button must not tear down the app — it returns to the Dock
-        // icon. We drop our reference so the next Dock click (or toggle) rebuilds
-        // a fresh window; `applicationShouldTerminateAfterLastWindowClosed`
-        // keeps the process alive.
+        // Closing must not quit the app; drop the reference so the next Dock click rebuilds the window.
         NotificationCenter.default.addObserver(
             forName: NSWindow.willCloseNotification,
             object: win,
@@ -861,13 +699,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
-    /// Closing the last window (the detached main window, or Settings/About in
-    /// accessory mode) never quits ArrBarr — it lives in the menu bar or Dock.
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
         false
     }
 
-    /// Clicking the Dock icon after the window was closed reopens it.
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
         if configStore.detachedWindow && mainWindow == nil {
             openMainWindow()
@@ -876,9 +711,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// Behind-window vibrant material for the detached window, matching the
-/// menu-bar popover's backdrop. `.popover` keeps the two surfaces visually
-/// identical; on macOS 26 the system renders it as Liquid Glass.
 private struct WindowGlassBackground: NSViewRepresentable {
     func makeNSView(context: Context) -> NSVisualEffectView {
         let v = NSVisualEffectView()
@@ -891,7 +723,6 @@ private struct WindowGlassBackground: NSViewRepresentable {
 }
 
 extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
-    /// Show the banner even when the app is frontmost.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,
@@ -900,9 +731,6 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
         completionHandler([.banner, .sound])
     }
 
-    /// Tap on banner / "Open in browser" → opens the arr's queue page.
-    /// Pause / Resume / Remove → looks up the QueueItem by source + arrQueueId
-    /// in the current QueueViewModel state and calls the matching action.
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         didReceive response: UNNotificationResponse,
@@ -914,9 +742,7 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
 
         switch action {
         case UNNotificationDefaultActionIdentifier:
-            // Tapping the banner body is a no-op now that MenuBarExtra
-            // owns the panel — there's no public API to open it
-            // programmatically. The user clicks the menu-bar icon.
+            // No public API opens the MenuBarExtra panel programmatically.
             break
         case NotificationCoalescer.openActionIdentifier:
             openArrQueue(from: userInfo)
@@ -955,22 +781,16 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
               let arrQueueId = userInfo[NotificationCoalescer.userInfoQueueIdKey] as? Int
         else { return }
         Task { @MainActor in
-            // Find the item in the current snapshot. If the user hasn't opened
-            // the popover since launch the VM may not have polled yet — kick
-            // a refresh first so the item is present.
+            // The VM may not have polled yet if the popover was never opened.
             if findItem(source: source, arrQueueId: arrQueueId) == nil {
                 await queueVM.refresh()
             }
             guard let item = findItem(source: source, arrQueueId: arrQueueId) else {
-                // The row is gone — imported, or removed on the server since the
-                // notification fired. The button just does nothing, which reads
-                // as a bug from the outside.
                 Self.log.notice(
                     "notification action for \(source.rawValue, privacy: .public) queue item \(arrQueueId, privacy: .public): no longer in the queue, ignored"
                 )
                 return
             }
-            // A pause/resume/delete that never touched the app's UI.
             Self.log.notice(
                 "notification action ran on \(source.rawValue, privacy: .public) queue item \(arrQueueId, privacy: .public)"
             )
@@ -984,8 +804,6 @@ extension AppDelegate: @preconcurrency UNUserNotificationCenterDelegate {
 }
 
 private extension MCPServerStatus {
-    /// Bridge the server controller's status (ArrMCPServer) into ArrCore's
-    /// display enum — identical shapes, different modules.
     init(_ s: MCPServerController.Status) {
         switch s {
         case .stopped: self = .stopped

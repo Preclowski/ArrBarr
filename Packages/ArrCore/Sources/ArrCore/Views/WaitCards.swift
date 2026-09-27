@@ -1,9 +1,7 @@
 import SwiftUI
 import MediaKit
 
-/// One "Did you know that…" while the indexers answer a manual search: a
-/// sentence in markdown (bold marks names and numbers), an optional second
-/// sentence, and the portraits of the people it talks about.
+/// One "Did you know that…" shown while the indexers answer a manual search.
 nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     struct Person: Hashable, Sendable {
         let name: String
@@ -15,8 +13,7 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     var id: String { sentence }
 }
 
-/// What the pushing detail screen already knows about the title. Everything
-/// here is a value it holds; the provider only adds cache-first TMDB reads.
+/// Values the pushing detail screen already holds; the provider only adds cache-first TMDB reads.
 struct WaitCardContext {
     var movie: ArrMovie? = nil
     var series: ArrSeries? = nil
@@ -36,9 +33,7 @@ struct WaitCardContext {
     }
 }
 
-/// Composes stories from templates. Every fact comes from the records in hand
-/// or a cache-first TMDB read; a missing fact means a missing story, never an
-/// error or a blank.
+/// A missing fact means a missing story, never an error or a blank.
 enum WaitStoryProvider {
     /// Stories that need no network, ready on first render.
     static func localStories(_ ctx: WaitCardContext, locale: Locale = .current) -> [WaitStory] {
@@ -69,8 +64,6 @@ enum WaitStoryProvider {
         return stories
     }
 
-    /// Stories from TMDB, shuffled so a long wait on the same title reads
-    /// differently each time.
     static func remoteStories(_ ctx: WaitCardContext, configStore: ConfigStore) async -> [WaitStory] {
         guard !configStore.tmdbApiKey.isEmpty, !ctx.title.isEmpty else { return [] }
         let client = configStore.tmdbClient
@@ -208,10 +201,7 @@ enum WaitStoryProvider {
 
 // MARK: - Surface
 
-/// The wait screen for a manual search: the poster, tilted, beside a "Did you
-/// know that…" sentence, with the standard spinner and label centred under
-/// them. Stories come in random order and rotate every few seconds; click the
-/// right side to skip ahead, the left to go back.
+/// The wait screen for a manual search. Click the right side to skip ahead, the left to go back.
 struct WaitStories: View {
     let context: WaitCardContext
     var interval: TimeInterval = 7

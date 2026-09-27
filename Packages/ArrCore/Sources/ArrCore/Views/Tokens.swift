@@ -1,21 +1,9 @@
 import SwiftUI
 
-/// Semantic design tokens. Use these for spacing/radii that have a clear
-/// role (section gutter, row inset, default corner) rather than reaching
-/// for raw point values. One-off local tuning (a +1 nudge to optically
-/// align a glyph, a `spacing: 3` to tighten a chip row) stays as a raw
-/// literal — forcing it through a token would hide intent, not clarify
-/// it.
-///
-/// New code should prefer these names. Existing raw values get migrated
-/// opportunistically when the surrounding code is being touched anyway.
+/// Semantic spacing and radii. One-off optical nudges stay raw literals; a token would hide the intent.
 enum Tokens {
-    /// Spacing scale. Names map to *semantic role* — `queueRowH` is the
-    /// horizontal inset inside a queue row, etc.
     enum Spacing {
-        /// Horizontal inset for queue rows + arr section headers. Tighter on
-        /// the narrow macOS popover (12 pt read as oversized side gaps there)
-        /// than on the full-width iOS list.
+        /// Tighter on the narrow macOS popover, where 12 pt read as oversized side gaps.
         #if os(macOS)
         public static let queueRowH: CGFloat = 7
         #else
@@ -23,9 +11,6 @@ enum Tokens {
         #endif
     }
 
-    /// Corner radii. `card` is the dominant value (rounded rectangles
-    /// inside the popover); `chip` is the tighter rounding used on
-    /// inline pills/badges.
     enum Radius {
         static let chip: CGFloat = 4
         static let card: CGFloat = 6

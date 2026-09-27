@@ -2,9 +2,7 @@ import SwiftUI
 import os
 import MediaKit
 
-/// Identity of a person to open — pushed as a `navigationDestination(item:)`
-/// from cast heads. Carries just enough to render the header instantly (name +
-/// headshot) while `People` fetches the bio and filmography.
+/// Carries enough to render the header instantly while `People` fetches bio and filmography.
 nonisolated public struct PersonRef: Hashable, Identifiable, Sendable {
     public let tmdbId: Int
     public let name: String
@@ -17,7 +15,7 @@ nonisolated public struct PersonRef: Hashable, Identifiable, Sendable {
         self.profilePath = profilePath
     }
 
-    /// Build from a tapped cast head (both providers stamp `tmdbPersonId`).
+    /// Both providers stamp `tmdbPersonId`.
     public init?(castMember m: CastMember) {
         guard let id = m.tmdbPersonId, id > 0 else { return nil }
         self.init(tmdbId: id, name: m.name, profilePath: nil)
@@ -25,10 +23,8 @@ nonisolated public struct PersonRef: Hashable, Identifiable, Sendable {
 }
 
 public extension View {
-    /// Attach a person destination to any cast-showing surface. The surface
-    /// owns a `@State PersonRef?`; a cast-head tap sets it and this pushes the
-    /// view. Owned by each surface (not a global) so back returns to the
-    /// originating detail and nested pushes don't collide.
+    /// Each surface owns its `@State PersonRef?` (not a global) so back returns to the originating detail
+    /// and nested pushes don't collide.
     func personDestination(_ ref: Binding<PersonRef?>) -> some View {
         navigationDestination(item: ref) { r in
             PersonView(ref: r, onBack: { ref.wrappedValue = nil })
@@ -36,37 +32,25 @@ public extension View {
     }
 }
 
-/// A person's page: headshot, bio + external-link chips, and the filmography
-/// as `PersonFilmographyRow`s (owned → detail, new → add). The external IMDb /
-/// TMDB links that cast heads used to open directly now live here, in the
-/// header.
 struct PersonView: View {
     let ref: PersonRef
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
-    /// Explicit pop callback instead of `@Environment(\.dismiss)`: reading
-    /// `dismiss` in a view that also declares `navigationDestination` trips a
-    /// SwiftUI invalidation loop — the DismissAction is re-created every update
-    /// cycle, each re-creation invalidates this view, and the whole nav stack
-    /// re-rendered at ~150 Hz (the person-view jank).
+    /// Explicit pop callback: reading `dismiss` in a view that declares `navigationDestination` re-renders
+    /// the whole stack at ~150 Hz.
     let onBack: () -> Void
 
     @State private var details: TMDBPersonDetails?
     @State private var detailsLoading = true
     @State private var movieRows: [SearchResult] = []
     @State private var seriesRows: [SearchResult] = []
-    /// Both filmographies load up front (two parallel calls) so switching tabs
-    /// is instant — no per-switch fetch — and the tab counts are known.
+    /// Both load up front so switching tabs needs no fetch and the counts are known.
     @State private var filmographyLoading = true
     @State private var kind: Kind = .movie
     @State private var enlargedPoster: URL?
-    /// Local title pushes so back returns HERE (owned → detail, new → add).
-    /// Routing titles through the root `DetailRequest` tore the nav stack down
-    /// to the root, which is what sent "back" to the wrong tab.
+    /// Local pushes: routing through the root `DetailRequest` tears the stack down, so back lands on the wrong tab.
     @State private var titleDetail: QueueItem?
     @State private var titleAdd: SearchResult?
-    /// Own SearchViewModel for the pushed add panel (it loads quality/root
-    /// options from the configs `setup` supplies).
     @State private var searchVM = SearchViewModel()
 
     enum Kind: Hashable { case movie, series }
@@ -79,8 +63,6 @@ struct PersonView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
-            // Detached window / popover draw no NavigationStack chevron — mirror
-            // the other detail surfaces and self-draw a back header.
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
@@ -107,16 +89,9 @@ struct PersonView: View {
             #endif
 
             ScrollView {
-                // A LazyVStack — with the rows' ForEach as DIRECT children — so
-                // a prolific actor's 100+ titles materialise only as they scroll
-                // into view. An eager VStack rendered (and hover-tracked) every
-                // row at once, which pegged the main thread the whole time the
-                // person view was open.
+                // LazyVStack with the ForEach as direct children: an eager VStack of 100+ hover-tracked rows pegged the main thread.
                 LazyVStack(alignment: .leading, spacing: 2) {
-                    // Header (photo, bio, external links) and the segmented
-                    // toggle are padded to 14; the filmography rows are
-                    // full-bleed (they self-inset 12) so they don't sit doubly
-                    // indented under the header.
+                    // Rows are full-bleed (they self-inset 12) so they aren't doubly indented under the 14pt header.
                     VStack(alignment: .leading, spacing: 14) {
                         header
                         filmographyToggle
@@ -134,14 +109,6 @@ struct PersonView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.vertical, 12)
                     } else {
-                        // Plain `Identifiable` again. This used to key on
-                        // `\.self` because every series row carried `id: 0` and
-                        // a ForEach full of duplicate ids breaks SwiftUI's
-                        // diffing — it drew the FIRST show over and over (the
-                        // "104 × The Simpsons" bug) and re-diffed the whole
-                        // stack on every state change. `SearchResult.id` is a
-                        // real per-row identity now, so the workaround (and
-                        // hashing an entire struct per row) can go.
                         ForEach(rows) { result in
                             PersonFilmographyRow(result: result) { openTitle(result) }
                         }
@@ -165,8 +132,6 @@ struct PersonView: View {
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
-        // Local title pushes — owned drills into the detail, a new title opens
-        // the add panel, both popping back to this person view.
         .navigationDestination(item: $titleDetail) { item in
             DetailView(item: item, onBack: { titleDetail = nil }, viewModel: QueueViewModel.shared)
         }
@@ -225,8 +190,6 @@ struct PersonView: View {
                     } else if detailsLoading {
                         SkeletonLines(count: 1)
                     }
-                    // External links live at the top (next to the identity),
-                    // as the services' brand icons.
                     if let details {
                         HStack(spacing: 10) {
                             if let url = details.tmdbURL { serviceLink("rating-tmdb", url, "TMDB") }
@@ -247,13 +210,7 @@ struct PersonView: View {
         .padding(.top, 2)
     }
 
-    /// TMDB's name once it's loaded, the caller's only until then.
-    ///
-    /// `ref.name` is a *label*, and not always a trustworthy one: a chat link
-    /// carries whatever text the model wrote next to the id, so a mislinked
-    /// title ("Detroit Rock City" pointing at Jason Biggs' personId) used to
-    /// headline this whole page. The id is the truth; the label is a
-    /// placeholder that gets corrected the moment details arrive.
+    /// The caller's name is only a label — a chat link carries whatever text the model wrote — so TMDB's name wins once loaded.
     private var displayName: String { details?.name ?? ref.name }
 
     private var photoURL: URL? {
@@ -273,13 +230,9 @@ struct PersonView: View {
 
     // MARK: - Filmography
 
-    /// ONE segmented Movies/Series switch — a single capsule track with the
-    /// active half filled that slides between the two. Both filmographies are
-    /// already loaded, so switching is a pure local state flip (no fetch, no
-    /// list-swap animation — that was the jank) with just the indicator sliding.
+    /// Both filmographies are loaded, so switching is a local flip; animating a list swap caused jank.
     private var filmographyToggle: some View {
-        // Movies show "owned/total" (they cross-reference the Radarr library);
-        // series can't be library-tagged from a TMDB tv id, so just the total.
+        // Series can't be library-tagged from a TMDB tv id, so only movies show "owned/total".
         let ownedMovies = movieRows.count { $0.inLibraryArrId != nil }
         let ownedSeries = seriesRows.count { $0.inLibraryArrId != nil }
         return HStack(spacing: 0) {
@@ -300,7 +253,6 @@ struct PersonView: View {
         } label: {
             HStack(spacing: 4) {
                 Text(key, bundle: .module)
-                // Count appears once the filmography has loaded — "Movies 11/123".
                 if !filmographyLoading {
                     Text(verbatim: count)
                         .foregroundStyle(.tertiary)
@@ -323,8 +275,6 @@ struct PersonView: View {
 
     @Namespace private var kindNS
 
-    /// Open a filmography title LOCALLY so back returns to this person view.
-    /// Owned → the detail (via the arr-internal id); new → the add panel.
     private func openTitle(_ result: SearchResult) {
         if let arrId = result.inLibraryArrId {
             titleDetail = DetailRequest.syntheticItem(
@@ -336,8 +286,6 @@ struct PersonView: View {
 
     // MARK: - External links
 
-    /// A brand-icon chip linking to the service's page — icon + text label in a
-    /// bordered pill (matching the rating chips' shape).
     private func serviceLink(_ icon: String, _ url: URL, _ label: String) -> some View {
         Button { PlatformURLOpener.open(url) } label: {
             HStack(spacing: 4) {
@@ -363,19 +311,8 @@ struct PersonView: View {
 
     // MARK: - Loading
 
-    /// Says out loud when the label that opened this page and the person the id
-    /// actually resolves to are two different people.
-    ///
-    /// The page is keyed by TMDB person id and nothing here can mix two people
-    /// up — the cast tile's name, headshot and id all come from ONE arr credit
-    /// record, the store keys the person by id, `PosterStore` by SHA-256 of the URL.
-    /// So when the headshot you tapped and the photo that loads are different
-    /// faces, the disagreement arrived in the data: a credit whose name and
-    /// image don't belong to the `personTmdbId` beside them. Invisible unless
-    /// someone recognises the face, hence the log.
-    ///
-    /// `.notice` (never read back at info level) and both names `.private` —
-    /// they are people.
+    /// Logs when the opening label and the person the id resolves to differ: a credit whose name and image
+    /// don't belong to its `personTmdbId`, invisible unless someone recognises the face.
     private static let identityLog = Logger(category: "SeriesIdentity")
 
     private static func warnIfIdentityDisagrees(ref: PersonRef, details: TMDBPersonDetails?) {
@@ -404,12 +341,7 @@ struct PersonView: View {
 }
 
 
-/// A filmography row: the shared `PosterMetadataRow` with the standard
-/// title chevron and hover tooltip, but deliberately NO source badge (the
-/// tab already says movie-vs-series) and NO trailing +/chevron accessory —
-/// ownership reads from the trailing "In library" pill alone. The second
-/// line is the person-view mix: credit role (Actor/Director/Writer, carried
-/// in `subtitle`) + rating + top genres — the year lives in the title.
+/// No source badge (the tab says movie vs series) and no trailing accessory: ownership reads from the "In library" pill.
 private struct PersonFilmographyRow: View {
     let result: SearchResult
     let onTap: () -> Void
@@ -442,8 +374,6 @@ private struct PersonFilmographyRow: View {
             metadataSegments: metadata,
             onTap: onTap
         ) {
-            // Ownership reads from the trailing edge — same placement as the
-            // queue / upcoming rows.
             if result.inLibraryArrId != nil {
                 LibraryStateBadge(isDownloaded: result.libraryDownloaded)
             }

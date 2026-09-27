@@ -1,9 +1,7 @@
 import SwiftUI
 import MediaKit
 
-/// Pushed when the user taps a season in the series detail. Identifies which
-/// season to open — kept a distinct type from `ManualSearchTarget` etc. so its
-/// `.navigationDestination` never collides with others in the same stack.
+/// A distinct type so its `.navigationDestination` never collides with others in the stack.
 struct SeasonDrill: Identifiable, Hashable, Sendable {
     let seriesId: Int
     let seasonNumber: Int
@@ -18,20 +16,14 @@ struct SeasonDrill: Identifiable, Hashable, Sendable {
     var id: String { "\(seriesId)-s\(seasonNumber)" }
 }
 
-/// Distinct wrapper so the season's "Manual search" push doesn't share a value
-/// type with the movie/album `ManualSearchTarget` destination up the stack.
+/// Distinct from `ManualSearchTarget` so the two destinations don't collide in one stack.
 private struct SeasonReleaseSearch: Identifiable, Hashable {
     let target: ManualSearchTarget
     var id: String { target.id }
 }
 
-/// A single season's screen: its episode list + Manual/Automatic search buttons
-/// pinned at the bottom. Search is now unambiguous — you're *inside* the season,
-/// so the buttons obviously act on it (replaces the ambiguous series-level CTA).
 struct SeasonDetailView: View {
     let drill: SeasonDrill
-    /// Series detail for the hero header (poster / overview / metadata) — the
-    /// season screen reuses the same `MediaHeaderCard` as the series view.
     let sonarrDetail: ArrSeries?
     let episodes: [ArrEpisode]
     let queueByEpisodeId: [Int: [QueueItem]]
@@ -41,9 +33,7 @@ struct SeasonDetailView: View {
     let seriesPosterAPIKey: String?
     let onBack: () -> Void
     var viewModel: QueueViewModel
-    /// Monitor-toggle callbacks up to the state owner (DetailView /
-    /// EpisodeQuickDetail own `sonarrDetail` + the episode array; this view
-    /// only receives copies). nil renders the bookmarks as inert state.
+    /// The parent owns `sonarrDetail` and the episodes; nil renders the bookmarks inert.
     var onSetSeasonMonitored: ((Bool) async -> Void)? = nil
     var onSetEpisodeMonitored: ((Int, Bool) async -> Void)? = nil
 
@@ -55,25 +45,16 @@ struct SeasonDetailView: View {
     @State private var manualSearchTarget: SeasonReleaseSearch?
     @State private var autoSearching = false
     @State private var autoDidSearch = false
-    /// The connected media server's artwork for *this season*, once fetched.
-    /// nil keeps the series poster, which is what every surface showed before.
+    /// nil keeps the series poster.
     @State private var mediaServerSeasonPoster: URL?
-    /// Same series-level country the series view shows — a cache hit in
-    /// `CountryProvider` when the user drilled in from there.
     @State private var countries: [String] = []
-    /// Series cast, loaded once per series for the episode screens below.
     @State private var cast: [CastMember] = []
-    /// The series' quality-profile name, for the episode hero's chip.
     @State private var profileName: String?
 
-    /// Season art when the media server has it, series art otherwise. Every
-    /// poster on this screen goes through here so the header, the lightbox and
-    /// the episode rows can't disagree about which image the season has.
+    /// Every poster on this screen goes through here so header, lightbox and rows agree.
     private var posterURL: URL? { mediaServerSeasonPoster ?? seriesPosterURL }
 
-    /// A media-server poster is fetched with the server's own header (its
-    /// `ArtworkReference`, resolved in `PosterStore`), never the arr's key — so both arr
-    /// credentials drop away as soon as the override wins.
+    /// A media-server poster carries the server's own header (resolved in `PosterStore`), never the arr's key.
     private var posterRequiresAuth: Bool {
         mediaServerSeasonPoster == nil && seriesPosterRequiresAuth
     }
@@ -86,15 +67,11 @@ struct SeasonDetailView: View {
         String(format: String(localized: "detail.seasonLld.label", bundle: .module), drill.seasonNumber)
     }
 
-    /// This season's own monitored flag, read live off the series detail the
-    /// parent hands down on every body pass — no local copy to go stale when
-    /// the flag is flipped upstream. `nil` (unreported) renders no bookmark.
+    /// Read live off the parent's series detail so it can't go stale; nil renders no bookmark.
     private var seasonMonitored: Bool? {
         sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.monitored
     }
 
-    /// On the poster's top-right corner, matching `DetailView` — the bookmark
-    /// is state about the season, not header chrome.
     private var monitorPosterToggle: AnyView? {
         guard let seasonMonitored else { return nil }
         return AnyView(
@@ -109,9 +86,7 @@ struct SeasonDetailView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
-            // Self-drawn header (the popover's native chevron is hidden by the
-            // parent DetailView's `windowToolbar` hide; the detached window has
-            // none either). iOS keeps the native nav bar.
+            // The popover's chevron is hidden by DetailView's `windowToolbar` and the detached window has none.
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
@@ -131,8 +106,6 @@ struct SeasonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     seasonHeader
-                    // Header + rows share a 6pt stack (the CastRow rhythm) so
-                    // the label hugs its list instead of floating 12pt above.
                     VStack(alignment: .leading, spacing: 6) {
                         DetailSectionHeader(
                         "queue.episodes.button",
@@ -148,9 +121,7 @@ struct SeasonDetailView: View {
                                     onTap: { episode in
                                         withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
                                     },
-                                    // Episodes have no art of their own; the
-                                    // hover tooltip borrows this season's
-                                    // poster (series art when there is none).
+                                    // Episodes have no art of their own.
                                     posterURL: posterURL,
                                     posterRequiresAuth: posterRequiresAuth,
                                     posterAPIKey: posterAPIKey,
@@ -172,20 +143,15 @@ struct SeasonDetailView: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-            // No bottom strip — the season's Search choice lives in the
-            // header cluster now.
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .posterLightbox(url: $enlargedPoster, apiKey: posterAPIKey, aspectRatio: 2.0 / 3.0)
-        // Lazily — one request per series the user actually opens a season of,
-        // and the index caches the answer for the rest of the session.
+        // Lazy: one request per series, cached by the index for the session.
         .task(id: drill.seriesId) {
             countries = await CountryProvider.seriesCountries(
                 tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
         }
-        // For the episode screens pushed from here. `CastProvider` coalesces
-        // and caches per title, so coming from the series detail this is a
-        // cache hit and costs nothing.
+        // `CastProvider` caches per title, so coming from the series detail this is a cache hit.
         .task(id: drill.seriesId) {
             cast = await CastProvider.seriesCredits(
                 tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore).cast
@@ -218,7 +184,6 @@ struct SeasonDetailView: View {
                 onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
                 onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
                 onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
-                // Tapping the hero's season link pops back to this season view.
                 onTapSeason: { selectedEpisode = nil },
                 seriesYear: drill.seriesYear,
                 cast: cast,
@@ -228,8 +193,7 @@ struct SeasonDetailView: View {
                 seriesTvdbId: sonarrDetail?.tvdbId,
                 profileName: profileName,
                 mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
-                // Re-read from the live array rather than the pushed `ep`
-                // snapshot, which is frozen at tap time.
+                // The pushed `ep` is a snapshot frozen at tap time.
                 monitored: episodes.first { $0.id == ep.id }?.monitored,
                 onToggleMonitored: onSetEpisodeMonitored.map { toggle in { m in await toggle(ep.id, m) } }
             )
@@ -243,8 +207,6 @@ struct SeasonDetailView: View {
         }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
-        // `.primaryAction` matches the placement the sibling detail screens
-        // already use. (The monitor toggle lives on the poster corner.)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 headerSearchMenu
@@ -255,9 +217,7 @@ struct SeasonDetailView: View {
         #endif
     }
 
-    /// What each episode already has on disk, keyed by episode number — the
-    /// baseline a single-episode row in the manual search diffs against. A pack
-    /// replaces many files, so it keeps no baseline of its own.
+    /// Baseline for single-episode rows in the manual search; a pack replaces many files, so it has none.
     private var existingFileByEpisodeNumber: [Int: UpgradeDiffView.Side] {
         var out: [Int: UpgradeDiffView.Side] = [:]
         for episode in episodes {
@@ -268,8 +228,6 @@ struct SeasonDetailView: View {
         return out
     }
 
-    /// The season's Search choice, in the header cluster (same component the
-    /// other detail surfaces use).
     private var headerSearchMenu: some View {
         HeaderSearchMenu(
             inFlight: autoSearching,
@@ -283,16 +241,12 @@ struct SeasonDetailView: View {
         )
     }
 
-    /// `Series · S02E04` — what the release list titles an episode search with,
-    /// matching the episode screen's own nav title.
     private func episodeSearchTitle(_ ep: ArrEpisode) -> String {
         let code = EpisodeCode.string(season: drill.seasonNumber, episode: ep.episodeNumber ?? 0)
         return "\(drill.seriesTitle) · \(code)"
     }
 
-    /// One episode's automatic search, fired from its row's context menu. The
-    /// row owns the spinner; failures are silent for the same reason the
-    /// header's sweep is — the arr queues the search, it doesn't report on it.
+    /// Failures are silent: the arr queues the search, it doesn't report on it.
     private func searchEpisode(_ ep: ArrEpisode) async {
         try? await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
     }
@@ -310,9 +264,7 @@ struct SeasonDetailView: View {
         }
     }
 
-    /// Sonarr's series score is TVDB's — the chip wears that name and mark,
-    /// same as the series detail one screen up. It used to read "Rating",
-    /// which named no source at all.
+    /// Sonarr's series score is TVDB's.
     private var ratings: [RatingChip] {
         guard let v = sonarrDetail?.ratings?.value else { return [] }
         return [RatingChip.tvdb(v, linkTitle: drill.seriesTitle,
@@ -320,8 +272,7 @@ struct SeasonDetailView: View {
                                 votes: sonarrDetail?.ratings?.votes)].compactMap { $0 }
     }
 
-    /// Same hero card as the series view — poster + overview + metadata. Title is
-    /// hidden (the header bar already shows "Series · Season N").
+    /// Title hidden: the header bar already shows "Series · Season N".
     private var seasonHeader: some View {
         MediaHeaderCard(
             title: drill.seriesTitle,

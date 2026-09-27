@@ -3,12 +3,8 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Settings → MCP pane.
-///
-/// Presents the MCP server config — enable, bind `host:port`, bearer-token auth,
-/// live status, and a per-tool opt-out list grouped by service. Controls are
-/// wired to `ConfigStore`; on macOS the app's `MCPServerController` starts/stops
-/// the real server in response and pushes status into `MCPServerStatusModel`.
+/// On macOS `MCPServerController` starts/stops the server from these settings
+/// and reports into `MCPServerStatusModel`.
 struct MCPSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
 
@@ -169,8 +165,6 @@ struct MCPSettingsPane: View {
         }
     }
 
-    /// One tool: name + short helper on the left, the apps it drives as a row
-    /// of brand icons, then the on/off switch.
     private func toolRow(_ tool: ChatToolCatalog.MCPToolInfo) -> some View {
         HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
@@ -182,8 +176,7 @@ struct MCPSettingsPane: View {
             }
             Spacer(minLength: 8)
             toolIcons(tool)
-            // `.labelsHidden()` strips the switch from the accessibility tree
-            // as well — every tool row would announce as an anonymous "off".
+            // `.labelsHidden()` also strips the accessibility name.
             Toggle("", isOn: toolBinding(tool.name))
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -194,14 +187,10 @@ struct MCPSettingsPane: View {
         .padding(.vertical, 2)
     }
 
-    /// Brand icons for the apps a tool supports. Caps the visible run and
-    /// spills the remainder into a `+N` chip so wide-reaching tools (health
-    /// touches every service) don't blow out the row.
+    /// Wide tools (health touches every service) spill into a `+N` chip.
     private static let maxVisibleIcons = 4
 
-    /// A tool's icon strip: brand marks for arr / download-client tools, or a
-    /// single SF Symbol for the ones that drive something outside that roster
-    /// (the media server, which has no brand mark in the icon set).
+    /// SF Symbol for tools outside the brand roster (the media server has no mark).
     @ViewBuilder
     private func toolIcons(_ tool: ChatToolCatalog.MCPToolInfo) -> some View {
         if let systemImage = tool.systemImage, tool.services.isEmpty {
@@ -226,22 +215,18 @@ struct MCPSettingsPane: View {
                 Text(verbatim: "+\(overflow)")
                     .font(.caption2.weight(.medium))
                     .foregroundStyle(.secondary)
-                    // Hovering "+N" lists the apps that didn't fit.
                     .help(Text(verbatim: services.dropFirst(Self.maxVisibleIcons)
                         .map(\.displayName).joined(separator: ", ")))
             }
         }
-        // Which apps a tool drives is real information, but it's encoded as a
-        // strip of brand marks plus a "+2" chip. Collapse the whole strip into
-        // one element that simply names them.
+        // One element that names the apps instead of a strip of marks and "+2".
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(Text(verbatim: services.map(\.displayName).joined(separator: ", ")))
     }
 
     // MARK: - Bindings / mutations
 
-    /// A tool is ON unless it's in the disabled set, so the stored set only
-    /// ever holds the user's explicit opt-outs (default = everything exposed).
+    /// The stored set holds only explicit opt-outs; default is everything exposed.
     private func toolBinding(_ name: String) -> Binding<Bool> {
         Binding(
             get: { !configStore.mcpDisabledTools.contains(name) },
@@ -256,7 +241,6 @@ struct MCPSettingsPane: View {
         configStore.mcpDisabledTools.isEmpty
     }
 
-    /// Header "Enable all / Disable all" flips every catalog tool at once.
     private func toggleAll() {
         if allToolsEnabled {
             configStore.mcpDisabledTools = Set(ChatToolCatalog.allToolNames)
