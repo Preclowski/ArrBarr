@@ -183,7 +183,7 @@ public struct DiscoverTabView: View {
         withAnimation(.easeOut(duration: 0.55)) {
             dragOffset = CGSize(width: -1000, height: 0)
         }
-        Task { @MainActor in
+        Task {
             try? await Task.sleep(nanoseconds: 550_000_000)
             viewModel.veto()
             dragOffset = .zero
@@ -274,7 +274,7 @@ public struct DiscoverTabView: View {
         moreTimeout?.cancel()
         requestingMore = true
         onRequestMore()
-        moreTimeout = Task { @MainActor in
+        moreTimeout = Task {
             try? await Task.sleep(for: .seconds(90))
             guard !Task.isCancelled else { return }
             requestingMore = false
@@ -615,7 +615,7 @@ public struct DiscoverTabView: View {
         withAnimation(.easeOut(duration: 0.55)) {
             dragOffset = CGSize(width: -flyDistance, height: 0)
         }
-        Task { @MainActor in
+        Task {
             try? await Task.sleep(nanoseconds: 550_000_000)
             viewModel.skip()
             dragOffset = .zero

@@ -234,7 +234,7 @@ public struct iOSAppRoot: View {
                   let ref = SpotlightIndexer.parse(id) else { return }
             // Small delay so the (cold-launched) Queue tab's detail listener is
             // mounted before we post — otherwise the notification is missed.
-            Task { @MainActor in
+            Task {
                 try? await Task.sleep(nanoseconds: 400_000_000)
                 DetailRequest.post(DetailRequest.syntheticItem(source: ref.source, entityId: ref.id, title: ""))
             }

@@ -106,7 +106,7 @@ public struct PopoverContentView: View {
     /// assignment made before it is there is silently dropped.
     private func focusInputForCurrentTab() {
         guard selectedTab.hostsSearch else { return }
-        Task { @MainActor in searchFieldFocused = true }
+        Task { searchFieldFocused = true }
     }
 
     /// What the app already knows about that matches the query — live queue
@@ -242,7 +242,7 @@ public struct PopoverContentView: View {
                     // dead. Unwind the whole branch first, then push the
                     // replacement on the next runloop pass.
                     detailItem = nil
-                    Task { @MainActor in
+                    Task {
                         withAnimation(.smooth(duration: 0.22)) { detailItem = item }
                     }
                 }
