@@ -49,11 +49,11 @@ struct SwipeSignalStoreTests {
         let t0 = Date(timeIntervalSince1970: 1_000_000)
         store.record(key: "tmdb:1", title: "Sicario", kind: .skipped, now: t0)
         store.record(key: "tmdb:1", title: "Sicario", kind: .kept, now: t0)
-        #expect(!store.isSuppressed("tmdb:1", now: t0))
+        #expect(!store.suppressedKeys(now: t0).contains("tmdb:1"))
 
         store.record(key: "tmdb:2", title: "Cats", kind: .veto, now: t0)
         store.record(key: "tmdb:2", title: "Cats", kind: .skipped, now: t0)
-        #expect(store.isSuppressed("tmdb:2", now: t0.addingTimeInterval(400 * 24 * 3600)),
+        #expect(store.suppressedKeys(now: t0.addingTimeInterval(400 * 24 * 3600)).contains("tmdb:2"),
                 "a veto never expires and a skip must not downgrade it")
     }
 
@@ -64,10 +64,10 @@ struct SwipeSignalStoreTests {
         store.record(key: "tmdb:1", title: "A", kind: .skipped, now: t0)
         store.record(key: "tmdb:2", title: "B", kind: .veto, now: t0)
         store.resetSkips()
-        #expect(!store.isSuppressed("tmdb:1", now: t0))
-        #expect(store.isSuppressed("tmdb:2", now: t0))
+        #expect(!store.suppressedKeys(now: t0).contains("tmdb:1"))
+        #expect(store.suppressedKeys(now: t0).contains("tmdb:2"))
         store.remove(key: "tmdb:2")
-        #expect(!store.isSuppressed("tmdb:2", now: t0))
+        #expect(!store.suppressedKeys(now: t0).contains("tmdb:2"))
     }
 
     @Test("The cap evicts the oldest skips first and spares vetoes")
@@ -80,9 +80,9 @@ struct SwipeSignalStoreTests {
                          now: t0.addingTimeInterval(Double(i)))
         }
         #expect(store.all.count <= 500 + 1)
-        #expect(store.isSuppressed("veto:0", now: t0.addingTimeInterval(1000)),
+        #expect(store.suppressedKeys(now: t0.addingTimeInterval(1000)).contains("veto:0"),
                 "the veto must survive cap eviction")
-        #expect(!store.isSuppressed("tmdb:1", now: t0.addingTimeInterval(1000)),
+        #expect(!store.suppressedKeys(now: t0.addingTimeInterval(1000)).contains("tmdb:1"),
                 "the oldest skip should have been evicted")
     }
 
@@ -95,6 +95,6 @@ struct SwipeSignalStoreTests {
         let store = SwipeSignalStore(defaults: defaults)
         store.record(key: "tmdb:1", title: "A", kind: .skipped, now: t0)
         let reloaded = SwipeSignalStore(defaults: defaults)
-        #expect(reloaded.isSuppressed("tmdb:1", now: t0))
+        #expect(reloaded.suppressedKeys(now: t0).contains("tmdb:1"))
     }
 }

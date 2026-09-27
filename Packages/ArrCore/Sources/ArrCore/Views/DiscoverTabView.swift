@@ -386,20 +386,9 @@ public struct DiscoverTabView: View {
     private var swipeBackground: some View {
         if viewModel.current != nil {
             cardStack
-        } else if viewModel.isLoading {
-            loadingState
         } else {
             emptyStackState
         }
-    }
-
-    private var loadingState: some View {
-        VStack {
-            Spacer()
-            ShimmerThinkingLabel()
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var floatingTopChrome: some View {
@@ -735,22 +724,6 @@ public struct DiscoverTabView: View {
                     .buttonBorderShape(.capsule)
                     .padding(.top, 4)
                 }
-                if viewModel.llmPoolExhausted && llmAvailable
-                   && !viewModel.moodText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    Button {
-                        Task { await viewModel.requestMoreLLM() }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "sparkles")
-                            Text("discover.moreAiSuggestions.button", bundle: .module)
-                        }
-                        .scaledFont(size: 11, weight: .semibold)
-                        .padding(.horizontal, 10).padding(.vertical, 5)
-                        .background(Capsule().fill(Color.purple.opacity(0.12)))
-                        .foregroundStyle(.purple)
-                    }
-                    .buttonStyle(.plain)
-                }
             }
             // Always last and always quiet — it's the way out, not an action
             // competing with the one the user probably wants.
@@ -763,7 +736,7 @@ public struct DiscoverTabView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 2)
-            // Setup hints and per-source diagnostics explain an EMPTY deck.
+            // Setup hints explain an EMPTY deck.
             // While a round is in flight they'd contradict the one thing the
             // surface is saying, so they wait until it settles.
             if !isLookingForMore {
@@ -784,41 +757,10 @@ public struct DiscoverTabView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
                 }
-                if !viewModel.failedSources.isEmpty {
-                    Text(failureBadgeText)
-                        .scaledFont(size: 10)
-                        .foregroundStyle(.tertiary)
-                }
-                let counts = viewModel.lastFetchedCounts
-                if !counts.isEmpty {
-                    Text(verbatim: countsLabel(counts))
-                        .scaledFont(size: 10)
-                        .foregroundStyle(.tertiary)
-                        .padding(.top, 4)
-                }
             }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    private func countsLabel(_ counts: [DiscoverViewModel.Source: Int]) -> String {
-        var parts: [String] = []
-        if let n = counts[.tmdb] { parts.append("TMDB: \(n)") }
-        if let n = counts[.library] { parts.append("Library: \(n)") }
-        if let n = counts[.llm] { parts.append("AI: \(n)") }
-        return parts.joined(separator: " \u{00B7} ")
-    }
-
-    private var failureBadgeText: String {
-        let names = viewModel.failedSources.map { src -> String in
-            switch src {
-            case .tmdb:    return "TMDB"
-            case .library: return "Library"
-            case .llm:     return "AI"
-            }
-        }.sorted().joined(separator: ", ")
-        return "\(names) unavailable"
     }
 }
 

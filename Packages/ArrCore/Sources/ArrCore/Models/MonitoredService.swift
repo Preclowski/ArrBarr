@@ -52,19 +52,6 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
         }
     }
 
-    /// True for the 4 real arrs (Radarr/Sonarr/Lidarr/Whisparr), whose health
-    /// is driven by the live queue fetch rather than a dedicated probe.
-    public var isArr: Bool {
-        guard case .arr(let kind) = self else { return false }
-        return [.radarr, .sonarr, .lidarr, .whisparr].contains(kind)
-    }
-
-    /// True for the 6 download clients.
-    public var isDownloadClient: Bool {
-        guard case .arr(let kind) = self else { return false }
-        return Self.downloadClientKinds.contains(kind)
-    }
-
     /// The backing `ServiceKind`, or `nil` for the AI services.
     public var serviceKind: ServiceKind? {
         if case .arr(let kind) = self { return kind }

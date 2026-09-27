@@ -31,8 +31,7 @@ extension LocalToolBackend {
 
         let partial = QuizArgumentsScanner.scan(text)
         guard let kind = partial.string("kind")?.lowercased(), kind == "movie" || kind == "series",
-              let mood = partial.string("mood")?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !mood.isEmpty else { return }
+              partial.string("mood")?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false else { return }
         let libraryMode = Self.quizLibraryMode(partial.string("library_mode"))
         let append = partial.bool("append") ?? false
         // A TMDB deck needs nothing more from the model: start it now and let
@@ -48,7 +47,7 @@ extension LocalToolBackend {
                 append || DiscoverViewModel.shared.loadPhase != nil || !DiscoverViewModel.shared.hasSession
             }
             guard safe else { return }
-            let pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append, mood: mood)
+            let pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append)
             if quizEarlyPipeline == nil {
                 quizEarlyPipeline = pipeline
                 if fromTMDB {
@@ -77,12 +76,12 @@ extension LocalToolBackend {
         }
     }
 
-    private func makeQuizPipeline(kind: String, libraryMode: String, append: Bool, mood: String) async -> QuizDeckPipeline {
+    private func makeQuizPipeline(kind: String, libraryMode: String, append: Bool) async -> QuizDeckPipeline {
         let (shown, suppressed) = await MainActor.run {
             (append ? DiscoverViewModel.shared.shownDedupKeys : [],
              SwipeSignalStore.shared.suppressedKeys(media: Self.swipeMedia(kind)))
         }
-        let setup = QuizDeckPipeline.Setup(kind: kind, libraryMode: libraryMode, append: append, mood: mood,
+        let setup = QuizDeckPipeline.Setup(kind: kind, libraryMode: libraryMode, append: append,
                                            shown: shown, suppressed: suppressed, delivers: !headlessSurface)
         return QuizDeckPipeline(setup: setup, resolve: curatedPickResolver(kind: kind))
     }
@@ -167,7 +166,7 @@ extension LocalToolBackend {
                 if !append && !headlessSurface {
                     await MainActor.run { DiscoverViewModel.shared.beginLoading() }
                 }
-                pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append, mood: label)
+                pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append)
             }
             await pipeline.feed(capped, isFinal: true)
             let outcome = await pipeline.finish()
@@ -438,7 +437,7 @@ extension LocalToolBackend {
 
         let undelivered = payload.filter { !delivered.contains($0.dedupKey) }
         if !undelivered.isEmpty {
-            AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: label, items: undelivered,
+            AppMessages.post(AppMessages.OpenDiscoverQuiz(items: undelivered,
                                                           append: append || !delivered.isEmpty))
         }
         let frontPosters = payload.prefix(3).compactMap { $0.result.posterURL }

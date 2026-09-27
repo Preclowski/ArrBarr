@@ -16,12 +16,6 @@ import os
 /// - **In-memory caches** (`CastProvider`, `PersonStore`, `SearchOptionsCache`,
 ///   `MediaServerIndex`). They die with the process and are rebuilt from the
 ///   network; a button for them would promise a fix it cannot deliver.
-/// - **`TitleMetadataStore`'s records.** They are titles, years and slugs — an
-///   answer that does not go stale, and re-fetching them costs one request per
-///   queued title. Its *artwork* is no longer a reason to clear it either:
-///   the media-server override is resolved at read time
-///   (`Metadata.applyingMediaServerArtwork`), so connecting or switching a
-///   server is reflected on the next poll.
 /// - **The Spotlight index.** Clearing it is a distinct, user-visible act
 ///   ("stop ArrBarr appearing in Spotlight"), and it has its own button.
 public enum AppCaches {
@@ -31,7 +25,6 @@ public enum AppCaches {
     /// off the main actor and cheap enough to fire and forget.
     public static func purgeExpired() async {
         await PosterStore.shared.purge()
-        await TitleMetadataStore.shared.purge()
     }
 
     /// Bytes the poster store currently occupies, for the Settings row that

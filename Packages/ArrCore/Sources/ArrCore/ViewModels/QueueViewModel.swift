@@ -1018,23 +1018,18 @@ public final class QueueViewModel {
             //    only when the user opted into "Show warnings" — otherwise this
             //    list stays errors-only and isn't drowned in noise.
             // ONE entry per problem — NOT grouped by app (the trailing chip names
-            // it, so the title must not repeat the app name) or by severity (each
-            // row carries its own severity icon). An *unreachable* source
+            // it, so the title must not repeat the app name) or by severity. An
+            // *unreachable* source
             // (transport / 502 / split-DNS) is the calm "you've left the LAN"
             // case, not an actionable problem, so its fetch error is dropped here.
             if let error = errors[source], !unreachable.contains(source) {
-                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.fetch.\(source.rawValue)", message: error, severity: .error))
+                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.fetch.\(source.rawValue)", message: error))
             }
             for record in health.records(for: source) {
                 guard let message = record.message, !message.isEmpty else { continue }
-                let severity: NeedsYouItem.Severity = switch record.type?.lowercased() {
-                case "error": .error
-                case "warning": .warning
-                default: .notice
-                }
                 // Errors always; warnings/notices only when the user opted in.
-                guard severity == .error || showWarnings else { continue }
-                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.health.\(source.rawValue).\(message)", message: message, severity: severity))
+                guard record.type?.lowercased() == "error" || showWarnings else { continue }
+                result.append(NeedsYouItem(arrIssue: source, id: "needsyou.health.\(source.rawValue).\(message)", message: message))
             }
         }
         // Collapse byte-identical entries into one row carrying a ×N count. A
@@ -1433,10 +1428,6 @@ public final class QueueViewModel {
 }
 
 public struct NeedsYouItem: Identifiable, Equatable {
-    /// Per-entry severity — drives the leading icon (the list isn't grouped by
-    /// severity; each row carries its own).
-    public enum Severity: Equatable { case error, warning, notice }
-
     public let id: String
     /// The arr this row belongs to — `nil` for a non-arr connection issue
     /// (download client / AI), which is identified by `service` instead.
@@ -1449,12 +1440,11 @@ public struct NeedsYouItem: Identifiable, Equatable {
     /// name), so the title must not repeat the app name.
     public let title: String
     /// Status name for a queue item (Failed / Manual import required); empty for
-    /// arr/service issues (their message is the title, severity is the icon).
+    /// arr/service issues (their message is the title).
     public let subtitle: String
     /// Extra "why" lines for a queue item (the arr's status messages). Empty for
     /// arr/service issues — their single message is the title.
     public let detailLines: [String]
-    public let severity: Severity
     /// The underlying queue item when this row represents one; `nil` for
     /// arr-level issues (connection / health problems) that have no queue row.
     public let item: QueueItem?
@@ -1474,7 +1464,6 @@ public struct NeedsYouItem: Identifiable, Equatable {
             ? String(localized: "queue.manualImportRequired.button", bundle: .module)
             : item.status.displayName
         self.detailLines = item.statusMessages
-        self.severity = item.status == .failed ? .error : .warning
     }
 
     /// A single arr-level problem (a reachable fetch error, or one health-check
@@ -1482,8 +1471,7 @@ public struct NeedsYouItem: Identifiable, Equatable {
     public init(
         arrIssue source: QueueItem.Source,
         id: String,
-        message: String,
-        severity: Severity
+        message: String
     ) {
         self.item = nil
         self.id = id
@@ -1492,7 +1480,6 @@ public struct NeedsYouItem: Identifiable, Equatable {
         self.title = message
         self.subtitle = ""
         self.detailLines = []
-        self.severity = severity
     }
 
     /// A non-arr connection issue (a download client or AI service is
@@ -1508,6 +1495,5 @@ public struct NeedsYouItem: Identifiable, Equatable {
         self.title = message
         self.subtitle = ""
         self.detailLines = []
-        self.severity = .error
     }
 }

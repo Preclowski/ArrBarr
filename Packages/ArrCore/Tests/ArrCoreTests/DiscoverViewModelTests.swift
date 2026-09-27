@@ -37,28 +37,11 @@ struct DiscoverViewModelTests {
         return DiscoverItem(result: r)
     }
 
-    @Test("start() pulls from every available source and dedupes across them")
-    func startPullsFromAllSourcesAndDedupes() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2)] },
-            library: { _ in [self.makeItem(2), self.makeItem(3)] },
-            llm: nil
-        )
-        await vm.start()
-        let keys = Set(vm.queue.map(\.dedupKey) + (vm.current.map { [$0.dedupKey] } ?? []))
-        #expect(keys == ["tmdb:1", "tmdb:2", "tmdb:3"])
-    }
-
     @Test("Skip is the only action that advances the deck, and it records the skip")
     func skipAdvancesAndRecords() async {
         // Skip (>>) is the only action that advances the deck.
         let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2), self.makeItem(3)] },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
+        vm.seed(items: [makeItem(1), makeItem(2), makeItem(3)])
         #expect(vm.current?.dedupKey == "tmdb:1")
         vm.skip()
         #expect(vm.current?.dedupKey == "tmdb:2")
@@ -72,11 +55,7 @@ struct DiscoverViewModelTests {
         // + = add: records a pick (drives QuizResumeCard's count) but does NOT
         // advance — a cancelled add returns to the same card. Deduped.
         let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2)] },
-            library: { _ in [] }, llm: nil
-        )
-        await vm.start()
+        vm.seed(items: [makeItem(1), makeItem(2)])
         #expect(vm.current?.dedupKey == "tmdb:1")
         vm.markPicked()
         #expect(vm.sessionMatched.map(\.dedupKey) == ["tmdb:1"])
@@ -85,97 +64,17 @@ struct DiscoverViewModelTests {
         #expect(vm.sessionMatched.map(\.dedupKey) == ["tmdb:1"])
     }
 
-    @Test("A throwing source drops only itself; the others still fill the deck")
-    func perSourceFailureDropsOnlyThatSource() async {
-        struct Boom: Error {}
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in throw Boom() },
-            library: { _ in [self.makeItem(7)] },
-            llm: nil
-        )
-        await vm.start()
-        #expect(vm.current?.dedupKey == "tmdb:7")
-        #expect(vm.failedSources.contains(.tmdb))
-    }
-
-    @Test("The LLM source stays dormant while the mood is empty")
-    func llmDormantWhenMoodEmpty() async {
-        var llmCalled = false
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [] }, library: { _ in [] },
-            llm: { _, _ in llmCalled = true; return [] }
-        )
-        vm.moodText = ""
-        await vm.start()
-        #expect(!llmCalled)
-    }
-
-    @Test("requestMoreLLM appends to the queue and accumulates the exclusion list")
-    func requestMoreLLMAccumulatesExcludes() async {
-        var receivedExcludes: [[String]] = []
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [] }, library: { _ in [] },
-            llm: { excludes, _ in
-                receivedExcludes.append(excludes)
-                let base = receivedExcludes.count * 100
-                return [self.makeItem(base + 1), self.makeItem(base + 2)]
-            }
-        )
-        vm.moodText = "noir"
-        await vm.start()
-        #expect(receivedExcludes.last == [])
-        #expect(vm.queue.count + (vm.current == nil ? 0 : 1) == 2)
-
-        await vm.requestMoreLLM()
-        #expect(receivedExcludes.count == 2)
-        #expect(receivedExcludes[1].count == 2, "second call should exclude the 2 already-shown")
-    }
-
-    @Test("Filling the bucket interleaves the sources round-robin")
-    func fillBucketInterleavesSources() async {
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in [self.makeItem(100), self.makeItem(101), self.makeItem(102)] },
-            library: { _ in [self.makeItem(200), self.makeItem(201), self.makeItem(202)] },
-            llm: nil
-        )
-        await vm.start()
-        let order = ([vm.current?.dedupKey] + vm.queue.map(\.dedupKey)).compactMap { $0 }
-        // Round 0 visits source[0]=tmdb, source[1]=library; round 1 same; round 2 same.
-        // Expected: [tmdb:100, tmdb:200, tmdb:101, tmdb:201, tmdb:102, tmdb:202]
-        #expect(order == ["tmdb:100", "tmdb:200", "tmdb:101", "tmdb:201", "tmdb:102", "tmdb:202"])
-    }
-
-    @Test("A source error is captured as a message plus a zero count")
-    func sourceErrorCapturesMessageAndZeroCount() async {
-        struct Boom: Error, CustomStringConvertible { var description: String { "boom" } }
-        let vm = freshVM()
-        vm.configure(
-            tmdb: { _, _ in throw Boom() },
-            library: { _ in [self.makeItem(1)] },
-            llm: nil
-        )
-        await vm.start()
-        #expect(vm.failedSources.contains(.tmdb))
-        #expect(vm.lastFetchedCounts[.tmdb] == 0)
-        #expect(vm.sourceErrors[.tmdb] != nil)
-        #expect(vm.sourceErrors[.tmdb]?.contains("boom") ?? false)
-    }
-
     // MARK: - Top-up rounds
 
     @Test("shownDedupKeys covers seeded, consumed and extended cards, and resets on seed")
     func shownKeysCoverTheWholeSession() async {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1), makeItem(2)], mood: "cosy")
+        vm.seed(items: [makeItem(1), makeItem(2)])
         vm.skip()   // tmdb:1 leaves the deck but stays "shown"
         vm.extend(items: [makeItem(3)])
         #expect(vm.shownDedupKeys == ["tmdb:1", "tmdb:2", "tmdb:3"])
 
-        vm.seed(items: [makeItem(9)], mood: "loud")
+        vm.seed(items: [makeItem(9)])
         #expect(vm.shownDedupKeys == ["tmdb:9"])
     }
 
@@ -186,7 +85,7 @@ struct DiscoverViewModelTests {
         // and the surface has no way to tell that apart from "there is nothing
         // left" — so it says "No more cards" while a retry still finds picks.
         let vm = freshVM()
-        vm.seed(items: [makeItem(1)], mood: "cosy")
+        vm.seed(items: [makeItem(1)])
         vm.skip()
         #expect(vm.current == nil)
 
@@ -218,12 +117,11 @@ struct DiscoverViewModelTests {
         let vm = freshVM()
         try await Task.sleep(for: .milliseconds(150))   // let the observer attach
         AppMessages.post(AppMessages.OpenDiscoverQuiz(
-            mood: "rainy", items: [makeItem(1), makeItem(2)], append: false))
+            items: [makeItem(1), makeItem(2)], append: false))
         try await waitUntil { vm.current != nil }
 
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.sessionTotal == 2)
-        #expect(vm.moodText == "rainy")
         #expect(vm.isPresented, "the deck seeds AND asks to be shown")
     }
 
@@ -235,10 +133,10 @@ struct DiscoverViewModelTests {
         // reset the deck — the user tapped "back to the quiz" and landed on an
         // empty one.
         let vm = freshVM()
-        vm.seed(items: [makeItem(1), makeItem(2)], mood: "rainy")
+        vm.seed(items: [makeItem(1), makeItem(2)])
         vm.isPresented = false
 
-        vm.open(mood: "rainy", items: [], append: true)
+        vm.open(items: [], append: true)
 
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.sessionTotal == 2)
@@ -248,24 +146,23 @@ struct DiscoverViewModelTests {
     @Test("An empty message never resets a session, even without the append flag")
     func emptyMessageNeverResetsTheSession() {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1)], mood: "rainy")
-        vm.open(mood: "something else", items: [], append: false)
+        vm.seed(items: [makeItem(1)])
+        vm.open(items: [], append: false)
         #expect(vm.current?.dedupKey == "tmdb:1")
-        #expect(vm.moodText == "rainy")
     }
 
     @Test("An appended round extends a live session and replaces a dead one")
     func appendExtendsLiveSessionAndReplacesDeadOne() {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1)], mood: "rainy")
-        vm.open(mood: "rainy", items: [makeItem(2)], append: true)
+        vm.seed(items: [makeItem(1)])
+        vm.open(items: [makeItem(2)], append: true)
         #expect(vm.sessionTotal == 2)
         #expect(vm.queue.map(\.dedupKey) == ["tmdb:2"])
 
         // Nothing swiped, nothing in the deck: an "append" from a model that
         // lost track of the session is a new session, not an extension.
         let cold = freshVM()
-        cold.open(mood: "loud", items: [makeItem(3)], append: true)
+        cold.open(items: [makeItem(3)], append: true)
         #expect(cold.current?.dedupKey == "tmdb:3")
         #expect(cold.sessionTotal == 1)
     }

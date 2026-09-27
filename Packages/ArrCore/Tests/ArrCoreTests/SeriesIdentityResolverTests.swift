@@ -251,7 +251,7 @@ struct SeriesIdentityResolverTests {
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8008),
                      tmdbApiKey: "k")
-            defer { vm.reset() }
+            defer { vm.query = "" }
 
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
             #expect(lean.externalId == 0)
@@ -275,7 +275,7 @@ struct SeriesIdentityResolverTests {
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8011),
                      tmdbApiKey: "k")
-            defer { vm.reset() }
+            defer { vm.query = "" }
 
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
             let tmdbPoster = lean.posterURL
@@ -299,7 +299,7 @@ struct SeriesIdentityResolverTests {
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8009),
                      tmdbApiKey: "k")
-            defer { vm.reset() }
+            defer { vm.query = "" }
 
             let lean = TMDBSearchMapping.series([tvSummary()]).first!
             #expect(await vm.enrich(lean) == nil)

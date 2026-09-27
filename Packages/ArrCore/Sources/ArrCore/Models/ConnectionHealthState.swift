@@ -13,11 +13,6 @@ nonisolated public enum ConnectionHealthState: Equatable, Sendable {
     case unknown
     case ok(detail: String?)
     case down(message: String)
-
-    public var isDown: Bool {
-        if case .down = self { return true }
-        return false
-    }
 }
 
 nonisolated public struct ServiceHealthSnapshot: Equatable, Sendable {

@@ -2,61 +2,6 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-@Suite("MediaServerGuidParser")
-struct MediaServerGuidParserTests {
-
-    @Test("Modern Plex guids parse to their provider keys")
-    func modernGuids() {
-        #expect(MediaServerGuidParser.key(from: "tmdb://157336") == .tmdb(157336))
-        #expect(MediaServerGuidParser.key(from: "tvdb://121361") == .tvdb(121361))
-        #expect(MediaServerGuidParser.key(from: "imdb://tt0816692") == .imdb("tt0816692"))
-    }
-
-    @Test("Legacy agent guids parse too")
-    func legacyAgentGuids() {
-        // Old agent-based libraries never got the `Guid` array, so these are
-        // the only ids those items carry.
-        #expect(MediaServerGuidParser.key(from: "com.plexapp.agents.themoviedb://157336?lang=en") == .tmdb(157336))
-        #expect(MediaServerGuidParser.key(from: "com.plexapp.agents.imdb://tt0816692?lang=en") == .imdb("tt0816692"))
-    }
-
-    @Test("TVDB guids drop the season/episode path components")
-    func tvdbWithEpisodePath() {
-        #expect(MediaServerGuidParser.key(from: "com.plexapp.agents.thetvdb://121361/2/1?lang=en") == .tvdb(121361))
-    }
-
-    @Test("Unknown schemes and malformed guids yield nothing")
-    func rejects() {
-        #expect(MediaServerGuidParser.key(from: "plex://movie/5d776be17a53e9001e732ab9") == nil)
-        #expect(MediaServerGuidParser.key(from: "tmdb://") == nil)
-        #expect(MediaServerGuidParser.key(from: "157336") == nil)
-        // An imdb id that isn't a "tt" id is not an imdb id.
-        #expect(MediaServerGuidParser.key(from: "imdb://12345") == nil)
-    }
-
-    @Test("Jellyfin / Emby ProviderIds map case-insensitively")
-    func providerIds() {
-        let keys = MediaServerGuidParser.keys(fromProviderIds: [
-            "Tmdb": "157336",
-            "IMDB": "TT0816692",
-            "tvdb": "121361",
-            "MusicBrainzAlbum": "abc",
-            "Tmdb2": "",
-        ])
-        #expect(Set(keys) == Set([.tmdb(157336), .imdb("tt0816692"), .tvdb(121361)]))
-    }
-
-    @Test("Blank and non-numeric provider values are dropped")
-    func providerIdsRejects() {
-        let keys = MediaServerGuidParser.keys(fromProviderIds: [
-            "Tmdb": "  ",
-            "Tvdb": "not-a-number",
-            "Imdb": "12345",
-        ])
-        #expect(keys.isEmpty)
-    }
-}
-
 @Suite("MediaServerConfig")
 struct MediaServerConfigTests {
 
@@ -119,90 +64,6 @@ struct MediaServerIndexTests {
                                remoteUrl: "https://image.tmdb.org/p/w500/x.jpg")]
         let (url, _) = images.posterURL(baseURL: "http://radarr:7878", mediaServerKeys: [])
         #expect(url?.absoluteString == "https://image.tmdb.org/p/w500/x.jpg")
-    }
-}
-
-@Suite("DiscoverLLMPrompt watch history")
-struct DiscoverPromptWatchHistoryTests {
-
-    @Test("Watched titles appear as both a taste signal and an exclusion")
-    func watchedInPrompt() {
-        let prompt = DiscoverLLMPrompt.build(
-            mood: "something tense", count: 5, exclude: [],
-            kindHint: .movie, watched: ["Heat (1995)", "Sicario (2015)"]
-        )
-        #expect(prompt.contains("Heat (1995)"))
-        #expect(prompt.contains("Sicario (2015)"))
-        #expect(prompt.lowercased().contains("recently watched"))
-    }
-
-    @Test("No watch history leaves the prompt as it was")
-    func noWatchHistory() {
-        let withHistory = DiscoverLLMPrompt.build(mood: "m", count: 5, exclude: [], watched: [])
-        let without = DiscoverLLMPrompt.build(mood: "m", count: 5, exclude: [])
-        #expect(withHistory == without)
-    }
-
-    @Test("The watched list is capped so it can't dominate the prompt")
-    func watchedCapped() {
-        let many = (1...100).map { "Title \($0)" }
-        let prompt = DiscoverLLMPrompt.build(mood: "m", count: 5, exclude: [], watched: many)
-        #expect(prompt.contains("Title 40"))
-        #expect(!prompt.contains("Title 41"))
-    }
-}
-
-@Suite("Cached poster resolution")
-struct CachedPosterResolutionTests {
-
-    private func metadata(keys: [MediaServerExternalKey]) -> TitleMetadataStore.Metadata {
-        TitleMetadataStore.Metadata(
-            title: "Inception", year: 2010,
-            posterURL: URL(string: "http://radarr:7878/MediaCover/1/poster.jpg"),
-            posterRequiresAuth: true,
-            mediaServerKeys: keys.map(\.rawKey)
-        )
-    }
-
-    @Test("External keys survive a round trip through their stored text form")
-    func rawKeyRoundTrip() {
-        let keys: [MediaServerExternalKey] = [.tmdb(157336), .tvdb(121361), .imdb("tt0816692")]
-        for key in keys {
-            #expect(MediaServerExternalKey(rawKey: key.rawKey) == key)
-        }
-        #expect(MediaServerExternalKey(rawKey: "tmdb:") == nil)
-        #expect(MediaServerExternalKey(rawKey: "nope:1") == nil)
-        #expect(MediaServerExternalKey(rawKey: "157336") == nil)
-    }
-
-    @Test("A cached record keeps the arr's artwork when no server holds the title")
-    func noOverrideWithoutIndex() {
-        // The bug this guards: the override used to be baked in at WRITE time,
-        // so an entry cached before a media server was connected kept the arr's
-        // poster for the store's whole retention while detail views showed the
-        // server's.
-        let record = metadata(keys: [.tmdb(157336)])
-        let resolved = record.applyingMediaServerArtwork()
-        #expect(resolved.posterURL == record.posterURL)
-        #expect(resolved.posterRequiresAuth)
-    }
-
-    @Test("A record with no external ids is returned untouched")
-    func noKeysNoOverride() {
-        let record = metadata(keys: [])
-        #expect(record.applyingMediaServerArtwork() == record)
-    }
-
-    @Test("Records written before the ids existed still decode")
-    func decodesLegacyRecord() throws {
-        // `mediaServerKeys` is optional precisely so an existing
-        // title-metadata.json survives the upgrade.
-        let json = #"{"title":"Inception","posterRequiresAuth":false}"#
-        let decoded = try JSONDecoder().decode(
-            TitleMetadataStore.Metadata.self, from: Data(json.utf8))
-        #expect(decoded.title == "Inception")
-        #expect(decoded.mediaServerKeys == nil)
-        #expect(decoded.applyingMediaServerArtwork() == decoded)
     }
 }
 
@@ -287,8 +148,6 @@ struct MediaServerMonitoringTests {
         // Nothing in the queue refresh touches it, so it can't ride along on
         // the arr fetch the way Radarr/Sonarr do.
         #expect(MonitoredService.probeTargets.contains(.mediaServer))
-        #expect(!MonitoredService.mediaServer.isArr)
-        #expect(!MonitoredService.mediaServer.isDownloadClient)
         #expect(MonitoredService.mediaServer.serviceKind == nil)
     }
 

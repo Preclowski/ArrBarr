@@ -118,7 +118,7 @@ public struct DemoChatProvider: LLMProvider {
         let mood = NSLocalizedString(
             kind == .series ? "demo.quizMood.series" : "demo.quizMood.movies",
             bundle: .module, comment: "")
-        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: mood, items: items, append: false))
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(items: items, append: false))
         let text = NSLocalizedString("demo.quizOpened", bundle: .module, comment: "")
         let posters = items.prefix(3).compactMap { $0.result.posterURL }
         return LLMResponse(

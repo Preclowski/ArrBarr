@@ -40,7 +40,7 @@ struct NeedsYouRow: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 6) {
                 // No leading severity icon — the title text alone carries the
-                // message (the severity still drives merge grouping in the model).
+                // message.
                 Text(needs.title)
                     .scaledFont(size: 12, weight: .medium)
                     .lineLimit(2)

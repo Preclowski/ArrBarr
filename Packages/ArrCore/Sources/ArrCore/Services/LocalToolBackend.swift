@@ -39,7 +39,7 @@ public enum ToolConfirmationContext {
 
 /// In-process tool backend. Uses ArrCore's existing Sonarr/Radarr clients.
 /// Exposes the same 6 tools as mcp-arr, but with zero external dependencies.
-public actor LocalToolBackend: ToolBackend {
+public actor LocalToolBackend {
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
     let lidarr: ServiceConfig
@@ -97,18 +97,6 @@ public actor LocalToolBackend: ToolBackend {
     }
 
     var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
-
-    public func listTools() async throws -> [MCPTool] {
-        ChatToolCatalog.tools(
-            includeSonarr: sonarr.isConfigured,
-            includeRadarr: radarr.isConfigured,
-            includeLidarr: lidarr.isConfigured,
-            includeWhisparr: whisparr.isConfigured && aiKnowsAboutWhisparr,
-            includeTMDBMovies: tmdbEnabled && radarr.isConfigured,
-            includeTMDBSeries: tmdbEnabled && sonarr.isConfigured,
-            includeMediaServer: mediaServer.isConfigured
-        )
-    }
 
     /// THE choke point. Every tool call — chat (OpenAI or Foundation Models),
     /// MCP server, App Intents — lands here, and a tool that isn't on

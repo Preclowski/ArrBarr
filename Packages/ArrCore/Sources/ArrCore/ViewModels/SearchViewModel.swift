@@ -256,15 +256,6 @@ public final class SearchViewModel {
         }
     }
 
-    public func reset() {
-        searchTask?.cancel()
-        query = ""
-        previousQuery = ""
-        clearResults()
-        isSearching = false
-        errorMessage = nil
-    }
-
     private func clearResults() {
         radarrResults = []
         sonarrResults = []

@@ -11,7 +11,6 @@ actor QuizDeckPipeline {
         let kind: String
         let libraryMode: String
         let append: Bool
-        let mood: String
         /// Dedup keys the live deck has already shown (appended rounds only).
         let shown: Set<String>
         let suppressed: Set<String>
@@ -126,7 +125,6 @@ actor QuizDeckPipeline {
         let done = results.count
         let total = picks.count
         let isFinal = totalIsFinal
-        let mood = setup.mood
         deliveryTail = Task { [weak self] in
             await previous?.value
             guard await self?.cancelled == false else { return }
@@ -135,7 +133,7 @@ actor QuizDeckPipeline {
                 if batch.isEmpty {
                     deck.noteResolving(done: done, total: total, totalIsFinal: isFinal)
                 } else {
-                    deck.open(mood: mood, items: batch, append: extends)
+                    deck.open(items: batch, append: extends)
                 }
             }
         }

@@ -157,6 +157,6 @@ public struct QuizResumeCard: View {
 
     private func resumeQuiz() {
         // Empty items + append: the host's handler skips seeding (`extend(items: [])` is a no-op) and just shows the overlay.
-        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: mood, items: [], append: true))
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(items: [], append: true))
     }
 }

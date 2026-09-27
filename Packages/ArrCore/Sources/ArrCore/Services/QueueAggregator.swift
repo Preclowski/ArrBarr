@@ -232,26 +232,6 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         }
     }
 
-    nonisolated static func isUnreachable(_ error: Error) -> Bool {
-        switch error {
-        case HTTPError.transport(let inner): return isConnectivityFailure(inner)
-        case HTTPError.status(let code, _): return [404, 408, 410, 502, 503, 504, 522, 523, 524].contains(code)
-        case let urlError as URLError: return isConnectivityFailure(urlError)
-        default: return MediaKitErrorPresenter.isUnreachable(error)
-        }
-    }
-
-    nonisolated static func isConnectivityFailure(_ error: Error) -> Bool {
-        guard let urlError = error as? URLError else { return false }
-        switch urlError.code {
-        case .notConnectedToInternet, .networkConnectionLost, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed,
-             .timedOut, .dataNotAllowed, .internationalRoamingOff:
-            return true
-        default:
-            return false
-        }
-    }
-
     nonisolated static func candidateKinds(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {
         switch proto {
         case .usenet: return [.sabnzbd, .nzbget]

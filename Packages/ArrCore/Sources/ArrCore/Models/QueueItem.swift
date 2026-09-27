@@ -142,7 +142,6 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     }
 
     public var isPaused: Bool { status == .paused }
-    public var isCompleted: Bool { status == .completed }
 
     /// A release the arr is still holding (delay profile) — it has no download-client id yet.
     var isPendingRelease: Bool { downloadId?.isEmpty ?? true }

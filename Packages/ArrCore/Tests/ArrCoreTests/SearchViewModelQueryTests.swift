@@ -17,7 +17,7 @@ struct SearchViewModelQueryTests {
         vm.setup(radarrConfig: ServiceConfig(enabled: true, baseURL: "http://127.0.0.1:1/",
                                              apiKey: "k", username: "", password: ""),
                  sonarrConfig: .empty)
-        defer { vm.reset() }
+        defer { vm.query = "" }
 
         vm.query = "matrix"
         #expect(vm.parsedInput == .text("matrix"))
@@ -38,7 +38,7 @@ struct SearchViewModelQueryTests {
     @Test("A pasted multi-line clipboard lands as one line")
     func pastedNewlinesCollapse() {
         let vm = SearchViewModel()
-        defer { vm.reset() }
+        defer { vm.query = "" }
 
         vm.query = "blade\nrunner"
         #expect(vm.query == "blade runner")
@@ -54,7 +54,7 @@ struct SearchViewModelQueryTests {
         vm.setup(radarrConfig: ServiceConfig(enabled: true, baseURL: "http://127.0.0.1:1/",
                                              apiKey: "k", username: "", password: ""),
                  sonarrConfig: .empty)
-        defer { vm.reset() }
+        defer { vm.query = "" }
 
         // A pasted line ending. `isActive` calls it empty, so the surface shows
         // nothing — a search behind it is a lookup nobody can see the result of.

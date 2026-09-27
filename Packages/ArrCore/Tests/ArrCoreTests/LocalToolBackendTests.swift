@@ -81,9 +81,9 @@ struct LocalToolBackendTests {
         }
     }
 
-    @Test("listTools returns the full catalog when sonarr/radarr/lidarr are configured")
-    func listToolsReturnsCatalog() async throws {
-        let tools = try await backend().listTools()
+    @Test("The catalog is complete when sonarr/radarr/lidarr are configured")
+    func catalogIsComplete() {
+        let tools = ChatToolCatalog.tools(includeSonarr: true, includeRadarr: true, includeLidarr: true)
         let names = Set(tools.map(\.name))
         // The `*_add_*` tools were removed — the add flow is now
         // UI-driven via SearchAddPanel; chat tools surface results
@@ -122,10 +122,9 @@ struct LocalToolBackendTests {
         #expect(tools.count == expected.count)
     }
 
-    @Test("listTools omits unconfigured arrs")
-    func listToolsGatesOnConfigured() async throws {
-        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: .empty, lidarr: .empty)
-        let tools = try await b.listTools()
+    @Test("The catalog omits unconfigured arrs")
+    func catalogGatesOnConfigured() {
+        let tools = ChatToolCatalog.tools(includeSonarr: true, includeRadarr: false, includeLidarr: false)
         let names = Set(tools.map(\.name))
         // Only sonarr_* tools — plus `suggest_titles` (gated on
         // sonarr-or-radarr-configured) and `arr_health` (gated on
@@ -140,19 +139,17 @@ struct LocalToolBackendTests {
         #expect(tools.count == 12)
     }
 
-    @Test("listTools includes TMDB tools when key set and matching arr configured")
-    func listToolsIncludesTMDBWhenKeyed() async throws {
-        let b = LocalToolBackend(sonarr: sonarrConfig(), radarr: radarrConfig(),
-                                 lidarr: .empty, tmdbApiKey: "abc123")
-        let names = Set(try await b.listTools().map(\.name))
+    @Test("The catalog includes TMDB tools when enabled")
+    func catalogIncludesTMDBWhenKeyed() {
+        let names = Set(ChatToolCatalog.tools(includeTMDBMovies: true, includeTMDBSeries: true).map(\.name))
         #expect(names.contains("tmdb_search_person"))
         #expect(names.contains("tmdb_discover_movies"))
         #expect(names.contains("tmdb_discover_series"))
     }
 
-    @Test("listTools omits TMDB tools when key empty")
-    func listToolsOmitsTMDBWithoutKey() async throws {
-        let names = Set(try await backend().listTools().map(\.name))
+    @Test("The catalog omits TMDB tools when disabled")
+    func catalogOmitsTMDBWithoutKey() {
+        let names = Set(ChatToolCatalog.tools(includeLidarr: true).map(\.name))
         #expect(!names.contains(where: { $0.hasPrefix("tmdb_") }))
     }
 

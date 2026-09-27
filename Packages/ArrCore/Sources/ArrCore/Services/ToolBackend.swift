@@ -12,10 +12,3 @@ nonisolated public struct ToolCallOutput: Sendable {
         self.rich = rich
     }
 }
-
-/// Common shape of "thing that can run a chat tool by name."
-/// Implemented by LocalToolBackend (in-process).
-nonisolated public protocol ToolBackend: Sendable {
-    func listTools() async throws -> [MCPTool]
-    func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput
-}

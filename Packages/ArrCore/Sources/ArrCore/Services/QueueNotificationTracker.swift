@@ -18,8 +18,8 @@ import Foundation
 ///   2. **Transient fetch failure.** `QueueAggregator.safeFetch` returns an
 ///      *empty* list (plus an error) when an arr times out or restarts. That
 ///      empty result must not read as "the queue emptied" or every item
-///      re-notifies on the next success. The caller passes `errored` so those
-///      arrs are skipped entirely.
+///      re-notifies on the next success. The caller folds only the sources
+///      whose fetch succeeded.
 ///
 ///   3. **Unstable identity / brief drop-out.** The arr re-assigns a queue
 ///      record id mid-download and items can momentarily leave the queue.
@@ -50,25 +50,6 @@ nonisolated struct QueueNotificationTracker: Codable, Equatable {
 
     /// How long after a pending row leaves the queue its download may still turn up.
     static let handoffWindow: TimeInterval = 15 * 60
-
-    /// Returns the items that should fire a notification this cycle and folds
-    /// the successful snapshots into internal state.
-    ///
-    /// - Parameters:
-    ///   - perSource: the latest queue snapshot per arr.
-    ///   - errored: arrs whose fetch failed this cycle. Their snapshot is
-    ///     ignored — an empty list from a failed fetch is not evidence the
-    ///     queue is empty.
-    mutating func newItems(
-        perSource: [QueueItem.Source: [QueueItem]],
-        errored: Set<QueueItem.Source>
-    ) -> [QueueItem] {
-        var result: [QueueItem] = []
-        for source in QueueItem.Source.allCases where !errored.contains(source) {
-            result += newItems(for: source, items: perSource[source] ?? [])
-        }
-        return result
-    }
 
     /// Fold one source's fetched rows into the cache and return the ones worth
     /// announcing.

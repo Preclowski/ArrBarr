@@ -422,9 +422,7 @@ nonisolated public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
     let title: String?
     let year: Int?
     let hasFile: Bool?
-    /// Deep-link slug for the arr web UI. Always been on the wire; decoding it
-    /// costs nothing and lets the Spotlight pass seed `TitleMetadataStore`
-    /// completely, so the queue never has to fetch a movie just for its slug.
+    /// Deep-link slug for the arr web UI.
     let titleSlug: String?
     let monitored: Bool?
     let images: [ArrImage]?

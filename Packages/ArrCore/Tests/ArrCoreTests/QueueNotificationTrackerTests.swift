@@ -82,64 +82,32 @@ private func item(
     @Test("First successful fetch seeds silently — pre-existing items don't notify")
     func seedsSilently() {
         var tracker = QueueNotificationTracker()
-        let new = tracker.newItems(
-            perSource: [.sonarr: [item(queueId: 1, downloadId: "hashA")]],
-            errored: []
-        )
+        let new = tracker.newItems(for: .sonarr, items: [item(queueId: 1, downloadId: "hashA")])
         #expect(new.isEmpty)
     }
 
     @Test("A genuinely new item notifies once, then not again")
     func notifiesNewItemOnce() {
         var tracker = QueueNotificationTracker()
-        _ = tracker.newItems(perSource: [.sonarr: []], errored: [])  // seed empty
+        _ = tracker.newItems(for: .sonarr, items: [])  // seed empty
 
-        let first = tracker.newItems(
-            perSource: [.sonarr: [item(queueId: 1, downloadId: "hashA")]],
-            errored: []
-        )
+        let first = tracker.newItems(for: .sonarr, items: [item(queueId: 1, downloadId: "hashA")])
         #expect(first.count == 1)
 
-        let second = tracker.newItems(
-            perSource: [.sonarr: [item(queueId: 1, downloadId: "hashA")]],
-            errored: []
-        )
+        let second = tracker.newItems(for: .sonarr, items: [item(queueId: 1, downloadId: "hashA")])
         #expect(second.isEmpty)
     }
 
-    // The headline regression: an item sits in the queue for days. A transient
-    // fetch error returns an empty list for that arr. The next success must NOT
-    // re-notify the still-present item.
-    @Test("Transient fetch error does not re-notify a still-queued item")
-    func transientErrorDoesNotRenotify() {
-        var tracker = QueueNotificationTracker()
-        let snapshot: [QueueItem.Source: [QueueItem]] = [
-            .sonarr: [item(queueId: 1, downloadId: "hashA")]
-        ]
-        _ = tracker.newItems(perSource: snapshot, errored: [])  // seed: present, silent
-
-        // Sonarr fetch fails → empty list + errored. Must be ignored.
-        let duringError = tracker.newItems(perSource: [.sonarr: []], errored: [.sonarr])
-        #expect(duringError.isEmpty)
-
-        // Fetch recovers, item still there. Must stay silent.
-        let afterRecovery = tracker.newItems(perSource: snapshot, errored: [])
-        #expect(afterRecovery.isEmpty)
-    }
-
-    // Same as above but the empty result arrives WITHOUT being flagged errored
-    // (e.g. the item momentarily drops out of the queue during a state
-    // transition). Union accumulation must keep it remembered.
+    // The item momentarily drops out of the queue during a state transition.
+    // Union accumulation must keep it remembered.
     @Test("Item briefly leaving the queue does not re-notify on return")
     func transientDropOutDoesNotRenotify() {
         var tracker = QueueNotificationTracker()
-        let snapshot: [QueueItem.Source: [QueueItem]] = [
-            .sonarr: [item(queueId: 1, downloadId: "hashA")]
-        ]
-        _ = tracker.newItems(perSource: snapshot, errored: [])  // seed
+        let snapshot = [item(queueId: 1, downloadId: "hashA")]
+        _ = tracker.newItems(for: .sonarr, items: snapshot)  // seed
 
-        _ = tracker.newItems(perSource: [.sonarr: []], errored: [])  // briefly gone
-        let back = tracker.newItems(perSource: snapshot, errored: [])
+        _ = tracker.newItems(for: .sonarr, items: [])  // briefly gone
+        let back = tracker.newItems(for: .sonarr, items: snapshot)
         #expect(back.isEmpty)
     }
 
@@ -148,15 +116,9 @@ private func item(
     @Test("Queue record-id churn with stable downloadId does not re-notify")
     func recordIdChurnDoesNotRenotify() {
         var tracker = QueueNotificationTracker()
-        _ = tracker.newItems(
-            perSource: [.sonarr: [item(queueId: 1, downloadId: "hashA")]],
-            errored: []
-        )
+        _ = tracker.newItems(for: .sonarr, items: [item(queueId: 1, downloadId: "hashA")])
         // Same download, new record id.
-        let churned = tracker.newItems(
-            perSource: [.sonarr: [item(queueId: 99, downloadId: "hashA")]],
-            errored: []
-        )
+        let churned = tracker.newItems(for: .sonarr, items: [item(queueId: 99, downloadId: "hashA")])
         #expect(churned.isEmpty)
     }
 
@@ -165,16 +127,14 @@ private func item(
     @Test("Persisted tracker survives a relaunch without re-notifying")
     func codableRoundTripDoesNotRenotify() throws {
         var tracker = QueueNotificationTracker()
-        let snapshot: [QueueItem.Source: [QueueItem]] = [
-            .sonarr: [item(queueId: 1, downloadId: "hashA")]
-        ]
-        _ = tracker.newItems(perSource: snapshot, errored: [])  // seed
+        let snapshot = [item(queueId: 1, downloadId: "hashA")]
+        _ = tracker.newItems(for: .sonarr, items: snapshot)  // seed
 
         // Simulate quit + relaunch: encode, then decode into a fresh tracker.
         let data = try JSONEncoder().encode(tracker)
         var reloaded = try JSONDecoder().decode(QueueNotificationTracker.self, from: data)
 
-        let afterRelaunch = reloaded.newItems(perSource: snapshot, errored: [])
+        let afterRelaunch = reloaded.newItems(for: .sonarr, items: snapshot)
         #expect(afterRelaunch.isEmpty)
     }
 
@@ -186,37 +146,27 @@ private func item(
         let stuck = item(queueId: 1, downloadId: "stuck-hash")
 
         // Seed with the stuck item present.
-        _ = tracker.newItems(perSource: [.sonarr: [stuck]], errored: [])
+        _ = tracker.newItems(for: .sonarr, items: [stuck])
 
         // Churn far more than the cap of other downloads, with the stuck item
         // remaining in every snapshot.
         for n in 0..<(QueueNotificationTracker.capPerSource + 500) {
             let others = item(queueId: 1000 + n, downloadId: "other-\(n)")
-            _ = tracker.newItems(perSource: [.sonarr: [stuck, others]], errored: [])
+            _ = tracker.newItems(for: .sonarr, items: [stuck, others])
         }
 
         // The stuck item must still be remembered → no new notification.
-        let again = tracker.newItems(perSource: [.sonarr: [stuck]], errored: [])
+        let again = tracker.newItems(for: .sonarr, items: [stuck])
         #expect(again.isEmpty)
     }
 
     @Test("Each arr is seeded independently on its own first success")
     func perArrIndependentSeeding() {
         var tracker = QueueNotificationTracker()
-        // First cycle: only Radarr succeeds; Sonarr errors.
-        _ = tracker.newItems(
-            perSource: [.radarr: [item(source: .radarr, queueId: 1, downloadId: "rad")]],
-            errored: [.sonarr]
-        )
-        // Sonarr recovers for the first time — its pre-existing item should
-        // seed silently, not notify.
-        let sonarrFirst = tracker.newItems(
-            perSource: [
-                .radarr: [item(source: .radarr, queueId: 1, downloadId: "rad")],
-                .sonarr: [item(source: .sonarr, queueId: 1, downloadId: "son")],
-            ],
-            errored: []
-        )
+        _ = tracker.newItems(for: .radarr, items: [item(source: .radarr, queueId: 1, downloadId: "rad")])
+        // Sonarr's first fetch — its pre-existing item should seed silently,
+        // not notify.
+        let sonarrFirst = tracker.newItems(for: .sonarr, items: [item(source: .sonarr, queueId: 1, downloadId: "son")])
         #expect(sonarrFirst.isEmpty)
     }
 }

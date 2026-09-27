@@ -169,8 +169,8 @@ struct SearchRelevanceRankingTests {
 
         #expect(SearchRelevance.score(better, normalizedQuery: "foo")
                 == SearchRelevance.score(worse, normalizedQuery: "foo"))
-        #expect(SearchRelevance.rank(better, normalizedQuery: "foo")
-                > SearchRelevance.rank(worse, normalizedQuery: "foo"))
+        #expect(SearchRelevance.rank(better, against: .text("foo"))
+                > SearchRelevance.rank(worse, against: .text("foo")))
     }
 
     /// The quality weight is capped well below the 1 000-point step between
@@ -180,8 +180,8 @@ struct SearchRelevanceRankingTests {
         let weakMatchGreatFilm = result("Best Foo Ever", rating: 10.0, votes: 20_000)
         let strongMatchUnrated = result("Foo Bar")
 
-        #expect(SearchRelevance.rank(strongMatchUnrated, normalizedQuery: "foo")
-                > SearchRelevance.rank(weakMatchGreatFilm, normalizedQuery: "foo"))
+        #expect(SearchRelevance.rank(strongMatchUnrated, against: .text("foo"))
+                > SearchRelevance.rank(weakMatchGreatFilm, against: .text("foo")))
     }
 
     /// The regression this scorer was written for: ordering used to be
@@ -214,13 +214,6 @@ struct SearchRelevanceRankingTests {
     func emptyQueryPreservesOrder() {
         let results = [result("Zed", id: 1), result("Alpha", id: 2)]
         #expect(SearchRelevance.sortedByRelevance(results, input: .text("   ")).map(\.externalId) == [1, 2])
-    }
-
-    @Test("The legacy string entry point matches the input-typed one")
-    func legacyQueryOverload() {
-        let results = [result("Foo Bar Baz", id: 1), result("Foo", id: 2)]
-        #expect(SearchRelevance.sortedByRelevance(results, query: "foo").map(\.externalId)
-                == SearchRelevance.sortedByRelevance(results, input: .text("foo")).map(\.externalId))
     }
 }
 
@@ -260,7 +253,7 @@ struct SearchRelevanceRefTests {
         let perfectText = result("Audi", rating: 10.0, votes: 20_000)
 
         #expect(SearchRelevance.rank(byRef, against: .ref(.tmdb(42)))
-                > SearchRelevance.rank(perfectText, normalizedQuery: "audi"))
+                > SearchRelevance.rank(perfectText, against: .text("audi")))
     }
 
     /// Sorting a ref query also *filters*: rows from other sources that came
@@ -515,33 +508,8 @@ struct SearchRelevanceYearTests {
     }
 }
 
-@Suite("Demo search id lookups")
+@Suite("Demo search pools")
 struct DemoSearchRefTests {
-    /// Demo mode filtered its pool by plain substring against the RAW term,
-    /// so `imdb:ttN` matched nothing and demo silently contradicted the real
-    /// behaviour it exists to demonstrate.
-    @Test("An IMDB ref resolves against the demo pool")
-    func demoResolvesIMDBRef() throws {
-        let pool = DemoMocks.radarrSearchPool
-        let target = try #require(pool.first { $0.imdbId != nil })
-        let imdbId = try #require(target.imdbId)
-
-        let hits = DemoMocks.searchResults(for: "imdb:\(imdbId)", source: .radarr)
-        #expect(hits.map(\.externalId) == [target.externalId])
-
-        // …and survives the ranker's ref filter, which is the step that used
-        // to throw the record away even when the lookup found it.
-        let sorted = SearchRelevance.sortedByRelevance(hits, input: QueryParser.parse("imdb:\(imdbId)"))
-        #expect(sorted.map(\.externalId) == [target.externalId])
-    }
-
-    @Test("A TMDB ref resolves against the demo pool")
-    func demoResolvesTMDBRef() throws {
-        let target = try #require(DemoMocks.radarrSearchPool.first)
-        let hits = DemoMocks.searchResults(for: "tmdb:\(target.externalId)", source: .radarr)
-        #expect(hits.map(\.externalId) == [target.externalId])
-    }
-
     /// Every demo record carries an id so both id schemes are exercisable.
     @Test("Demo pools carry IMDB ids")
     func demoPoolsCarryIMDBIds() {

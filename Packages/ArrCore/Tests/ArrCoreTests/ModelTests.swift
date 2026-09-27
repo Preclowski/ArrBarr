@@ -161,13 +161,6 @@ struct QueueItemTests {
         #expect(!Self.make(status: .queued).isPaused)
     }
 
-    @Test("isCompleted is true only when status is completed")
-    func isCompleted() {
-        #expect(!Self.make(status: .downloading).isCompleted)
-        #expect(Self.make(status: .completed).isCompleted)
-        #expect(!Self.make(status: .paused).isCompleted)
-    }
-
     @Test("All status values have display names")
     func statusDisplayNames() {
         for status in [QueueItem.Status.downloading, .paused, .queued, .importing, .completed, .warning, .failed, .unknown] {
