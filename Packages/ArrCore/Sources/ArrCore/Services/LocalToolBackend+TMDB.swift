@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -76,7 +77,7 @@ extension LocalToolBackend {
     /// Best effort: a filmography is still a good answer without the header.
     private func personCard(_ personId: Int) async -> ChatPerson? {
         let client = tmdbClient
-        guard let details = try? await client.personDetails(personId: personId) else { return nil }
+        guard let details = await Logger.extras.attempt("person card", { try await client.personDetails(personId: personId) }) else { return nil }
         return ChatPerson(details)
     }
 

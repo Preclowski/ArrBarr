@@ -1,3 +1,4 @@
+import os
 import Foundation
 
 /// TMDB's per-episode score: neither Sonarr nor TVDB ship one. The tmdb id is resolved
@@ -18,7 +19,7 @@ enum EpisodeRatingProvider {
                               configStore: ConfigStore) async -> Rating? {
         let client = configStore.tmdbClient
         guard let seriesId = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId),
-              let hit = try? await client.episodeRating(tvId: seriesId, season: season, episode: episode)
+              let hit = await Logger.extras.attempt("episode rating", { try await client.episodeRating(tvId: seriesId, season: season, episode: episode) }) ?? nil
         else { return nil }
         return Rating(value: hit.value, votes: hit.votes)
     }

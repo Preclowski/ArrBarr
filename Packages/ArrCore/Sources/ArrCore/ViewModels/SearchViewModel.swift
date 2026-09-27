@@ -1,3 +1,4 @@
+import os
 import Foundation
 import Observation
 import MediaKit
@@ -275,11 +276,11 @@ public final class SearchViewModel {
             return ([], nil)
         }
         // Series as the fallback: a TV-only actor has a thin-to-empty movie list.
-        var titles = (try? await People.movieFilmography(
-            personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)) ?? []
+        var titles = (await Logger.extras.attempt("starring movies") { try await People.movieFilmography(
+            personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty) }) ?? []
         if titles.isEmpty {
-            titles = (try? await People.seriesFilmography(
-                personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty)) ?? []
+            titles = (await Logger.extras.attempt("starring series") { try await People.seriesFilmography(
+                personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty) }) ?? []
         }
         guard isFullName || !titles.isEmpty else { return ([], nil) }
         return ([], StarringSection(person: top, titles: Array(titles.prefix(8)),
@@ -315,12 +316,12 @@ public final class SearchViewModel {
         switch result.source {
         case .radarr:
             guard let client = client(for: result.source), result.externalId > 0 else { return nil }
-            return (try? await client.lookup(query: "tmdb:\(result.externalId)").first)?
+            return (await Logger.extras.attempt("enrich by tmdb") { try await client.lookup(query: "tmdb:\(result.externalId)") })?.first?
                 .withArtwork(from: result)
         case .sonarr:
             if result.externalId > 0 {
                 guard let client = client(for: result.source) else { return nil }
-                return (try? await client.lookup(query: "tvdb:\(result.externalId)").first)?
+                return (await Logger.extras.attempt("enrich by tvdb") { try await client.lookup(query: "tvdb:\(result.externalId)") })?.first?
                     .withArtwork(from: result)
             }
             // A TMDB tv id is not a tvdbId; resolve by id, never by name.

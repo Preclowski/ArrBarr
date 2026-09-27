@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -94,7 +95,7 @@ extension ArrAPIClient {
     }
 
     func isSearchRunning(entityId: Int) async -> Bool {
-        let commands = (try? await read(policy: .mustRevalidate) { $0.commands() }) ?? []
+        let commands = (await Logger.extras.attempt("search-running poll") { try await read(policy: .mustRevalidate) { $0.commands() } }) ?? []
         return commands.contains { $0.isSearch(for: entityId) }
     }
 

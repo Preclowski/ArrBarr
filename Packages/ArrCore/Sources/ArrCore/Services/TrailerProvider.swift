@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -58,7 +59,7 @@ enum TrailerProvider {
 
     private static func fetch(configStore: ConfigStore,
                               _ videos: @escaping (TMDBClient) async throws -> [TMDBVideo]) async -> [TrailerClip] {
-        guard !configStore.tmdbApiKey.isEmpty, let list = try? await videos(configStore.tmdbClient) else { return [] }
+        guard !configStore.tmdbApiKey.isEmpty, let list = await Logger.extras.attempt("trailer videos", { try await videos(configStore.tmdbClient) }) else { return [] }
         return TMDBVideo.rankedYouTube(list).map { TrailerClip(key: $0.key, name: $0.name) }
     }
 }

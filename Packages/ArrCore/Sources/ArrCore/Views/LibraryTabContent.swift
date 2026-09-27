@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import MediaKit
 
@@ -577,9 +578,9 @@ private struct LibraryEntryTooltip: View {
             guard fileDetails == nil, entry.state == .complete else { return }
             switch entry.source {
             case .radarr:
-                fileDetails = try? await configStore.radarrClient.fetchMovieFile(movieId: entry.arrId)
+                fileDetails = await Logger.extras.attempt("library file tooltip") { try await configStore.radarrClient.fetchMovieFile(movieId: entry.arrId) } ?? nil
             case .whisparr:
-                fileDetails = try? await configStore.whisparrClient.fetchMovieFile(movieId: entry.arrId)
+                fileDetails = await Logger.extras.attempt("library file tooltip") { try await configStore.whisparrClient.fetchMovieFile(movieId: entry.arrId) } ?? nil
             case .sonarr, .lidarr:
                 break
             }

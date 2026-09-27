@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -20,7 +21,7 @@ enum CastProvider {
     /// `radarrMovieId` takes Radarr's `/credit` (no TMDB key needed); `tmdbId` is the fallback.
     static func movieCredits(radarrMovieId: Int?, tmdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
         if let radarrMovieId, configStore.radarr.isConfigured {
-            let credits = (try? await configStore.radarrClient.fetchCredits(movieId: radarrMovieId)) ?? []
+            let credits = (await Logger.extras.attempt("radarr credits") { try await configStore.radarrClient.fetchCredits(movieId: radarrMovieId) }) ?? []
             let members = TitleCredits(cast: CastMember.from(radarrCredits: credits),
                                        directors: CastMember.directors(radarrCredits: credits))
             if !members.isEmpty { return members }
@@ -28,7 +29,7 @@ enum CastProvider {
         }
         let key = configStore.tmdbApiKey
         guard !key.isEmpty, let tmdbId, tmdbId > 0,
-              let credits = try? await configStore.tmdbClient.movieCredits(movieId: tmdbId)
+              let credits = await Logger.extras.attempt("tmdb credits", { try await configStore.tmdbClient.movieCredits(movieId: tmdbId) })
         else { return .empty }
         return TitleCredits(cast: CastMember.from(tmdbCast: credits.cast),
                             directors: CastMember.directors(tmdbCrew: credits.crew ?? []))
@@ -40,8 +41,8 @@ enum CastProvider {
         let client = configStore.tmdbClient
         guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return .empty }
         // Run alongside the credits so the strip and "Created by" land together.
-        async let creators = (try? await client.tvCreators(tvId: id)) ?? []
-        guard let credits = try? await client.tvCredits(tvId: id) else { return .empty }
+        async let creators = (await Logger.extras.attempt("series creators") { try await client.tvCreators(tvId: id) }) ?? []
+        guard let credits = await Logger.extras.attempt("series credits", { try await client.tvCredits(tvId: id) }) else { return .empty }
         return TitleCredits(cast: CastMember.from(tmdbCast: credits.cast),
                             directors: CastMember.from(tmdbCreators: await creators))
     }

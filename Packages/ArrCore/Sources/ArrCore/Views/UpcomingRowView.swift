@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import MediaKit
 
@@ -257,18 +258,18 @@ struct UpcomingItemTooltip: View {
             guard item.hasFile, fileDetails == nil, let entityId = item.entityId else { return }
             switch item.source {
             case .radarr:
-                if let f = try? await configStore.radarrClient.fetchMovieFile(movieId: entityId) {
+                if let f = await Logger.extras.attempt("upcoming file", { try await configStore.radarrClient.fetchMovieFile(movieId: entityId) }) ?? nil {
                     fileDetails = FileFacts(f)
                 }
             case .whisparr:
-                if let f = try? await configStore.whisparrClient.fetchMovieFile(movieId: entityId) {
+                if let f = await Logger.extras.attempt("upcoming file", { try await configStore.whisparrClient.fetchMovieFile(movieId: entityId) }) ?? nil {
                     fileDetails = FileFacts(f)
                 }
             case .sonarr:
                 // entityId is the SERIES id; the calendar's episodeFileId
                 // picks this episode's file out of the series map.
                 guard let fileId = item.episodeFileId else { break }
-                let map = (try? await configStore.sonarrClient.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
+                let map = (await Logger.extras.attempt("upcoming episode files") { try await configStore.sonarrClient.fetchEpisodeFileMap(seriesId: entityId) }) ?? [:]
                 if let f = map[fileId] {
                     fileDetails = FileFacts(f)
                 }

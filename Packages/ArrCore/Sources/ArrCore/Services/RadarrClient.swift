@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -18,7 +19,7 @@ nonisolated public struct RadarrClient: MovieArrClient {
             if !titles.isEmpty { inline[id] = titles }
         }
         if !inline.isEmpty { return inline }
-        guard let rows = try? await read({ $0.alternateTitles() }) else { return [:] }
+        guard let rows = await Logger.extras.attempt("alternate titles", { try await read { $0.alternateTitles() } }) else { return [:] }
         var out: [Int: [String]] = [:]
         for row in rows {
             guard let id = row.movieId, id > 0, let title = row.title, !title.isEmpty else { continue }

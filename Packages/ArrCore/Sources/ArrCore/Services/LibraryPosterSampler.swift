@@ -1,3 +1,4 @@
+import os
 import Foundation
 
 /// Poster URLs from the user's library for the chat's Quiz card. Only `remoteUrl` posters,
@@ -36,14 +37,14 @@ public enum LibraryPosterSampler {
     private static func fetch(configStore: ConfigStore, max: Int) async -> [URL] {
         var urls: [URL] = []
         if configStore.radarr.isConfigured,
-           let movies = try? await configStore.radarrClient.fetchAllMovies() {
+           let movies = await Logger.extras.attempt("quiz poster sample", { try await configStore.radarrClient.fetchAllMovies() }) {
             for rec in movies {
                 let (url, needsAuth) = (rec.images ?? []).posterURL(baseURL: configStore.radarr.baseURL, mediaServerKeys: rec.mediaServerKeys)
                 if let url, !needsAuth { urls.append(url) }
             }
         }
         if configStore.sonarr.isConfigured,
-           let series = try? await configStore.sonarrClient.fetchAllSeries() {
+           let series = await Logger.extras.attempt("quiz poster sample", { try await configStore.sonarrClient.fetchAllSeries() }) {
             for rec in series {
                 let (url, needsAuth) = (rec.images ?? []).posterURL(baseURL: configStore.sonarr.baseURL, mediaServerKeys: rec.mediaServerKeys)
                 if let url, !needsAuth { urls.append(url) }

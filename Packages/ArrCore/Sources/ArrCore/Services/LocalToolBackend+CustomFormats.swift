@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -96,7 +97,7 @@ extension LocalToolBackend {
             }
         }
 
-        let profiles = (try? await client.fetchQualityProfiles()) ?? []
+        let profiles = (await Logger.extras.attempt("custom format profiles") { try await client.fetchQualityProfiles() }) ?? []
         let scored: [(String, Int)] = profiles.compactMap { profile in
             guard let item = profile.formatItems?.first(where: { $0.format == cf.id }),
                   item.score != 0 else { return nil }

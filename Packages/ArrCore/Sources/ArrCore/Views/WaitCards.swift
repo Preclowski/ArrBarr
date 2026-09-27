@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import MediaKit
 
@@ -77,8 +78,8 @@ enum WaitStoryProvider {
         }
 
         if let m = ctx.movie, let id = m.tmdbId, id > 0 {
-            let facts = try? await client.movieDetails(movieId: id)
-            let crew = (try? await client.movieCredits(movieId: id))?.crew ?? []
+            let facts = await Logger.extras.attempt("wait facts") { try await client.movieDetails(movieId: id) }
+            let crew = (await Logger.extras.attempt("wait crew") { try await client.movieCredits(movieId: id) })?.crew ?? []
             let composer = crew.first { $0.job == "Original Music Composer" }
             let writer = crew.first { $0.job == "Screenplay" || $0.job == "Writer" }
             let dop = crew.first { $0.job == "Director of Photography" }
@@ -101,14 +102,14 @@ enum WaitStoryProvider {
                 stories.append(WaitStory(sentence: L("wait.story.taglineOnly \(title) \(tagline)"),
                                          support: f.originalTitle.flatMap { $0 == m.title || $0.isEmpty ? nil : L("wait.story.originalTitle \($0)") }))
             }
-            if let picks = try? await client.recommendedMovies(movieId: id), picks.count >= 2 {
+            if let picks = await Logger.extras.attempt("wait recommendations", { try await client.recommendedMovies(movieId: id) }), picks.count >= 2 {
                 let a = picks[0], b = picks[1]
                 let ownedPick = picks.prefix(4).first { owned[$0.id] != nil }
                 stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)"),
                                          support: ownedPick.map { L("wait.story.alsoOwned \($0.title)") }))
             }
         } else if let s = ctx.series, let id = await client.seriesId(tmdbId: s.tmdbId, tvdbId: s.tvdbId) {
-            if let f = try? await client.tvDetails(tvId: id), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
+            if let f = await Logger.extras.attempt("wait series facts", { try await client.tvDetails(tvId: id) }), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
                seasons > 0, let years = yearsAgo(s.year) {
                 let sentence = L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")
                 let support = s.network.map { L("wait.story.network \($0)") } ?? f.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") }
@@ -129,8 +130,8 @@ enum WaitStoryProvider {
 
         for person in people {
             guard let personId = person.tmdbPersonId else { continue }
-            let details = try? await client.personDetails(personId: personId)
-            let credits = try? await client.personMovieCredits(personId: personId)
+            let details = await Logger.extras.attempt("wait person") { try await client.personDetails(personId: personId) }
+            let credits = await Logger.extras.attempt("wait person credits") { try await client.personMovieCredits(personId: personId) }
             let portrait = WaitStory.Person(name: person.name, imageURL: details?.profileURL ?? person.imageURL)
             let others = (credits?.cast ?? []).filter { $0.id != ctx.movie?.tmdbId && ($0.voteCount ?? 0) >= 100 }
             let hit = others.max { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }

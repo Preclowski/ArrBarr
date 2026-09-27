@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -24,7 +25,7 @@ extension DownloadClientFacade {
 
     public func defaultAddPaused() async -> Bool? {
         guard let (gateway, service) = try? await context() else { return nil }
-        return try? await gateway.store.read(service.defaultAddPaused()).value
+        return await Logger.extras.attempt("default add-paused") { try await gateway.store.read(service.defaultAddPaused()).value } ?? nil
     }
 
     public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {

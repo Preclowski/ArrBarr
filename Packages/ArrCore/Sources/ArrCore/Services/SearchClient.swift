@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -37,7 +38,11 @@ public actor SearchClient {
             async let searchTask = client.read { $0.lidarrSearch(term: query) }
             async let artistTask = client.read { $0.lookupArtists(term: query) }
             let searchRecords = try await searchTask
-            let artistRecords = (try? await artistTask) ?? []
+            let artistRecords: [ArrArtist]
+            do { artistRecords = try await artistTask } catch {
+                Logger.extras.debug("lidarr artist lookup failed: \(error.localizedDescription, privacy: .public)")
+                artistRecords = []
+            }
             let albums = searchRecords.enumerated().compactMap { offset, rec in rec.album.flatMap { SearchResult(album: $0, baseURL: baseURL, sourceRank: offset) } }
             let artists = artistRecords.isEmpty
                 ? searchRecords.enumerated().compactMap { offset, rec in rec.artist.flatMap { SearchResult(artist: $0, baseURL: baseURL, sourceRank: offset) } }
@@ -57,7 +62,7 @@ public actor SearchClient {
     }
 
     nonisolated static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
-        names((try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? [])
+        names((await Logger.extras.attempt("profile names") { try await SearchClient(config: config, source: source).fetchQualityProfiles() }) ?? [])
     }
 
     /// Profiles already in the store, no request: the Library's first paint does not wait on garnish.

@@ -24,6 +24,9 @@ nonisolated public extension URL {
 }
 
 nonisolated extension Logger {
+    /// Optional extras (cast, trailers, facts, file tooltips): a failure changes nothing on screen but stays findable.
+    static let extras = Logger(category: "Extras")
+
     /// `try?` that leaves a trace: the value, or nil with the reason logged. `what` is a fixed label, never user data.
     func attempt<T>(_ what: StaticString, level: OSLogType = .debug, _ body: () async throws -> T) async -> T? {
         do { return try await body() } catch is CancellationError { return nil } catch {

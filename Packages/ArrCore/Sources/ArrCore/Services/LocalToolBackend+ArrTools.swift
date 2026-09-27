@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -404,7 +405,7 @@ extension LocalToolBackend {
     }
 
     private func artistName(id: Int) async -> String? {
-        guard let artists = try? await lidarrClient.fetchAllArtists() else { return nil }
+        guard let artists = await Logger.extras.attempt("lidarr artists", { try await lidarrClient.fetchAllArtists() }) else { return nil }
         return artists.first { $0.id == id }?.artistName
     }
 

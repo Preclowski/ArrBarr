@@ -1122,7 +1122,10 @@ struct DetailView: View {
                 async let fs = client.fetchTrackFiles(albumId: entityId)
                 lidarrAlbum = try await a
                 lidarrTracks = try await ts
-                lidarrTrackFiles = (try? await fs) ?? []
+                do { lidarrTrackFiles = try await fs } catch {
+                    Logger.extras.debug("lidarr track files failed: \(error.localizedDescription, privacy: .public)")
+                    lidarrTrackFiles = []
+                }
             case .whisparr:
                 let client = configStore.whisparrClient
                 radarrDetail = try await client.fetchMovieDetails(id: entityId)

@@ -1,3 +1,4 @@
+import os
 import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
@@ -49,7 +50,7 @@ struct FoundationModelsProvider: LLMProvider {
 
         // Only user turns: replaying assistant messages via `respond(to:)` generates spurious replies.
         for msg in history.suffix(6) where msg.role == .user {
-            _ = try? await session.respond(to: msg.content)
+            _ = await Logger.extras.attempt("chat context replay") { try await session.respond(to: msg.content) }
         }
         // Tool calls triggered by the context replay would re-render as stale cards on every message.
         _ = await DynamicMCPToolBox.shared.drainResults()

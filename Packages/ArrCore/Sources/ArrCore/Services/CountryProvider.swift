@@ -1,3 +1,4 @@
+import os
 import Foundation
 
 /// ISO 3166-1 alpha-2 production countries. TMDB-only: Radarr/Sonarr resources
@@ -10,7 +11,7 @@ enum CountryProvider {
     static func movieCountries(tmdbId: Int?, configStore: ConfigStore) async -> [String] {
         guard let tmdbId, tmdbId > 0 else { return [] }
         guard !configStore.tmdbApiKey.isEmpty else { return [] }
-        return (try? await configStore.tmdbClient.movieCountries(movieId: tmdbId)) ?? []
+        return (await Logger.extras.attempt("countries") { try await configStore.tmdbClient.movieCountries(movieId: tmdbId) }) ?? []
     }
 
     /// Without a `tmdbId`, `tvdbId` is resolved via TMDB `/find`.
@@ -18,7 +19,7 @@ enum CountryProvider {
         guard !configStore.tmdbApiKey.isEmpty else { return [] }
         let client = configStore.tmdbClient
         guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
-        return (try? await client.tvCountries(tvId: id)) ?? []
+        return (await Logger.extras.attempt("countries") { try await client.tvCountries(tvId: id) }) ?? []
     }
 
     // MARK: - Display

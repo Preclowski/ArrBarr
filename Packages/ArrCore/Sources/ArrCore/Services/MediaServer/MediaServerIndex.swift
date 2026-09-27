@@ -226,7 +226,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             return State()
         }
         // A server that answers the library but not the history should still get posters.
-        let history = (try? await facade.recentlyWatched(limit: watchHistoryFetchLimit, policy: .staleWhileRevalidate)) ?? []
+        let history = (await Self.log.attempt("watch history") { try await facade.recentlyWatched(limit: watchHistoryFetchLimit, policy: .staleWhileRevalidate) }) ?? []
 
         var state = State(watchHistory: history, fetchedAt: index.fetchedAt)
         state.byKey.reserveCapacity(index.entries.count * 2)

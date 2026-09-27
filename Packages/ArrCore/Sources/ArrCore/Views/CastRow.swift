@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 import MediaKit
 
@@ -189,7 +190,7 @@ private struct CastTooltip: View {
         .frame(width: 320, height: 148, alignment: .topLeading)
         .task {
             guard !loaded, let id = person.tmdbPersonId else { return }
-            details = try? await People.details(personId: id, tmdbKey: tmdbKey)
+            details = await Logger.extras.attempt("cast tooltip") { try await People.details(personId: id, tmdbKey: tmdbKey) } ?? nil
             loaded = true
         }
     }

@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -180,7 +181,7 @@ nonisolated public struct TMDBClient: Sendable {
     func seriesId(tmdbId: Int?, tvdbId: Int?) async -> Int? {
         if let tmdbId, tmdbId > 0 { return tmdbId }
         guard let tvdbId, tvdbId > 0 else { return nil }
-        return try? await tvIdFromTVDB(tvdbId)
+        return await Logger.extras.attempt("tvdb → tmdb series id") { try await tvIdFromTVDB(tvdbId) } ?? nil
     }
 
     public func tvdbIdFromTVId(_ tvId: Int) async throws -> Int? {
@@ -193,7 +194,7 @@ nonisolated public struct TMDBClient: Sendable {
     public func personDetails(personId: Int) async throws -> TMDBPersonDetails {
         let details = try await read { $0.person(id: personId) }
         guard details.biography?.isEmpty ?? true,
-              let english = try? await read({ $0.person(id: personId, language: "en-US") }),
+              let english = await Logger.extras.attempt("english biography", { try await read { $0.person(id: personId, language: "en-US") } }),
               !(english.biography?.isEmpty ?? true) else { return details }
         return english
     }
@@ -246,7 +247,7 @@ nonisolated public struct TMDBClient: Sendable {
         let fresh = await withTaskGroup(of: Int?.self) { group in
             for show in airing {
                 group.addTask {
-                    let details = try? await self.tvDetails(tvId: show.id)
+                    let details = await Logger.extras.attempt("fresh-season check") { try await self.tvDetails(tvId: show.id) }
                     return details?.isFreshSeason(around: date) == true ? show.id : nil
                 }
             }

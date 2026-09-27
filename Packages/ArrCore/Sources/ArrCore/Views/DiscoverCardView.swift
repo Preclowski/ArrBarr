@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 
 func discoverRatingChips(for result: SearchResult, imdbId: String? = nil) -> [RatingChip] {
@@ -53,7 +54,7 @@ struct DiscoverCardView: View {
                 tmdbId: tmdbId,
                 configStore: configStore).directors
             if result.imdbId == nil, let tmdbId, tmdbId > 0, !configStore.tmdbApiKey.isEmpty {
-                resolvedIMDbId = try? await configStore.tmdbClient.movieIMDbId(movieId: tmdbId)
+                resolvedIMDbId = await Logger.extras.attempt("imdb id") { try await configStore.tmdbClient.movieIMDbId(movieId: tmdbId) } ?? nil
             }
         case .show:
             directors = await CastProvider.seriesCredits(

@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -44,7 +45,7 @@ extension LocalToolBackend {
                 quizEarlyPipeline = pipeline
                 if fromTMDB {
                     // The tool call below reports a TMDB failure; the early pipeline just starts empty.
-                    await pipeline.feed((try? await nowPicks(kind: kind)) ?? [], isFinal: true)
+                    await pipeline.feed((await Logger.extras.attempt("quiz now deck") { try await nowPicks(kind: kind) }) ?? [], isFinal: true)
                     return
                 }
             }
