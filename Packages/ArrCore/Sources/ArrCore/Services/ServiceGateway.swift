@@ -217,6 +217,12 @@ public final class ServiceGateway {
         }
     }
 
+    /// Retention sweep of the SQLite resource store, beside the poster sweep.
+    public nonisolated func sweepDataCache() async { await kit.store.sweep() }
+
+    /// Drops every cached response; the next reads go to the network.
+    public nonisolated func purgeDataCache() async { await kit.store.purgeAll() }
+
     public func systemDidWake() async {
         await kit.governor.noteWake(at: Date())
         await kit.events.wakeAll()

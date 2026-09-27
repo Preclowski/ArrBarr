@@ -11,6 +11,9 @@ import os
 /// index, which nothing said out loud. Each new cache added another place to
 /// remember.
 ///
+/// The MediaKit resource store is swept with the posters; its purge is
+/// `ServiceGateway.purgeDataCache()`.
+///
 /// What is NOT here, on purpose:
 ///
 /// - **In-memory caches** (`CastProvider`, `PersonStore`, `SearchOptionsCache`,
@@ -25,6 +28,8 @@ public enum AppCaches {
     /// off the main actor and cheap enough to fire and forget.
     public static func purgeExpired() async {
         await PosterStore.shared.purge()
+        // Never forces the gateway into existence: a launch that has none yet sweeps on `MediaStack.start`.
+        await ServiceGateway.current?.sweepDataCache()
     }
 
     /// Bytes the poster store currently occupies, for the Settings row that
