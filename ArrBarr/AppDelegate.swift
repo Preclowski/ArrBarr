@@ -102,13 +102,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // An arr's download client (or its category) can change under us, and
-        // the resolved destinations are memoised — so any config edit drops
-        // that cache rather than serving a stale client on the next drop.
-        configStore.objectWillChange
-            .sink { _ in Task { await DownloadDropService.shared.invalidate() } }
-            .store(in: &cancellables)
-
         // The menu-bar icon accepts drops too — installed on a delay because
         // SwiftUI creates the status item after this callback returns.
         statusItemDropTarget.install()

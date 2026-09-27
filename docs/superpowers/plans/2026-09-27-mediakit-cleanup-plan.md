@@ -126,9 +126,15 @@ Decided 2026-09-27: delete the composition engine; keep Discovery for a separate
 
 ## Phase E — caches outside MediaKit
 
-- [ ] `SearchOptionsCache`, `PersonStore` LRU + in-flight, `IndexerNames`, `LibraryPosterSampler`,
+- [x] `SearchOptionsCache`, `PersonStore` LRU + in-flight, `IndexerNames`, `LibraryPosterSampler`,
       `MediaServerIndex.seasonPostersByItem`, `DownloadDropService` destinations → store reads.
-- [ ] `LibrarySnapshotStore`/`WidgetDataStore` file snapshots vs MediaKit `Snapshot`/`live_snapshots` [decide].
+- [x] `LibrarySnapshotStore`/`WidgetDataStore` file snapshots vs MediaKit `Snapshot`/`live_snapshots` [decide].
+- Outcome: `SearchOptionsCache` deleted (store `reference` reads; `.cacheOnly` for the Library's first paint),
+  `IndexerNames` and `People` (was `PersonStore`) are stateless read-throughs, drop destinations read the arrs'
+  client lists from the store. Kept on purpose: `LibraryPosterSampler`'s memo (one deck per session, shared by
+  the warm-up and the view), `MediaServerIndex`'s season-poster map (the synchronous index poster resolution
+  needs), and the `LibrarySnapshotStore`/`WidgetDataStore` files (finished projections for first paint and the
+  widget, not copies of wire payloads).
 
 ## Phase F — demo branches (the plan said they go)
 

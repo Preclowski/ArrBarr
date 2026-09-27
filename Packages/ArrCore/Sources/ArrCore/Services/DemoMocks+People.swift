@@ -3,7 +3,7 @@ import MediaKit
 
 /// Demo-mode people fixtures — the person view, cast-head taps and People
 /// search work offline against the same curated open-movie world as the rest
-/// of demo mode. Served from the SAME store paths as live data: `PersonStore`
+/// of demo mode. Served from the SAME store paths as live data: `People`
 /// and `SearchViewModel.fetchPeople` branch here when `DemoMode.isActive`.
 extension DemoMocks {
 

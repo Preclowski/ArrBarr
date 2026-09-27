@@ -52,7 +52,7 @@ struct CastRow: View {
 /// One head+name+role tile. Opens the in-app person view when a tap handler is
 /// wired and the person has a TMDB id; inert otherwise. On macOS a 600ms hover
 /// reveals a rich tooltip (bio / age / birthplace) fetched lazily through
-/// `PersonStore` — the hover gate means sweeping the cursor across the strip
+/// `People` — the hover gate means sweeping the cursor across the strip
 /// doesn't fire a fetch per head.
 /// "Directed by NAME" / "Created by NAME" — the byline that sits above a
 /// synopsis. Lives here rather than inside `MediaHeaderCard` because the Quiz
@@ -189,7 +189,7 @@ private struct CastTile: View {
 #if os(macOS)
 /// Hover card for a cast head. Instant layer (headshot, name, role) plus a
 /// lazily-fetched layer (age · birthplace, biography). One TMDB call, cached
-/// in `PersonStore`.
+/// in `People`.
 private struct CastTooltip: View {
     let person: CastMember
     let tmdbKey: String
@@ -235,7 +235,7 @@ private struct CastTooltip: View {
         .frame(width: 320, height: 148, alignment: .topLeading)
         .task {
             guard !loaded, let id = person.tmdbPersonId else { return }
-            details = await PersonStore.shared.details(personId: id, tmdbKey: tmdbKey)
+            details = await People.details(personId: id, tmdbKey: tmdbKey)
             loaded = true
         }
     }

@@ -18,24 +18,17 @@ nonisolated private let dropLog = Logger(category: "DownloadDrop")
 public actor DownloadDropService {
     nonisolated public static let shared = DownloadDropService()
 
-    /// Resolved destinations keyed by the config signature they were built
-    /// from, so re-opening the sheet doesn't re-interrogate every arr — but a
-    /// changed config does.
-    private var cache: [String: [DownloadDestination]] = [:]
-
     public init() {}
 
     /// Every place this payload could go: one entry per (arr, download client)
     /// pair that can speak the payload's protocol AND that ArrBarr itself has
-    /// credentials for.
+    /// credentials for. The arrs' client lists are `reference` store reads, so
+    /// reopening the sheet does not re-interrogate every arr.
     ///
     /// An arr we can't reach contributes nothing rather than failing the whole
     /// resolve — with three arrs configured and one down, the user should still
     /// be able to file a drop with the other two.
     public func destinations(for kind: DownloadKind, configs: [ServiceKind: ServiceConfig]) async -> [DownloadDestination] {
-        let signature = Self.signature(configs) + "|" + kind.rawValue
-        if let cached = cache[signature] { return cached }
-
         var result: [DownloadDestination] = []
         for arr in ServiceKind.arrKinds {
             guard let config = configs[arr], config.isVisible else {
@@ -70,7 +63,6 @@ public actor DownloadDropService {
                 result.append(DownloadDestination(arr: arr, client: client, serviceKind: local))
             }
         }
-        cache[signature] = result
         return result
     }
 
@@ -99,12 +91,6 @@ public actor DownloadDropService {
         return await client.defaultAddPaused() ?? false
     }
 
-    /// Drop the memoised destinations — called when the user edits any service
-    /// config, since an arr's download client can change under us.
-    public func invalidate() {
-        cache.removeAll()
-    }
-
     /// The one place mapping a client kind to something that can be handed a
     /// new download. Mirrors `DownloadProgressService.makeSource`; the two stay
     /// separate because progress and adding are genuinely different
@@ -127,12 +113,6 @@ public actor DownloadDropService {
 
     /// Cheap identity for a config set — enough to notice a URL/key edit
     /// without holding the configs themselves.
-    nonisolated private static func signature(_ configs: [ServiceKind: ServiceConfig]) -> String {
-        configs.keys.sorted { $0.rawValue < $1.rawValue }.map { kind in
-            let c = configs[kind]
-            return "\(kind.rawValue):\(c?.enabled == true):\(c?.baseURL ?? "")"
-        }.joined(separator: ",")
-    }
 }
 
 nonisolated public extension ServiceKind {

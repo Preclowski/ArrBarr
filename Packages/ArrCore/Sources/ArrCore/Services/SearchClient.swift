@@ -57,22 +57,23 @@ public actor SearchClient {
     }
 
     nonisolated static func profileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
-        let profiles = await SearchOptionsCache.shared.qualityProfiles(config: config, source: source) {
-            (try? await SearchClient(config: config, source: source).fetchQualityProfiles()) ?? []
-        }
-        return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        names(await SearchClient(config: config, source: source).fetchQualityProfiles())
     }
 
-    /// Profiles already in hand, no request. See `cachedQualityProfiles`.
+    /// Profiles already in the store, no request: the Library's first paint does not wait on garnish.
     nonisolated static func cachedProfileNameMap(config: ServiceConfig, source: QueueItem.Source) async -> [Int: String] {
-        let profiles = await SearchOptionsCache.shared.cachedQualityProfiles(config: config, source: source)
-        return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        names(await SearchClient(config: config, source: source).cachedQualityProfiles())
     }
 
-    func fetchQualityProfiles() async throws -> [ArrQualityProfile] { (try? await client.read { $0.qualityProfiles() }) ?? [] }
-    func fetchMetadataProfiles() async throws -> [ArrMetadataProfile] { (try? await client.read { $0.metadataProfiles() }) ?? [] }
+    nonisolated private static func names(_ profiles: [ArrQualityProfile]) -> [Int: String] {
+        Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    func fetchQualityProfiles() async -> [ArrQualityProfile] { (try? await client.read { $0.qualityProfiles() }) ?? [] }
+    func cachedQualityProfiles() async -> [ArrQualityProfile] { (try? await client.read(policy: .cacheOnly) { $0.qualityProfiles() }) ?? [] }
+    func fetchMetadataProfiles() async -> [ArrMetadataProfile] { (try? await client.read { $0.metadataProfiles() }) ?? [] }
     /// The arr's root folder paths; the pickers need nothing else.
-    func fetchRootFolders() async throws -> [String] { ((try? await client.read { $0.rootFolders() }) ?? []).compactMap(\.path) }
+    func fetchRootFolders() async -> [String] { ((try? await client.read { $0.rootFolders() }) ?? []).compactMap(\.path) }
 
     private func ensureRefCompatible(_ result: SearchResult) throws {
         let ref = result.mediaRef

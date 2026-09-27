@@ -12,7 +12,7 @@ nonisolated public struct ProwlarrClient: Sendable {
     public init() {}
 
     /// The indexers as Prowlarr knows them. Reference data with a long life in
-    /// the store — `IndexerNames` reads it once per launch.
+    /// the store, read through by `IndexerNames`.
     public func indexers() async throws -> [ProwlarrIndexer] {
         let c = try await context()
         return try await c.gateway.store.read(c.service.indexers()).value

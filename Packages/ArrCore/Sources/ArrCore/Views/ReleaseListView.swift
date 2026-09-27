@@ -330,7 +330,7 @@ struct ReleaseListView: View {
             loadedTargetId = target.id
             // Names are reference data, cached across searches — this is a
             // no-op after the first search of a session.
-            Task { indexerNames = await IndexerNames.shared.names(for: target.source, configStore: configStore) }
+            Task { indexerNames = await IndexerNames.names(for: target.source, configStore: configStore) }
             // A search where the *arr rejected everything is the normal case for
             // a season that's already complete — hiding all of it would answer
             // "search" with a blank screen, so the pill starts on instead.

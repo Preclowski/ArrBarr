@@ -382,12 +382,12 @@ struct MediaEditPanel: View {
         }
 
         let search = configStore.searchClient(for: request.source)
-        async let q = (try? search.fetchQualityProfiles()) ?? []
-        async let f = (try? search.fetchRootFolders()) ?? []
+        async let q = search.fetchQualityProfiles()
+        async let f = search.fetchRootFolders()
         qualityProfiles = await q
         rootFolders = await f
         if request.source == .lidarr {
-            metadataProfiles = (try? await search.fetchMetadataProfiles()) ?? []
+            metadataProfiles = await search.fetchMetadataProfiles()
         }
 
         // Demo mode has no raw record to read — seed from the first options

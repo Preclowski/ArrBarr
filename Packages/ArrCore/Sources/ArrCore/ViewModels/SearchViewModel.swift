@@ -147,7 +147,7 @@ public final class SearchViewModel {
     /// What the searches are built from, read on every use so a server edited
     /// in Settings is the one the next search asks.
     @ObservationIgnored private var settings: () -> (configs: [QueueItem.Source: ServiceConfig], tmdbApiKey: String) = { ([:], "") }
-    /// The configured arrs only; also keys the `SearchOptionsCache`.
+    /// The configured arrs only.
     private var configs: [QueueItem.Source: ServiceConfig] { settings().configs }
     /// Empty ⇒ people search is skipped.
     private var tmdbApiKey: String { settings().tmdbApiKey }
@@ -366,10 +366,10 @@ public final class SearchViewModel {
         // Movies first, series as the fallback: a TV-only actor (Rhea Seehorn,
         // Bryan Cranston's Better Call Saul co-lead) has a thin-to-empty movie
         // list, and used to be dropped entirely for it.
-        var titles = await PersonStore.shared.movieFilmography(
+        var titles = await People.movieFilmography(
             personId: top.id, tmdbKey: tmdbApiKey, radarrConfig: configs[.radarr] ?? .empty)
         if titles.isEmpty {
-            titles = await PersonStore.shared.seriesFilmography(
+            titles = await People.seriesFilmography(
                 personId: top.id, tmdbKey: tmdbApiKey, sonarrConfig: configs[.sonarr] ?? .empty)
         }
         // A named person stands on their own — the header row alone opens the
@@ -462,38 +462,13 @@ public final class SearchViewModel {
         let client = client(for: source)
         guard let client else { return }
 
-        // Cache hit: paint instantly. Server-side profile/folder lists rarely
-        // change; the 15-minute TTL covers the common "open SearchAddPanel
-        // three times in a row" pattern without making the user wait for
-        // identical results.
-        let cacheKey = configs[source].map {
-            SearchOptionsCache.key(source: source, config: $0)
-        }
-        if let key = cacheKey, let cached = SearchOptionsCache.shared.entry(for: key) {
-            qualityProfiles = cached.profiles
-            rootFolders = cached.folders
-            metadataProfiles = cached.metadataProfiles
-            return
-        }
-
+        // The store serves these from its `reference` rows; only a cold one waits on the arr.
         isLoadingOptions = true
         defer { isLoadingOptions = false }
         async let profiles = client.fetchQualityProfiles()
         async let folders = client.fetchRootFolders()
-        let q = (try? await profiles) ?? []
-        let f = (try? await folders) ?? []
-        let mp: [ArrMetadataProfile] = source == .lidarr
-            ? ((try? await client.fetchMetadataProfiles()) ?? [])
-            : []
-        qualityProfiles = q
-        rootFolders = f
-        metadataProfiles = mp
-        if let key = cacheKey {
-            SearchOptionsCache.shared.store(
-                .init(profiles: q, folders: f, metadataProfiles: mp),
-                for: key
-            )
-        }
+        async let metadata = source == .lidarr ? client.fetchMetadataProfiles() : []
+        (qualityProfiles, rootFolders, metadataProfiles) = await (profiles, folders, metadata)
     }
 
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,

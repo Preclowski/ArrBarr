@@ -664,8 +664,6 @@ public final class ConfigStore: ObservableObject {
         }.store(in: &cancellables)
         $prowlarr.dropFirst().sink { [weak self] cfg in
             guard let self else { return }
-            // Names resolved through the old server would outlive it otherwise.
-            IndexerNames.shared.invalidate()
             self.setOrDelete(cfg.apiKey, for: .prowlarrKey)
             var stripped = cfg
             stripped.apiKey = ""

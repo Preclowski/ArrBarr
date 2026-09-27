@@ -16,7 +16,7 @@ import os
 ///
 /// What is NOT here, on purpose:
 ///
-/// - **In-memory caches** (`CastProvider`, `PersonStore`, `SearchOptionsCache`,
+/// - **In-memory caches** (`CastProvider`, `People`,
 ///   `MediaServerIndex`). They die with the process and are rebuilt from the
 ///   network; a button for them would promise a fix it cannot deliver.
 /// - **The Spotlight index.** Clearing it is a distinct, user-visible act

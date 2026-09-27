@@ -4,7 +4,7 @@ import MediaKit
 
 /// Identity of a person to open — pushed as a `navigationDestination(item:)`
 /// from cast heads. Carries just enough to render the header instantly (name +
-/// headshot) while `PersonStore` fetches the bio and filmography.
+/// headshot) while `People` fetches the bio and filmography.
 nonisolated public struct PersonRef: Hashable, Identifiable, Sendable {
     public let tmdbId: Int
     public let name: String
@@ -368,7 +368,7 @@ public struct PersonView: View {
     ///
     /// The page is keyed by TMDB person id and nothing here can mix two people
     /// up — the cast tile's name, headshot and id all come from ONE arr credit
-    /// record, `PersonStore` caches by id, `PosterStore` by SHA-256 of the URL.
+    /// record, `People` caches by id, `PosterStore` by SHA-256 of the URL.
     /// So when the headshot you tapped and the photo that loads are different
     /// faces, the disagreement arrived in the data: a credit whose name and
     /// image don't belong to the `personTmdbId` beside them. Invisible unless
@@ -387,10 +387,10 @@ public struct PersonView: View {
 
     private func loadInitial() async {
         let key = configStore.tmdbApiKey
-        async let d = PersonStore.shared.details(personId: ref.tmdbId, tmdbKey: key)
-        async let m = PersonStore.shared.movieFilmography(
+        async let d = People.details(personId: ref.tmdbId, tmdbKey: key)
+        async let m = People.movieFilmography(
             personId: ref.tmdbId, tmdbKey: key, radarrConfig: configStore.radarr)
-        async let s = PersonStore.shared.seriesFilmography(
+        async let s = People.seriesFilmography(
             personId: ref.tmdbId, tmdbKey: key, sonarrConfig: configStore.sonarr)
         details = await d
         detailsLoading = false
