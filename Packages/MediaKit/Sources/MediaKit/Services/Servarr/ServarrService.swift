@@ -149,9 +149,8 @@ public struct ServarrService: Sendable {
     }
 
     /// Volatile with a 60 s TTL: indexers are queried on every miss.
-    public func releases(entityID: Int) -> Resource<[ArrRelease]> {
-        let key = profile.kind == .sonarr ? "episodeId" : profile.kind == .lidarr ? "albumId" : "movieId"
-        return .json(plan("fetchReleases", path: "/release", query: [(key, String(entityID))], timeout: .seconds(120)), tags: [], freshness: .volatile, ttl: .seconds(60))
+    public func releases(_ target: ReleaseTarget) -> Resource<[ArrRelease]> {
+        .json(plan("fetchReleases", path: "/release", query: target.query, timeout: .seconds(120)), tags: [], freshness: .volatile, ttl: .seconds(60))
     }
 
     // MARK: - Commands
@@ -404,5 +403,19 @@ public struct ServarrService: Sendable {
 
     static func day(_ date: Date) -> String {
         date.formatted(Date.ISO8601FormatStyle(dateSeparator: .dash).year().month().day())
+    }
+}
+
+/// What an interactive search runs for: the `/release` query of each arr.
+public enum ReleaseTarget: Hashable, Sendable {
+    case movie(Int), episode(Int), album(Int), season(seriesID: Int, season: Int)
+
+    var query: [(String, String)] {
+        switch self {
+        case let .movie(id): [("movieId", String(id))]
+        case let .episode(id): [("episodeId", String(id))]
+        case let .album(id): [("albumId", String(id))]
+        case let .season(seriesID, season): [("seriesId", String(seriesID)), ("seasonNumber", String(season))]
+        }
     }
 }

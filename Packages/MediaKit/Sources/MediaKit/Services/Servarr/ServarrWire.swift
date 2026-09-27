@@ -464,9 +464,9 @@ public struct ArrCredit: Codable, Equatable, Sendable, Hashable {
     public let images: [ArrImage]?
 }
 
-public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
+public struct ArrRelease: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let guid: String
-    public let title: String?
+    public let title: String
     public let indexer: String?
     public let indexerId: Int?
     public let size: Int64?
@@ -474,6 +474,7 @@ public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
     public let leechers: Int?
     public let age: Int?
     public let ageHours: Double?
+    public let publishDate: String?
     public let `protocol`: String?
     public let quality: ArrQuality?
     public let customFormatScore: Int?
@@ -484,6 +485,17 @@ public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
     public let infoUrl: String?
     public let downloadUrl: String?
     public let languages: [ArrLanguage]?
+    public let releaseGroup: String?
+    /// Sonarr: a full-season pack, and the season and episodes a release carries.
+    public let fullSeason: Bool?
+    public let seasonNumber: Int?
+    public let episodeNumbers: [Int]?
+    /// Names on Sonarr v4, a bitfield on older builds.
+    public let indexerFlags: JSONValue?
+
+    public var id: String { guid }
+    /// Only the name form: a bitfield has no mapping worth guessing at.
+    public var indexerFlagNames: [String] { indexerFlags?.arrayValue?.compactMap(\.stringValue).filter { !$0.isEmpty } ?? [] }
 }
 
 /// Lidarr `GET /search` rows: either an artist or an album.

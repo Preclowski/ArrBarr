@@ -66,7 +66,7 @@ struct UpgradeDiffView: View {
     }
 
     /// A manual-search candidate as the *incoming* side.
-    static func side(release: Release) -> Side {
+    static func side(release: ArrRelease) -> Side {
         Side(quality: release.qualityName,
              score: release.customFormatScore,
              size: release.sizeBytes > 0 ? release.sizeBytes : nil,

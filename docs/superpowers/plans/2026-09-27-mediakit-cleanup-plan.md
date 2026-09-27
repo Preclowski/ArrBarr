@@ -36,19 +36,22 @@ re-decodes MediaKit's plans into them. Same endpoint, two shapes, one cache key:
 the store keeps whichever re-encoded payload wrote last, so the other reader can get fields silently nil.
 Same for `seriesDetails`, `album(id:)`, `movies()/series()/artists()`, lookups, files, health.
 
-- [ ] Facades return MediaKit types: `ArrMovie`, `ArrSeries`, `ArrEpisode`, `ArrAlbum`, `ArrArtist`, `ArrTrack`,
+- [x] Facades return MediaKit types: `ArrMovie`, `ArrSeries`, `ArrEpisode`, `ArrAlbum`, `ArrArtist`, `ArrTrack`,
       `ArrFile`, `ArrHealth`, `ArrCredit`, `ArrCustomFormat(Detail)`, `ArrQualityProfile`, `ArrImage`, `ArrCommand`.
-- [ ] Delete ArrCore's parallel types: `Radarr/Sonarr/Lidarr/Whisparr…LibraryRecord`, `…LookupRecord`,
+- [x] Delete ArrCore's parallel types: `Radarr/Sonarr/Lidarr/Whisparr…LibraryRecord`, `…LookupRecord`,
       `…Detail`, `SonarrEpisodeDetail/EpisodeFile/SeasonInfo/SeasonStats`, `LidarrTrackFile/TrackDetail/AlbumDetail`,
       the six rating structs, `ArrHealthRecord`, `ArrLibraryFile.Quality`, `ArrCredit.Image`, `QualityProfile`
       (`AC/Models/ArrTypes.swift`, `ArrDetailTypes.swift`, `SearchTypes.swift`), and the ArrCore
       `ArrImage/ArrFile/ArrCommand/ArrCustomFormat/ArrQualityProfile/ArrCredit` that shadow MediaKit's names.
-- [ ] Remove `ArrAPIClient.read<T>`'s re-wrap (`ArrAPIClient.swift:33-39`, `TMDBClient.swift:351`): reading the
+- [x] Remove `ArrAPIClient.read<T>`'s re-wrap (`ArrAPIClient.swift:33-39`, `TMDBClient.swift:351`): reading the
       service `Resource` as is also restores `harvest`, so the identity crosswalk finally gets written.
-- [ ] Remove `HTTPError` (`AC/Services/HTTPError.swift`): the three live cases become `MediaKitError` or a small
+- [x] Remove `HTTPError` (`AC/Services/HTTPError.swift`): the three live cases become `MediaKitError` or a small
       local error with catalog strings; `typealias KitJSON` goes with the untyped bridges (Phase C).
-- [ ] Views read MediaKit fields; file adapters collapse (`ExistingFileBanner:54,71,84`, `UpgradeDiffView:59,68`,
+- [x] Views read MediaKit fields; file adapters collapse (`ExistingFileBanner:54,71,84`, `UpgradeDiffView:59,68`,
       `UpcomingRowView:212,226`, `ArrCompositions.snapshot:265`, `LibraryFileState:56-70`).
+- [x] Also one model for TMDB (`TMDBPerson/Details/Video…`), media-server libraries/sessions, `JSONValue`,
+      `DiskSpace` → `ArrDiskSpace`, `Release` → `ArrRelease` + `ReleaseTarget`; the Edit form reads/writes
+      MediaKit's typed `ArrRecordSettings`; arr error-body parsing (ProblemDetails too) lives in MediaKit.
 
 ## Phase C — one implementation per concern (DRY)
 
@@ -73,7 +76,7 @@ Same for `seriesDetails`, `album(id:)`, `movies()/series()/artists()`, lookups, 
       `EpisodeRatingProvider:25`); drop pass-through wrappers.
 - [ ] Upcoming fetch/merge/sort: one path (`QueueAggregator:223-242`, `UpcomingService:10-54`,
       `LocalToolBackend+ArrTools:735-767`; cutoffs differ).
-- [ ] Endpoint knowledge back into MediaKit: `ArrAPIClient.getRawObject:84`, `updateLibraryRecord:122-135`
+- [x] Endpoint knowledge back into MediaKit (done in B): `ArrAPIClient.getRawObject:84`, `updateLibraryRecord:122-135`
       (= `ServarrService.readModifyWrite`), `postCommand:150` (untyped body), `fetchReleases` plan edits `:99-101`,
       `TMDBClient:386` plan edit; `MediaServerFacade.nowPlaying:84` bypasses the store (→ `liveSessions` or a resource).
 - [ ] Artwork sizing: `PosterStore.sourceURL:366-374` and `TMDBClient.imageURL:514` redo `ArtworkReference.tmdbCDN`;
@@ -118,7 +121,7 @@ Decided 2026-09-27: delete the composition engine; keep Discovery for a separate
 
 ## Phase F — demo branches (the plan said they go)
 
-- [ ] `ServerStatusModel:30-33,73` `demoDisks` → fixture `/diskspace`; `MediaEditPanel:411-417`;
+- [ ] ~~`demoDisks`~~ (done in B); `MediaEditPanel:411-417`;
       `SeriesIdentityResolver:52,62`; `QueueViewModel:235,801`; widget library `DemoMocks.librarySummaries`
       (`ArrBarrWidgets.swift:105`) → fixtures; `canControl`/visibility demo gating (`QueueRowView:120`,
       `QueueGroupRowView:50`, `QueueTitleGroupRowView:38`, `QueueListView:1007`, `DetailView:233`,

@@ -53,7 +53,7 @@ final class IndexerNames {
             if let prowlarrID = definition.prowlarrIndexerID, let name = prowlarrNames[prowlarrID] {
                 out[definition.id] = name
             } else if let name = definition.name, !name.isEmpty {
-                out[definition.id] = Release.strippingProwlarrSuffix(name)
+                out[definition.id] = ArrRelease.strippingProwlarrSuffix(name)
             }
         }
         Logger(category: "Indexers").debug("resolved \(out.count, privacy: .public) indexer names for \(source.rawValue, privacy: .public)")

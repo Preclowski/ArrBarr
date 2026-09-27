@@ -68,12 +68,7 @@ extension ArrAPIClient {
     func fetchHealth() async throws -> [ArrHealth] { try await read(policy: .mustRevalidate) { $0.health() } }
     func fetchDiskSpace() async throws -> [ArrDiskSpace] { try await read { $0.diskSpace() } }
 
-    func fetchReleases(query: [URLQueryItem]) async throws -> [Release] {
-        let context = try await context()
-        var plan = context.service.releases(entityID: 0).plan
-        plan.query = query.map { RequestPlan.QueryItem($0.name, $0.value ?? "") }
-        return try await context.store.read(Resource<[Release]>.json(plan, tags: [], freshness: .volatile, ttl: .seconds(60))).value
-    }
+    func fetchReleases(_ target: ReleaseTarget) async throws -> [ArrRelease] { try await read { $0.releases(target) } }
 
     func testConnection() async throws -> String {
         let status = try await read(policy: .mustRevalidate) { $0.status() }

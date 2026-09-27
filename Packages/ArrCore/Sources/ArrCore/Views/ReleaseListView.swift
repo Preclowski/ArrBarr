@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Manual / interactive search results for a library item (movie / episode /
 /// season / album) that isn't currently downloading. Pushed from the detail
@@ -8,7 +9,7 @@ import SwiftUI
 /// Row layout — three lines whose leading cells share a column, so the scope
 /// badge sits above the protocol chip and that above the age, and a trailing
 /// download control:
-///   (scope)   Release file name                          ⌄    (↓)
+///   (scope)   ArrRelease file name                          ⌄    (↓)
 ///   (proto)   indexer · quality · size · seeders
 ///   (age)     languages · flags · formats ……… upgrade + score
 /// The third line is what makes a score arguable rather than oracular.
@@ -34,7 +35,7 @@ struct ReleaseListView: View {
 
     @EnvironmentObject var configStore: ConfigStore
 
-    @State private var releases: [Release] = []
+    @State private var releases: [ArrRelease] = []
     @State private var loading = true
     @State private var loadError: String?
     /// Guards against re-running the (indexer-hitting) search every time the
@@ -45,7 +46,7 @@ struct ReleaseListView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var grabbing: Set<String> = []
     @State private var grabbed: Set<String> = []
-    @State private var pendingGrab: Release?
+    @State private var pendingGrab: ArrRelease?
     @State private var showGrabConfirm = false
     /// The one release whose detail is open, by guid. One at a time: two open
     /// rows in a 380pt popover is a scroll, not a comparison.
@@ -168,7 +169,7 @@ struct ReleaseListView: View {
     }
 
     @ViewBuilder
-    private func row(_ release: Release) -> some View {
+    private func row(_ release: ArrRelease) -> some View {
         let isExpanded = expanded == release.guid
         VStack(spacing: 0) {
             ReleaseRow(
@@ -271,13 +272,13 @@ struct ReleaseListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func indexerName(for release: Release) -> String? {
+    private func indexerName(for release: ArrRelease) -> String? {
         release.indexerId.flatMap { indexerNames[$0] } ?? release.indexerName
     }
 
     /// The file this release would replace: the screen's own baseline when it
     /// has one, otherwise the file of the single episode this release carries.
-    private func baseline(for release: Release) -> UpgradeDiffView.Side? {
+    private func baseline(for release: ArrRelease) -> UpgradeDiffView.Side? {
         if let existing { return existing }
         let numbers = release.episodeNumbers ?? []
         guard numbers.count == 1, let number = numbers.first else { return nil }
@@ -288,11 +289,11 @@ struct ReleaseListView: View {
 
     /// Accepted releases first, then — only when the pill is on — the rejected
     /// ones, so revealing them never reorders the rows above.
-    private var visible: [Release] { accepted + (showRejected ? ordered(rejected) : []) }
-    private var accepted: [Release] { ordered(releases.filter { !$0.isRejected }) }
-    private var rejected: [Release] { releases.filter(\.isRejected) }
+    private var visible: [ArrRelease] { accepted + (showRejected ? ordered(rejected) : []) }
+    private var accepted: [ArrRelease] { ordered(releases.filter { !$0.isRejected }) }
+    private var rejected: [ArrRelease] { releases.filter(\.isRejected) }
 
-    private func ordered(_ input: [Release]) -> [Release] {
+    private func ordered(_ input: [ArrRelease]) -> [ArrRelease] {
         let scoped = input.filter { release in
             guard target.isSeasonSearch else { return true }
             switch scope {
@@ -325,7 +326,7 @@ struct ReleaseListView: View {
             return
         }
         do {
-            releases = try await client.fetchReleases(query: target.query)
+            releases = try await client.fetchReleases(target.release)
             loadedTargetId = target.id
             // Names are reference data, cached across searches — this is a
             // no-op after the first search of a session.
@@ -341,7 +342,7 @@ struct ReleaseListView: View {
         }
     }
 
-    private func grab(_ release: Release?) {
+    private func grab(_ release: ArrRelease?) {
         guard let release, let indexerId = release.indexerId, let client = makeClient() else { return }
         grabbing.insert(release.guid)
         Task {
@@ -388,7 +389,7 @@ private struct ReleaseLeadCell<Content: View>: View {
 }
 
 private struct ReleaseRow: View {
-    let release: Release
+    let release: ArrRelease
     let existing: UpgradeDiffView.Side?
     /// Resolved through Prowlarr when it's configured, the *arr's own label
     /// otherwise — see `IndexerNames`.
@@ -591,7 +592,7 @@ private struct ReleaseRow: View {
         if languages.count > 1 || (languages.first.map { $0 != "English" } ?? false) {
             out.append((languages.joined(separator: ", "), .secondary))
         }
-        out += release.flagLabels.map { (text: $0, color: Color.green) }
+        out += release.indexerFlagNames.map { (text: $0, color: Color.green) }
         let baseline = Set(existing?.formats ?? [])
         let formats = (release.customFormats ?? []).compactMap(\.name)
         out += formats.map { (text: $0, color: existing != nil && !baseline.contains($0) ? Color.green : Color.secondary) }
@@ -636,7 +637,7 @@ private struct ReleaseRow: View {
 /// into it on both platforms, and macOS hover shows the same view as an
 /// accelerator. Downloading lives on the row itself.
 private struct ReleaseDetail: View {
-    let release: Release
+    let release: ArrRelease
     /// On-disk file to compare against, when the library has one — see
     /// `ReleaseListView.existing`.
     let existing: UpgradeDiffView.Side?
@@ -673,7 +674,7 @@ private struct ReleaseDetail: View {
                     row("Seeders / leechers", "\(release.seeders ?? 0) / \(release.leechers ?? 0)")
                 }
                 if let age = release.ageLabel { row("Age", age) }
-                if let group = release.releaseGroup, !group.isEmpty { row("Release group", group) }
+                if let group = release.releaseGroup, !group.isEmpty { row("ArrRelease group", group) }
                 if let langs = languageNames { row("Languages", langs) }
             }
 
@@ -687,7 +688,7 @@ private struct ReleaseDetail: View {
                 QueueStatusMessagesBanner(messages: rejections, tint: .orange)
             }
 
-            // Release name over the file it would replace, as in the download detail.
+            // ArrRelease name over the file it would replace, as in the download detail.
             ReleaseNameBlock(release: release.title, existing: existing?.filename)
                 .textSelection(.enabled)
 
@@ -739,7 +740,7 @@ private struct ReleaseDetail: View {
 
 // MARK: - Age
 
-private extension Release {
+private extension ArrRelease {
     /// Compact indexer age — "3d" / "12h" / "<1h", `nil` when the arr didn't
     /// report one. Shared by the row and the detail so the same release
     /// can't read differently in the two places.

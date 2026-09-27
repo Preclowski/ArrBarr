@@ -259,7 +259,7 @@ enum ProducedOperations {
                     s.artist(id: 1).plan, s.album(id: 1).plan, s.episodes(seriesID: 1).plan, s.albums(artistID: 1).plan, s.tracks(albumID: 1).plan,
                     s.credits(movieID: 1).plan, s.alternateTitles().plan, s.qualityProfiles().plan, s.metadataProfiles().plan, s.rootFolders().plan,
                     s.customFormats().plan, s.downloadClients().plan, s.commands().plan, s.lookupMovies(term: "").plan, s.lookupSeries(term: "").plan,
-                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(entityID: 1).plan, s.settings(entityID: 1).plan].map(\.operation)
+                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(.movie(1)).plan, s.settings(entityID: 1).plan].map(\.operation)
             switch s.files.strategy {
             case let .chunked(_, make, _): ops.append(make([1]).plan.operation)
             case let .perKey(make): ops.append(make(1).plan.operation)

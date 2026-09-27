@@ -820,7 +820,7 @@ public struct DetailView: View {
     /// many files — but its per-episode rows each diff against their own file.
     private func manualSearchEpisodeFiles(for target: ManualSearchTarget) -> [Int: UpgradeDiffView.Side] {
         guard item.source == .sonarr,
-              let season = target.query.first(where: { $0.name == "seasonNumber" })?.value.flatMap(Int.init)
+              let season = target.season
         else { return [:] }
         var out: [Int: UpgradeDiffView.Side] = [:]
         for episode in sonarrEpisodes where episode.seasonNumber == season {
