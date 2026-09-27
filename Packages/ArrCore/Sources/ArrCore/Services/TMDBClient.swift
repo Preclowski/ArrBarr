@@ -293,6 +293,7 @@ nonisolated public struct TMDBVideo: Codable, Sendable, Equatable {
     public let official: Bool?
     public let name: String?
 
+    // periphery:ignore
     public init(key: String, site: String?, type: String?, official: Bool?, name: String? = nil) {
         self.key = key
         self.site = site
@@ -534,6 +535,7 @@ nonisolated public struct TMDBTVSchedule: Codable, Sendable {
     public let nextEpisodeToAir: Episode?
     public let seasons: [Season]?
 
+    // periphery:ignore
     public init(lastEpisodeToAir: Episode?, nextEpisodeToAir: Episode?, seasons: [Season]?) {
         self.lastEpisodeToAir = lastEpisodeToAir; self.nextEpisodeToAir = nextEpisodeToAir; self.seasons = seasons
     }

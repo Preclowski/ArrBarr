@@ -197,6 +197,7 @@ public final class QueueViewModel {
     /// suppresses the polling timers + realtime bootstrap so `refresh()` can be
     /// driven deterministically without background fetches racing the test.
     /// Production goes through the public `init` above.
+    // periphery:ignore
     init(
         configStore: ConfigStore,
         notificationDefaults: UserDefaults,

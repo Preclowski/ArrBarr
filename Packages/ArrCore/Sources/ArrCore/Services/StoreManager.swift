@@ -43,9 +43,11 @@ public final class StoreManager: ObservableObject {
 
     /// `forTesting` only skips the shared-singleton expectation; behaviour is
     /// identical. Production code uses `.shared`.
+    // periphery:ignore
     public init(forTesting: Bool = false) {}
 
     /// Inject the concrete backend (called once at app launch under #if APPSTORE).
+    // periphery:ignore
     public func use(_ backend: PurchaseBackend) {
         self.backend = backend
         backend.onEntitlementChange = { [weak self] entitled in

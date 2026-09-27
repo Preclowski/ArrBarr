@@ -345,8 +345,11 @@ public final class ConfigStore: ObservableObject {
     nonisolated private static let secretsMigratedKey = "ArrBarr.secretsMigratedToKeychain"
     /// Exposed for testing only — lets tests assert on the done-flag key name
     /// without making it fully public.
+    // periphery:ignore
     nonisolated static var groupMigrationDoneKeyForTesting: String { groupMigrationDoneKey }
+    // periphery:ignore
     nonisolated static var secretsMigratedKeyForTesting: String { secretsMigratedKey }
+    // periphery:ignore
     nonisolated static func serviceKeyForTesting(_ kind: ServiceKind) -> String { key(kind) }
 
     public init(defaults: UserDefaults = ConfigStore.resolveDefaults(),

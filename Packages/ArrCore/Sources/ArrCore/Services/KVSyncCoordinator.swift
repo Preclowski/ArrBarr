@@ -187,6 +187,7 @@ public final class KVSyncCoordinator: ObservableObject {
     }
 
     /// Test seam: simulate the outbound observer for one key.
+    // periphery:ignore
     public func observeDefault(_ key: String) {
         guard !isApplyingRemote, SyncedKeys.isSynced(key) else { return }
         if let value = defaults.object(forKey: key) { kv.set(value, forKey: key) }

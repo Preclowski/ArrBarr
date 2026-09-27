@@ -53,6 +53,7 @@ nonisolated public enum AppCapabilities {
     }
 
     /// Test seam: clear the cached probe so a changed flag/override re-evaluates.
+    // periphery:ignore
     public static func resetProbeForTesting() { cachedProbe = nil }
 
     /// Throwaway add+copy+delete against the shared access group. Returns false

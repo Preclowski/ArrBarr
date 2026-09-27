@@ -137,6 +137,7 @@ nonisolated public enum WidgetDataStore {
     /// hold the write hostage and prove the caller still returns. Without this
     /// the "doesn't block" test is vacuous — a *failing* write returns fast
     /// too, so it would pass against the very code that could hang.
+    // periphery:ignore
     static func blockSnapshotQueueForTesting(until signal: DispatchSemaphore) {
         snapshotQueue.async { signal.wait() }
     }
