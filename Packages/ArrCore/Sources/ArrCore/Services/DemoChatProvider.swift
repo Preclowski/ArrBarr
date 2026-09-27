@@ -109,8 +109,6 @@ public struct DemoChatProvider: LLMProvider {
         let items = pool.map { result in
             DiscoverItem(
                 result: result,
-                action: (kind == .series) ? .addToSonarr : .addToRadarr,
-                originLabel: .llm,
                 kind: (kind == .series) ? .show : .movie,
                 reason: quizReasonKeys[result.title].map {
                     NSLocalizedString($0, bundle: .module, comment: "")

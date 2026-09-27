@@ -126,7 +126,7 @@ private enum SortMode: CaseIterable {
     ///
     /// `.rating` is whichever single score the source ships, so it carries a
     /// plain star: Sonarr's is TVDB's, Lidarr's its metadata provider's.
-    func symbolName(for source: QueueItem.Source) -> String {
+    var symbolName: String {
         switch self {
         case .title: return "textformat"
         case .releaseDate: return "calendar"
@@ -442,13 +442,6 @@ private extension LibraryEntry {
             }
             return parts.joined(separator: " · ")
         }
-    }
-
-    /// One status word (or the x/y count for partially-downloaded series /
-    /// artists). Drives the tooltip's Status line; the chip renders the same
-    /// mapping via `MediaStateChip`.
-    func statusText(locale: Locale) -> String {
-        state.statusText(have: fileCount, total: totalCount, locale: locale)
     }
 
     var sizeText: String? {
@@ -958,7 +951,7 @@ private struct LibraryFilterBar: View {
                         // the user a second tap did something.
                         Image(systemName: sort == mode
                               ? (sortDescending ? "arrow.down" : "arrow.up")
-                              : mode.symbolName(for: source))
+                              : mode.symbolName)
                     }
                     // Menu rows resolve `Label` at the container's label style,
                     // and inside a `Menu` that can come out title-only — which

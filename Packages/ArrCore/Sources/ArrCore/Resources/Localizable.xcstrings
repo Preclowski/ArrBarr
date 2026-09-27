@@ -3095,48 +3095,6 @@
       },
       "comment": "Error message"
     },
-    "Media servers are a Control feature": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Media servers are a Control feature"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serwery mediów są częścią Control"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Medienserver sind eine Control-Funktion"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los servidores multimedia son una función de Control"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les serveurs multimédias font partie de Control"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mediaservers zijn een Control-functie"
-          }
-        }
-      },
-      "comment": "Paywall contextual line"
-    },
     "Monitor & grab an album": {
       "extractionState": "manual",
       "localizations": {

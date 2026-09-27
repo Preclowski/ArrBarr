@@ -1061,7 +1061,6 @@ public struct DetailView: View {
                     directedByKey: "detail.createdBy.label"
                 )
                 SonarrDetailPanel(
-                    item: item,
                     siblings: siblings,
                     loadError: loadError,
                     isLoading: loading,

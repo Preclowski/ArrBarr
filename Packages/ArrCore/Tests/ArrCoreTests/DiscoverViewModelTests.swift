@@ -26,7 +26,7 @@ struct DiscoverViewModelTests {
         Issue.record("condition never became true")
     }
 
-    private func makeItem(_ id: Int, _ origin: DiscoverItem.Origin) -> DiscoverItem {
+    private func makeItem(_ id: Int) -> DiscoverItem {
         let r = SearchResult(
             externalId: id, foreignId: String(id), title: "T\(id)", subtitle: nil,
             year: 2010, rating: nil, imdb: nil, rottenTomatoes: nil,
@@ -34,15 +34,15 @@ struct DiscoverViewModelTests {
             genres: [], network: nil, certification: nil,
             posterURL: nil, source: .radarr, inLibraryArrId: nil
         )
-        return DiscoverItem(result: r, action: .addToRadarr, originLabel: origin)
+        return DiscoverItem(result: r)
     }
 
     @Test("start() pulls from every available source and dedupes across them")
     func startPullsFromAllSourcesAndDedupes() async {
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
-            library: { _ in [self.makeItem(2, .library), self.makeItem(3, .library)] },
+            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2)] },
+            library: { _ in [self.makeItem(2), self.makeItem(3)] },
             llm: nil
         )
         await vm.start()
@@ -55,7 +55,7 @@ struct DiscoverViewModelTests {
         // Skip (>>) is the only action that advances the deck.
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb), self.makeItem(3, .tmdb)] },
+            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2), self.makeItem(3)] },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
@@ -73,7 +73,7 @@ struct DiscoverViewModelTests {
         // advance — a cancelled add returns to the same card. Deduped.
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(1, .tmdb), self.makeItem(2, .tmdb)] },
+            tmdb: { _, _ in [self.makeItem(1), self.makeItem(2)] },
             library: { _ in [] }, llm: nil
         )
         await vm.start()
@@ -91,7 +91,7 @@ struct DiscoverViewModelTests {
         let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in throw Boom() },
-            library: { _ in [self.makeItem(7, .library)] },
+            library: { _ in [self.makeItem(7)] },
             llm: nil
         )
         await vm.start()
@@ -121,7 +121,7 @@ struct DiscoverViewModelTests {
             llm: { excludes, _ in
                 receivedExcludes.append(excludes)
                 let base = receivedExcludes.count * 100
-                return [self.makeItem(base + 1, .llm), self.makeItem(base + 2, .llm)]
+                return [self.makeItem(base + 1), self.makeItem(base + 2)]
             }
         )
         vm.moodText = "noir"
@@ -138,8 +138,8 @@ struct DiscoverViewModelTests {
     func fillBucketInterleavesSources() async {
         let vm = freshVM()
         vm.configure(
-            tmdb: { _, _ in [self.makeItem(100, .tmdb), self.makeItem(101, .tmdb), self.makeItem(102, .tmdb)] },
-            library: { _ in [self.makeItem(200, .library), self.makeItem(201, .library), self.makeItem(202, .library)] },
+            tmdb: { _, _ in [self.makeItem(100), self.makeItem(101), self.makeItem(102)] },
+            library: { _ in [self.makeItem(200), self.makeItem(201), self.makeItem(202)] },
             llm: nil
         )
         await vm.start()
@@ -155,7 +155,7 @@ struct DiscoverViewModelTests {
         let vm = freshVM()
         vm.configure(
             tmdb: { _, _ in throw Boom() },
-            library: { _ in [self.makeItem(1, .library)] },
+            library: { _ in [self.makeItem(1)] },
             llm: nil
         )
         await vm.start()
@@ -170,12 +170,12 @@ struct DiscoverViewModelTests {
     @Test("shownDedupKeys covers seeded, consumed and extended cards, and resets on seed")
     func shownKeysCoverTheWholeSession() async {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1, .llm), makeItem(2, .llm)], mood: "cosy")
+        vm.seed(items: [makeItem(1), makeItem(2)], mood: "cosy")
         vm.skip()   // tmdb:1 leaves the deck but stays "shown"
-        vm.extend(items: [makeItem(3, .llm)])
+        vm.extend(items: [makeItem(3)])
         #expect(vm.shownDedupKeys == ["tmdb:1", "tmdb:2", "tmdb:3"])
 
-        vm.seed(items: [makeItem(9, .llm)], mood: "loud")
+        vm.seed(items: [makeItem(9)], mood: "loud")
         #expect(vm.shownDedupKeys == ["tmdb:9"])
     }
 
@@ -186,12 +186,12 @@ struct DiscoverViewModelTests {
         // and the surface has no way to tell that apart from "there is nothing
         // left" — so it says "No more cards" while a retry still finds picks.
         let vm = freshVM()
-        vm.seed(items: [makeItem(1, .llm)], mood: "cosy")
+        vm.seed(items: [makeItem(1)], mood: "cosy")
         vm.skip()
         #expect(vm.current == nil)
 
         let before = vm.sessionTotal
-        vm.extend(items: [makeItem(1, .llm)])
+        vm.extend(items: [makeItem(1)])
         #expect(vm.current == nil)
         #expect(vm.sessionTotal == before, "a duplicate round must not inflate the total")
     }
@@ -199,7 +199,7 @@ struct DiscoverViewModelTests {
     @Test("Append rounds are filtered against the live deck before they reach it")
     func appendRoundsAreFilteredAgainstTheDeck() {
         let shown: Set<String> = ["tmdb:1", "tmdb:2"]
-        let round = [makeItem(1, .llm), makeItem(3, .llm), makeItem(2, .llm)]
+        let round = [makeItem(1), makeItem(3), makeItem(2)]
         let split = LocalToolBackend.splitAlreadyShown(round, shown: shown)
         #expect(split.fresh.map(\.dedupKey) == ["tmdb:3"])
         #expect(split.dropped.map(\.dedupKey) == ["tmdb:1", "tmdb:2"])
@@ -218,7 +218,7 @@ struct DiscoverViewModelTests {
         let vm = freshVM()
         try await Task.sleep(for: .milliseconds(150))   // let the observer attach
         AppMessages.post(AppMessages.OpenDiscoverQuiz(
-            mood: "rainy", items: [makeItem(1, .llm), makeItem(2, .llm)], append: false))
+            mood: "rainy", items: [makeItem(1), makeItem(2)], append: false))
         try await waitUntil { vm.current != nil }
 
         #expect(vm.current?.dedupKey == "tmdb:1")
@@ -235,7 +235,7 @@ struct DiscoverViewModelTests {
         // reset the deck — the user tapped "back to the quiz" and landed on an
         // empty one.
         let vm = freshVM()
-        vm.seed(items: [makeItem(1, .llm), makeItem(2, .llm)], mood: "rainy")
+        vm.seed(items: [makeItem(1), makeItem(2)], mood: "rainy")
         vm.isPresented = false
 
         vm.open(mood: "rainy", items: [], append: true)
@@ -248,7 +248,7 @@ struct DiscoverViewModelTests {
     @Test("An empty message never resets a session, even without the append flag")
     func emptyMessageNeverResetsTheSession() {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1, .llm)], mood: "rainy")
+        vm.seed(items: [makeItem(1)], mood: "rainy")
         vm.open(mood: "something else", items: [], append: false)
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.moodText == "rainy")
@@ -257,15 +257,15 @@ struct DiscoverViewModelTests {
     @Test("An appended round extends a live session and replaces a dead one")
     func appendExtendsLiveSessionAndReplacesDeadOne() {
         let vm = freshVM()
-        vm.seed(items: [makeItem(1, .llm)], mood: "rainy")
-        vm.open(mood: "rainy", items: [makeItem(2, .llm)], append: true)
+        vm.seed(items: [makeItem(1)], mood: "rainy")
+        vm.open(mood: "rainy", items: [makeItem(2)], append: true)
         #expect(vm.sessionTotal == 2)
         #expect(vm.queue.map(\.dedupKey) == ["tmdb:2"])
 
         // Nothing swiped, nothing in the deck: an "append" from a model that
         // lost track of the session is a new session, not an extension.
         let cold = freshVM()
-        cold.open(mood: "loud", items: [makeItem(3, .llm)], append: true)
+        cold.open(mood: "loud", items: [makeItem(3)], append: true)
         #expect(cold.current?.dedupKey == "tmdb:3")
         #expect(cold.sessionTotal == 1)
     }

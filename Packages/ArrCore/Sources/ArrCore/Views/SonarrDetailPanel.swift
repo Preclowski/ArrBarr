@@ -3,7 +3,6 @@ import SwiftUI
 // MARK: - Sonarr
 
 struct SonarrDetailPanel<Header: View>: View {
-    let item: QueueItem
     @EnvironmentObject var configStore: ConfigStore
     let siblings: [QueueItem]
     let loadError: String?

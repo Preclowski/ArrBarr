@@ -16,8 +16,7 @@ struct UpcomingHoverTooltip: ViewModifier {
             if let active = activeQueueItem {
                 QueueItemTooltip(
                     item: active,
-                    apiKey: active.posterRequiresAuth ? apiKey : nil,
-                    locale: configStore.currentLocale
+                    apiKey: active.posterRequiresAuth ? apiKey : nil
                 )
                 .environmentObject(configStore)
             } else {

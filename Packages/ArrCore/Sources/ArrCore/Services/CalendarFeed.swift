@@ -7,14 +7,6 @@ import Foundation
 /// refreshes it on its own, so ArrBarr needs zero sync code.
 public enum CalendarFeed {
 
-    /// Only media-manager arrs expose a calendar feed (download clients don't).
-    public static func isSupported(_ kind: ServiceKind) -> Bool {
-        switch kind {
-        case .sonarr, .radarr, .lidarr, .whisparr: return true
-        default: return false
-        }
-    }
-
     /// `webcal://host[:port][/base]/feed/<v>/calendar/<App>.ics?apikey=…`
     /// Returns nil for non-arr kinds, an unconfigured service, or a missing
     /// API key (the feed requires it). The base path is preserved so it works

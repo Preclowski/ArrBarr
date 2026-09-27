@@ -12,22 +12,19 @@ nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
     public var toolResult: String?
     /// Set on `.tool` messages — structured UI payload (not sent to LLM).
     public var richContent: ChatRichContent?
-    public let timestamp: Date
 
     public init(id: UUID = UUID(),
                 role: Role,
                 content: String,
                 toolCall: ToolCall? = nil,
                 toolResult: String? = nil,
-                richContent: ChatRichContent? = nil,
-                timestamp: Date = Date()) {
+                richContent: ChatRichContent? = nil) {
         self.id = id
         self.role = role
         self.content = content
         self.toolCall = toolCall
         self.toolResult = toolResult
         self.richContent = richContent
-        self.timestamp = timestamp
     }
 }
 

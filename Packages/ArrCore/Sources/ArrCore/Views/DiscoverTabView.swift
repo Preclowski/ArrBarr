@@ -16,7 +16,7 @@ public struct DiscoverTabView: View {
     var isObscured: Bool = false
     let onClose: () -> Void
     let onCancelLoading: () -> Void
-    let onRequestMore: (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void
+    let onRequestMore: () -> Void
 
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
@@ -73,7 +73,7 @@ public struct DiscoverTabView: View {
                 isObscured: Bool = false,
                 onClose: @escaping () -> Void,
                 onCancelLoading: @escaping () -> Void = {},
-                onRequestMore: @escaping (_ mood: String, _ kept: [DiscoverItem], _ skipped: [DiscoverItem]) -> Void = { _, _, _ in }) {
+                onRequestMore: @escaping () -> Void = {}) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
@@ -273,9 +273,7 @@ public struct DiscoverTabView: View {
     private func requestMore() {
         moreTimeout?.cancel()
         requestingMore = true
-        onRequestMore(viewModel.moodText,
-                      viewModel.sessionMatched,
-                      viewModel.sessionSkipped)
+        onRequestMore()
         moreTimeout = Task { @MainActor in
             try? await Task.sleep(for: .seconds(90))
             guard !Task.isCancelled else { return }

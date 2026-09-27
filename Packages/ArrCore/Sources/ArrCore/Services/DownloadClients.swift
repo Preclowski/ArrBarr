@@ -35,19 +35,6 @@ extension DownloadClientFacade {
         }
         _ = try await gateway.store.run(service.add(payload, category: category, paused: paused))
     }
-
-    func perform(_ action: DownloadAction, id: String, deleteFiles: Bool = false) async throws {
-        let (gateway, service) = try await context()
-        _ = try await gateway.store.run(service.action(action, ids: [id], deleteFiles: deleteFiles))
-    }
-
-    /// The client's live tasks, keyed by lowercased id.
-    func fetchProgress(ids: Set<String> = []) async throws -> [String: DownloadTask] {
-        let (gateway, service) = try await context()
-        var out: [String: DownloadTask] = [:]
-        for task in try await service.fetchTasks(ids: ids, pipeline: gateway.kit.pipeline) { out[task.id] = task }
-        return out
-    }
 }
 
 nonisolated public struct QbittorrentClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .qbittorrent; init(config: ServiceConfig) { self.config = config } }

@@ -75,7 +75,7 @@ struct SeasonRow: View {
                 // Same Upgrade / New vocabulary the episode rows use, and the
                 // same place: trailing edge, ahead of the row's number.
                 if anyDownloading {
-                    MediaBadgeCluster(isUpgrade: isUpgrade, size: .subtle)
+                    MediaBadgeCluster(isUpgrade: isUpgrade)
                 }
                 Text(verbatim: "\(have)/\(total)")
                     .scaledFont(size: 10, monospacedDigit: true)

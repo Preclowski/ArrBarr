@@ -16,10 +16,6 @@ nonisolated public struct SonarrClient: ArrAPIClient {
         let c = try await context()
         return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
     }
-    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
-        let c = try await context()
-        return try await ArrQueueLoader.history(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL, page: page, pageSize: pageSize, entityId: entityId)
-    }
 
     func fetchEpisodeFileMap(seriesId: Int) async throws -> [Int: SonarrEpisodeFile] {
         let files = try await read([SonarrEpisodeFile].self) { $0.filesOf(parent: seriesId) }
@@ -30,7 +26,6 @@ nonisolated public struct SonarrClient: ArrAPIClient {
     func fetchEpisodes(seriesId: Int) async throws -> [SonarrEpisodeDetail] { try await read([SonarrEpisodeDetail].self) { $0.episodes(seriesID: seriesId) } }
     func searchEpisodes(episodeIds: [Int]) async throws { try await run { $0.search(.episodes(episodeIds)) } }
     func searchSeason(seriesId: Int, seasonNumber: Int) async throws { try await run { $0.search(.season(seriesID: seriesId, season: seasonNumber)) } }
-    func searchSeries(seriesId: Int) async throws { try await run { $0.search(.series(seriesId)) } }
     func setSeriesMonitored(seriesId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: seriesId, monitored) } }
     func setEpisodesMonitored(episodeIds: [Int], monitored: Bool) async throws { try await run { $0.setEpisodesMonitored(ids: episodeIds, monitored) } }
     func setSeasonMonitored(seriesId: Int, seasonNumber: Int, monitored: Bool) async throws {

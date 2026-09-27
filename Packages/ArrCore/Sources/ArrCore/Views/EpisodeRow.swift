@@ -90,7 +90,7 @@ struct EpisodeRow: View {
     /// dimmed on one launch and bright on the next, for no reason the user
     /// could see. Air date, file state and download state are all spoken by
     /// the row's own glyphs and labels; the title stays legible.
-    private func episodeTitleStyle(aired: Bool) -> AnyShapeStyle {
+    private var episodeTitleStyle: AnyShapeStyle {
         if let q = queueItem { return AnyShapeStyle(q.status.tint) }
         return AnyShapeStyle(Color.primary)
     }
@@ -120,7 +120,7 @@ struct EpisodeRow: View {
                     .foregroundStyle(.secondary)
                 Text(episode.title ?? "—")
                     .scaledFont(size: 11)
-                    .foregroundStyle(episodeTitleStyle(aired: aired))
+                    .foregroundStyle(episodeTitleStyle)
                     .lineLimit(1)
                 // Drill-in affordance — same `LinkChevron` every other tappable
                 // row uses (static dark, brightens on row hover via `.linkRowHover`).
@@ -152,7 +152,7 @@ struct EpisodeRow: View {
                     // Per-row Upgrade / New tag — same component the queue
                     // rows use. Lives on the trailing edge, immediately ahead
                     // of the score, instead of interrupting the title.
-                    MediaBadgeCluster(isUpgrade: q.isUpgrade, size: .subtle)
+                    MediaBadgeCluster(isUpgrade: q.isUpgrade)
                     // The incoming file's own score. It used to be a delta
                     // against the file on disk, which made this gutter mean
                     // something different from the identical-looking gutter
@@ -251,8 +251,7 @@ struct EpisodeRow: View {
             if let q = queueItem {
                 QueueItemTooltip(
                     item: q,
-                    apiKey: q.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
-                    locale: configStore.currentLocale
+                    apiKey: q.posterRequiresAuth ? configStore.sonarr.apiKey : nil
                 )
             } else {
                 episodeTooltip

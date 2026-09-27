@@ -85,11 +85,6 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
             self.formats = formats; self.filename = filename
         }
 
-        init(file: ArrFile) {
-            self.init(quality: file.quality?.name, score: file.customFormatScore, size: file.size,
-                      formats: (file.customFormats ?? []).map(\.name), filename: file.relativePath)
-        }
-
         /// The file a deletion event removed, as that event recorded it.
         init(deleted event: HistoryItem) {
             self.init(quality: event.quality, score: event.customFormatScore, size: event.size,
@@ -283,18 +278,6 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
             case "moviefiledeleted", "episodefiledeleted", "trackfiledeleted": return .deleted
             default: return .other
             }
-        }
-    }
-}
-
-nonisolated extension Dictionary where Key == String, Value == JSONValue {
-    /// One value of a history record's `data` bag as text. The arrs send every
-    /// value there as a string; a bare number is accepted too.
-    func historyString(_ key: String) -> String? {
-        switch self[key] {
-        case .string(let s): return s.isEmpty ? nil : s
-        case .number(let n): return String(Int64(n))
-        default: return nil
         }
     }
 }

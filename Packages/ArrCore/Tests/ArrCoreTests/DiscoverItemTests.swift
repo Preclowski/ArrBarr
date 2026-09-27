@@ -17,7 +17,7 @@ struct DiscoverItemTests {
 
     @Test("dedupKey prefers the TMDB id carried in foreignId")
     func dedupKeyUsesTmdbIdFromForeignId() {
-        let item = DiscoverItem(result: mockSearchResult(externalId: 42), action: .addToRadarr)
+        let item = DiscoverItem(result: mockSearchResult(externalId: 42))
         #expect(item.dedupKey == "tmdb:42")
     }
 
@@ -30,7 +30,7 @@ struct DiscoverItemTests {
             genres: [], network: nil, certification: nil,
             posterURL: nil, source: .radarr, inLibraryArrId: nil
         )
-        let item = DiscoverItem(result: result, action: .addToRadarr)
+        let item = DiscoverItem(result: result)
         #expect(item.dedupKey == "title:untitled|1999")
     }
 
@@ -111,8 +111,6 @@ struct DiscoverItemTests {
 
         #expect(card?.result.externalId == 550)
         #expect(card?.result.mediaRef == .tmdb(550))
-        // The arr id is still there, in the two places that mean "the record".
         #expect(card?.result.inLibraryArrId == 4242)
-        #expect(card?.action == .openDetail(source: .radarr, arrId: 4242))
     }
 }

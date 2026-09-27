@@ -14,7 +14,6 @@ struct DownloadSection: View {
     var showCustomFormats: Bool = false
     var showListingBadges: Bool = false
     var listCollapsible: Bool = false
-    var listExpandedDefault: Bool = true
     /// Per-item drill-down for the multi-row variant — fires when the
     /// user taps an episode row in a season-pack download list.
     var onTapItem: ((QueueItem) -> Void)? = nil
@@ -50,7 +49,6 @@ struct DownloadSection: View {
         self.showCustomFormats = showCustomFormats
         self.showListingBadges = showListingBadges
         self.listCollapsible = listCollapsible
-        self.listExpandedDefault = listExpandedDefault
         self.onTapItem = onTapItem
         self.onPauseItem = onPauseItem
         self.onResumeItem = onResumeItem

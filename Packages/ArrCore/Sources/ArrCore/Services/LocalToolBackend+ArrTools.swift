@@ -500,7 +500,6 @@ extension LocalToolBackend {
                 id: rec.id,
                 title: rec.title,
                 year: Self.yearFromReleaseDate(rec.releaseDate),
-                albumType: rec.albumType,
                 monitored: rec.monitored ?? false,
                 trackFileCount: rec.statistics?.trackFileCount ?? 0,
                 trackCount: rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0,

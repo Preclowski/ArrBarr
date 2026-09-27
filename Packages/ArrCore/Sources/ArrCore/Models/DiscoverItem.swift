@@ -10,42 +10,16 @@ nonisolated public enum DiscoverMediaSelection: String, CaseIterable, Identifiab
     case movie, show
 
     public var id: String { rawValue }
-    public var displayName: String {
-        switch self {
-        case .movie: return "Movies"
-        case .show:  return "Shows"
-        }
-    }
-}
-
-nonisolated public enum DiscoverAction: Equatable, Sendable {
-    /// Card represents a movie not in Radarr. Swipe-right opens the
-    /// existing SearchAddPanel overlay.
-    case addToRadarr
-    /// Card represents a show not in Sonarr. Swipe-right opens the
-    /// existing SearchAddPanel overlay (with source: .sonarr).
-    case addToSonarr
-    /// Card represents a title already in the library. Swipe-right opens
-    /// DetailView via the existing DetailRequest pipeline.
-    case openDetail(source: QueueItem.Source, arrId: Int)
 }
 
 nonisolated public struct DiscoverItem: Identifiable, Equatable, Sendable {
     public let result: SearchResult
-    public let action: DiscoverAction
-    /// Source label for the bottom-of-card chip ("From TMDB" / "From your
-    /// library" / "From AI").
-    public let originLabel: Origin
     /// Whether this card represents a movie or a TV show.
     public let kind: DiscoverItemKind
     /// One short, user-facing line saying WHY this card is in the deck
     /// ("Because you kept Sicario", "Top-rated on your shelf"). Rendered on
     /// the card when present; absence needs no explanation, so nil is fine.
     public let reason: String?
-
-    public enum Origin: String, Sendable {
-        case tmdb, library, llm
-    }
 
     public var id: String { dedupKey }
 
@@ -61,12 +35,9 @@ nonisolated public struct DiscoverItem: Identifiable, Equatable, Sendable {
         return "title:\(title)|\(year)"
     }
 
-    public init(result: SearchResult, action: DiscoverAction,
-                originLabel: Origin = .tmdb, kind: DiscoverItemKind = .movie,
+    public init(result: SearchResult, kind: DiscoverItemKind = .movie,
                 reason: String? = nil) {
         self.result = result
-        self.action = action
-        self.originLabel = originLabel
         self.kind = kind
         self.reason = reason
     }

@@ -210,9 +210,8 @@ extension LocalToolBackend {
     /// map so owned picks open detail instead of the add flow.
     private func curatedPickResolver(kind: String) -> @Sendable (QuizDeckPipeline.Pick) async -> DiscoverItem? {
         // Library map fetched in parallel with the per-pick lookups (mirrors
-        // suggest_titles). Owned picks get inLibraryArrId set and
-        // originLabel=.library so the matched-list sections them under
-        // "In library" with an openDetail tap instead of an add flow.
+        // suggest_titles). Owned picks get inLibraryArrId set so they open
+        // detail instead of an add flow.
         let libraryMapFetch = Task { [self] () -> [Int: LibraryOwnership] in
             kind == "series" ? await sonarrLibraryByTVDBId() : await radarrLibraryByTMDBId()
         }
@@ -247,12 +246,9 @@ extension LocalToolBackend {
                 )
                 if let ownership = libraryMap[tmdbId] {
                     let owned = resultBase.withLibraryOwnership(ownership)
-                    return DiscoverItem(result: owned,
-                                        action: .openDetail(source: .radarr, arrId: ownership.arrId),
-                                        originLabel: .library, kind: .movie)
+                    return DiscoverItem(result: owned, kind: .movie)
                 }
-                return DiscoverItem(result: resultBase, action: .addToRadarr,
-                                    originLabel: .llm, kind: .movie)
+                return DiscoverItem(result: resultBase, kind: .movie)
             case "series":
                 guard sonarrConfigured,
                       let first = await Self.matchedSeries(pick, client: sonarrClient) else { return nil }
@@ -275,12 +271,9 @@ extension LocalToolBackend {
                 )
                 if let ownership = libraryMap[tvdbId] {
                     let owned = resultBase.withLibraryOwnership(ownership)
-                    return DiscoverItem(result: owned,
-                                        action: .openDetail(source: .sonarr, arrId: ownership.arrId),
-                                        originLabel: .library, kind: .show)
+                    return DiscoverItem(result: owned, kind: .show)
                 }
-                return DiscoverItem(result: resultBase, action: .addToSonarr,
-                                    originLabel: .llm, kind: .show)
+                return DiscoverItem(result: resultBase, kind: .show)
             default: return nil
             }
         }
@@ -306,7 +299,7 @@ extension LocalToolBackend {
             let all = await LibraryIndex.shared.movies(config: radarr)
             let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
             return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-                guard let arrId = rec.id, let title = rec.title else { return nil }
+                guard rec.id != nil, let title = rec.title else { return nil }
                 let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL).0
                 let result = SearchResult(
                     externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
@@ -322,9 +315,7 @@ extension LocalToolBackend {
                     posterURL: poster, source: .radarr
                 )
                 .withLibraryOwnership(rec.ownership)
-                return DiscoverItem(result: result,
-                                    action: .openDetail(source: .radarr, arrId: arrId),
-                                    originLabel: .library, kind: .movie,
+                return DiscoverItem(result: result, kind: .movie,
                                     reason: String(localized: "Top-rated on your shelf", bundle: .module))
             }
         }
@@ -332,7 +323,7 @@ extension LocalToolBackend {
         let all = await LibraryIndex.shared.series(config: sonarr)
         let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
         return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-            guard let arrId = rec.id, let title = rec.title else { return nil }
+            guard rec.id != nil, let title = rec.title else { return nil }
             let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL).0
             let result = SearchResult(
                 externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
@@ -346,9 +337,7 @@ extension LocalToolBackend {
                 tmdbTVId: rec.tmdbId
             )
             .withLibraryOwnership(rec.ownership)
-            return DiscoverItem(result: result,
-                                action: .openDetail(source: .sonarr, arrId: arrId),
-                                originLabel: .library, kind: .show,
+            return DiscoverItem(result: result, kind: .show,
                                 reason: String(localized: "Top-rated on your shelf", bundle: .module))
         }
     }
@@ -523,8 +512,7 @@ extension LocalToolBackend {
                                     source: .radarr,
                                     inLibraryArrId: nil
                                 )
-                                return DiscoverItem(result: result, action: .addToRadarr,
-                                                    originLabel: .llm, kind: .movie,
+                                return DiscoverItem(result: result, kind: .movie,
                                                     reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }
                             return (idx, out)
@@ -548,8 +536,7 @@ extension LocalToolBackend {
                                     inLibraryArrId: nil,
                                     tmdbTVId: s.id
                                 )
-                                return DiscoverItem(result: result, action: .addToSonarr,
-                                                    originLabel: .llm, kind: .show,
+                                return DiscoverItem(result: result, kind: .show,
                                                     reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }
                             return (idx, out)
@@ -576,17 +563,8 @@ extension LocalToolBackend {
                 let metadataId = item.result.externalId
                 if let ownership = libraryMap[metadataId] {
                     if libraryMode == "new" { continue }
-                    let arrId = ownership.arrId
                     let owned = item.result.withLibraryOwnership(ownership)
-                    let detailAction: DiscoverAction = (kind == "movie")
-                        ? .openDetail(source: .radarr, arrId: arrId)
-                        : .openDetail(source: .sonarr, arrId: arrId)
-                    out.append(DiscoverItem(
-                        result: owned,
-                        action: detailAction,
-                        originLabel: .library,
-                        kind: item.kind
-                    ))
+                    out.append(DiscoverItem(result: owned, kind: item.kind))
                 } else {
                     out.append(item)
                 }

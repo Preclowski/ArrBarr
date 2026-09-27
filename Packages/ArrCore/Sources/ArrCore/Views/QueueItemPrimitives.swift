@@ -20,26 +20,9 @@ import SwiftUI
 /// the file isn't new to the library.
 public struct MediaBadgeCluster: View {
     let isUpgrade: Bool
-    var size: Size
 
-    public enum Size {
-        /// Compact row cells — 8pt font, 4pt horizontal padding,
-        /// tinted capsule background. Default for queue rows.
-        case compact
-        /// Tooltip header / detail title — 9-10pt font, 5-6pt padding,
-        /// tinted capsule.
-        case medium
-        /// Quietest variant — uppercase tracked label, no background.
-        /// For surfaces that already carry a lot of colour (e.g. the
-        /// season episode list, where the row already paints the
-        /// status tint across the background) and would read as noisy
-        /// with another tinted capsule on top.
-        case subtle
-    }
-
-    public init(isUpgrade: Bool, size: Size = .compact) {
+    public init(isUpgrade: Bool) {
         self.isUpgrade = isUpgrade
-        self.size = size
     }
 
     public var body: some View {
@@ -62,11 +45,9 @@ public struct MediaBadgeCluster: View {
 /// so it reads as metadata, not as a status indicator.
 public struct DownloadClientLabel: View {
     let name: String
-    var size: CGFloat
 
-    public init(name: String, size: CGFloat = 9) {
+    public init(name: String) {
         self.name = name
-        self.size = size
     }
 
     public var body: some View {
@@ -365,57 +346,6 @@ private struct BannerClampedHeightKey: PreferenceKey {
 private struct BannerFullHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-
-// MARK: -
-
-/// Fast hover tooltip — fires after ~350 ms hover, renders via
-/// `.popover` so the label floats free of parent clipping (our
-/// earlier `.overlay`-based draft got eaten by the gradient backdrop
-/// on row hover-overlays). Heavier chrome than a raw label but
-/// guaranteed visible.
-public struct ActionHoverTip: ViewModifier {
-    let text: LocalizedStringKey
-    @State private var show = false
-    @State private var hoverTask: Task<Void, Never>?
-    @State private var isHovering = false
-
-    public func body(content: Content) -> some View {
-        #if os(macOS)
-        content
-            .onHover { hovering in
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering {
-                    hoverTask = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 350_000_000)
-                        if !Task.isCancelled, isHovering { show = true }
-                    }
-                } else {
-                    show = false
-                }
-            }
-            .popover(isPresented: $show, arrowEdge: .bottom) {
-                Text(text, bundle: .module)
-                    .scaledFont(size: 11, weight: .medium)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .fixedSize()
-                    .popoverBehavior(.applicationDefined)
-            }
-        #else
-        content
-        #endif
-    }
-}
-
-public extension View {
-    /// Quick hover tooltip — fires faster than the native `.help()`
-    /// (~350 ms vs ~1 s) and is guaranteed visible (NSPopover, not
-    /// a clipped overlay).
-    func actionHoverTip(_ text: LocalizedStringKey) -> some View {
-        modifier(ActionHoverTip(text: text))
-    }
 }
 
 // MARK: -

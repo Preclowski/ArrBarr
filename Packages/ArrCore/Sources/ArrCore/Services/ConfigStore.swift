@@ -13,14 +13,6 @@ import WidgetKit
 public enum LaunchAtLogin {
     private static let logger = Logger(category: "LaunchAtLogin")
 
-    static var isEnabled: Bool {
-        #if os(macOS)
-        return SMAppService.mainApp.status == .enabled
-        #else
-        return false
-        #endif
-    }
-
     static func set(enabled: Bool) {
         #if os(macOS)
         let service = SMAppService.mainApp
@@ -200,12 +192,6 @@ public final class ConfigStore: ObservableObject {
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
     public static let defaultArrOrder = ["tonight", "needsyou", "radarr", "sonarr", "lidarr", "whisparr"]
-    /// Banner window — hard-locked to 7 days. Used to be configurable
-    /// via Settings (12h / 24h / 72h), but the picker was friction for
-    /// no real payoff: most users want "what's coming this week" and
-    /// the rest were rounding to 72h anyway. Kept as `@Published Int`
-    /// for source-compat with subscribers; nothing writes to it now.
-    public static let tonightHoursOptions = [168]
     /// Picker options for `tonightVisibleCount` — 0 renders as "All".
     public static let tonightVisibleOptions = [3, 5, 0]
 
@@ -270,12 +256,6 @@ public final class ConfigStore: ObservableObject {
         return fontScale
         #endif
     }
-
-    /// Picker options for the "text size" preset. Three steps is enough
-    /// to cover "fine / a bit bigger / clearly bigger" without paging a
-    /// continuous slider that nobody actually fine-tunes.
-    public static let fontScaleOptions: [Double] = [1.0, 1.20, 1.45]
-
 
     private var defaults: UserDefaults
     var defaultsForGateway: UserDefaults { defaults }
@@ -474,7 +454,7 @@ public final class ConfigStore: ObservableObject {
         self.whisparrAgeConfirmed = defaults.bool(forKey: Self.whisparrAgeConfirmedKey)
         // `defaults.double(forKey:)` returns 0.0 when the key isn't set,
         // which we treat as "use the default 1.0". Validating against
-        // `fontScaleOptions` would silently reset old saved values when
+        // the picker's options would silently reset old saved values when
         // the option list changes — we accept any positive double so
         // upgrades don't kick the user back to Default.
         let storedScale = defaults.double(forKey: Self.fontScaleKey)
@@ -922,37 +902,6 @@ public final class ConfigStore: ObservableObject {
     /// config straight from a `UserDefaults` suite.
     public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         load(kind, from: defaults)
-    }
-
-    /// The media-server counterpart, for the same reason and with the same
-    /// caveat: the token is blanked in the stored blob and has to come from a
-    /// `SecretStore` alongside it.
-    public nonisolated static func decodeMediaServerConfig(from defaults: UserDefaults) -> MediaServerConfig {
-        decodeMediaServerConfig(from: defaults.dictionaryRepresentation())
-    }
-
-    /// Both decoders again, over a plain dictionary rather than a
-    /// `UserDefaults`.
-    ///
-    /// For a reader that holds this app's stored values WITHOUT owning the
-    /// store they came from — a sibling app in the family reading a snapshot of
-    /// this one's preferences. Routing it through a `UserDefaults` suite would
-    /// mean either persisting a second plaintext copy of every secret, or
-    /// registering them into the process-wide registration domain where every
-    /// other `UserDefaults` in the process would see them. A dictionary is
-    /// simply the values, with the storage format still known only here.
-    public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from storage: [String: Any]) -> ServiceConfig {
-        guard let data = storage[key(kind)] as? Data,
-              let cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data)
-        else { return .empty }
-        return cfg
-    }
-
-    public nonisolated static func decodeMediaServerConfig(from storage: [String: Any]) -> MediaServerConfig {
-        guard let data = storage[mediaServerKey] as? Data,
-              let cfg = try? JSONDecoder().decode(MediaServerConfig.self, from: data)
-        else { return .empty }
-        return cfg
     }
 
     private func setOrDelete(_ value: String, for key: SecretKey) {

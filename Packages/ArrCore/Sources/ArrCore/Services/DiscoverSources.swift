@@ -32,7 +32,7 @@ nonisolated public enum DiscoverSources {
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
-                guard let arrId = rec.id, let title = rec.title else { return nil }
+                guard rec.id != nil, let title = rec.title else { return nil }
                 let poster: URL? = posterURL(from: rec.images)
                 let result = SearchResult(
                     // `id` is the FOREIGN id for every other producer of a
@@ -57,8 +57,6 @@ nonisolated public enum DiscoverSources {
                 .withLibraryOwnership(rec.ownership)
                 return DiscoverItem(
                     result: result,
-                    action: .openDetail(source: .radarr, arrId: arrId),
-                    originLabel: .library,
                     kind: .movie
                 )
             }
@@ -90,7 +88,7 @@ nonisolated public enum DiscoverSources {
             }
             let shuffled = filtered.shuffled()
             return shuffled.compactMap { rec -> DiscoverItem? in
-                guard let arrId = rec.id, let title = rec.title else { return nil }
+                guard rec.id != nil, let title = rec.title else { return nil }
                 let poster: URL? = posterURL(from: rec.images)
                 let result = SearchResult(
                     // The tvdbId, for the same reason as the movie source
@@ -106,8 +104,6 @@ nonisolated public enum DiscoverSources {
                 .withLibraryOwnership(rec.ownership)
                 return DiscoverItem(
                     result: result,
-                    action: .openDetail(source: .sonarr, arrId: arrId),
-                    originLabel: .library,
                     kind: .show
                 )
             }
@@ -173,8 +169,7 @@ nonisolated public enum DiscoverSources {
                         source: .radarr,
                         inLibraryArrId: nil
                     )
-                    return DiscoverItem(result: result, action: .addToRadarr,
-                                        originLabel: .llm, kind: .movie)
+                    return DiscoverItem(result: result, kind: .movie)
                 case .show:
                     let hits = (try? await sonarrLookup(term)) ?? []
                     guard let first = hits.first else { return nil }
@@ -194,8 +189,7 @@ nonisolated public enum DiscoverSources {
                         inLibraryArrId: nil,
                         tmdbTVId: first.tmdbId
                     )
-                    return DiscoverItem(result: result, action: .addToSonarr,
-                                        originLabel: .llm, kind: .show)
+                    return DiscoverItem(result: result, kind: .show)
                 }
             }.compactMap { $0 }
             return out

@@ -10,14 +10,9 @@ import SwiftUI
 /// New code should prefer these names. Existing raw values get migrated
 /// opportunistically when the surrounding code is being touched anyway.
 public enum Tokens {
-    /// Spacing scale. Names map to *semantic role* — `section` is the
-    /// outer gutter used between major popover sections, `row` is the
-    /// horizontal inset inside a list row, etc.
+    /// Spacing scale. Names map to *semantic role* — `queueRowH` is the
+    /// horizontal inset inside a queue row, etc.
     public enum Spacing {
-        /// 8 pt — comfortable inline gap, between paragraph and meta row.
-        public static let regular: CGFloat = 8
-        /// 12 pt — section-level horizontal inset for popover content.
-        public static let section: CGFloat = 12
         /// Horizontal inset for queue rows + arr section headers. Tighter on
         /// the narrow macOS popover (12 pt read as oversized side gaps there)
         /// than on the full-width iOS list.
@@ -26,8 +21,6 @@ public enum Tokens {
         #else
         public static let queueRowH: CGFloat = 12
         #endif
-        /// 14 pt — outer page gutter (settings forms, welcome panels).
-        public static let page: CGFloat = 14
     }
 
     /// Corner radii. `card` is the dominant value (rounded rectangles

@@ -5,14 +5,12 @@ import SwiftUI
 /// that pushes one is the episode hero's series-title tap.
 public struct SeriesPushRequest: Hashable {
     public let queueItemId: String
-    public let source: QueueItem.Source
     /// Carried verbatim so the destination can render DetailView without
     /// having to refetch the QueueItem from the view model.
     public let item: QueueItem
 
     public init(item: QueueItem) {
         self.queueItemId = item.id
-        self.source = item.source
         self.item = item
     }
 

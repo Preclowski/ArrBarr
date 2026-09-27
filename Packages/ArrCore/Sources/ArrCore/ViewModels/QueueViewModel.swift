@@ -14,17 +14,6 @@ public final class QueueViewModel {
     /// Per-source last-error string. Same shape as `queues`.
     public private(set) var errors: [QueueItem.Source: String] = [:]
 
-    // Back-compat named accessors. Existing consumers (DetailView, status-bar
-    // badge, history lookup) read these. Keep them as computed so the dict
-    // stays the only source of truth.
-    public var radarr: [QueueItem]   { queues[.radarr,   default: []] }
-    public var sonarr: [QueueItem]   { queues[.sonarr,   default: []] }
-    public var lidarr: [QueueItem]   { queues[.lidarr,   default: []] }
-    public var whisparr: [QueueItem] { queues[.whisparr, default: []] }
-    public var radarrError: String?   { errors[.radarr] }
-    public var sonarrError: String?   { errors[.sonarr] }
-    public var lidarrError: String?   { errors[.lidarr] }
-    public var whisparrError: String? { errors[.whisparr] }
     public private(set) var upcoming: [UpcomingItem] = []
     public private(set) var tonight: [UpcomingItem] = []
     public private(set) var needsYou: [NeedsYouItem] = []
@@ -53,13 +42,6 @@ public final class QueueViewModel {
 
     public func error(for source: QueueItem.Source) -> String? {
         errors[source]
-    }
-
-    /// True when no arr has any queued items. Used by both surfaces to show
-    /// the "Nothing in queue" empty state instead of dispatching to per-arr
-    /// sections that would each render their own empty placeholders.
-    public var allEmpty: Bool {
-        queues.values.allSatisfy { $0.isEmpty }
     }
 
     /// Whether the panel is on screen — the menu-bar popover is open, or the
@@ -714,8 +696,8 @@ public final class QueueViewModel {
         return true
     }
 
-    private func startBackgroundPolling(refreshNow: Bool = true) {
-        if refreshNow { Task { await self.refresh() } }
+    private func startBackgroundPolling() {
+        Task { await self.refresh() }
         backgroundTimer?.invalidate()
         let interval = configStore.backgroundInterval
         guard interval > 0 else { return }
@@ -733,15 +715,6 @@ public final class QueueViewModel {
                 await self.refreshQueues()
             }
         }
-    }
-
-    /// Re-arm on an interval change. Was a second copy of `startBackgroundPolling`
-    /// that had drifted: it rebuilt the timer *without* the realtime health gate,
-    /// so changing the interval in Settings silently re-enabled polling until the
-    /// next launch. One implementation, minus the immediate refresh that only
-    /// makes sense the first time.
-    private func restartBackgroundPolling() {
-        startBackgroundPolling(refreshNow: false)
     }
 
     /// Kick the media-server index if it has gone stale. Fire-and-forget: the

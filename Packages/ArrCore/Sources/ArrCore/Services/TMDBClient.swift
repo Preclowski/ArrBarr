@@ -514,8 +514,6 @@ nonisolated public struct TMDBClient: Sendable {
         guard let path, !path.isEmpty else { return nil }
         return URL(string: "https://image.tmdb.org/t/p/\(size)\(path)")
     }
-
-    public static func isReadAccessToken(_ s: String) -> Bool { TMDBService.isReadAccessToken(s) }
 }
 
 // MARK: - Wait-card facts (subset of /movie and /tv details)

@@ -11,17 +11,6 @@ public enum ProFeature: String, CaseIterable, Sendable {
     case queueAction
     case mediaServer
 
-    /// Short headline for the contextual paywall line.
-    public var localizedTitleKey: String {
-        switch self {
-        case .chat:            return "Chat is a Control feature"
-        case .downloadClients: return "Download clients are a Control feature"
-        case .addTitle:        return "Adding titles is a Control feature"
-        case .queueAction:     return "Managing downloads is a Control feature"
-        case .mediaServer:     return "Media servers are a Control feature"
-        }
-    }
-
     /// Big contextual headline at the top of the paywall.
     public var paywallHeadlineKey: String {
         switch self {

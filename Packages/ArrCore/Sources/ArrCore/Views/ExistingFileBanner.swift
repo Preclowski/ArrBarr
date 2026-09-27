@@ -24,65 +24,28 @@ enum ArrReleaseStatusLabel {
     }
 }
 
-/// Banner describing the file an arr already has on disk for this item.
-/// Two callers:
-///   - upgrade-in-progress (queue item) — fields come from the queue
-///     row's `existing*` metadata
-///   - already-in-library (no active queue) — fields come from
-///     `RadarrMovieDetail.movieFile` / similar
-/// The view body is the same; only the source of the fields differs.
+/// Banner describing the file an arr already has on disk for this item —
+/// built from `RadarrMovieDetail.movieFile` / similar.
 struct ExistingFileBanner: View {
     let quality: String?
     let size: Int64?
     let customFormatScore: Int?
     let customFormats: [String]
     let fileName: String?
-    /// When set, chips in `customFormats` that aren't in this list
-    /// render as removed (red outline) — they're the formats the
-    /// new download will strip. Nil for "no active upgrade, just
-    /// show what's on disk" callers, where every chip stays neutral.
-    /// Symmetric to `CustomFormatChips.existingFormats` which colours
-    /// chips green when they're net-new vs the existing file.
-    var newFormats: [String]?
-    /// Show the quality (+ size) line. False for the upgrade-in-progress caller,
-    /// where `DownloadProgressCard`'s `└─ OLD` sub-line already prints quality —
-    /// printing it here too would duplicate. True for the "already in library /
-    /// upcoming" callers, where this banner is the ONLY place quality appears, so
-    /// omitting it made the detail look broken (filename + formats but no quality).
-    var showMetadata: Bool
     /// Extra file facts, mirroring the Library tooltip (movie callers only —
     /// the queue/episode/track variants leave them nil).
     var releaseGroup: String?
     var languages: String?
 
     init(quality: String?, size: Int64?, customFormatScore: Int?,
-         customFormats: [String], fileName: String?, newFormats: [String]? = nil,
-         showMetadata: Bool = false,
+         customFormats: [String], fileName: String?,
          releaseGroup: String? = nil, languages: String? = nil) {
         self.quality = quality; self.size = size
         self.customFormatScore = customFormatScore
         self.customFormats = customFormats
         self.fileName = fileName
-        self.newFormats = newFormats
-        self.showMetadata = showMetadata
         self.releaseGroup = releaseGroup
         self.languages = languages
-    }
-
-    /// Build the banner from a queue row's `existing*` fields (upgrade-time
-    /// metadata Radarr/Sonarr send when a download will replace something).
-    /// Pass `comparingTo: item.customFormats` to colour-code removed
-    /// chips red (the diff view); omit for a plain "this is on disk"
-    /// banner with all chips neutral.
-    init(item: QueueItem, comparingTo newFormats: [String]? = nil) {
-        self.init(
-            quality: item.existingQuality,
-            size: item.existingSize,
-            customFormatScore: item.existingCustomFormatScore,
-            customFormats: item.existingCustomFormats,
-            fileName: item.existingFileName,
-            newFormats: newFormats
-        )
     }
 
     /// Build the banner from an arr's library `movieFile` — the file the
@@ -96,7 +59,6 @@ struct ExistingFileBanner: View {
             customFormatScore: movieFile.customFormatScore,
             customFormats: (movieFile.customFormats ?? []).map(\.name),
             fileName: movieFile.relativePath,
-            showMetadata: true,
             releaseGroup: movieFile.releaseGroup,
             languages: languages.isEmpty ? nil : languages.joined(separator: ", ")
         )
@@ -112,8 +74,7 @@ struct ExistingFileBanner: View {
             size: episodeFile.size,
             customFormatScore: episodeFile.customFormatScore,
             customFormats: (episodeFile.customFormats ?? []).map(\.name),
-            fileName: episodeFile.relativePath,
-            showMetadata: true
+            fileName: episodeFile.relativePath
         )
     }
 
@@ -126,8 +87,7 @@ struct ExistingFileBanner: View {
             size: trackFile.size,
             customFormatScore: trackFile.customFormatScore,
             customFormats: (trackFile.customFormats ?? []).map(\.name),
-            fileName: trackFile.path.map { URL(fileURLWithPath: $0).lastPathComponent },
-            showMetadata: true
+            fileName: trackFile.path.map { URL(fileURLWithPath: $0).lastPathComponent }
         )
     }
 
@@ -138,32 +98,30 @@ struct ExistingFileBanner: View {
         // kind of table.
         VStack(alignment: .leading, spacing: 5) {
             Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
-                if showMetadata {
-                    if let q = quality, !q.isEmpty {
-                        GridRow {
-                            label("queue.quality.button")
-                            value(q, weight: .semibold)
-                        }
+                if let q = quality, !q.isEmpty {
+                    GridRow {
+                        label("queue.quality.button")
+                        value(q, weight: .semibold)
                     }
-                    if let s = size, s > 0 {
-                        GridRow {
-                            label("queue.size.button")
-                            value(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
-                        }
+                }
+                if let s = size, s > 0 {
+                    GridRow {
+                        label("queue.size.button")
+                        value(ByteCountFormatter.string(fromByteCount: s, countStyle: .file))
                     }
-                    // Same rows, same order as the Library tooltip: group,
-                    // languages, release status — then chips + filename below.
-                    if let releaseGroup, !releaseGroup.isEmpty {
-                        GridRow {
-                            label("Release group")
-                            value(releaseGroup)
-                        }
+                }
+                // Same rows, same order as the Library tooltip: group,
+                // languages, release status — then chips + filename below.
+                if let releaseGroup, !releaseGroup.isEmpty {
+                    GridRow {
+                        label("Release group")
+                        value(releaseGroup)
                     }
-                    if let languages, !languages.isEmpty {
-                        GridRow {
-                            label("Languages")
-                            value(languages)
-                        }
+                }
+                if let languages, !languages.isEmpty {
+                    GridRow {
+                        label("Languages")
+                        value(languages)
                     }
                 }
             }
@@ -176,17 +134,9 @@ struct ExistingFileBanner: View {
             // tooltip / queue row gives it (it used to be a labelled grid
             // row here, the one surface that differed).
             if !customFormats.isEmpty || (customFormatScore ?? 0) != 0 {
-                let newSet: Set<String> = newFormats.map(Set.init) ?? []
-                let highlightRemoved = newFormats != nil
                 TooltipFlowLayout(spacing: 4) {
                     ForEach(customFormats, id: \.self) { cf in
-                        // Mirror of CustomFormatChips' green-for-added:
-                        // red-for-going-away. Chips kept across the
-                        // upgrade stay neutral. Without `newFormats`
-                        // (no diff context), all chips neutral — that's
-                        // the "in library, no active download" view.
-                        let isRemoved = highlightRemoved && !newSet.contains(cf)
-                        TagChip(text: cf, color: isRemoved ? .red : .primary)
+                        TagChip(text: cf, color: .primary)
                     }
                     if let score = customFormatScore, score != 0 {
                         ScoreChip(score: score)

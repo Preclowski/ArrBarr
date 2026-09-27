@@ -373,22 +373,4 @@ extension DemoMocks {
             ),
         ]
     }
-
-    /// YouTube ids for the demo universe, keyed by the fixtures' own synthetic
-    /// external ids. Demo ships no TMDB key, so `TrailerProvider`'s real lookup
-    /// can never answer — without this the trailer button never appears and the
-    /// feature can't be exercised in demo or in screenshots. Every id below is
-    /// the Blender Foundation's own upload of that film.
-    static func trailerKey(forId id: Int) -> String? {
-        switch id {
-        case 10001: return "YE7VzlLtp-4"  // Big Buck Bunny
-        case 10002: return "eRsGyueVLvQ"  // Sintel
-        case 10010: return "R6MlUcmOul8"  // Tears of Steel
-        case 10003: return "TLkA0RELQ1g"  // Elephants Dream
-        case 10004: return "WhWc3b3KhnY"  // Spring
-        case 10009: return "Y-rmzh0PI3c"  // Cosmos Laundromat
-        case 20002: return "SkVqJ1SGeL0"  // Caminandes 3: Llamigos
-        default: return nil
-        }
-    }
 }

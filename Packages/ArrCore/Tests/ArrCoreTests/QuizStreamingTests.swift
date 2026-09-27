@@ -56,7 +56,7 @@ struct QuizStreamingTests {
             genres: [], network: nil, certification: nil,
             posterURL: nil, source: .radarr, inLibraryArrId: owned ? id : nil
         )
-        return DiscoverItem(result: r, action: .addToRadarr)
+        return DiscoverItem(result: r)
     }
 
     @Test("pipeline keeps pick order across feeds and filters what the deck must not get")
