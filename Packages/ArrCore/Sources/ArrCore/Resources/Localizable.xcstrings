@@ -4796,6 +4796,48 @@
         }
       }
     },
+    "search.unresolvedImdb.error": {
+      "comment": "Add error when a search result carries only an IMDb id, which no arr can add by.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This title only has an IMDb id. Search for it again to add it."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ten tytuł ma tylko identyfikator IMDb. Wyszukaj go ponownie, aby go dodać."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Titel hat nur eine IMDb-ID. Such ihn erneut, um ihn hinzuzufügen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este título solo tiene un ID de IMDb. Búscalo de nuevo para añadirlo."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce titre n’a qu’un identifiant IMDb. Recherche-le à nouveau pour l’ajouter."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze titel heeft alleen een IMDb-id. Zoek hem opnieuw om hem toe te voegen."
+          }
+        }
+      }
+    },
     "Seeders / leechers": {
       "extractionState": "manual",
       "localizations": {

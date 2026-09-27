@@ -1,7 +1,6 @@
 import Foundation
 import MediaKit
 
-/// One playable YouTube clip from a title's videos.
 nonisolated public struct TrailerClip: Hashable, Sendable, Identifiable {
     public let key: String
     /// TMDB's title for the clip; nil for Radarr's bare trailer id.
@@ -11,13 +10,10 @@ nonisolated public struct TrailerClip: Hashable, Sendable, Identifiable {
     var thumbnailURL: URL? { URL(string: "https://i.ytimg.com/vi/\(key)/mqdefault.jpg") }
 }
 
-/// Every clip a title has, featured one first. What the badge opens and what
-/// the player's tile strip lists.
 nonisolated public struct TrailerReel: Hashable, Sendable {
     public let clips: [TrailerClip]
 
-    /// `featuredKey` (Radarr's own pick) leads the reel whether or not TMDB
-    /// lists it too; nil when there is nothing to play.
+    /// `featuredKey` (Radarr's own pick) leads the reel whether or not TMDB lists it too.
     init?(featuredKey: String?, clips: [TrailerClip]) {
         var clips = clips
         if let featuredKey, !featuredKey.isEmpty {
@@ -31,16 +27,13 @@ nonisolated public struct TrailerReel: Hashable, Sendable {
     var featuredKey: String { clips[0].key }
 }
 
-/// Resolves the trailers for a title, for both the detail hero's badge and the
-/// Quiz's play button. Radarr's own `youTubeTrailerId` leads the reel when the
-/// detail payload has one; the rest come from TMDB `/videos` (series always —
-/// Sonarr ships no trailer field at all).
+/// Radarr's `youTubeTrailerId` leads the reel when present; the rest come from TMDB
+/// `/videos` (series always — Sonarr ships no trailer field).
 enum TrailerProvider {
 
     // MARK: - Public API
 
-    /// `radarrTrailerId` is Radarr's own field — pass it straight through even
-    /// when empty; Radarr sends `""` for "none".
+    /// Radarr sends `""` for "none"; pass it straight through.
     static func movieReel(radarrTrailerId: String?, tmdbId: Int?,
                           configStore: ConfigStore) async -> TrailerReel? {
         var clips: [TrailerClip] = []
@@ -50,8 +43,7 @@ enum TrailerProvider {
         return TrailerReel(featuredKey: radarrTrailerId, clips: clips)
     }
 
-    /// `tvdbId` is the fallback route for the series Sonarr didn't ship a
-    /// `tmdbId` for — same `/find` hop the cast strip makes.
+    /// `tvdbId` resolves series Sonarr shipped without a `tmdbId`.
     static func seriesReel(tmdbId: Int?, tvdbId: Int?,
                            configStore: ConfigStore) async -> TrailerReel? {
         guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }

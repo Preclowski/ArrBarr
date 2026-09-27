@@ -1,22 +1,16 @@
 import SwiftUI
 
 public struct SearchAddPanel: View {
-    /// Mutable so we can swap in an enriched copy when the source was a
-    /// chat result built from a TMDB summary (no IMDB / RT / runtime).
-    /// `+`-flow results already arrive enriched and the swap is a no-op.
+    /// Mutable so a chat result built from a TMDB summary (no IMDb / RT / runtime) can be
+    /// swapped for an enriched copy.
     @State private var result: SearchResult
     var viewModel: SearchViewModel
     let onBack: () -> Void
 
     @ObservedObject private var storeManager = StoreManager.shared
 
-    /// Identity of the title this panel was opened for, frozen at init.
-    ///
-    /// The cast / trailer tasks used to key on `result.id`, which enrichment
-    /// *changes* for a TMDB-sourced series (0 → the resolved tvdbId). That
-    /// re-ran both fetches mid-panel — the visible half of the wrong-series
-    /// bug, since the second run was the one that repainted the strip. The
-    /// panel shows one title for its whole life, so its task key is constant.
+    /// Frozen at init: enrichment changes `result.id` for a TMDB-sourced series (0 → tvdbId),
+    /// which would re-run the cast/trailer tasks and repaint the wrong series.
     private let identityKey: String
 
     public init(result: SearchResult, viewModel: SearchViewModel,
@@ -27,11 +21,8 @@ public struct SearchAddPanel: View {
         self.identityKey = result.id
     }
 
-    /// Trailer for the title being added. Nil = no clip (or no TMDB key for
-    /// the series route), and then no badge on the poster.
+    /// Nil = no clip (or no TMDB key for the series route), so no poster badge.
     @State private var trailer: TrailerReel?
-    /// The clip on screen — shared session, rendered by the surface root so it
-    /// survives popover close/reopen (see `TrailerSession`).
     @ObservedObject private var trailerSession = TrailerSession.shared
 
     // Radarr state
@@ -42,10 +33,7 @@ public struct SearchAddPanel: View {
     // Sonarr state
     @State private var sonarrMonitor: SonarrMonitorMode = .all
     @State private var seriesType: SonarrSeriesType = .standard
-    /// Season folders default to on for every series we add. The toggle
-    /// used to live in the form but it was a power-user knob that almost
-    /// nobody flipped — Sonarr's own default is the same. Constant `true`
-    /// keeps the API call shape compatible without re-surfacing UI.
+    /// Always on, like Sonarr's own default; kept to preserve the API call shape.
     private let seasonFolder = true
 
     // Lidarr state
@@ -54,38 +42,23 @@ public struct SearchAddPanel: View {
     // Whisparr state
     @State private var whisparrMonitor: RadarrMonitorMode = .movieOnly
     @State private var lidarrMonitor: LidarrMonitorMode = .all
-    /// Poster lightbox — set to a URL when the user taps the hero
-    /// poster, cleared by the xmark / scrim tap. Renders the shared
-    /// `PosterLightbox` as a ZStack overlay so the focused view
-    /// covers the entire popover (form + scroll).
     @State private var enlargedPoster: URL?
 
     @EnvironmentObject private var configStore: ConfigStore
-    /// Cast for the "new title to download" detail — fetched from TMDB so the
-    /// add panel matches the in-library DetailView (which also shows a CastRow).
-    /// Movies/series only; empty until loaded (and stays empty without a TMDB key).
+    /// Movies/series only; stays empty without a TMDB key.
     @State private var cast: [CastMember] = []
-    /// Directing credits from the same fetch — a movie's director(s), a
-    /// series' creator(s). Rendered above the cast strip.
     @State private var directors: [CastMember] = []
     @State private var countries: [String] = []
-    /// True while the TMDB credits fetch is in flight — drives the cast
-    /// skeleton so the hero doesn't jump when the strip pops in.
+    /// Drives the cast skeleton so the hero doesn't jump when the strip pops in.
     @State private var castLoading = false
-    /// Cast-head tap → in-app person view, pushed locally so back returns
-    /// here (same wiring as DetailView).
+    /// Pushed locally so back returns here.
     @State private var personRef: PersonRef?
 
     public var body: some View {
         ZStack {
             mainContent
-                // Parked while the lightbox is up, so the frosted scrim doesn't
-                // blur a visible layout underneath. All four mechanisms, same
-                // as PopoverContentView: hiding and un-clicking a layer still
-                // leaves it holding pointer regions and sitting in the
-                // accessibility tree. Full-bleed artwork makes that worse — the
-                // poster now covers the window edge to edge, so anything
-                // leaking from below leaks everywhere rather than in a margin.
+                // Parked with all four mechanisms, as in PopoverContentView: hidden layers still hold
+                // pointer regions and sit in the accessibility tree.
                 .opacity(enlargedPoster != nil ? 0 : 1)
                 .allowsHitTesting(enlargedPoster == nil)
                 .disabled(enlargedPoster != nil)
@@ -104,10 +77,8 @@ public struct SearchAddPanel: View {
                 .zIndex(10)
             }
         }
-        // No `.navigationTitle` here: the panel is a ZStack overlay inside the
-        // root NavigationStack and draws its own `header` (title + FloatingBackButton),
-        // so a navigationTitle would propagate up and render a SECOND, stacked
-        // header above the real one.
+        // No `.navigationTitle`: this overlay draws its own header, and a title would propagate up
+        // and stack a second header above it.
         .personDestination($personRef)
     }
 
@@ -115,12 +86,7 @@ public struct SearchAddPanel: View {
         VStack(spacing: 0) {
             header
 
-            // Scrollable content — hero card + overview only. The
-            // parameter form + Add CTA used to live in here at the
-            // bottom of the scroll; the user reported having to scroll
-            // past a tall overview just to find the action. Pinned
-            // them to a sticky footer below so the CTA is always one
-            // tap away.
+            // The form + CTA sit in a sticky footer so a tall overview never hides the action.
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     hero
@@ -132,10 +98,6 @@ public struct SearchAddPanel: View {
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
 
-            // Sticky footer — parameter form + glass CTA pinned to
-            // the bottom of the popover. Thin material backdrop +
-            // divider so the footer reads as a distinct surface
-            // floating above the scroll content.
             VStack(spacing: 6) {
                 if viewModel.isLoadingOptions {
                     ProgressView()
@@ -175,9 +137,7 @@ public struct SearchAddPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
-            // Enrich first so the hero card upgrades from TMDB-lean to
-            // full-fat IMDB/RT/runtime as soon as possible. Runs in
-            // parallel with loadOptions — they hit different endpoints.
+            // Parallel with loadOptions — they hit different endpoints.
             async let enrich: Void = { @MainActor in
                 if needsEnrichment, let enriched = await viewModel.enrich(result) {
                     result = enriched
@@ -190,22 +150,15 @@ public struct SearchAddPanel: View {
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
         .task(id: identityKey) {
-            // `addError` lives on the shared SearchViewModel, so a failed add
-            // ("this movie has already been added") stuck around and rendered
-            // under the form of the *next* title the user opened. Clear it
-            // whenever a panel comes up for a title.
+            // `addError` lives on the shared SearchViewModel; clear it or the last failure shows
+            // under the next title.
             viewModel.addError = nil
             await loadCast()
         }
-        // Deciding whether to ADD is when a trailer is worth most, so the panel
-        // offers it exactly like the detail view does (the overlay itself is
-        // rendered by the surface root, off the shared session).
         .task(id: identityKey) { await resolveTrailer() }
     }
 
-    /// TMDB-sourced chat results carry only voteAverage + title + year + genres.
-    /// Lookup-sourced `+` results carry IMDB / RT / Metacritic / runtime too.
-    /// Use those richer fields' absence as the "this came from chat" signal.
+    /// Chat results from TMDB lack IMDb / RT / Metacritic / runtime; that absence marks them.
     private var needsEnrichment: Bool {
         result.runtime == nil && result.imdb == nil
             && result.rottenTomatoes == nil && result.metacritic == nil
@@ -214,11 +167,7 @@ public struct SearchAddPanel: View {
     // MARK: - Header chrome (matches DetailView)
 
     private var header: some View {
-        // SearchAddPanel is presented as an *overlay* (from the Add tab and
-        // from chat rich cards), not a NavigationStack push, so there's no
-        // system `<` chevron. Render our own leading back button + title —
-        // without it the chat → "add new movie" flow had no way back (the
-        // reported bug). Mirrors EpisodeDetailOverlay's floating header.
+        // An overlay, not a push, so there's no system chevron — draw our own back button.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
                 .keyboardShortcut(.cancelAction)
@@ -245,11 +194,9 @@ public struct SearchAddPanel: View {
         )
     }
 
-    /// `mediaRef` already knows which foreign key this result carries, so the
-    /// movie/series split needs no second source check.
+    /// `mediaRef` already knows the foreign key, so no second source check.
     private func resolveTrailer() async {
-        // Dismiss only OUR previous clip — a fresh mount (trailer nil) must
-        // not kill a session restored across a popover reopen.
+        // Dismiss only OUR previous clip — a fresh mount must not kill a session restored across a reopen.
         if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         trailer = nil
         switch result.mediaRef {
@@ -258,15 +205,12 @@ public struct SearchAddPanel: View {
                 radarrTrailerId: nil, tmdbId: id, configStore: configStore
             )
         case .tvdb(let id):
-            // Same as the cast strip: pass the TMDB id when the row has one,
-            // so this costs one request instead of a `/find` plus one.
+            // Pass the TMDB id when there is one: one request instead of `/find` plus one.
             trailer = await TrailerProvider.seriesReel(
                 tmdbId: result.tmdbTVId, tvdbId: id, configStore: configStore
             )
         case .tmdbTV(let id):
-            // A row that hasn't been resolved to a tvdbId yet — TMDB is the
-            // only side that knows this show, and it is the side serving the
-            // clip anyway.
+            // Not yet resolved to a tvdbId — only TMDB knows this show.
             trailer = await TrailerProvider.seriesReel(
                 tmdbId: id, tvdbId: nil, configStore: configStore
             )
@@ -275,8 +219,6 @@ public struct SearchAddPanel: View {
         }
     }
 
-    /// Toolbar title — "The Boys (2019)" / "Inception (2010)". Falls
-    /// back to bare title when year is unknown.
     private var navTitleString: String {
         if let y = result.year, y > 0 {
             return "\(result.title) (\(y))"
@@ -298,9 +240,6 @@ public struct SearchAddPanel: View {
                 countries: countries,
                 genres: result.genres,
                 ratings: ratingChips,
-                // Overview beside the poster — same right-column layout the
-                // detail view gets from this shared card (it used to render
-                // below the poster here, as a separate block).
                 overview: result.overview,
                 posterURL: result.posterURL,
                 fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : (result.source == .whisparr ? "flame" : "film")),
@@ -311,9 +250,7 @@ public struct SearchAddPanel: View {
                     }
                 },
                 posterBadge: trailerBadge,
-                // Title + year live in the nav-bar title now; hero
-                // hides its in-card title to avoid duplication —
-                // matches DetailView's pattern.
+                // Title + year live in the nav-bar title.
                 showTitle: false,
                 directedBy: directors,
                 directedByKey: result.source == .sonarr ? "detail.createdBy.label" : "detail.directedBy.label",
@@ -321,9 +258,6 @@ public struct SearchAddPanel: View {
                     if let ref = PersonRef(castMember: member) { personRef = ref }
                 }
             )
-            // Overview lives inside the header card's right column now.
-            // Cast strip with a skeleton while the TMDB fetch is in flight —
-            // same fill-in-as-it-lands pattern as DetailView.
             if !cast.isEmpty {
                 CastRow(cast: cast, onTapPerson: { member in
                     if let ref = PersonRef(castMember: member) { personRef = ref }
@@ -334,24 +268,16 @@ public struct SearchAddPanel: View {
         }
     }
 
-    /// Fetch the cast via the shared `CastProvider`. Supplementary — silent on
-    /// failure / no key. The result's `id` carries the TMDB movie id for
-    /// movies and the TVDB series id for series (see `SearchResult`), which is
-    /// exactly what each cast path keys on — plus `tmdbTVId` for series, which
-    /// TMDB can serve directly. Handing that over skips the `/find` hop the
-    /// provider would otherwise make, and it is the only route that works at
-    /// all for a TMDB-sourced row (whose tvdbId slot is still 0).
+    /// Silent on failure / no key. Passing `tmdbTVId` for series skips the `/find` hop and is
+    /// the only route for a TMDB-sourced row, whose tvdbId is still 0.
     private func loadCast() async {
         guard !configStore.tmdbApiKey.isEmpty else { return }
         castLoading = true
         defer { castLoading = false }
-        // Country rides along with the cast: same TMDB ids, and
-        // `CountryProvider`'s cache means opening the title in DetailView
-        // afterwards doesn't refetch it.
+        // `CountryProvider`'s cache means DetailView won't refetch it later.
         switch result.source {
         case .radarr, .whisparr:
-            // Radarr only: Whisparr has no country of its own, and its ids
-            // aren't guaranteed to be TMDB movie ids.
+            // Radarr only: Whisparr's ids aren't guaranteed to be TMDB movie ids.
             async let movieCountries: [String] = result.source == .radarr
                 ? CountryProvider.movieCountries(
                     tmdbId: result.externalId, configStore: configStore)
@@ -403,9 +329,8 @@ public struct SearchAddPanel: View {
                        ),
                        options: viewModel.rootFolders.map { ($0, $0) })
 
-            // Monitor choice applies to a fresh ARTIST add. An album row
-            // always monitors exactly that album (the artist is created
-            // with `monitor: none`), so the picker would be a lie there.
+            // An album row always monitors just that album (the artist is added with `monitor: none`),
+            // so the picker would be a lie there.
             if !result.isLidarrAlbum {
                 formPicker("search.monitor.button",
                            selection: $lidarrMonitor,
@@ -418,8 +343,7 @@ public struct SearchAddPanel: View {
 
     private var ratingChips: [RatingChip] {
         var chips: [RatingChip] = []
-        // Direct links where an id exists (imdbId; movie result.id IS the
-        // TMDB id, series result.id the TVDB id) — site search otherwise.
+        // Movie result.id is the TMDB id, series result.id the TVDB id; site search otherwise.
         if let v = result.imdb, let chip = RatingChip.imdb(v, linkTitle: result.title, imdbId: result.imdbId) {
             chips.append(chip)
         }
@@ -498,10 +422,6 @@ public struct SearchAddPanel: View {
     // MARK: - Sonarr form
 
     private var sonarrForm: some View {
-        // Same picker-row stack as every other arr's form (radarr / whisparr
-        // / lidarr) — monitor mode used to be a horizontal chip strip here,
-        // the lone control of its kind across the four forms, so it's a
-        // `formPicker` now too.
         VStack(spacing: 4) {
             formPicker("search.qualityProfile.button",
                        selection: Binding(
@@ -531,14 +451,8 @@ public struct SearchAddPanel: View {
 
     // MARK: - Add button
 
-    /// Two CTAs instead of one, because "Add" used to *also* kick off an
-    /// indexer search without saying so — the arr started downloading and the
-    /// only hint was a queue row appearing later. Splitting it puts the choice
-    /// in the user's hands and names it.
-    ///
-    /// "Add and search" is the prominent one: it's what the old single button
-    /// did, and it stays the common intent (you searched for a title because
-    /// you want it).
+    /// Two CTAs so an add never starts an indexer search without saying so; "Add and search"
+    /// is the prominent, common one.
     private var addButtons: some View {
         HStack(spacing: 8) {
             addButton(searchOnAdd: false)
@@ -553,14 +467,7 @@ public struct SearchAddPanel: View {
             Task {
                 guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
                       let folder = selectedRootFolder ?? viewModel.rootFolders.first else { return }
-                // Dispatch on the result's MediaRef rather than its
-                // `.source` enum — same outcome, but the ref kind
-                // makes the per-arr add-method choice the explicit
-                // axis (a `.tvdb` ref can only become an addSeries
-                // call; the type system pins it down). Whisparr +
-                // Radarr both carry `.tmdb` refs, so the inner
-                // source check stays to disambiguate the two movie-
-                // ID-using arrs.
+                // Whisparr and Radarr both carry `.tmdb` refs, so the inner source check disambiguates.
                 switch result.mediaRef {
                 case .tmdb where result.source == .whisparr:
                     await viewModel.addScene(result, qualityProfileId: pid,
@@ -570,8 +477,7 @@ public struct SearchAddPanel: View {
                     await viewModel.addMovie(result, qualityProfileId: pid,
                                             rootFolderPath: folder, monitor: radarrMonitor,
                                             searchOnAdd: searchOnAdd)
-                // Not yet resolved to a tvdbId — `addSeries` does that by id
-                // before it posts, and refuses if it can't.
+                // `addSeries` resolves the tvdbId before posting and refuses if it can't.
                 case .tvdb, .tmdbTV:
                     await viewModel.addSeries(result, qualityProfileId: pid,
                                              rootFolderPath: folder, monitor: sonarrMonitor,
@@ -580,8 +486,7 @@ public struct SearchAddPanel: View {
                 case .musicBrainz:
                     let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
                     if result.isLidarrAlbum {
-                        // Album row: add just this album (artist gets created
-                        // unmonitored-for-new so only this album is tracked).
+                        // The artist is created unmonitored-for-new so only this album is tracked.
                         await viewModel.addAlbum(result, qualityProfileId: pid,
                                                  metadataProfileId: metaPid, rootFolderPath: folder,
                                                  searchOnAdd: searchOnAdd)
@@ -592,14 +497,11 @@ public struct SearchAddPanel: View {
                                                  searchOnAdd: searchOnAdd)
                     }
                 case .imdb:
-                    // IMDB-only refs aren't directly addable — the search
-                    // pipeline should have resolved them to tmdb/tvdb
-                    // before reaching this UI. Log and bail.
-                    viewModel.addError = "Unsupported reference type — IMDB IDs must be resolved before adding."
+                    // The search pipeline should have resolved IMDb-only refs before this UI.
+                    viewModel.addError = String(localized: "search.unresolvedImdb.error", bundle: .module)
                 }
                 if viewModel.addError == nil {
-                    // Surfaces to any deck showing this title — the Quiz drops
-                    // the card instead of offering something already added.
+                    // The Quiz drops the card instead of offering something already added.
                     LibraryAddCompletion.post(foreignId: result.foreignId)
                     onBack()
                 }
@@ -609,12 +511,7 @@ public struct SearchAddPanel: View {
                 if viewModel.isAdding {
                     ProgressView().controlSize(.small)
                 } else {
-                    // Catalog keys, not the English labels themselves: these
-                    // used to be plain `String`s handed to `Text(_:)`, which
-                    // resolves to the *non-localizing* StringProtocol overload,
-                    // so the button read "Add to Radarr" in every language even
-                    // though the translations were already sitting in the
-                    // catalog under these very keys.
+                    // `LocalizedStringKey`, not `String`: `Text(String)` takes the non-localizing overload.
                     let addLabel: LocalizedStringKey = {
                         switch result.source {
                         case .radarr: return "search.addToRadarr.button"
@@ -623,13 +520,7 @@ public struct SearchAddPanel: View {
                         case .whisparr: return "search.addToWhisparr.button"
                         }
                     }()
-                    // Source glyph (film / tv / music.note / flame) leads
-                    // the label — same visual that titles section headers
-                    // and queue rows for this arr. Makes the CTA read at
-                    // a glance which service it'll hit. The search variant
-                    // trades it for a magnifier: the pair sits side by side
-                    // under one hero, so which arr is already unambiguous and
-                    // the glyph's job becomes telling the two buttons apart.
+                    // The search variant trades the source glyph for a magnifier to tell the two buttons apart.
                     HStack(spacing: 6) {
                         if !storeManager.isPro {
                             Image(systemName: "lock.fill")
@@ -651,17 +542,13 @@ public struct SearchAddPanel: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 7)
         }
-        // Only the search variant is prominent — two filled buttons of equal
-        // weight would make the user stop and read instead of reaching for the
-        // one they almost always want.
+        // Only one prominent button, so the user reaches for it instead of reading.
         .modifier(AddCTAStyle(prominent: searchOnAdd))
         .disabled(viewModel.isAdding || viewModel.isLoadingOptions)
     }
 
     // MARK: - Helpers
 
-    /// Prominent for the primary CTA, plain glass for the secondary — reuses
-    /// the two shared button styles rather than inventing a third.
     private struct AddCTAStyle: ViewModifier {
         let prominent: Bool
         func body(content: Content) -> some View {

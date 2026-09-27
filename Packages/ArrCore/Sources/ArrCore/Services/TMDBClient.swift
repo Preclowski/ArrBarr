@@ -4,19 +4,15 @@ import MediaKit
 nonisolated public enum TMDBDepartment {
     public static let acting = "Acting"
     public static let directing = "Directing"
-    /// The crew `job` (not department) that means "this person directed it".
-    /// The Directing department is much wider than this — assistant directors,
-    /// script supervisors and the rest live there too — so the strip matches
-    /// jobs, not the department.
+    /// The crew `job` meaning "directed it"; the Directing department also holds
+    /// assistant directors and script supervisors, so match jobs, not the department.
     public static let directorJob = "Director"
     public static let coDirectorJob = "Co-Director"
 }
 
 // MARK: - Genre maps
-//
-// TMDB exposes /genre/movie/list and /genre/tv/list but those values are
-// stable across decades — embedding them avoids an extra round-trip per
-// session and lets the LLM pick a genre by name without a setup tool call.
+// TMDB's genre ids are stable for decades; embedding them saves a round-trip
+// and lets the LLM pick a genre by name.
 
 nonisolated public enum TMDBGenres {
     public static let movie: [String: Int] = [
@@ -37,8 +33,7 @@ nonisolated public enum TMDBGenres {
         "western": 37,
     ]
 
-    /// Resolve a free-text genre token (case-insensitive). Returns nil for
-    /// unknown tokens — caller should skip the filter rather than 0-out it.
+    /// Case-insensitive; nil for unknown tokens — skip the filter rather than 0-out it.
     public static func movieId(for token: String) -> Int? {
         movie[token.lowercased()]
     }
@@ -46,11 +41,7 @@ nonisolated public enum TMDBGenres {
         tv[token.lowercased()]
     }
 
-    /// Reverse map for the "+ result card" hero — TMDB discover/credits
-    /// returns numeric `genre_ids`; the SearchResult model carries the
-    /// display name strings the SearchAddPanel renders as chips. We pick
-    /// the first matching name (the maps have aliases that all map to the
-    /// same id — e.g. "sci-fi" and "science fiction" both = 878).
+    /// Aliases share an id ("sci-fi" and "science fiction" = 878); the first matching name wins.
     public static func movieName(for id: Int) -> String? {
         movie.first { $0.value == id }?.key.capitalized
     }
@@ -109,9 +100,8 @@ nonisolated public extension TMDBTVSummary {
 }
 
 nonisolated public extension TMDBVideo {
-    /// Every playable clip, best first. Ranked rather than filtered: a title
-    /// with only an unofficial teaser should still get a play button.
-    /// YouTube-only because that's the only embed we can play.
+    /// Ranked rather than filtered: a title with only an unofficial teaser still gets
+    /// a play button. YouTube-only because that's the only embed we can play.
     static func rankedYouTube(_ videos: [TMDBVideo]) -> [TMDBVideo] {
         func rank(_ v: TMDBVideo) -> Int {
             switch (v.type, v.official ?? false) {
@@ -122,7 +112,7 @@ nonisolated public extension TMDBVideo {
             default:                 return 4
             }
         }
-        // Index tiebreak keeps TMDB's own order inside a rank: its first entry is the one the site features.
+        // Index tiebreak keeps TMDB's order within a rank: its first entry is the one the site features.
         return videos.enumerated()
             .filter { ($0.element.site ?? "YouTube") == "YouTube" && !$0.element.key.isEmpty }
             .sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }
@@ -148,7 +138,6 @@ nonisolated public extension TMDBDetails {
 
 // MARK: - Client
 
-/// TMDB through MediaKit, the key resolved per instance; results are MediaKit's records.
 nonisolated public struct TMDBClient: Sendable {
     public let apiKey: String
 
@@ -175,8 +164,7 @@ nonisolated public struct TMDBClient: Sendable {
     public func movieCredits(movieId: Int) async throws -> TMDBCredits { try await read { $0.movieCredits(id: movieId) } }
     public func tvCredits(tvId: Int) async throws -> TMDBCredits { try await read { $0.tvCredits(id: tvId) } }
 
-    /// One episode's TMDB score. `nil` when the episode is unrated (TMDB sends
-    /// `0` for that, which is not a rating).
+    /// `nil` when unrated — TMDB sends `0` for that, which is not a rating.
     public func episodeRating(tvId: Int, season: Int, episode: Int) async throws -> (value: Double, votes: Int)? {
         let record = try await read { $0.tvEpisode(id: tvId, season: season, episode: episode) }
         guard let value = record.voteAverage, value > 0 else { return nil }
@@ -229,10 +217,8 @@ nonisolated public struct TMDBClient: Sendable {
         return try await read { $0.discoverTV(sort: sortBy, minVotes: minVoteCount, extra: extra) }.results
     }
 
-    /// Theatrical releases of the last six weeks, most popular first — what a
-    /// model cannot know past its training cutoff. With a region the dates are
-    /// that country's (a film opens in Warsaw weeks after LA); re-releases of
-    /// old films stay out either way.
+    /// Theatrical releases of the last six weeks, most popular first — what a model cannot
+    /// know past its cutoff. With a region the dates are that country's.
     public func moviesInCinemas(region: String?, around date: Date = Date()) async throws -> [TMDBMovieSummary] {
         let dateField = region == nil ? "primary_release_date" : "release_date"
         var extra = [("\(dateField).gte", Self.day(date, offset: -42)),
@@ -247,10 +233,8 @@ nonisolated public struct TMDBClient: Sendable {
         }
     }
 
-    /// Series in the middle of a fresh season: an episode within the last two
-    /// weeks or the next one, from a season that began at most 90 days ago.
-    /// "An episode this week" alone is every soap, talk show and 30-year-old
-    /// anime.
+    /// Series mid fresh season. "An episode this week" alone would match every soap,
+    /// talk show and 30-year-old anime.
     public func seriesOnAir(around date: Date = Date()) async throws -> [TMDBTVSummary] {
         let extra = [("air_date.gte", Self.day(date, offset: -14)),
                      ("air_date.lte", Self.day(date, offset: 7)),
