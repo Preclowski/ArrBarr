@@ -3,6 +3,7 @@ import MediaKit
 import Combine
 import SwiftUI
 import UserNotifications
+import os
 
 @Observable
 public final class QueueViewModel {
@@ -85,7 +86,9 @@ public final class QueueViewModel {
     /// happened to be empty, which on a healthy idle library was every
     /// background tick. Once true, we trust the existing rows to redraw with
     /// fresh values rather than tearing the surface down.
-    public private(set) var hasLoadedOnce = false
+    public private(set) var hasLoadedOnce = false {
+        didSet { if hasLoadedOnce, !oldValue { Self.logFirstLoad() } }
+    }
     public private(set) var lastError: String?
 
     private let aggregator: QueueDataProviding
@@ -734,6 +737,23 @@ public final class QueueViewModel {
         Task.detached(priority: .utility) {
             await MediaServerIndex.shared.refreshIfStale(config: config)
         }
+    }
+
+    private static let launchLog = Logger(category: "Launch")
+    private static var loggedFirstLoad = false
+
+    /// Criterion 27: cold start measured from the process start time the kernel keeps.
+    private static func logFirstLoad() {
+        guard !loggedFirstLoad else { return }
+        loggedFirstLoad = true
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, getpid()]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0 else { return }
+        let start = info.kp_proc.p_starttime
+        let started = Double(start.tv_sec) + Double(start.tv_usec) / 1_000_000
+        let ms = Int((Date().timeIntervalSince1970 - started) * 1000)
+        launchLog.notice("first queue load \(ms, privacy: .public) ms after process start")
     }
 
     public func refresh() async {

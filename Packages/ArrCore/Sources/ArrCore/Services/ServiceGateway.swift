@@ -45,6 +45,7 @@ public final class ServiceGateway {
     private let adHocServers = OSAllocatedUnfairLock<[MediaServerConfig]>(initialState: [])
     private let adHocTMDBKeys = OSAllocatedUnfairLock<[String]>(initialState: [])
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
+    private static let log = Logger(category: "Gateway")
 
     public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive, transport: (any Transport)? = nil) {
         self.configStore = configStore
@@ -162,8 +163,13 @@ public final class ServiceGateway {
         // Under tests the saved profile is never registered: a client's adopted config is the only way in.
         let instances = descriptors()
         await kit.start(instances: instances)
-        if !Self.isRunningTests { await syncRealtime() }
-        Logger(category: "Gateway").notice("MediaKit started with \(instances.count, privacy: .public) instance(s), demo \(self.demo, privacy: .public)")
+        if !Self.isRunningTests {
+            await syncRealtime()
+            #if DEBUG
+            logTelemetryAfterLaunch()
+            #endif
+        }
+        Self.log.notice("MediaKit started with \(instances.count, privacy: .public) instance(s), demo \(self.demo, privacy: .public)")
     }
 
     public func reconcile() async {
@@ -219,6 +225,19 @@ public final class ServiceGateway {
             await kit.events.attach(source, for: id)
         }
     }
+
+    #if DEBUG
+    /// Criterion 27: request volume of the first minute, counts only.
+    private func logTelemetryAfterLaunch() {
+        Task { [telemetry] in
+            try? await Task.sleep(for: .seconds(60))
+            let (hosts, caches, operations) = telemetry.totals()
+            let top = operations.sorted { $0.value == $1.value ? $0.key.rawValue < $1.key.rawValue : $0.value > $1.value }
+                .prefix(12).map { "\($0.key.rawValue)=\($0.value)" }.joined(separator: " ")
+            Self.log.notice("telemetry 60 s after launch: requests \(hosts.requests, privacy: .public) failures \(hosts.failures, privacy: .public) skipped \(hosts.skipped, privacy: .public) bytes \(hosts.bytes, privacy: .public) cache hits \(caches.hits, privacy: .public) misses \(caches.misses, privacy: .public) stale \(caches.staleServed, privacy: .public) coalesced \(caches.coalesced, privacy: .public) top \(top, privacy: .public)")
+        }
+    }
+    #endif
 
     /// Retention sweep of the SQLite resource store, beside the poster sweep.
     public nonisolated func sweepDataCache() async { await kit.store.sweep() }
@@ -279,7 +298,7 @@ public final class ServiceGateway {
         configuration.signposts = OSSignposter(subsystem: "pl.incred.ArrBarr", category: "MediaKit")
         configuration.mediaServerUserID = configStore.mediaServer.userId.isEmpty ? nil : configStore.mediaServer.userId
         do { return try MediaStack(configuration) } catch {
-            Logger(category: "Gateway").error("MediaKit database unavailable, running in memory: \(error.localizedDescription, privacy: .public)")
+            log.error("MediaKit database unavailable, running in memory: \(error.localizedDescription, privacy: .public)")
             configuration.database = .memory
             return try! MediaStack(configuration)
         }

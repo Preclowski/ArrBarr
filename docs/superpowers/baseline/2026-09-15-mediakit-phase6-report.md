@@ -60,14 +60,14 @@ The five ArrCore failures are the phase-0 ones (asset catalogue and `.xcstrings`
 | 24 | `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`; no explicit `@MainActor` on Views/ViewModels types | pass |
 | 25 | `DiscoveryTests` (Bonjour TXT + UDP beacon fixtures, no network) | pass |
 | 26 | `GoldenParityTests.everyCorpusOperationHasAProducer`: every corpus (client, operation) has a MediaKit producer; excluded with reason: `tmdb.similarMovies/similarTV/tvCreators` (replaced by recommendations/credits), `qbittorrent.contains`/`sabnzbd.contains` (old probe ops), `sonarr.realtime.negotiate` (SignalR source, not a resource) | pass with 6 documented exceptions |
-| 27 | Per-screen request counters and cold-start time were not read back: `log show` returns nothing in this session's sandbox, so the numbers live in the in-app telemetry report for the owner to read; `swift test` wall times above | not measured here |
+| 27 | Measured 2026-09-27 from `log show` (Debug build, owner profile, 7 instances, relaunch right after a build): two launches: first queue load **1287 / 1218 ms** after process start (`Launch` notice, kernel process start time); first 60 s after launch: **44 / 37 requests**, 0 failures, 0 skipped, 27.9 MB (mostly `plex.libraryIndex` ×2), cache 8/30 and 4/27 hits/misses (`Gateway` notice, DEBUG only; the rest is `fetchQueue`/`fetchProgress` 2–4 per arr or client plus one-off status, health, calendar and realtime connects). Per-screen counters need UI navigation and stay owner-read in Developer options → "MediaKit telemetry" | cold start + launch minute measured; per-screen owner-read |
 | 28 | Not done: intents as Spotlight actions with parameters, queue-status snippet, `@Generable` results for Quiz/`suggest_titles` | open |
 
 ## 4. Out of scope / deferred (plan file has the checklist)
 
 - Wave 3 leftovers: `MediaServerIndex` → MediaKit `Snapshot`, `PosterStore` on `ArtworkReference`, `ConnectionHealthMonitor` → `HostGovernor` health, `SpotlightIndexer`/`LibraryIndex` as store consumers.
 - Wave 4: `QueueViewModel` on `LiveStream` instead of its timers.
-- Remaining `URLProtocol` stub suites (they run through the shared session in the test process; `ServiceGateway.override` is the path to migrate them).
+- ~~Remaining `URLProtocol` stub suites~~ migrated 2026-09-27 to `ScriptedTransport` + the `.gateway(_:)` suite trait (`ServiceGateway.override`).
 - Phase 7 items 2 and 4: `ConfigStore` is an `ObservableObject` shared by 37 views, moving it to `Observations` is its own change; chat markdown keeps swift-markdown (GFM tables), `Text(.init(markdown:))` would not remove code.
 - Criterion 28.
 

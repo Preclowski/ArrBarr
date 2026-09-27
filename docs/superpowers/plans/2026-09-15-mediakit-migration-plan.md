@@ -50,7 +50,8 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       draft, tests) becomes its own instance ordinal via `ServiceGateway.adopt`.
 - [x] Tests: `QueueUnificationTests`, `SeasonPackArtworkTests`, `LidarrWireDecodingTests` on
       `ArrCompositions`; stub suites keep global `URLProtocol` registration (a test process
-      routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override).
+      routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override; migrated off
+      global registration in Wave 6).
 - [ ] Later: `LibraryIndex`/`LibraryViewModel` as store consumers (today they call the facades
       with `mustRevalidate` and keep their own snapshot).
 
@@ -90,8 +91,19 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       as facades (consumers unchanged). `ConnectionHealthMonitor` stays (it schedules probes,
       not HTTP). `CoalescingCache` and `TitleMetadataStore` stay (in-memory caches over
       MediaKit-backed calls; candidates for a later pass).
-- [ ] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`
-      (today they run through the shared session with global registration).
+- [x] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`:
+      eight suites answer through a test `ScriptedTransport` on a fresh gateway per test
+      (`.gateway(_:)` suite trait over `ServiceGateway.override`, `ServiceGateway(transport:)`);
+      no suite registers a global stub. `OpenAIProviderTests` already used an ephemeral session.
+      Remaining full-run flakes (LibraryViewModel, SeriesIdentityResolver) reproduce on the
+      pre-migration tree too: `LibraryIndex.shared` keeps one slot and version per source.
+- [x] Add flow on typed payloads: `SearchClient` adds (movie, series, scene, artist) run
+      `ServarrService.add(ArrAddPayload)` through the store; `ArrAddPayload` gained top-level
+      `monitor` and `foreignId`; the untyped `ArrAPIClient.post` is gone. `AddRequestBodyTests`
+      pins each whole body.
+- [x] Data cache purge: `AppCaches.purgeExpired()` also sweeps the resource store
+      (`ServiceGateway.sweepDataCache()`); `ServiceGateway.purgeDataCache()` → `purgeAll()`.
+      Not in the UI: Settings' button clears images only and Developer options has no cache control.
 - [x] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`. Wire models, the
       helper enums, the facades, the lock-guarded stores and the statics inside actors are
       `nonisolated`; MainActor default arguments (`ConfigStore.shared`) dropped; `MediaServerIndex`
@@ -118,8 +130,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       documented exclusions; `anonymize_fixtures.py --check` clean; error presenter on catalogue keys
       (`MediaKitErrorCatalogTests`); `DiscoveryTests`; report:
       `docs/superpowers/baseline/2026-09-15-mediakit-phase6-report.md`.
-- [ ] Per-screen request counters: `log show` is empty in this environment; the owner reads the telemetry
-      report from Developer options.
+- [x] Criterion 27 (2026-09-27, `log show`): first queue load 1287 / 1218 ms after process start;
+      44 / 37 requests in the first 60 s (DEBUG `Gateway` notice). Per-screen counters need UI navigation and stay
+      owner-read in Developer options → "MediaKit telemetry".
 
 ## Phase 7 — API 26 UI (macOS)
 
@@ -127,5 +140,5 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] `GlassEffectContainer` around the popover islands; queue selection bar as `safeAreaBar` with
       `.scrollEdgeEffectStyle(.soft, for: .top)`.
 - [ ] `Observations` for `ConfigStore` consumers (37 views on an `ObservableObject`; separate change).
-- [ ] Markdown via `Text(.init(markdown:))`: swift-markdown stays for GFM tables, nothing to remove.
+- [x] ~~Markdown via `Text(.init(markdown:))`~~ won't do: swift-markdown stays for GFM tables, nothing to remove.
 - [ ] Criterion 28 (Spotlight intents with parameters, queue snippet, `@Generable` results).

@@ -84,6 +84,20 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
     public func counters(for operation: OperationID) -> Int { state.withLock { $0.operations[operation] ?? 0 } }
     public var totalRequests: Int { state.withLock { $0.operations.values.reduce(0, +) } }
 
+    /// Counters summed over every host and instance: numbers without names, safe for a public log line.
+    public func totals() -> (hosts: HostCounters, caches: CacheCounters, operations: [OperationID: Int]) {
+        state.withLock { s in
+            let hosts = s.hosts.values.reduce(into: HostCounters()) { t, c in
+                t.requests += c.requests; t.skipped += c.skipped; t.failures += c.failures
+                t.breakerOpens += c.breakerOpens; t.rateLimits += c.rateLimits; t.bytes += c.bytes
+            }
+            let caches = s.caches.values.reduce(into: CacheCounters()) { t, c in
+                t.hits += c.hits; t.misses += c.misses; t.staleServed += c.staleServed; t.coalesced += c.coalesced
+            }
+            return (hosts, caches, s.operations)
+        }
+    }
+
     public func report() -> String {
         let (hosts, caches, operations, since) = state.withLock { ($0.hosts, $0.caches, $0.operations, $0.since) }
         var lines = ["MediaKit telemetry since \(since) (\(clock.now.timeIntervalSince(since).rounded()) s)"]
