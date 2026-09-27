@@ -618,17 +618,6 @@ public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
     public subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
 }
 
-extension Array where Element == ArrImage {
-    /// Prefers a remote URL of the requested cover types, in order.
-    public func url(coverTypes: [String]) -> URL? {
-        for type in coverTypes {
-            if let image = first(where: { ($0.coverType ?? "").lowercased() == type.lowercased() }),
-               let raw = image.remoteUrl ?? image.url, let url = URL(string: raw) { return url }
-        }
-        return nil
-    }
-}
-
 /// An indexer as configured *in the arr* (`/indexer`). ArrBarr reads two things
 /// from it: the id a release carries, and the `baseUrl` field, whose path holds
 /// the Prowlarr indexer id when the indexer was synced from Prowlarr

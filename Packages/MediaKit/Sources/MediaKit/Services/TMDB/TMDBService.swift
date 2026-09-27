@@ -98,13 +98,6 @@ public struct TMDBService: Sendable {
         return json(plan("discoverTV", path: "/discover/tv", query: query), tags: [.collection(.lookup, instance)], freshness: .warm)
     }
 
-    /// `image.tmdb.org` never carries a credential.
-    public static func artwork(path: String?, kind: ArtworkReference.Kind) -> ArtworkReference? {
-        guard let path, !path.isEmpty else { return nil }
-        let normalized = path.hasPrefix("/") ? path : "/" + path
-        return ArtworkReference(url: imageURL(path: normalized, size: "original")!, sizing: .tmdbCDN(path: normalized), kind: kind)
-    }
-
     /// A CDN url at any size (`/t/p/<size>/<file>`, as the arrs hand them out), so it can be re-sized.
     public static func artwork(cdnURL url: URL, kind: ArtworkReference.Kind) -> ArtworkReference? {
         let parts = url.path.split(separator: "/", omittingEmptySubsequences: false)

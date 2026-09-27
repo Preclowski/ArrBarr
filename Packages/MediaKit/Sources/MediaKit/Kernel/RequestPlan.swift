@@ -10,7 +10,6 @@ public enum RequestPriority: Int, Sendable, Comparable, Hashable {
 public enum RetryDisposition: Sendable, Hashable {
     case idempotent
     case never
-    case handshakeOnly
 }
 
 public struct RequestPlan: Sendable, Hashable {

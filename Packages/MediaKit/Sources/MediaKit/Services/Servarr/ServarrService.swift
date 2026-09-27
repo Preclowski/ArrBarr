@@ -21,9 +21,6 @@ public struct ServarrService: Sendable {
     private var entityTag: (Int) -> InvalidationTag { { .entity(instance, profile.entityKind, $0) } }
     private func tag(_ c: CollectionName) -> InvalidationTag { .collection(c, instance) }
 
-    /// Whisparr v2 exposes none of the movie vocabulary; the method fails at construction, before any request.
-    private var movieVocabularyAvailable: Bool { instance.kind != .whisparr || capabilities.has(.whisparrV3, instance) }
-
     // MARK: - Resources
 
     public func status() -> Resource<ArrSystemStatus> {
@@ -204,14 +201,6 @@ public struct ServarrService: Sendable {
         case let .artist(id): body = ["name": .string("ArtistSearch"), "artistId": .number(Double(id))]; operation = "searchArtist"; tags.insert(entityTag(id))
         }
         return postCommand(operation: operation, body: body, invalidates: tags)
-    }
-
-    public func command(named name: String, body extra: [String: JSONValue] = [:], entityID: Int? = nil) -> Command {
-        var body = extra
-        body["name"] = .string(name)
-        var tags: Set<InvalidationTag> = [tag(.commands)]
-        if let entityID { tags.insert(entityTag(entityID)) }
-        return postCommand(operation: "postCommand", body: body, invalidates: tags)
     }
 
     private func postCommand(operation: String, body: [String: JSONValue], invalidates: Set<InvalidationTag>) -> Command {

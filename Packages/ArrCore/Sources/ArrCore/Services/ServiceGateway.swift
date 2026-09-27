@@ -48,8 +48,6 @@ public final class ServiceGateway {
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
     /// Live streams belong to the stack that made them: a demo rebuild swaps the stack and so starts fresh ones.
     private let streams = OSAllocatedUnfairLock<LiveStreams>(initialState: LiveStreams())
-    /// What the queue view-model asked the live queues to do; replayed on the stack a demo rebuild brings.
-    private var liveQueues: (sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy)?
     private var queueUpdateContinuations: [UUID: AsyncStream<QueueItem.Source>.Continuation] = [:]
     /// Streams already pumping and registered, by identity, each with the task forwarding its values.
     private var pumping: [ObjectIdentifier: Task<Void, Never>] = [:]
@@ -222,7 +220,6 @@ public final class ServiceGateway {
 
     /// Run these arrs' queue streams on their own clock and pushes. Idempotent: called on every panel open and close.
     public func setLiveQueues(sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy) async {
-        liveQueues = (sources, activity, policy)
         let events = kit.events
         await events.setForeground(activity == .foreground)
         let dropped = streams.withLock { streams in streams.queue.filter { !sources.contains($0.key) }.map(\.value) }

@@ -81,7 +81,6 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
 
     public func counters(for host: Host) -> HostCounters { state.withLock { $0.hosts[host] ?? HostCounters() } }
     public func cacheCounters(for instance: InstanceID) -> CacheCounters { state.withLock { $0.caches[instance] ?? CacheCounters() } }
-    public var totalRequests: Int { state.withLock { $0.operations.values.reduce(0, +) } }
 
     /// Counters summed over every host and instance: numbers without names, safe for a public log line.
     public func totals() -> (hosts: HostCounters, caches: CacheCounters, operations: [OperationID: Int]) {

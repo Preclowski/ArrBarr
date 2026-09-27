@@ -1,5 +1,4 @@
 import Foundation
-import MediaKit
 
 /// Servarr field parsing shared by every arr's row mappers.
 nonisolated func parseArrDate(_ string: String) -> Date? {

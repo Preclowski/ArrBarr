@@ -13,18 +13,6 @@ public struct SABnzbdService: DownloadService {
     struct QueueBody: Codable { let paused: Bool?; let slots: [Slot]; let kbpersec: String? }
     struct QueueResponse: Codable { let queue: QueueBody }
 
-    public struct HistorySlot: Codable, Sendable, Hashable {
-        public let nzo_id: String
-        public let name: String
-        public let status: String
-        public let category: String?
-        public let completed: Int?
-        public let bytes: Int64?
-        public let fail_message: String?
-        public let storage: String?
-    }
-    struct HistoryResponse: Codable { struct Body: Codable { let slots: [HistorySlot] }; let history: Body }
-
     public func version() -> Resource<String> {
         Resource(plan: api("testConnection", query: [("mode", "version")]), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["version"]?.stringValue ?? ""
@@ -47,12 +35,6 @@ public struct SABnzbdService: DownloadService {
             return DownloadTask(id: s.nzo_id, name: s.filename, state: state, progress: mb > 0 ? max(0, (mb - left) / mb) : 0,
                                 downloadSpeed: state == .downloading ? speed : nil, sizeBytes: Int64(mb * 1_048_576),
                                 etaSeconds: Self.seconds(s.timeleft), category: s.cat, instance: instance)
-        }
-    }
-
-    public func history(limit: Int = 50) -> Resource<[HistorySlot]> {
-        Resource(plan: api("history", query: [("mode", "history"), ("limit", String(limit))]), tags: [.collection(.downloads, instance)], freshness: .warm) { data in
-            try WireCodec.decoder.decode(HistoryResponse.self, from: data).history.slots
         }
     }
 

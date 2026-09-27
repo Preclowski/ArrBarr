@@ -48,7 +48,6 @@ public actor ResourceStore {
         self.capabilities = capabilities
     }
 
-
     // MARK: - Reads
 
     public func read<V>(_ resource: Resource<V>, policy requested: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
@@ -312,8 +311,6 @@ public actor ResourceStore {
             inFlight[slot] = entry
         }
     }
-
-    private var committed: Set<ResourceKey> = []
 
     private func commit<V>(_ row: CommittedRow, for resource: Resource<V>, fingerprint: Fingerprint, slot: String? = nil) {
         let entry = StoredEntry(key: resource.key, fingerprint: fingerprint, freshness: resource.freshness, payload: row.payload,

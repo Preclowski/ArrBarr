@@ -152,16 +152,22 @@ Decided 2026-09-27: delete the composition engine; keep Discovery for a separate
 
 ## Phase G — conventions and leftovers
 
-- [ ] Logging: per-call loggers `PersonView:381`, `IndexerNames:60,72`; instance loggers `PosterStore:146`,
+- [x] Logging: per-call loggers `PersonView:381`, `IndexerNames:60,72`; instance loggers `PosterStore:146`,
       `PersonStore:27` (wrong category); spelled subsystem `ServiceGateway:424-425`; `"detail"` category case.
-- [ ] Localization: hardcoded English in `HTTPError` descriptions, `SearchClient:174` seasons, `ChatViewModel:269`,
+- [x] Localization: hardcoded English in `HTTPError` descriptions, `SearchClient:174` seasons, `ChatViewModel:269`,
       `"Unknown"` fallbacks in `ArrCompositions`, `WelcomeView:484,491,560`, `LLMProvider:100`, `"OK"` fallbacks;
       `nl` missing from CLAUDE.md's language list.
-- [ ] Stale/orphan comments: `TMDBClient:327`, `LocalToolBackend+ArrTools:276-297`, `SearchViewModel:437`,
+- [x] Stale/orphan comments: `TMDBClient:327`, `LocalToolBackend+ArrTools:276-297`, `SearchViewModel:437`,
       `DownloadDropService:108`, `PosterStore:136`, `AppCaches:19`, `TrailerProvider:22-24`, `ServiceConfig:42`,
       `UpcomingService:5`, `DetailView:776-781`, `UpgradeDiffLine:355`, `CastProvider:42`; empty MARKs
       `ArrTypes:104,218`; unread fields `ArrDetailTypes:104`, `TMDBClient:560`.
-- [ ] Periphery sweep after B–F.
+- [x] Periphery sweep after B–F.
+- Periphery (macOS + iOS indexes): deleted SAB history, `command(named:)`, the MediaKit `url(coverTypes:)` duplicate,
+  TMDB `artwork(path:)`, fixture overrides/frames/reset, descriptor-less telemetry total, three `ServarrProfile`
+  fields, `handshakeOnly`, the gateway's write-only `liveQueues`, unused imports. Left, verified: test/runner API
+  (`TestClock`, `StaticCredentials`, `observe`, `lastEventAt`, `requestLog`, telemetry counters, redaction), protocol
+  `ids` parameters, delegate methods, assign-only identity fields of `Equatable` keys, app-target callers the
+  package index misses (`startShared`, `reloadFromDefaults`), `Discovery` (kept for its UI), redundant-`public` notes.
 
 ## Phase H — make the old plan true
 

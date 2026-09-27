@@ -1,6 +1,6 @@
 import Foundation
 
-/// Demo mode and every fixture-driven test: answers from `Fixtures/<kind>.json`, echoes writes, replays queued frames.
+/// Demo mode and every fixture-driven test: answers from `Fixtures/<kind>.json` and echoes writes.
 public actor FixtureTransport: Transport, SocketTransport {
     private struct Entry: Decodable {
         let status: Int
@@ -12,13 +12,11 @@ public actor FixtureTransport: Transport, SocketTransport {
     private let root: URL
     private let clock: any MediaClock
     private var files: [InstanceKind: [String: Entry]] = [:]
-    private var overrides: [String: JSONValue] = [:]
     /// PUT bodies keyed by path: a demo monitor toggle survives the next GET of the same record.
     private var putBodies: [String: JSONValue] = [:]
     /// Demo pause/resume by download id: the arr queue rows tracking those downloads report it.
     private var downloadStatus: [String: String] = [:]
     private var removedQueueItems: Set<String> = []
-    private var frames: [InstanceID: [String]] = [:]
     private var log: [(OperationID, Date)] = []
     private var commands: [Int: Date] = [:]
     private var nextCommandID = 1000
@@ -53,9 +51,7 @@ public actor FixtureTransport: Transport, SocketTransport {
             return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
         }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
-            var body = entry.body
-            if let override = overrides[request.operation.rawValue] { body = override }
-            body = applyState(body, kind: kind, name: name)
+            let body = applyState(entry.body, kind: kind, name: name)
             return HTTPResponse(status: entry.status, headers: HTTPHeaders(entry.headers), body: try encode(body))
         }
         guard isWrite else { throw MediaKitError.fixtureMissing(request.operation) }
@@ -73,16 +69,10 @@ public actor FixtureTransport: Transport, SocketTransport {
 
     public func open(_ request: HTTPRequest) async throws -> any WireSocket {
         log.append((request.operation, clock.now))
-        let queued = frames.removeValue(forKey: InstanceID(request.operation.kind)) ?? []
-        return FixtureSocket(frames: [#"{}"#] + queued)
+        return FixtureSocket(frames: [#"{}"#])
     }
 
-    public func enqueueFrames(_ newFrames: [String], for instance: InstanceID) { frames[instance, default: []].append(contentsOf: newFrames) }
     public func requestLog() -> [(OperationID, Date)] { log }
-    public func reset() { overrides = [:]; putBodies = [:]; downloadStatus = [:]; removedQueueItems = []; frames = [:]; log = []; commands = [:] }
-
-    /// Tests and the demo seed variants without touching the bundle.
-    public func override(_ operation: OperationID, body: JSONValue) { overrides[operation.rawValue] = body }
 
     // MARK: - Internals
 
