@@ -1,5 +1,6 @@
 import SwiftUI
 import os
+import MediaKit
 
 /// Identity of a person to open — pushed as a `navigationDestination(item:)`
 /// from cast heads. Carries just enough to render the header instantly (name +

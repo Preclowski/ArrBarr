@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// The one search-results surface, shared by the Queue tab, the Library tab
 /// and both platforms.

@@ -13,8 +13,8 @@ struct DirectorCreditsTests {
         try JSONDecoder().decode([ArrCredit].self, from: Data(json.utf8))
     }
 
-    private func tmdbCrew(_ json: String) throws -> [TMDBCreditPerson] {
-        try JSONDecoder().decode([TMDBCreditPerson].self, from: Data(json.utf8))
+    private func tmdbCrew(_ json: String) throws -> [TMDBPerson] {
+        try tmdbDecoder.decode([TMDBPerson].self, from: Data(json.utf8))
     }
 
     // MARK: - Radarr `/credit`
@@ -98,8 +98,8 @@ struct DirectorCreditsTests {
 
     @Test("A director ranks level with an actor of the same popularity")
     func directorRanksLikeActor() throws {
-        func person(_ name: String, _ dept: String) throws -> ArrCore.TMDBPerson {
-            try JSONDecoder().decode(ArrCore.TMDBPerson.self, from: Data("""
+        func person(_ name: String, _ dept: String) throws -> TMDBPerson {
+            try tmdbDecoder.decode(TMDBPerson.self, from: Data("""
             {"id": 1, "name": "\(name)", "popularity": 20, "known_for_department": "\(dept)"}
             """.utf8))
         }
@@ -115,8 +115,8 @@ struct DirectorCreditsTests {
 
     @Test("A director's filmography is captioned as directed, not starring")
     func captionKey() throws {
-        func person(_ dept: String) throws -> ArrCore.TMDBPerson {
-            try JSONDecoder().decode(ArrCore.TMDBPerson.self, from: Data("""
+        func person(_ dept: String) throws -> TMDBPerson {
+            try tmdbDecoder.decode(TMDBPerson.self, from: Data("""
             {"id": 1, "name": "X", "known_for_department": "\(dept)"}
             """.utf8))
         }

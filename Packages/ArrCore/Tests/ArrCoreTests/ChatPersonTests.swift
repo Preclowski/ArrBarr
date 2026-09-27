@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("Chat person card")
@@ -10,7 +11,7 @@ struct ChatPersonTests {
          "birthday": \(birthday.map { "\"\($0)\"" } ?? "null"),
          "deathday": \(deathday.map { "\"\($0)\"" } ?? "null")}
         """
-        return try! JSONDecoder().decode(TMDBPersonDetails.self, from: Data(json.utf8))
+        return try! tmdbDecoder.decode(TMDBPersonDetails.self, from: Data(json.utf8))
     }
 
     private func result(id: Int, title: String, source: QueueItem.Source) -> SearchResult {

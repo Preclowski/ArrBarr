@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Ranks TMDB people for a text query — the "which person did they mean"
 /// decision, kept apart from `SearchRelevance` (which scores title matches;

@@ -275,10 +275,10 @@ nonisolated extension CastMember {
 
     /// TMDB credits → cast members (used for series, which have no Radarr-style
     /// `/credit` endpoint).
-    static func from(tmdbCast cast: [TMDBCreditPerson]) -> [CastMember] {
+    static func from(tmdbCast cast: [TMDBPerson]) -> [CastMember] {
         cast.map { p in
             CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.characterName,
-                       imageURL: p.posterURL, tmdbPersonId: p.id)
+                       imageURL: p.profileURL, tmdbPersonId: p.id)
         }
     }
 
@@ -302,22 +302,22 @@ nonisolated extension CastMember {
     }
 
     /// TMDB movie crew → the directing credits.
-    static func directors(tmdbCrew crew: [TMDBCreditPerson]) -> [CastMember] {
+    static func directors(tmdbCrew crew: [TMDBPerson]) -> [CastMember] {
         dedupe(crew
             .filter { isDirecting(department: $0.department, job: $0.job) }
             .map { p in
                 CastMember(id: "dir-tmdb-\(p.id)", name: p.name, role: jobLabel(p.job),
-                           imageURL: p.posterURL, tmdbPersonId: p.id)
+                           imageURL: p.profileURL, tmdbPersonId: p.id)
             })
     }
 
     /// TMDB `created_by` → the series' creators. They carry no job field —
     /// being listed IS the credit — so the tile shows the bare name under the
     /// "Created by" header.
-    static func from(tmdbCreators creators: [TMDBCreditPerson]) -> [CastMember] {
+    static func from(tmdbCreators creators: [TMDBPerson]) -> [CastMember] {
         dedupe(creators.map { p in
             CastMember(id: "creator-tmdb-\(p.id)", name: p.name, role: nil,
-                       imageURL: p.posterURL, tmdbPersonId: p.id)
+                       imageURL: p.profileURL, tmdbPersonId: p.id)
         })
     }
 

@@ -84,7 +84,7 @@ enum WaitStoryProvider {
         }
 
         if let m = ctx.movie, let id = m.tmdbId, id > 0 {
-            let facts = try? await client.movieFacts(movieId: id)
+            let facts = try? await client.movieDetails(movieId: id)
             let crew = (try? await client.movieCredits(movieId: id))?.crew ?? []
             let composer = crew.first { $0.job == "Original Music Composer" }
             let writer = crew.first { $0.job == "Screenplay" || $0.job == "Writer" }
@@ -98,12 +98,12 @@ enum WaitStoryProvider {
                     support = composer.map { L("wait.story.premiereComposer \(years) \($0.name)") } ?? L("wait.story.premiereShort \(years)")
                 }
                 stories.append(WaitStory(sentence: sentence, support: support,
-                                         people: composer.map { [.init(name: $0.name, imageURL: $0.posterURL)] } ?? []))
+                                         people: composer.map { [.init(name: $0.name, imageURL: $0.profileURL)] } ?? []))
             }
             if let writer, let dop {
                 stories.append(WaitStory(sentence: L("wait.story.crew \(writer.name) \(dop.name)"),
                                          support: facts?.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") },
-                                         people: [.init(name: writer.name, imageURL: writer.posterURL), .init(name: dop.name, imageURL: dop.posterURL)]))
+                                         people: [.init(name: writer.name, imageURL: writer.profileURL), .init(name: dop.name, imageURL: dop.profileURL)]))
             } else if let f = facts, let tagline = f.tagline, !tagline.isEmpty {
                 stories.append(WaitStory(sentence: L("wait.story.taglineOnly \(title) \(tagline)"),
                                          support: f.originalTitle.flatMap { $0 == m.title || $0.isEmpty ? nil : L("wait.story.originalTitle \($0)") }))
@@ -115,7 +115,7 @@ enum WaitStoryProvider {
                                          support: ownedPick.map { L("wait.story.alsoOwned \($0.title)") }))
             }
         } else if let s = ctx.series, let id = await seriesTMDBId(s, client: client) {
-            if let f = try? await client.tvFacts(tvId: id), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
+            if let f = try? await client.tvDetails(tvId: id), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
                seasons > 0, let years = yearsAgo(s.year) {
                 let sentence = L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")
                 let support = s.network.map { L("wait.story.network \($0)") } ?? f.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") }

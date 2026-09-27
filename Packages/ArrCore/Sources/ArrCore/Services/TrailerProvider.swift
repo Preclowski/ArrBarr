@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Resolves the YouTube trailer for a title, for both the detail hero's chip
 /// and the Quiz's play button. Mirrors `CastProvider`: the arr payload is

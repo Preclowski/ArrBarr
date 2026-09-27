@@ -77,8 +77,10 @@ public struct TMDBService: Sendable {
         })
     }
 
-    public func person(id: Int) -> Resource<TMDBPersonDetails> {
-        json(plan("personDetails", path: "/person/{id}", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)
+    /// `language` overrides the account's; an empty biography in the user's language is retried in English.
+    public func person(id: Int, language: String? = nil) -> Resource<TMDBPersonDetails> {
+        json(plan("personDetails", path: "/person/{id}", values: ["id": String(id)], query: language.map { [("language", $0)] } ?? []),
+             tags: [personTag(id)], freshness: .archival)
     }
     public func personMovieCredits(id: Int) -> Resource<TMDBPersonCredits<TMDBMovieSummary>> {
         json(plan("personMovieCredits", path: "/person/{id}/movie_credits", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)

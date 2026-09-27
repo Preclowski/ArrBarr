@@ -9,3 +9,10 @@ extension ArrHealth {
         return try! JSONDecoder().decode(ArrHealth.self, from: JSONSerialization.data(withJSONObject: json))
     }
 }
+
+/// TMDB answers in snake_case; MediaKit's TMDB records decode it the way `TMDBService` does.
+let tmdbDecoder: JSONDecoder = {
+    let decoder = JSONDecoder()
+    decoder.keyDecodingStrategy = .convertFromSnakeCase
+    return decoder
+}()

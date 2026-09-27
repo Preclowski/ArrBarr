@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Cast + directing credits for one title, as the detail surfaces render them.
 /// Fetched together because both come out of the same credits payload — asking
@@ -62,7 +63,7 @@ enum CastProvider {
               let credits = try? await TMDBClient(apiKey: key).movieCredits(movieId: tmdbId)
         else { return .empty }
         return TitleCredits(cast: CastMember.from(tmdbCast: credits.cast),
-                            directors: CastMember.directors(tmdbCrew: credits.crew))
+                            directors: CastMember.directors(tmdbCrew: credits.crew ?? []))
     }
 
     private static func fetchSeriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {

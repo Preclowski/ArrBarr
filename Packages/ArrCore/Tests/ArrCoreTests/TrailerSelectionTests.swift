@@ -1,9 +1,13 @@
+import Foundation
 import Testing
+import MediaKit
 @testable import ArrCore
 
 struct TrailerSelectionTests {
     private func video(_ key: String, type: String?, official: Bool?, site: String? = "YouTube") -> TMDBVideo {
-        TMDBVideo(key: key, site: site, type: type, official: official)
+        var json: [String: Any] = ["key": key]
+        json["site"] = site; json["type"] = type; json["official"] = official
+        return try! tmdbDecoder.decode(TMDBVideo.self, from: JSONSerialization.data(withJSONObject: json))
     }
 
     @Test("An official trailer beats a teaser, a clip and an unofficial trailer")

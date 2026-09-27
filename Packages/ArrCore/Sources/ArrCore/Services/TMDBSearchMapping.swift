@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// One place that turns TMDB summary payloads into `SearchResult` rows.
 ///

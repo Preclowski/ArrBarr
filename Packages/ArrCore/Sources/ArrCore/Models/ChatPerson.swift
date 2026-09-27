@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// A person as the chat renders them: just enough for the minimal profile card
 /// that sits above a filmography carousel (headshot, name, department, life

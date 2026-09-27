@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// A person credit entry as the merge cares about it — both TMDB summary
 /// types (movie / tv) qualify.

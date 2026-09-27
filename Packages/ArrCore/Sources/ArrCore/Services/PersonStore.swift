@@ -1,5 +1,6 @@
 import Foundation
 import os
+import MediaKit
 
 /// The single owner of TMDB people data — biography detail and filmography —
 /// shared by the person view and (later) the cast-head tooltip.

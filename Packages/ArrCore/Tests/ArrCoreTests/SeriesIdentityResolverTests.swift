@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import MediaKit
 @testable import ArrCore
 
 /// The bug these exist for: opening "The Closer" from Rhea Seehorn's
@@ -308,7 +309,7 @@ struct SeriesIdentityResolverTests {
     }
 
     private func tvSummary() -> TMDBTVSummary {
-        try! JSONDecoder().decode(TMDBTVSummary.self, from: Data(#"""
+        try! tmdbDecoder.decode(TMDBTVSummary.self, from: Data(#"""
         {"id": 1234, "name": "The Closer", "first_air_date": "2005-06-13",
          "vote_average": 7.9, "genre_ids": [18], "overview": "…",
          "poster_path": "/tmdb-poster.jpg"}
