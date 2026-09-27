@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // MARK: - File state
 //
@@ -82,7 +83,7 @@ nonisolated public struct LibraryOwnership: Equatable, Sendable {
     public let isDownloaded: Bool
 }
 
-nonisolated extension RadarrLibraryRecord {
+nonisolated extension ArrMovie {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
     }
@@ -91,12 +92,6 @@ nonisolated extension RadarrLibraryRecord {
 nonisolated extension SonarrLibraryRecord {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: episodeFileCounts.isComplete) }
-    }
-}
-
-nonisolated extension WhisparrLibraryRecord {
-    var ownership: LibraryOwnership? {
-        id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
     }
 }
 

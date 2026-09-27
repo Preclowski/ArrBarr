@@ -132,7 +132,7 @@ public struct DetailView: View {
         siblings.count { $0.arrQueueId != 0 }
     }
 
-    @State private var radarrDetail: RadarrMovieDetail?
+    @State private var radarrDetail: ArrMovie?
     /// Separately-fetched movie file. Radarr's `/movie/{id}` returns a
     /// stripped `movieFile` payload (no customFormats), so we hit
     /// `/moviefile?movieId={id}` afterwards to get the chip-bearing
@@ -1236,7 +1236,7 @@ public struct DetailView: View {
         )
     }
 
-    private func movieRatingChipsFor(_ detail: RadarrMovieDetail?) -> [RatingChip] {
+    private func movieRatingChipsFor(_ detail: ArrMovie?) -> [RatingChip] {
         guard let r = detail?.ratings else { return [] }
         // Radarr's detail payload carries no imdbId, so the IMDb pill links
         // to the site's search; TMDB gets a direct record link via tmdbId.

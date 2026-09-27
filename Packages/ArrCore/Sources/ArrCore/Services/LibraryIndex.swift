@@ -57,7 +57,7 @@ nonisolated public struct LibraryIndex: Sendable {
     // MARK: - Reads
 
     /// `revalidate: false` takes whatever the store holds, however old, and says so in `stale`.
-    public func moviesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<RadarrLibraryRecord> {
+    public func moviesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<ArrMovie> {
         let read = await Self.read(.radarr, config) { try await RadarrClient(config: config).fetchAllMoviesFetched(revalidate: revalidate) }
         if !read.failed { LibraryStats.shared.setMovieCount(read.records.count) }
         return read
@@ -73,11 +73,11 @@ nonisolated public struct LibraryIndex: Sendable {
         await Self.read(.lidarr, config) { try await LidarrClient(config: config).fetchAllArtistsFetched(revalidate: revalidate) }
     }
 
-    public func whisparrMoviesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<WhisparrLibraryRecord> {
+    public func whisparrMoviesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<ArrMovie> {
         await Self.read(.whisparr, config) { try await WhisparrClient(config: config).fetchAllMoviesFetched(revalidate: revalidate) }
     }
 
-    public func movies(config: ServiceConfig, revalidate: Bool = true) async -> [RadarrLibraryRecord] {
+    public func movies(config: ServiceConfig, revalidate: Bool = true) async -> [ArrMovie] {
         await moviesRead(config: config, revalidate: revalidate).records
     }
 
@@ -89,7 +89,7 @@ nonisolated public struct LibraryIndex: Sendable {
         await artistsRead(config: config, revalidate: revalidate).records
     }
 
-    public func whisparrMovies(config: ServiceConfig, revalidate: Bool = true) async -> [WhisparrLibraryRecord] {
+    public func whisparrMovies(config: ServiceConfig, revalidate: Bool = true) async -> [ArrMovie] {
         await whisparrMoviesRead(config: config, revalidate: revalidate).records
     }
 

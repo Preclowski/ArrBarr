@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("Title matching")
@@ -165,17 +166,11 @@ struct TitleMatchTests {
 struct LibraryFilterTests {
 
     private func movie(_ title: String, _ year: Int, _ genres: [String],
-                       rating: Double? = 7.0) -> RadarrLibraryRecord {
-        RadarrLibraryRecord(
-            id: abs(title.hashValue % 10_000), tmdbId: nil, title: title, year: year,
-            hasFile: true, titleSlug: nil, monitored: true, images: nil,
-            genres: genres, runtime: 100, overview: nil,
-            ratings: rating.map {
-                RadarrLookupRatings(tmdb: RadarrLookupRatingValue(value: $0, votes: 1000),
-                                    imdb: nil, metacritic: nil, rottenTomatoes: nil)
-            },
-            certification: nil, studio: nil, sizeOnDisk: nil
-        )
+                       rating: Double? = 7.0) -> ArrMovie {
+        var json: [String: Any] = ["id": abs(title.hashValue % 10_000), "title": title, "year": year, "hasFile": true,
+                                   "monitored": true, "genres": genres, "runtime": 100]
+        if let rating { json["ratings"] = ["tmdb": ["value": rating, "votes": 1000]] }
+        return try! JSONDecoder().decode(ArrMovie.self, from: JSONSerialization.data(withJSONObject: json))
     }
 
     /// The prompt this whole design was stress-tested against: "romantic, not a
@@ -319,7 +314,7 @@ struct CheckTitlesArgumentTests {
 
     @Test("Both a bare string with a trailing year and a {title, year} object parse")
     func parsesBothForms() {
-        let args = JSONValue.object([
+        let args = ArrCore.JSONValue.object([
             "titles": .array([
                 .string("Dune 2021"),
                 .string("Chungking Express"),

@@ -13,7 +13,7 @@ struct SearchDecodingTests {
           "ratings":{"tmdb":{"value":8.5}},
           "images":[{"coverType":"poster","remoteUrl":"https://example.com/p.jpg"}]}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([RadarrLookupRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrMovie].self, from: json)
         #expect(records[0].tmdbId == 438631)
         #expect(records[0].title == "Dune: Part Two")
         #expect(records[0].ratings?.tmdb?.value == 8.5)

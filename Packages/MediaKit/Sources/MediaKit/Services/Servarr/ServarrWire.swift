@@ -84,7 +84,8 @@ public struct ArrStatistics: Codable, Equatable, Sendable, Hashable {
 
 public struct ArrSeason: Codable, Equatable, Sendable, Hashable {
     public let seasonNumber: Int
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let statistics: ArrStatistics?
 }
 
@@ -108,7 +109,8 @@ public struct ArrMovie: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let runtime: Int?
     public let status: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let hasFile: Bool?
     public let isAvailable: Bool?
     public let minimumAvailability: String?
@@ -151,7 +153,8 @@ public struct ArrSeries: Codable, Equatable, Sendable, Hashable {
     public let status: String?
     public let network: String?
     public let seriesType: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let qualityProfileId: Int?
     public let rootFolderPath: String?
     public let path: String?
@@ -180,7 +183,8 @@ public struct ArrEpisode: Codable, Equatable, Sendable, Hashable {
     public let airDateUtc: String?
     public let overview: String?
     public let hasFile: Bool?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let episodeFileId: Int?
     public let runtime: Int?
     public let finaleType: String?
@@ -196,7 +200,8 @@ public struct ArrArtist: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let status: String?
     public let artistType: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let qualityProfileId: Int?
     public let metadataProfileId: Int?
     public let rootFolderPath: String?
@@ -218,7 +223,8 @@ public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let albumType: String?
     public let releaseDate: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let anyReleaseOk: Bool?
     public let genres: [String]?
     public let images: [ArrImage]?
@@ -313,7 +319,8 @@ public struct ArrCalendarRecord: Codable, Equatable, Sendable, Hashable {
     public let year: Int?
     public let overview: String?
     public let hasFile: Bool?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let images: [ArrImage]?
     public let runtime: Int?
     public let genres: [String]?

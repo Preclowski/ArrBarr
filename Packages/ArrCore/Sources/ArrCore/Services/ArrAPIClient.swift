@@ -29,6 +29,24 @@ extension ArrAPIClient {
         return ArrContext(gateway: gateway, service: service)
     }
 
+    /// Reads a MediaKit resource as is: its own type, and its harvest records the ids it carries.
+    func read<V>(policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil, priority: RequestPriority = .interactive,
+                 _ make: (ServarrService) -> Resource<V>) async throws -> V {
+        try await readFetched(policy: policy, maxAge: maxAge, priority: priority, make).value
+    }
+
+    func readFetched<V>(policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil, priority: RequestPriority = .interactive,
+                        _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<V> {
+        let context = try await context()
+        return try await context.store.read(make(context.service), policy: policy, maxAge: maxAge, priority: priority)
+    }
+
+    /// See `readCacheFirst(_:revalidate:_:)`.
+    func readCacheFirst<V>(revalidate: Bool, _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<V> {
+        if !revalidate, let cached = try? await readFetched(policy: .cacheOnly, make) { return cached }
+        return try await readFetched(policy: .cacheFirst, make)
+    }
+
     /// Reads a MediaKit resource decoded into one of ArrCore's own record types (same plan, same tags, same freshness).
     func read<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
                                         priority: RequestPriority = .interactive, _ make: (ServarrService) -> Resource<V>) async throws -> T {

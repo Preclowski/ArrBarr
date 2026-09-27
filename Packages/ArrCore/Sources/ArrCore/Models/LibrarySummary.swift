@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// One arr's library headline: how many items and how many bytes on disk.
 /// Pure value type so the summation logic is unit-testable without a network.
@@ -20,11 +21,11 @@ nonisolated public struct LibrarySummary: Sendable, Equatable, Identifiable {
         self.totalBytes = totalBytes
     }
 
-    public static func radarr(from recs: [RadarrLibraryRecord]) -> LibrarySummary {
+    public static func radarr(from recs: [ArrMovie]) -> LibrarySummary {
         .init(source: .radarr, count: recs.count,
               totalBytes: recs.reduce(0) { $0 + ($1.sizeOnDisk ?? 0) })
     }
-    public static func whisparr(from recs: [WhisparrLibraryRecord]) -> LibrarySummary {
+    public static func whisparr(from recs: [ArrMovie]) -> LibrarySummary {
         .init(source: .whisparr, count: recs.count,
               totalBytes: recs.reduce(0) { $0 + ($1.sizeOnDisk ?? 0) })
     }

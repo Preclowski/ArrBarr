@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Source-neutral cast member for the detail cast strip. Movies map from
 /// Radarr's `/credit` (no TMDB key needed); series map from TMDB credits.

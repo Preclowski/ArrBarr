@@ -18,7 +18,7 @@ nonisolated public struct SonarrClient: ArrAPIClient {
     }
 
     func fetchEpisodeFileMap(seriesId: Int) async throws -> [Int: ArrFile] {
-        let files = try await read([ArrFile].self) { $0.filesOf(parent: seriesId) }
+        let files = try await read { $0.filesOf(parent: seriesId) }
         return Dictionary(files.compactMap { file in file.id.map { ($0, file) } }, uniquingKeysWith: { first, _ in first })
     }
 

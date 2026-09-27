@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("Library summary summation")
@@ -7,9 +8,9 @@ struct LibrarySummaryTests {
     @Test("Radarr summary counts records and sums sizeOnDisk")
     func radarr() throws {
         let recs = [
-            try JSONDecoder().decode(RadarrLibraryRecord.self, from: #"{"id":1,"sizeOnDisk":100}"#.data(using: .utf8)!),
-            try JSONDecoder().decode(RadarrLibraryRecord.self, from: #"{"id":2,"sizeOnDisk":250}"#.data(using: .utf8)!),
-            try JSONDecoder().decode(RadarrLibraryRecord.self, from: #"{"id":3}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrMovie.self, from: #"{"id":1,"title":"Big Buck Bunny","sizeOnDisk":100}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrMovie.self, from: #"{"id":2,"title":"Big Buck Bunny","sizeOnDisk":250}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrMovie.self, from: #"{"id":3,"title":"Big Buck Bunny"}"#.data(using: .utf8)!),
         ]
         let s = LibrarySummary.radarr(from: recs)
         #expect(s.source == .radarr)
@@ -41,7 +42,7 @@ struct LibrarySummaryTests {
     @Test("Whisparr summary mirrors Radarr shape")
     func whisparr() throws {
         let recs = [
-            try JSONDecoder().decode(WhisparrLibraryRecord.self, from: #"{"id":1,"sizeOnDisk":42}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrMovie.self, from: #"{"id":1,"title":"Big Buck Bunny","sizeOnDisk":42}"#.data(using: .utf8)!),
         ]
         let s = LibrarySummary.whisparr(from: recs)
         #expect(s.source == .whisparr)

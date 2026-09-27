@@ -3,53 +3,6 @@ import MediaKit
 
 // MARK: - Radarr movie detail
 
-nonisolated public struct RadarrMovieDetail: Codable, Sendable {
-    public let id: Int
-    /// TMDB movie id — used to fetch cast/credits (TMDB-only data). `var`
-    /// (not `let`) with a default so it still DECODES from JSON while the
-    /// memberwise init stays optional for demo mocks — a `let … = nil` would
-    /// be silently dropped from Decodable's synthesized keys.
-    var tmdbId: Int? = nil
-    let title: String
-    let year: Int?
-    let overview: String?
-    let runtime: Int?
-    let genres: [String]?
-    let ratings: RadarrDetailRatings?
-    let images: [ArrImage]?
-    let studio: String?
-    let certification: String?
-    let titleSlug: String?
-    let movieFile: ArrFile?
-    let inCinemas: String?
-    let status: String?
-    /// Radarr's monitored flag. `var … = nil` for the same reason as
-    /// `tmdbId` above (decodes from JSON, stays optional in the
-    /// memberwise init) — and `nil` is load-bearing here: "the field
-    /// didn't decode" hides the monitor toggle instead of rendering a
-    /// bookmark that lies about state.
-    var monitored: Bool? = nil
-    /// Assigned quality profile — resolved to a name for the hero's chip.
-    var qualityProfileId: Int? = nil
-    /// YouTube video id of the movie's trailer, straight from Radarr — no
-    /// TMDB key needed for the movie path. Radarr sends `""` (not null) when
-    /// it has none, so callers must treat empty as absent. `var … = nil` for
-    /// the same Decodable reason as `tmdbId`.
-    var youTubeTrailerId: String? = nil
-}
-
-nonisolated public struct RadarrDetailRatings: Codable, Sendable {
-    let imdb: RadarrRatingValue?
-    let tmdb: RadarrRatingValue?
-    let metacritic: RadarrRatingValue?
-    let rottenTomatoes: RadarrRatingValue?
-}
-
-nonisolated public struct RadarrRatingValue: Codable, Sendable {
-    let value: Double?
-    let votes: Int?
-}
-
 // MARK: - Sonarr series detail
 
 nonisolated public struct SonarrSeriesDetail: Codable, Sendable {
@@ -79,9 +32,9 @@ nonisolated public struct SonarrSeriesDetail: Codable, Sendable {
     /// in place (optimistic update) without refetching the series.
     var seasons: [SonarrSeasonInfo]?
     let firstAired: String?
-    /// See `RadarrMovieDetail.monitored`.
+    /// See `ArrMovie.monitored`.
     var monitored: Bool? = nil
-    /// See `RadarrMovieDetail.qualityProfileId`.
+    /// See `ArrMovie.qualityProfileId`.
     var qualityProfileId: Int? = nil
 }
 
@@ -137,9 +90,9 @@ nonisolated public struct LidarrAlbumDetail: Codable, Sendable {
     let albumType: String?
     let duration: Int?
     let statistics: LidarrAlbumStats?
-    /// See `RadarrMovieDetail.monitored`.
+    /// See `ArrMovie.monitored`.
     var monitored: Bool? = nil
-    /// See `RadarrMovieDetail.qualityProfileId`.
+    /// See `ArrMovie.qualityProfileId`.
     var qualityProfileId: Int? = nil
 }
 

@@ -18,16 +18,16 @@ nonisolated public struct WhisparrClient: ArrAPIClient {
         return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
     }
 
-    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read([ArrFile].self) { $0.movieFiles([movieId]) }.first }
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
     /// `revalidate: false` serves whatever the on-disk store holds and says so
     /// in `isStale`, refreshing behind the caller — what the Library's first
     /// paint of a session wants.
-    func fetchAllMovies(revalidate: Bool = true) async throws -> [WhisparrLibraryRecord] {
+    func fetchAllMovies(revalidate: Bool = true) async throws -> [ArrMovie] {
         try await fetchAllMoviesFetched(revalidate: revalidate).value
     }
 
-    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[WhisparrLibraryRecord]> {
-        try await readCacheFirst([WhisparrLibraryRecord].self, revalidate: revalidate) { $0.movies() }
+    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[ArrMovie]> {
+        try await readCacheFirst(revalidate: revalidate) { $0.movies() }
     }
-    func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail { try await read(RadarrMovieDetail.self) { $0.movie(id: id) } }
+    func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
 }

@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// One "Did you know that…" while the indexers answer a manual search: a
 /// sentence in markdown (bold marks names and numbers), an optional second
@@ -17,7 +18,7 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
 /// What the pushing detail screen already knows about the title. Everything
 /// here is a value it holds; the provider only adds cache-first TMDB reads.
 struct WaitCardContext {
-    var movie: RadarrMovieDetail? = nil
+    var movie: ArrMovie? = nil
     var series: SonarrSeriesDetail? = nil
     var album: LidarrAlbumDetail? = nil
     var seriesYear: Int? = nil
@@ -79,9 +80,7 @@ enum WaitStoryProvider {
         var owned: [Int: String] = [:]
         if ctx.movie != nil, configStore.radarr.isConfigured {
             let library = await LibraryIndex.shared.movies(config: configStore.radarr, revalidate: false)
-            owned = Dictionary(library.compactMap { r in
-                if let id = r.tmdbId, let t = r.title { return (id, t) } else { return nil }
-            }, uniquingKeysWith: { a, _ in a })
+            owned = Dictionary(library.compactMap { r in r.tmdbId.map { ($0, r.title) } }, uniquingKeysWith: { a, _ in a })
         }
 
         if let m = ctx.movie, let id = m.tmdbId, id > 0 {

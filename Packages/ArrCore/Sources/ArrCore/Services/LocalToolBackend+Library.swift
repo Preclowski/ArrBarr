@@ -78,14 +78,14 @@ extension LocalToolBackend {
                 let ids = [rec.id.map { "movieId=\($0)" }, rec.tmdbId.map { "tmdbId=\($0)" }]
                     .compactMap { $0 }.joined(separator: ", ")
                 return Self.libraryLine(
-                    title: rec.title ?? "(untitled)", year: rec.year,
+                    title: rec.title, year: rec.year,
                     genres: rec.filterGenres, rating: rec.filterRating,
                     state: (rec.hasFile ?? false) ? "downloaded" : "missing",
                     watched: isWatched(rec.mediaServerKeys),
                     ids: ids
                 )
             },
-            nearestLine: { "\($0.title ?? "(untitled)")\($0.year.map { y in " (\(y))" } ?? "")" }
+            nearestLine: { "\($0.title)\($0.year.map { y in " (\(y))" } ?? "")" }
         )
         return ToolCallOutput(text: text, rich: .libraryMovies(shown))
     }
@@ -160,7 +160,7 @@ extension LocalToolBackend {
             let label = item.year.map { "\(item.title) (\($0))" } ?? item.title
             if let hit = TitleMatch.best(query: item.title, year: item.year,
                                          candidates: movies,
-                                         title: { $0.title ?? "" }, year: { $0.year }) {
+                                         title: { $0.title }, year: { $0.year }) {
                 owned += 1
                 let id = hit.id.map { "movieId=\($0)" } ?? "movieId=?"
                 // Internal id AND external ref: the first is for the arr tools,
@@ -168,7 +168,7 @@ extension LocalToolBackend {
                 let ref = hit.tmdbId.map { ", tmdb:\($0)" } ?? ""
                 let file = (hit.hasFile ?? false) ? "downloaded" : "not downloaded"
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
-                lines.append("• \(label) — in library as \(hit.title ?? label)\(hit.year.map { " (\($0))" } ?? ""), \(id)\(ref), \(file)\(watch)")
+                lines.append("• \(label) — in library as \(hit.title)\(hit.year.map { " (\($0))" } ?? ""), \(id)\(ref), \(file)\(watch)")
             } else if let hit = TitleMatch.best(query: item.title, year: item.year,
                                                 candidates: series,
                                                 title: { $0.title ?? "" }, year: { $0.year }) {

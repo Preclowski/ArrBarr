@@ -158,57 +158,12 @@ nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
 
 // MARK: - Search Lookup
 
-nonisolated public struct RadarrLookupRecord: Codable, Sendable {
-    /// Radarr's `/movie/lookup` echoes the library record id here for movies the
-    /// user already owns (0 / absent otherwise) — the signal that drives the
-    /// "in library" state on search cards.
-    let id: Int?
-    let tmdbId: Int?
-    /// `"ttNNNNNNN"`. Needed to resolve an `imdb:ttN` search — the unified
-    /// `SearchResult` identity is TMDB-keyed, so without this an IMDB ref
-    /// has nothing to match against and every row gets filtered out.
-    var imdbId: String? = nil
-    let title: String
-    /// Original-language and alternate titles: "Vidas Secas" is Radarr's
-    /// "Barren Lives", and the model may name either.
-    var originalTitle: String? = nil
-    var alternateTitles: [LookupAlternateTitle]? = nil
-    let year: Int?
-    let overview: String?
-    let runtime: Int?
-    let ratings: RadarrLookupRatings?
-    let images: [ArrImage]?
-    let genres: [String]?
-    let certification: String?
-    let studio: String?
-    let status: String?
-}
-
-nonisolated public struct LookupAlternateTitle: Codable, Sendable, Equatable {
-    let title: String?
-}
-
-nonisolated public struct RadarrLookupRatings: Codable, Sendable, Equatable {
-    let tmdb: RadarrLookupRatingValue?
-    let imdb: RadarrLookupRatingValue?
-    let metacritic: RadarrLookupRatingValue?
-    let rottenTomatoes: RadarrLookupRatingValue?
-}
-nonisolated public struct RadarrLookupRatingValue: Codable, Sendable, Equatable {
-    let value: Double?
-    /// Radarr's lookup endpoint returns the same Ratings sub-object as
-    /// the detail endpoint, including TMDB's vote_count. Used as the
-    /// confidence weight in `SearchRelevance.bayesianQuality` so
-    /// low-vote ratings get shrunk toward the global mean.
-    let votes: Int?
-}
-
 nonisolated public struct SonarrLookupRecord: Codable, Sendable {
     /// Library record id for series the user already owns (0 / absent otherwise)
     /// — drives the "in library" state on search cards.
     let id: Int?
     let tvdbId: Int?
-    /// See `RadarrLookupRecord.imdbId` — Sonarr's lookup carries it too, so
+    /// See `ArrMovie.imdbId` — Sonarr's lookup carries it too, so
     /// an `imdb:ttN` query can resolve a series as well as a movie.
     var imdbId: String? = nil
     /// TMDB series id, when SkyHook knows one. The verification gate in
@@ -218,7 +173,7 @@ nonisolated public struct SonarrLookupRecord: Codable, Sendable {
     /// answers with whatever the string fuzzy-matches).
     var tmdbId: Int? = nil
     let title: String
-    var alternateTitles: [LookupAlternateTitle]? = nil
+    var alternateTitles: [ArrAlternateTitle]? = nil
     let year: Int?
     let overview: String?
     let ratings: SonarrLookupRatings?
@@ -253,7 +208,7 @@ nonisolated public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
     public let statistics: LidarrLibraryStatistics?
     /// See `SonarrLibraryRecord.qualityProfileId`.
     public var qualityProfileId: Int? = nil
-    /// See `RadarrLibraryRecord.added`. Artists have no release date of their
+    /// See `ArrMovie.added`. Artists have no release date of their
     /// own — that belongs to their albums — so this is the only date sort
     /// Lidarr can offer.
     public var added: String? = nil
@@ -328,68 +283,6 @@ nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identif
 }
 
 
-/// One entry of an arr's alternate-title list — the translated, regional and
-/// scene names a title is also known by ("Leon zawodowiec" for "Léon: The
-/// Professional"). Radarr sources them from TMDB; Sonarr's are TVDB/XEM
-/// aliases, so its coverage is thinner.
-///
-/// Shared by the inline `alternateTitles[]` on a library record and by
-/// Radarr's dedicated `/alttitle` table, which is why `movieId` is here at
-/// all: inline it's redundant, standalone it's the only join key.
-nonisolated public struct ArrAlternateTitle: Codable, Sendable, Equatable {
-    public let title: String?
-    public var movieId: Int? = nil
-}
-
-// Used to fetch existing library ids and list library contents
-nonisolated public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
-    let id: Int?
-    let tmdbId: Int?
-    let title: String?
-    let year: Int?
-    let hasFile: Bool?
-    /// Deep-link slug for the arr web UI.
-    let titleSlug: String?
-    let monitored: Bool?
-    let images: [ArrImage]?
-    let genres: [String]?
-    let runtime: Int?
-    let overview: String?
-    let ratings: RadarrLookupRatings?
-    let certification: String?
-    let studio: String?
-    let sizeOnDisk: Int64?
-    /// Radarr availability ("announced" / "inCinemas" / "released") — the
-    /// Library tooltip's release-status row.
-    var status: String? = nil
-    /// Radarr's computed "can this be grabbed yet" flag (minimumAvailability
-    /// vs release state) — splits Missing into Missing / Not available.
-    var isAvailable: Bool? = nil
-    /// Library tab: the on-disk file's actual quality ("WEBDL-1080p").
-    /// Present in `/api/v3/movie` whenever `hasFile` — we just never
-    /// decoded it before.
-    var movieFile: ArrFile? = nil
-    /// Library tab fallback when there's no file yet — resolved to the
-    /// profile's name via `/qualityprofile`. (`var … = nil` so the demo
-    /// mocks' memberwise inits keep compiling; Decodable still decodes it.)
-    var qualityProfileId: Int? = nil
-    /// The title in its own language ("Nuovo Cinema Paradiso"). Always on the
-    /// wire; feeding the library filter is the first thing that wanted it.
-    var originalTitle: String? = nil
-    /// When the movie was added to Radarr — the Library tab's "Date added"
-    /// sort. ISO 8601 on the wire, parsed at unify time.
-    var added: String? = nil
-    /// Radarr's three release dates. The Library tab sorts on the earliest
-    /// one that exists: a film is "released" the day it first reached anyone,
-    /// and only the physical date is guaranteed absent for streaming titles.
-    var inCinemas: String? = nil
-    var digitalRelease: String? = nil
-    var physicalRelease: String? = nil
-    /// Translated / regional names. Whether `/api/v3/movie` inlines these
-    /// varies by Radarr version — `RadarrClient.alternateTitleMap` falls back
-    /// to the `/alttitle` table when it doesn't.
-    var alternateTitles: [ArrAlternateTitle]? = nil
-}
 nonisolated public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
     let id: Int?
     let tvdbId: Int?
@@ -405,10 +298,10 @@ nonisolated public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
     /// second round-trip to the series detail endpoint.
     let seasons: [SonarrLibrarySeason]?
     let overview: String?
-    /// See `RadarrLibraryRecord.titleSlug` — same field, same reason.
+    /// See `ArrMovie.titleSlug` — same field, same reason.
     let titleSlug: String?
     /// Series have no single file quality — the Library tab shows the
-    /// assigned profile's name instead. (`var … = nil`: see RadarrLibraryRecord.)
+    /// assigned profile's name instead. (`var … = nil`: see ArrMovie.)
     var qualityProfileId: Int? = nil
     /// TVDB rating — feeds the Library tab's rating sort.
     var ratings: SonarrLookupRatings? = nil
@@ -426,7 +319,7 @@ nonisolated public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
     /// scene names first and translations second, so coverage of foreign
     /// titles is thinner here than for movies.
     var alternateTitles: [ArrAlternateTitle]? = nil
-    /// See `RadarrLibraryRecord.added`.
+    /// See `ArrMovie.added`.
     var added: String? = nil
     /// First episode's air date — a series' equivalent of a release date.
     var firstAired: String? = nil
@@ -453,39 +346,6 @@ nonisolated public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equa
 
 
 
-
-nonisolated public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
-    public let id: Int?
-    public let foreignId: String?
-    public let tmdbId: Int?
-    public let title: String?
-    public let year: Int?
-    public let studio: String?
-    public let hasFile: Bool?
-    public let monitored: Bool?
-    public let images: [ArrImage]?
-    public let sizeOnDisk: Int64?
-    /// See `RadarrLibraryRecord.movieFile` / `qualityProfileId` / `status`.
-    public var movieFile: ArrFile? = nil
-    public var qualityProfileId: Int? = nil
-    public var status: String? = nil
-    public var isAvailable: Bool? = nil
-    /// See `RadarrLibraryRecord.added`.
-    public var added: String? = nil
-}
-
-nonisolated public struct WhisparrLookupRecord: Codable, Sendable {
-    public let foreignId: String?
-    public let tmdbId: Int?
-    public let title: String
-    public let year: Int?
-    public let overview: String?
-    public let runtime: Int?
-    public let studio: String?
-    public let images: [ArrImage]?
-    public let genres: [String]?
-    public let ratings: RadarrLookupRatings?
-}
 
 // MARK: - ArrImage helpers
 

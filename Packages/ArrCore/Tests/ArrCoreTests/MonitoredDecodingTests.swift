@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// The monitored flag drives whether a bookmark renders at all: present →
@@ -15,7 +16,7 @@ struct MonitoredDecodingTests {
         let json = """
         {"id": 100, "title": "Test Movie", "year": 2024, "monitored": false}
         """
-        let detail = try JSONDecoder().decode(RadarrMovieDetail.self, from: Data(json.utf8))
+        let detail = try JSONDecoder().decode(ArrMovie.self, from: Data(json.utf8))
         #expect(detail.monitored == false)
     }
 
@@ -59,7 +60,7 @@ struct MonitoredDecodingTests {
     @Test("Absent monitored stays nil rather than defaulting to false")
     func absentStaysNil() throws {
         let movie = try JSONDecoder().decode(
-            RadarrMovieDetail.self, from: Data(#"{"id": 1, "title": "M"}"#.utf8))
+            ArrMovie.self, from: Data(#"{"id": 1, "title": "M"}"#.utf8))
         let series = try JSONDecoder().decode(
             SonarrSeriesDetail.self, from: Data(#"{"id": 2, "title": "S"}"#.utf8))
         let album = try JSONDecoder().decode(

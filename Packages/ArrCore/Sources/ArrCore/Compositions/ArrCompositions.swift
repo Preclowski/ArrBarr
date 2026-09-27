@@ -254,7 +254,7 @@ nonisolated enum ArrCompositions {
         }
     }
 
-    static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.tmdbId.map { [.tmdbMovie($0)] } ?? [] }
+    static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.mediaServerKeys ?? [] }
     static func keys(series: ArrSeries?) -> [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         if let tvdb = series?.tvdbId { keys.append(.tvdb(tvdb)) }

@@ -93,6 +93,8 @@ private let resolverTransport = ScriptedTransport { request in
         .queryItems?.first { $0.name == "term" }?.value ?? ""
 
     if path.contains("/external_ids") {
+        // Slow enough that two concurrent resolutions are both in flight: the store coalesces in-flight reads.
+        try await Task.sleep(for: .milliseconds(50))
         return .init(resolverState.externalTVDBId.map { #"{"tvdb_id": \#($0)}"# } ?? #"{"tvdb_id": null}"#)
     }
     if path.hasSuffix("/series/lookup") {

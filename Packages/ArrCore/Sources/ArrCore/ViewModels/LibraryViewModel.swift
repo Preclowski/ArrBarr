@@ -1,9 +1,10 @@
 import Foundation
 import Observation
 import os
+import MediaKit
 
 /// One tile of the Library tab's cover grid — a unified projection of the
-/// per-arr library records (`RadarrLibraryRecord` & friends). Carries just
+/// per-arr library records (`ArrMovie` & friends). Carries just
 /// what the grid renders plus the ids DetailView needs to refetch the full
 /// record on tap.
 public struct LibraryEntry: Identifiable, Equatable, Sendable, Codable {
@@ -292,7 +293,7 @@ public final class LibraryViewModel {
         case .whisparr:
             let read = await LibraryIndex.shared.whisparrMoviesRead(config: config, revalidate: revalidate)
             failed = read.failed; stale = read.stale
-            projection = await Self.project { Self.unify(read.records, baseURL: baseURL, profiles: profiles) }
+            projection = await Self.project { Self.unifyWhisparr(read.records, baseURL: baseURL, profiles: profiles) }
         }
 
         Self.log.notice("\(source.rawValue, privacy: .public) load: \(projection.entries.count, privacy: .public) entries projected in \(elapsed(), privacy: .public) ms")
@@ -391,10 +392,11 @@ public final class LibraryViewModel {
 
     // MARK: - Unify
 
-    nonisolated private static func unify(_ records: [RadarrLibraryRecord], baseURL: String, profiles: [Int: String],
+    nonisolated private static func unify(_ records: [ArrMovie], baseURL: String, profiles: [Int: String],
                               alternateTitles: [Int: [String]] = [:]) -> [LibraryEntry] {
         records.compactMap { r in
-            guard let id = r.id, let title = r.title else { return nil }
+            guard let id = r.id else { return nil }
+            let title = r.title
             let keys = r.mediaServerKeys
             let (poster, auth) = (r.images ?? []).posterURL(
                 baseURL: baseURL, mediaServerKeys: keys
@@ -483,9 +485,10 @@ public final class LibraryViewModel {
         }
     }
 
-    nonisolated private static func unify(_ records: [WhisparrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unifyWhisparr(_ records: [ArrMovie], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
-            guard let id = r.id, let title = r.title else { return nil }
+            guard let id = r.id else { return nil }
+            let title = r.title
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
             return LibraryEntry(
                 id: "whisparr-\(id)", source: .whisparr, arrId: id, externalId: r.tmdbId, title: title,

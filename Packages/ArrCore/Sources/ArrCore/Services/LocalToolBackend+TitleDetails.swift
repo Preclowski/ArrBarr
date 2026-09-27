@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // MARK: - get_title_details
 //
@@ -95,7 +96,7 @@ extension LocalToolBackend {
 
     // MARK: - Formatting
 
-    nonisolated private static func formatMovieDetails(_ d: RadarrMovieDetail) -> String {
+    nonisolated private static func formatMovieDetails(_ d: ArrMovie) -> String {
         var out = d.year.map { "\(d.title) (\($0))" } ?? d.title
         var facts: [String] = []
         if let r = d.runtime, r > 0 { facts.append("\(r) min") }

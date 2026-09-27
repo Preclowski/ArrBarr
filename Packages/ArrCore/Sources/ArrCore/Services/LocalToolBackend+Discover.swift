@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // Ported from discover/llm-only-cleanup. Owns the `discover_in_quiz`
 // chat tool — pre-resolves the model's picks server-side, then posts
@@ -298,7 +299,8 @@ extension LocalToolBackend {
             let all = await LibraryIndex.shared.movies(config: radarr)
             let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
             return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-                guard rec.id != nil, let title = rec.title else { return nil }
+                guard rec.id != nil else { return nil }
+                let title = rec.title
                 let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
                 let result = SearchResult(
                     externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
@@ -578,7 +580,7 @@ extension LocalToolBackend {
 
     /// An exact `tmdb:` ref is trusted only when the hit carries that id —
     /// older Sonarr searches the literal text; otherwise the title decides.
-    nonisolated static func matchedMovie(_ pick: QuizDeckPipeline.Pick, client: RadarrClient) async -> RadarrLookupRecord? {
+    nonisolated static func matchedMovie(_ pick: QuizDeckPipeline.Pick, client: RadarrClient) async -> ArrMovie? {
         if let id = pick.tmdbId,
            let hit = ((try? await client.lookupMovies(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
             return hit

@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Structured side-channel payload carried by a `.tool` `ChatMessage`. The
 /// LLM never sees this — it's UI-only. The corresponding `toolResult` text
@@ -9,9 +10,9 @@ nonisolated public enum ChatRichContent: Sendable, Equatable {
     case searchArtistResults([SearchResult])
     case searchSceneResults([SearchResult])
     case librarySeries([SonarrLibraryRecord])
-    case libraryMovies([RadarrLibraryRecord])
+    case libraryMovies([ArrMovie])
     case libraryArtists([LidarrLibraryRecord])
-    case libraryScenes([WhisparrLibraryRecord])
+    case libraryScenes([ArrMovie])
     case calendar([UpcomingItem])
     /// One artist's albums, with the artist named above them — the music half
     /// of what the movie/series carousels already did. `artist` is the display

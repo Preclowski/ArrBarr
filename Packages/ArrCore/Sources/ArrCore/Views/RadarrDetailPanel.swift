@@ -2,11 +2,11 @@ import SwiftUI
 import MediaKit
 
 // MARK: - Movie (Radarr + Whisparr share the same layout since Whisparr
-//          is a Radarr fork operating on the same RadarrMovieDetail type)
+//          is a Radarr fork operating on the same ArrMovie type)
 
 struct RadarrDetailPanel<Header: View>: View {
     let item: QueueItem
-    let radarrDetail: RadarrMovieDetail?
+    let radarrDetail: ArrMovie?
     let radarrMovieFile: ArrFile?
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool

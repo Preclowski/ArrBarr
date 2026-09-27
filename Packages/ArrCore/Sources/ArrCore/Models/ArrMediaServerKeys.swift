@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// How each arr record identifies itself to the media server.
 ///
@@ -10,14 +11,6 @@ import Foundation
 ///
 /// Records with no ids yield an empty array, which the index treats as "no
 /// match" — the arr's own artwork stands.
-
-nonisolated public extension RadarrMovieDetail {
-    var mediaServerKeys: [MediaServerExternalKey] {
-        var keys: [MediaServerExternalKey] = []
-        if let tmdbId { keys.append(.tmdbMovie(tmdbId)) }
-        return keys
-    }
-}
 
 nonisolated public extension SonarrSeriesDetail {
     var mediaServerKeys: [MediaServerExternalKey] {
@@ -31,9 +24,9 @@ nonisolated public extension SonarrSeriesDetail {
     }
 }
 
-nonisolated public extension RadarrLibraryRecord {
+nonisolated public extension ArrMovie {
     var mediaServerKeys: [MediaServerExternalKey] {
-        tmdbId.map { [.tmdbMovie($0)] } ?? []
+        tmdbId.flatMap { $0 > 0 ? [.tmdbMovie($0)] : nil } ?? []
     }
 }
 

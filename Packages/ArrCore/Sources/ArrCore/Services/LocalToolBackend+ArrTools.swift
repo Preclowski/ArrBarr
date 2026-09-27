@@ -425,10 +425,10 @@ extension LocalToolBackend {
         let title: String
         if let hit = movies.first(where: { $0.id == movieId }) {
             resolvedId = movieId
-            title = hit.title ?? "movieId \(movieId)"
+            title = hit.title
         } else if let byTmdb = movies.first(where: { $0.tmdbId == movieId }), let realId = byTmdb.id {
             resolvedId = realId
-            title = byTmdb.title ?? "movieId \(realId)"
+            title = byTmdb.title
         } else {
             return ToolCallOutput(text: "movieId \(movieId) is NOT in the Radarr library, so there is nothing to search for. This tool only re-runs the indexer search for movies the user ALREADY has. There is NO tool that adds a movie — adding happens when the USER taps a card from radarr_search and confirms in the add panel. If they asked to add this title, tell them to tap its card.")
         }
@@ -816,9 +816,9 @@ extension LocalToolBackend {
             args: args, source: .whisparr, config: whisparr,
             itemNounSingular: "scene", itemNounPlural: "scenes",
             fetch: { try await WhisparrClient(config: self.whisparr).fetchAllMovies() },
-            filterMatch: { rec, q in (rec.title ?? "").lowercased().contains(q) },
+            filterMatch: { rec, q in rec.title.lowercased().contains(q) },
             line: { r in
-                let title = r.title ?? "(untitled)"
+                let title = r.title
                 let yearPart = r.year.map { " (\($0))" } ?? ""
                 let fileMark = (r.hasFile ?? false) ? " · downloaded" : " · missing"
                 return "• \(title)\(yearPart)\(fileMark)"

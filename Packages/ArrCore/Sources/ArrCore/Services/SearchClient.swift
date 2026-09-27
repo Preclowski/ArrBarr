@@ -26,13 +26,13 @@ public actor SearchClient {
         let baseURL = config.baseURL
         switch source {
         case .radarr:
-            let records = try await client.read([RadarrLookupRecord].self) { $0.lookupMovies(term: query) }
+            let records = try await client.read { $0.lookupMovies(term: query) }
             return records.enumerated().compactMap { Self.unifyRadarr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .sonarr:
             let records = try await client.read([SonarrLookupRecord].self) { $0.lookupSeries(term: query) }
             return records.enumerated().compactMap { Self.unifySonarr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .whisparr:
-            let records = try await client.read([WhisparrLookupRecord].self) { $0.lookupMovies(term: query) }
+            let records = try await client.read { $0.lookupMovies(term: query) }
             return records.enumerated().compactMap { Self.unifyWhisparr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .lidarr:
             if input.isRef {
@@ -157,7 +157,7 @@ public actor SearchClient {
         images?.posterURL(baseURL: baseURL, coverTypes: coverTypes, mediaServerKeys: keys).0
     }
 
-    nonisolated private static func unifyRadarr(_ r: RadarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated private static func unifyRadarr(_ r: ArrMovie, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tmdbId = r.tmdbId else { return nil }
         return SearchResult(
             externalId: tmdbId, foreignId: String(tmdbId), title: r.title, subtitle: nil, year: r.year, rating: r.ratings?.tmdb?.value,
@@ -179,7 +179,7 @@ public actor SearchClient {
             imdbId: r.imdbId, sourceRank: sourceRank, tmdbTVId: (r.tmdbId ?? 0) != 0 ? r.tmdbId : nil)
     }
 
-    nonisolated static func unifyWhisparr(_ r: WhisparrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated static func unifyWhisparr(_ r: ArrMovie, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         let stableId: Int, foreign: String
         if let tmdb = r.tmdbId, tmdb != 0 { stableId = tmdb; foreign = String(tmdb) }
         else if let fid = r.foreignId, !fid.isEmpty { stableId = ArrLibraryMaps.foreignHashKey(fid); foreign = fid }

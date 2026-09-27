@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// What the library list tools were asked for. The three metadata facets
 /// (`genre`, `startYear`, `endYear`) are spelled exactly like `tmdb_discover_*`
@@ -88,8 +89,8 @@ nonisolated public protocol LibraryFilterable {
     var filterAdded: String? { get }
 }
 
-nonisolated extension RadarrLibraryRecord: LibraryFilterable {
-    public var filterTitle: String { title ?? "" }
+nonisolated extension ArrMovie: LibraryFilterable {
+    public var filterTitle: String { title }
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
     public var filterRating: Double? { ratings?.tmdb?.value ?? ratings?.imdb?.value }
