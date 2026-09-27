@@ -25,20 +25,10 @@ import os
 ///
 /// Cost shape: rendering a 100-row filmography costs nothing here (resolution
 /// is lazy, on tap), and TMDB is only consulted for titles the user does *not*
-/// own. Results are held in a `CoalescingCache`, so a second tap on the same
-/// title — or two taps racing — costs nothing.
+/// own. The reads underneath are the resource store's, so a second tap on the
+/// same title costs no TMDB request.
 @MainActor
 enum SeriesIdentityResolver {
-    /// Nil is a *miss*, not an answer: a title we couldn't prove today may
-    /// resolve once Sonarr is reachable or the TMDB key is pasted.
-    private static let records = CoalescingCache<String, SearchResult?>(
-        capacity: 40, shouldStore: { $0 != nil })
-    /// `tmdbTVId → tvdbId`, the half of a resolution the add path needs on its
-    /// own. Separate from `records` because it is also filled by the library
-    /// snapshot, which answers without ever producing a Sonarr record.
-    private static let tvdbIds = CoalescingCache<Int, Int?>(
-        capacity: 200, shouldStore: { $0 != nil })
-
     /// Every resolution is logged with both ids and the title it landed on.
     /// "Is this the same show?" is not answerable by looking at a poster —
     /// artwork differs between TMDB and TVDB for the *same* series — so the
@@ -60,13 +50,7 @@ enum SeriesIdentityResolver {
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> SearchResult? {
         guard tmdbTVId > 0, !DemoMode.isActive, sonarrConfig.isConfigured else { return nil }
-        let record = await records.value(for: "\(sonarrConfig.identityFingerprint):\(tmdbTVId)") {
-            await resolveRecord(tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
-        }
-        // A resolved record is also the answer to "what is its tvdbId", so the
-        // add path never re-resolves what the panel already worked out.
-        if let id = record?.externalId, id > 0 { tvdbIds.store(id, for: tmdbTVId) }
-        return record
+        return await resolveRecord(tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
     }
 
     /// Just the tvdbId — for the add path, which needs the id Sonarr posts
@@ -76,22 +60,20 @@ enum SeriesIdentityResolver {
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> Int? {
         guard tmdbTVId > 0, !DemoMode.isActive else { return nil }
-        return await tvdbIds.value(for: tmdbTVId) {
-            // Cheapest first: an owned series has both ids in the library
-            // snapshot already, so this costs no request at all.
-            if sonarrConfig.isConfigured,
-               let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
-                return owned
-            }
-            if let external = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) {
-                return external
-            }
-            // Still an id route, not a title one: Sonarr may know the tmdb id
-            // even when TMDB has no tvdb id on file.
-            let record = await sonarrRecord(
-                tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
-            return (record?.externalId).flatMap { $0 > 0 ? $0 : nil }
+        // Cheapest first: an owned series has both ids in the library
+        // snapshot already, so this costs no request at all.
+        if sonarrConfig.isConfigured,
+           let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
+            return owned
         }
+        if let external = await externalTVDBId(tmdbTVId: tmdbTVId, tmdbKey: tmdbKey) {
+            return external
+        }
+        // Still an id route, not a title one: Sonarr may know the tmdb id
+        // even when TMDB has no tvdb id on file.
+        let record = await sonarrRecord(
+            tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
+        return (record?.externalId).flatMap { $0 > 0 ? $0 : nil }
     }
 
     // MARK: - Resolution
@@ -182,8 +164,6 @@ enum SeriesIdentityResolver {
     /// Tests share one process; identity caches must not leak between them.
     // periphery:ignore
     static func resetForTesting() {
-        records.removeAll()
-        tvdbIds.removeAll()
         acceptsTMDBTerm = [:]
     }
     #endif

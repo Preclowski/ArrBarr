@@ -105,14 +105,16 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] `HTTPClient`, `RealtimeUpdates`, `DownloadProgressService`, the per-arr queue/calendar/
       history wire records and the old client HTTP paths are gone; the client type names remain
       as facades (consumers unchanged). `ConnectionHealthMonitor` stays (it schedules probes,
-      not HTTP). `CoalescingCache` and `TitleMetadataStore` stay (in-memory caches over
-      MediaKit-backed calls; candidates for a later pass).
+      not HTTP). (2026-09-27) `CoalescingCache` is gone: the cast, trailer, country and episode
+      rating providers and `SeriesIdentityResolver` read through the store, whose TMDB rows are
+      archival; `TitleMetadataStore` had already been removed.
 - [x] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`:
       eight suites answer through a test `ScriptedTransport` on a fresh gateway per test
       (`.gateway(_:)` suite trait over `ServiceGateway.override`, `ServiceGateway(transport:)`);
       no suite registers a global stub. `OpenAIProviderTests` already used an ephemeral session.
-      Remaining full-run flakes (LibraryViewModel, SeriesIdentityResolver) reproduce on the
-      pre-migration tree too: `LibraryIndex.shared` keeps one slot and version per source.
+      (2026-09-27) The LibraryViewModel/SeriesIdentityResolver full-run flakes are not reproducible:
+      `LibraryIndex` now reads through the store and holds no slot; ~45 full runs today, one resolver
+      failure on a cold build under load, none in 30 runs since.
 - [x] Add flow on typed payloads: `SearchClient` adds (movie, series, scene, artist) run
       `ServarrService.add(ArrAddPayload)` through the store; `ArrAddPayload` gained top-level
       `monitor` and `foreignId`; the untyped `ArrAPIClient.post` is gone. `AddRequestBodyTests`

@@ -206,22 +206,6 @@ struct SeriesIdentityResolverTests {
         }
     }
 
-    @Test("A repeat resolution is served from cache")
-    func repeatResolutionIsCached() async throws {
-        await withStub {
-            let cfg = config(port: 8006)
-            _ = await SeriesIdentityResolver.sonarrRecord(
-                tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
-            let firstCount = resolverState.requests.count
-
-            let again = await SeriesIdentityResolver.sonarrRecord(
-                tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
-
-            #expect(again?.externalId == Fixtures.tvdbId)
-            #expect(resolverState.requests.count == firstCount)
-        }
-    }
-
     @Test("Concurrent resolutions of the same show coalesce into one")
     func concurrentResolutionsCoalesce() async throws {
         await withStub {

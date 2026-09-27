@@ -1,9 +1,8 @@
 import Foundation
 
 /// Resolves the YouTube trailer for a title, for both the detail hero's chip
-/// and the Quiz's play button. Mirrors `CastProvider`: a small LRU, in-flight
-/// coalescing, and the arr payload preferred over TMDB wherever it carries the
-/// answer already.
+/// and the Quiz's play button. Mirrors `CastProvider`: the arr payload is
+/// preferred over TMDB wherever it carries the answer already.
 ///
 /// Movies come from Radarr's own `youTubeTrailerId` when the detail payload has
 /// one — no TMDB key involved. Everything else goes to TMDB `/videos`: series
@@ -11,11 +10,6 @@ import Foundation
 /// record has an empty trailer id.
 @MainActor
 enum TrailerProvider {
-    /// Misses stay uncached (see `CoalescingCache`): "no trailer" is often a
-    /// dropped request or a TMDB key the user hasn't pasted yet, and pinning
-    /// it for the session would hide the chip even after that's fixed.
-    private static let cache = CoalescingCache<String, String?>(
-        capacity: 60, shouldStore: { $0 != nil })
 
     // MARK: - Public API
 
@@ -29,9 +23,7 @@ enum TrailerProvider {
         // the trailer button would never appear. The fixtures carry their own
         // ids — see `DemoMocks.trailerKey`.
         guard let tmdbId, tmdbId > 0 else { return nil }
-        return await cache.value(for: "movie:\(tmdbId)") {
-            await fetch(configStore: configStore) { try await $0.movieVideos(movieId: tmdbId) }
-        }
+        return await fetch(configStore: configStore) { try await $0.movieVideos(movieId: tmdbId) }
     }
 
     /// YouTube video id for a series. `tvdbId` is the fallback route for the
@@ -40,16 +32,13 @@ enum TrailerProvider {
     static func seriesTrailerKey(tmdbId: Int?, tvdbId: Int?,
                                  configStore: ConfigStore) async -> String? {
         guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }
-        let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-")"
-        return await cache.value(for: key) {
-            await fetch(configStore: configStore) { client in
-                var resolved = tmdbId
-                if (resolved ?? 0) <= 0, let tvdbId, tvdbId > 0 {
-                    resolved = try await client.tvIdFromTVDB(tvdbId)
-                }
-                guard let id = resolved, id > 0 else { return [] }
-                return try await client.tvVideos(tvId: id)
+        return await fetch(configStore: configStore) { client in
+            var resolved = tmdbId
+            if (resolved ?? 0) <= 0, let tvdbId, tvdbId > 0 {
+                resolved = try await client.tvIdFromTVDB(tvdbId)
             }
+            guard let id = resolved, id > 0 else { return [] }
+            return try await client.tvVideos(tvId: id)
         }
     }
 

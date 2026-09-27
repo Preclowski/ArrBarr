@@ -4,9 +4,8 @@ import Foundation
 ///
 /// The series' own rating (TVDB, via Sonarr) says nothing about the episode on
 /// screen, and neither Sonarr nor TVDB ship a per-episode one — TMDB is the
-/// only source. Same shape as `CastProvider`: a small cache and in-flight
-/// coalescing, keyed per episode, with the series' tmdb id resolved from its
-/// tvdb id when Sonarr didn't ship one.
+/// only source. The series' tmdb id is resolved from its tvdb id when Sonarr
+/// didn't ship one.
 @MainActor
 enum EpisodeRatingProvider {
     struct Rating: Equatable, Sendable {
@@ -14,17 +13,10 @@ enum EpisodeRatingProvider {
         let votes: Int
     }
 
-    /// Misses stay uncached: an unrated episode usually just aired, and
-    /// pinning "no rating" would keep the pill missing for the session.
-    private static let cache = CoalescingCache<String, Rating?>(capacity: 60, shouldStore: { $0 != nil })
-
     static func rating(tmdbId: Int?, tvdbId: Int?, season: Int?, episode: Int?,
                        configStore: ConfigStore) async -> Rating? {
         guard let season, let episode, !configStore.tmdbApiKey.isEmpty else { return nil }
-        let key = "ep:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-"):\(season):\(episode)"
-        return await cache.value(for: key) {
-            await fetch(tmdbId: tmdbId, tvdbId: tvdbId, season: season, episode: episode, configStore: configStore)
-        }
+        return await fetch(tmdbId: tmdbId, tvdbId: tvdbId, season: season, episode: episode, configStore: configStore)
     }
 
     private static func fetch(tmdbId: Int?, tvdbId: Int?, season: Int, episode: Int,

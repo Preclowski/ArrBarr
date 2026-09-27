@@ -16,9 +16,8 @@ struct TitleCredits: Equatable, Sendable {
 
 /// The single source of cast strips across the app. Replaces the three
 /// near-identical fetchers that used to live in `DetailView` (movie + series)
-/// and `SearchAddPanel`, adds a small per-title cache so the add panel and the
-/// detail view of the same title stop double-fetching, and coalesces
-/// concurrent requests for the same title into one network call.
+/// and `SearchAddPanel`. Caching and coalescing are the resource store's: the
+/// credits reads are archival there.
 ///
 /// Movies come from Radarr's `/credit` when we have a Radarr id (no TMDB key
 /// needed), falling back to TMDB. Series have no Radarr endpoint, so they come
@@ -27,11 +26,6 @@ struct TitleCredits: Equatable, Sendable {
 /// cast at all).
 @MainActor
 enum CastProvider {
-    /// Misses stay uncached (see `CoalescingCache`): an empty strip is usually
-    /// a transient "not ready yet" — an unreleased title with no credits, or a
-    /// fetch blip — and pinning it would keep the row empty all session.
-    private static let cache = CoalescingCache<String, TitleCredits>(
-        capacity: 40, shouldStore: { !$0.isEmpty })
 
     // MARK: - Public API
 
@@ -40,20 +34,14 @@ enum CastProvider {
     /// only route when the caller has no Radarr id (e.g. a TMDB-sourced add-panel
     /// result).
     static func movieCredits(radarrMovieId: Int?, tmdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        let key = "movie:\(radarrMovieId.map(String.init) ?? "-"):\(tmdbId.map(String.init) ?? "-")"
-        return await cache.value(for: key) {
-            await fetchMovieCredits(radarrMovieId: radarrMovieId, tmdbId: tmdbId, configStore: configStore)
-        }
+        return await fetchMovieCredits(radarrMovieId: radarrMovieId, tmdbId: tmdbId, configStore: configStore)
     }
 
     /// Series cast + creators. `tmdbId` is tried first; when absent, `tvdbId`
     /// is resolved to a tmdb id via TMDB `/find`.
     /// fixtures.
     static func seriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        let key = "series:\(tmdbId.map(String.init) ?? "-"):\(tvdbId.map(String.init) ?? "-")"
-        return await cache.value(for: key) {
-            await fetchSeriesCredits(tmdbId: tmdbId, tvdbId: tvdbId, configStore: configStore)
-        }
+        return await fetchSeriesCredits(tmdbId: tmdbId, tvdbId: tvdbId, configStore: configStore)
     }
 
     // MARK: - Fetchers (the logic the three call sites used to duplicate)
