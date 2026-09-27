@@ -29,8 +29,6 @@
 		LOCBF001LOCBF001LOCBF01A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
 		LOCBF002LOCBF002LOCBF02A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
 		LOCBF003LOCBF003LOCBF03A /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */; };
-		TNB00001TNB00001TNB0001A /* TonightBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = TNB00010TNB00010TNB0010A /* TonightBarrApp.swift */; };
-		TNB00002TNB00002TNB0002A /* TonightCore in Frameworks */ = {isa = PBXBuildFile; productRef = TNB00020TNB00020TNB0020A /* TonightCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -80,9 +78,6 @@
 		PRVFR001PRVFR001PRVFR01A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		PRVFR002PRVFR002PRVFR02A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		PRVFR003PRVFR003PRVFR03A /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		TNB00010TNB00010TNB0010A /* TonightBarrApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TonightBarrApp.swift; sourceTree = "<group>"; };
-		TNB00011TNB00011TNB0011A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		TNB00013TNB00013TNB0013A /* TonightBarr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = TonightBarr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -111,14 +106,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		TNB00030TNB00030TNB0030A /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				TNB00002TNB00002TNB0002A /* TonightCore in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -128,7 +115,6 @@
 				24CA88887E39123AE476CB8E /* ArrBarr.app */,
 				IOS00013IOS00013IOS0013A /* ArrBarr.app */,
 				WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */,
-				TNB00013TNB00013TNB0013A /* TonightBarr.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -154,7 +140,6 @@
 				7C333C05887345F76F5DBD52 /* ArrBarr */,
 				IOS00060IOS00060IOS0060A /* ArrBarriOS */,
 				WDGGR060WDGGR060WDGGR06A /* ArrBarrWidgets */,
-				TNB00060TNB00060TNB0060A /* TonightBarr */,
 				SKB00050SKB00050SKB0050A /* Shared */,
 				SKB00040SKB00040SKB0040A /* ArrBarr.storekit */,
 				2AB51CB1B325CDC1D0C6215E /* Products */,
@@ -190,15 +175,6 @@
 				PRVFR003PRVFR003PRVFR03A /* PrivacyInfo.xcprivacy */,
 			);
 			path = ArrBarrWidgets;
-			sourceTree = "<group>";
-		};
-		TNB00060TNB00060TNB0060A /* TonightBarr */ = {
-			isa = PBXGroup;
-			children = (
-				TNB00010TNB00010TNB0010A /* TonightBarrApp.swift */,
-				TNB00011TNB00011TNB0011A /* Info.plist */,
-			);
-			path = TonightBarr;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -267,26 +243,6 @@
 			productReference = WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
-		TNB00070TNB00070TNB0070A /* TonightBarr */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = TNB00080TNB00080TNB0080A /* Build configuration list for PBXNativeTarget "TonightBarr" */;
-			buildPhases = (
-				TNB00050TNB00050TNB0050A /* Sources */,
-				TNB00030TNB00030TNB0030A /* Frameworks */,
-				TNB00040TNB00040TNB0040A /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = TonightBarr;
-			packageProductDependencies = (
-				TNB00020TNB00020TNB0020A /* TonightCore */,
-			);
-			productName = TonightBarr;
-			productReference = TNB00013TNB00013TNB0013A /* TonightBarr.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -325,7 +281,6 @@
 				PKG00001PKG00001PKG0001A /* XCLocalSwiftPackageReference "Packages/ArrCore" */,
 				MCPPK001MCPPK001MCPPK01A /* XCLocalSwiftPackageReference "Packages/ArrMCPServer" */,
 				TNBPK001TNBPK001TNBPK01A /* XCLocalSwiftPackageReference "Packages/MediaKit" */,
-				TNBPK002TNBPK002TNBPK02A /* XCLocalSwiftPackageReference "Packages/TonightCore" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2AB51CB1B325CDC1D0C6215E /* Products */;
@@ -335,7 +290,6 @@
 				981F7B6F6B019D53A2A452F0 /* ArrBarr */,
 				IOS00070IOS00070IOS0070A /* ArrBarriOS */,
 				WDGNT050WDGNT050WDGNT05A /* ArrBarrWidgets */,
-				TNB00070TNB00070TNB0070A /* TonightBarr */,
 			);
 		};
 /* End PBXProject section */
@@ -372,13 +326,6 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		TNB00040TNB00040TNB0040A /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -407,14 +354,6 @@
 			buildActionMask = 2147483647;
 			files = (
 				WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		TNB00050TNB00050TNB0050A /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				TNB00001TNB00001TNB0001A /* TonightBarrApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -845,78 +784,6 @@
 			};
 			name = "Release-AppStore";
 		};
-		TNB00081TNB00081TNB0081A /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = "$(ARRBARR_BUILD_NUMBER)";
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = TonightBarr/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.TonightBarr;
-				PRODUCT_NAME = TonightBarr;
-				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-			};
-			name = "Debug";
-		};
-		TNB00082TNB00082TNB0082A /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = "$(ARRBARR_BUILD_NUMBER)";
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = TonightBarr/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.TonightBarr;
-				PRODUCT_NAME = TonightBarr;
-				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-			};
-			name = "Release";
-		};
-		TNB00083TNB00083TNB0083A /* Release-AppStore */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_STYLE = Automatic;
-				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = "$(ARRBARR_BUILD_NUMBER)";
-				ENABLE_APP_SANDBOX = NO;
-				ENABLE_PREVIEWS = YES;
-				INFOPLIST_FILE = TonightBarr/Info.plist;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/../Frameworks",
-				);
-				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.TonightBarr;
-				PRODUCT_NAME = TonightBarr;
-				SDKROOT = macosx;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_VERSION = 6.0;
-			};
-			name = "Release-AppStore";
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -960,16 +827,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		TNB00080TNB00080TNB0080A /* Build configuration list for PBXNativeTarget "TonightBarr" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				TNB00081TNB00081TNB0081A /* Debug */,
-				TNB00082TNB00082TNB0082A /* Release */,
-				TNB00083TNB00083TNB0083A /* Release-AppStore */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -984,10 +841,6 @@
 		TNBPK001TNBPK001TNBPK01A /* XCLocalSwiftPackageReference "Packages/MediaKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = Packages/MediaKit;
-		};
-		TNBPK002TNBPK002TNBPK02A /* XCLocalSwiftPackageReference "Packages/TonightCore" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/TonightCore;
 		};
 /* End XCLocalSwiftPackageReference section */
 
@@ -1007,10 +860,6 @@
 		WDGPD020WDGPD020WDGPD02A /* ArrCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ArrCore;
-		};
-		TNB00020TNB00020TNB0020A /* TonightCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = TonightCore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
