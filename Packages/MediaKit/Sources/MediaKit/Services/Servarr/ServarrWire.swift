@@ -493,6 +493,8 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
     public var tvdbId: Int?
     public var foreignArtistId: String?
     public var foreignAlbumId: String?
+    /// Whisparr scenes without a TMDB id.
+    public var foreignId: String?
     public var artistName: String?
     public var year: Int?
     public var titleSlug: String?
@@ -502,6 +504,8 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
     public var metadataProfileId: Int?
     public var rootFolderPath: String
     public var monitored: Bool
+    /// Radarr/Whisparr take the monitor mode at the top level; Sonarr and Lidarr in `addOptions`.
+    public var monitor: String?
     public var minimumAvailability: String?
     public var seriesType: String?
     public var seasonFolder: Bool?

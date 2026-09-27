@@ -85,18 +85,19 @@ public actor SearchClient {
         }
     }
 
-    private func addTags(_ instance: InstanceID) -> Set<InvalidationTag> {
-        [.collection(.library, instance), .collection(.calendar, instance), .collection(.lookup, instance)]
+    private func add(_ payload: ArrAddPayload) async throws -> Int? {
+        try await client.run { $0.add(payload) }.trackingID
     }
 
     @discardableResult
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String, monitor: RadarrMonitorMode, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
-        return try await client.post("addMovie", path: "/movie", body: [
-            "tmdbId": .number(Double(result.externalId)), "title": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
-            "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true), "monitor": .string(monitor.rawValue),
-            "addOptions": .object(["searchForMovie": .bool(searchOnAdd)]),
-        ], invalidates: { self.addTags($0) })
+        var payload = ArrAddPayload(qualityProfileId: qualityProfileId, rootFolderPath: rootFolderPath)
+        payload.tmdbId = result.externalId
+        payload.title = result.title
+        payload.monitor = monitor.rawValue
+        payload.addOptions = ArrAddOptions(searchForMovie: searchOnAdd)
+        return try await add(payload)
     }
 
     @discardableResult
@@ -108,33 +109,36 @@ public actor SearchClient {
             throw HTTPError.decoding(NSError(domain: "ArrBarr.SonarrAdd", code: 0, userInfo: [
                 NSLocalizedDescriptionKey: String(format: String(localized: "search.unresolvedSeries.error", bundle: .module), result.title)]))
         }
-        return try await client.post("addSeries", path: "/series", body: [
-            "tvdbId": .number(Double(tvdbId)), "title": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
-            "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true), "seriesType": .string(seriesType.rawValue), "seasonFolder": .bool(seasonFolder),
-            "addOptions": .object(["monitor": .string(monitor.apiValue), "searchForMissingEpisodes": .bool(searchOnAdd)]),
-        ], invalidates: { self.addTags($0) })
+        var payload = ArrAddPayload(qualityProfileId: qualityProfileId, rootFolderPath: rootFolderPath)
+        payload.tvdbId = tvdbId
+        payload.title = result.title
+        payload.seriesType = seriesType.rawValue
+        payload.seasonFolder = seasonFolder
+        payload.addOptions = ArrAddOptions(searchForMissingEpisodes: searchOnAdd, monitor: monitor.apiValue)
+        return try await add(payload)
     }
 
     @discardableResult
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String, monitor: RadarrMonitorMode = .movieOnly, searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
-        var body: [String: KitJSON] = [
-            "title": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)), "rootFolderPath": .string(rootFolderPath),
-            "monitored": .bool(true), "monitor": .string(monitor.rawValue), "addOptions": .object(["searchForMovie": .bool(searchOnAdd)]),
-        ]
-        if let tmdbId = Int(result.foreignId), tmdbId != 0 { body["tmdbId"] = .number(Double(tmdbId)) } else { body["foreignId"] = .string(result.foreignId) }
-        return try await client.post("addMovie", path: "/movie", body: body, invalidates: { self.addTags($0) })
+        var payload = ArrAddPayload(qualityProfileId: qualityProfileId, rootFolderPath: rootFolderPath)
+        payload.title = result.title
+        payload.monitor = monitor.rawValue
+        payload.addOptions = ArrAddOptions(searchForMovie: searchOnAdd)
+        if let tmdbId = Int(result.foreignId), tmdbId != 0 { payload.tmdbId = tmdbId } else { payload.foreignId = result.foreignId }
+        return try await add(payload)
     }
 
     @discardableResult
     func addArtist(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int, rootFolderPath: String, monitor: String = "all",
                    searchOnAdd: Bool) async throws -> Int? {
         try ensureRefCompatible(result)
-        return try await client.post("addArtist", path: "/artist", body: [
-            "foreignArtistId": .string(result.foreignId), "artistName": .string(result.title), "qualityProfileId": .number(Double(qualityProfileId)),
-            "metadataProfileId": .number(Double(metadataProfileId)), "rootFolderPath": .string(rootFolderPath), "monitored": .bool(true),
-            "addOptions": .object(["monitor": .string(monitor), "searchForMissingAlbums": .bool(searchOnAdd)]),
-        ], invalidates: { self.addTags($0) })
+        var payload = ArrAddPayload(qualityProfileId: qualityProfileId, rootFolderPath: rootFolderPath)
+        payload.foreignArtistId = result.foreignId
+        payload.artistName = result.title
+        payload.metadataProfileId = metadataProfileId
+        payload.addOptions = ArrAddOptions(searchForMissingAlbums: searchOnAdd, monitor: monitor)
+        return try await add(payload)
     }
 
     @discardableResult

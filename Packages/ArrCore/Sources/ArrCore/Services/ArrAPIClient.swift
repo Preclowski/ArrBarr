@@ -75,20 +75,6 @@ extension ArrAPIClient {
         return try await context.store.run(make(context.service))
     }
 
-    /// A one-request write with a JSON body; answers the new record id when the arr echoes one.
-    @discardableResult
-    func post(_ operation: String, path: String, body: [String: KitJSON], invalidates: (InstanceID) -> Set<InvalidationTag>, timeout: Duration = .seconds(15)) async throws -> Int? {
-        let context = try await context()
-        let plan = RequestPlan(instance: context.instance, operation: operation, method: "POST", pathTemplate: context.service.profile.apiBase + path,
-                               body: try RequestBuilder.json(KitJSON.object(body)), auth: .header("X-Api-Key"), timeout: timeout)
-        let command = Command(name: plan.operation, instance: context.instance, invalidates: invalidates(context.instance)) { ctx in
-            let response = try await ctx.send(plan)
-            let id = (try? await ctx.decode(KitJSON.self, from: response, operation: plan.operation))?["id"]?.intValue
-            return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: response.body), trackingID: id)
-        }
-        return try await context.store.run(command).trackingID
-    }
-
     // MARK: - Shared reads
 
     /// The record as the arr sent it, for forms that read fields MediaKit does not model.
