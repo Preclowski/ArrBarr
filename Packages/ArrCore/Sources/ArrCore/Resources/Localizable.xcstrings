@@ -2,48 +2,6 @@
   "sourceLanguage": "en",
   "version": "1.1",
   "strings": {
-    "%1$dd %2$@": {
-      "comment": "ETA longer than a day, e.g. \"1d 05:30\". %1$d is the whole-day count immediately followed by the localized day-unit abbreviation; %2$@ is hh:mm.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dT %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dj %2$@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        }
-      }
-    },
     "%@ has no trash to empty.": {
       "extractionState": "manual",
       "localizations": {
@@ -4748,48 +4706,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "Removed custom formats": {
-      "comment": "Accessibility label for the minus sign in front of custom-format chips an upgrade drops",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Removed custom formats"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usunięte formaty niestandardowe"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entfernte benutzerdefinierte Formate"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formatos personalizados eliminados"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formats personnalisés supprimés"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verwijderde aangepaste formats"
           }
         }
       }
@@ -30434,48 +30350,6 @@
       },
       "comment": "Button in queue"
     },
-    "queue.reDownloadingIdenticalRelease.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-downloading identical release"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponowne pobieranie identycznego wydania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Identisches Release wird erneut heruntergeladen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volviendo a descargar la versión idéntica"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-téléchargement d'une version identique"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Identieke release opnieuw downloaden"
-          }
-        }
-      },
-      "comment": "Label in queue"
-    },
     "queue.removeDownload.tooltip": {
       "extractionState": "manual",
       "localizations": {
@@ -30723,48 +30597,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download hervatten"
-          }
-        }
-      },
-      "comment": "Button in queue"
-    },
-    "queue.sameSpecRetagged.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Same spec, retagged"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta sama specyfikacja, inne tagi"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gleiche Spezifikation, neues Tag"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Misma especificación, retiquetado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Même spec, réétiquetté"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zelfde specificatie, opnieuw getagd"
           }
         }
       },
@@ -31893,48 +31725,6 @@
           }
         }
       }
-    },
-    "queue.serviceProblem.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Service problem"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problem usługi"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dienst-Problem"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problema del servicio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problème de service"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serviceprobleem"
-          }
-        }
-      },
-      "comment": "Button in queue"
     },
     "queue.showHistory.button": {
       "extractionState": "manual",

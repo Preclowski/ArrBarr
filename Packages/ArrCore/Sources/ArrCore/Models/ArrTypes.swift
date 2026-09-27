@@ -1,13 +1,6 @@
 import Foundation
 
 // MARK: - Shared Radarr/Sonarr v3 types
-nonisolated public struct ArrQueuePage<Record: Codable & Sendable>: Codable, Sendable {
-    let page: Int
-    let pageSize: Int
-    let totalRecords: Int
-    let records: [Record]
-}
-
 nonisolated public struct ArrCustomFormat: Codable, Equatable, Sendable {
     // `id` is optional because some arr endpoints (notably Radarr's
     // movie detail when CFs are referenced rather than embedded) ship
