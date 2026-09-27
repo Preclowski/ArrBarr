@@ -70,8 +70,8 @@ struct SeasonDetailView: View {
     /// the episode rows can't disagree about which image the season has.
     private var posterURL: URL? { mediaServerSeasonPoster ?? seriesPosterURL }
 
-    /// A media-server poster is fetched with the server's own header (see
-    /// `MediaServerPosterAccess`), never the arr's key — so both arr
+    /// A media-server poster is fetched with the server's own header (its
+    /// `ArtworkReference`, resolved in `PosterStore`), never the arr's key — so both arr
     /// credentials drop away as soon as the override wins.
     private var posterRequiresAuth: Bool {
         mediaServerSeasonPoster == nil && seriesPosterRequiresAuth

@@ -2,6 +2,7 @@ import Foundation
 import CryptoKit
 import ImageIO
 import UniformTypeIdentifiers
+import MediaKit
 import os
 #if os(macOS)
 import AppKit
@@ -102,6 +103,15 @@ nonisolated public enum PosterTier: String, Sendable, CaseIterable {
     /// lightbox zooms to 5×. Without the upgrade, tapping a portrait enlarged
     /// a 185-pixel image. Swapping to a size the URL already has is a no-op,
     /// so an `original` URL stays untouched.
+    /// The server-side resize a media server is asked for; `.full` keeps the original.
+    fileprivate var artworkTier: ArtworkTier? {
+        switch self {
+        case .icon: return .icon
+        case .card: return .card
+        case .full: return nil
+        }
+    }
+
     fileprivate var tmdbSize: String? {
         switch self {
         case .icon: return "w185"
@@ -310,12 +320,13 @@ public actor PosterStore {
            let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) {
             return PosterFetch(data: persist(sized, url: url, tier: tier), downloadedBytes: 0)
         }
-        if let variant = Self.sourceURL(for: url, tier: tier),
-           let data = await download(variant, apiKey: apiKey),
+        let artwork = await MediaServerIndex.shared.artwork(for: url)
+        if let variant = Self.sourceURL(for: url, tier: tier, artwork: artwork),
+           let data = await download(variant, apiKey: apiKey, artwork: artwork),
            let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) {
             return PosterFetch(data: persist(sized, url: url, tier: tier), downloadedBytes: data.count)
         }
-        guard let data = await download(url, apiKey: apiKey),
+        guard let data = await download(url, apiKey: apiKey, artwork: artwork),
               let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) else {
             markMiss(url, tier: tier)
             return nil
@@ -335,7 +346,7 @@ public actor PosterStore {
     ///
     /// Purely a transport detail: the cache key stays the ORIGINAL url, so
     /// changing variants never orphans what we already stored.
-    nonisolated static func sourceURL(for url: URL, tier: PosterTier) -> URL? {
+    nonisolated static func sourceURL(for url: URL, tier: PosterTier, artwork: ArtworkReference? = nil) -> URL? {
         switch url.host {
         case "image.tmdb.org":
             // /t/p/<size>/<file> — the size segment is the only part to swap.
@@ -357,14 +368,15 @@ public actor PosterStore {
                 .appendingPathComponent(base + "_t")
                 .appendingPathExtension(ext)
         default:
-            // Plex / Jellyfin / Emby resize on request, but only for the host
-            // the user actually connected — hence the config lookup rather
-            // than a host literal like the two CDNs above.
-            return MediaServerPosterAccess.shared.sizedURL(for: url, tier: tier)
+            // Plex / Jellyfin / Emby resize on request; their artwork reference
+            // knows how, and only the media server index hands one out.
+            guard let artwork, let size = tier.artworkTier else { return nil }
+            let sized = artwork.sized(size).url
+            return sized == url ? nil : sized
         }
     }
 
-    private func download(_ url: URL, apiKey: String?) async -> Data? {
+    private func download(_ url: URL, apiKey: String?, artwork: ArtworkReference?) async -> Data? {
         // Poster fetches are the app's other fan-out, and they share the same
         // six-connections-per-host pool as the queue's side-loads. Whether a
         // slow refresh is the arr being slow or the poster loader hogging the
@@ -380,10 +392,12 @@ public actor PosterStore {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
         }
         // The media server's token never appears in the URL — it would be
-        // persisted with the poster URL and hashed into the cache key. It is
-        // resolved per request instead; see `MediaServerPosterAccess`.
-        for (field, value) in MediaServerPosterAccess.shared.headers(for: url) {
-            request.setValue(value, forHTTPHeaderField: field)
+        // persisted with the poster URL and hashed into the cache key. The
+        // reference carries a credential ref that MediaKit resolves per request.
+        if let artwork {
+            for (field, value) in await ServiceGateway.resolve().kit.artworkHeaders(for: artwork).dictionary {
+                request.setValue(value, forHTTPHeaderField: field)
+            }
         }
         do {
             let (data, response) = try await session.data(for: request)

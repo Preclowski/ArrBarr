@@ -36,9 +36,9 @@ public struct ArtworkReference: Hashable, Sendable, Codable {
         case let .plexTranscode(photoPath):
             c.path = "/photo/:/transcode"
             c.queryItems = [URLQueryItem(name: "width", value: String(pixels)), URLQueryItem(name: "height", value: String(pixels * 3 / 2)),
-                            URLQueryItem(name: "minSize", value: "1"), URLQueryItem(name: "upscale", value: "1"), URLQueryItem(name: "url", value: photoPath)]
-        case let .jellyfinFill(itemID, tag):
-            c.path = "/Items/\(itemID)/Images/Primary"
+                            URLQueryItem(name: "minSize", value: "1"), URLQueryItem(name: "upscale", value: "0"), URLQueryItem(name: "url", value: photoPath)]
+        case let .jellyfinFill(_, tag):
+            // The url already names the item's image; rewriting the path would drop a reverse-proxy prefix.
             c.queryItems = [URLQueryItem(name: "maxWidth", value: String(pixels))] + (tag.map { [URLQueryItem(name: "tag", value: $0)] } ?? [])
         }
         return ArtworkReference(url: c.url ?? url, headers: headers, sizing: sizing, kind: kind)

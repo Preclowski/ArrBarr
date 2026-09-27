@@ -1,6 +1,7 @@
 import Foundation
 
-/// What ArrBarr asks of a media server. Eight calls, all of them either reads or
+/// What ArrBarr's settings and tools ask of a media server (the index reads
+/// through `MediaServerFacade` directly). Six calls, all of them either reads or
 /// maintenance the user explicitly pressed — nothing here writes library
 /// content, and there is no delete path on purpose.
 nonisolated public protocol MediaServerClient: Sendable {
@@ -9,10 +10,6 @@ nonisolated public protocol MediaServerClient: Sendable {
     /// Reachability + version, and (Jellyfin / Emby) the user id whose play
     /// state we will read. Throws on anything the user needs to fix.
     func testConnection() async throws -> MediaServerHandshake
-
-    /// Every movie and series in the server's libraries, with provider ids and
-    /// play state. One pass — this is what `MediaServerIndex` is built from.
-    func libraryIndex() async throws -> [MediaServerEntry]
 
     /// The server's libraries, in the order the server lists them.
     func libraries() async throws -> [MediaServerLibrary]
@@ -27,11 +24,6 @@ nonisolated public protocol MediaServerClient: Sendable {
     func nowPlaying() async throws -> [MediaServerSession]
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch]
-
-    /// Season number → season poster, for one series item on the server.
-    /// Seasons the server has no artwork of its own for are simply absent —
-    /// the caller falls back to the series poster.
-    func seasonPosters(seriesItemId: String) async throws -> [Int: URL]
 }
 
 nonisolated public enum MediaServerClientFactory {

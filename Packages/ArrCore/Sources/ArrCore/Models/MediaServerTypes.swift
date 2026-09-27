@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// What kind of thing a media-server library entry is. Deliberately coarse:
 /// ArrBarr only ever needs to line an entry up against a Radarr movie or a
@@ -29,17 +30,17 @@ nonisolated public struct MediaServerEntry: Sendable, Equatable {
     /// Distinct titles are counted by it, since one title occupies several
     /// index keys.
     public let itemId: String
-    /// Token-free, so it can be persisted and cached; see
-    /// `MediaServerPosterAccess`.
-    public let posterURL: URL?
+    /// Token-free: the credential is a header reference `PosterStore` resolves per download.
+    public let poster: ArtworkReference?
+    public var posterURL: URL? { poster?.url }
     /// Every provider id this title exposes. All of them become index keys.
     public let externalKeys: [MediaServerExternalKey]
     public let watched: Bool
 
-    public init(itemId: String, posterURL: URL?,
+    public init(itemId: String, poster: ArtworkReference?,
                 externalKeys: [MediaServerExternalKey], watched: Bool) {
         self.itemId = itemId
-        self.posterURL = posterURL
+        self.poster = poster
         self.externalKeys = externalKeys
         self.watched = watched
     }

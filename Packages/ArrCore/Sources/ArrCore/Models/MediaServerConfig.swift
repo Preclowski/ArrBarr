@@ -28,26 +28,6 @@ nonisolated public enum MediaServerKind: String, Codable, CaseIterable, Identifi
         case .emby: return "http://192.168.1.10:8096"
         }
     }
-
-    /// Auth header this server expects for its REST API.
-    ///
-    /// Plex takes a bare `X-Plex-Token`; Emby a bare `X-Emby-Token`; Jellyfin
-    /// wants the token wrapped in its `MediaBrowser` authorization scheme (a
-    /// bare `X-Emby-Token` also works on most builds, but the documented header
-    /// is the one that survives version bumps).
-    func authHeaders(token: String) -> [String: String] {
-        switch self {
-        case .plex:
-            return ["X-Plex-Token": token, "Accept": "application/json"]
-        case .emby:
-            return ["X-Emby-Token": token, "Accept": "application/json"]
-        case .jellyfin:
-            return [
-                "Authorization": "MediaBrowser Token=\"\(token)\"",
-                "Accept": "application/json",
-            ]
-        }
-    }
 }
 
 /// The single media-server connection. Mirrors `ServiceConfig`'s shape closely

@@ -29,23 +29,31 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         return MediaServerHandshake(versionLine: identity.version.map { "\(name) \($0)" } ?? name, userId: config.kind == .plex ? nil : service.userID)
     }
 
-    func libraryIndex() async throws -> [MediaServerEntry] {
+    /// The store and instance this config reads through, for a projection that follows the store's revisions.
+    func scope() async throws -> (store: ResourceStore, instance: InstanceID) {
+        let (gateway, service) = try await context()
+        return (gateway.store, service.instance)
+    }
+
+    /// Every movie and series with provider ids, play state and a token-free artwork reference; `fetchedAt` is the oldest section's.
+    func libraryIndex(policy: ReadPolicy) async throws -> (entries: [MediaServerEntry], fetchedAt: Date) {
         let (gateway, service) = try await context()
         // Plex indexes per section; Jellyfin/Emby answer one recursive query for every library.
         let sections: [String] = config.kind == .plex
-            ? try await gateway.store.read(service.libraries()).value.filter { $0.kind == .movie || $0.kind == .series }.map(\.key)
+            ? try await gateway.store.read(service.libraries(), policy: policy).value.filter { $0.kind == .movie || $0.kind == .series }.map(\.key)
             : [""]
         var entries: [MediaServerEntry] = []
+        var fetchedAt = Date()
         for section in sections {
-            let rows = try await gateway.store.read(service.libraryIndex(section: section)).value
-            for row in rows {
+            let fetched = try await gateway.store.read(service.libraryIndex(section: section), policy: policy)
+            fetchedAt = min(fetchedAt, fetched.fetchedAt)
+            for row in fetched.value {
                 let keys = row.ids.compactMap(Self.externalKey)
                 guard !keys.isEmpty else { continue }
-                let poster = service.artwork(for: row, baseURL: baseURL)?.url
-                entries.append(MediaServerEntry(itemId: row.itemID, posterURL: poster, externalKeys: keys, watched: row.watched))
+                entries.append(MediaServerEntry(itemId: row.itemID, poster: service.artwork(for: row, baseURL: baseURL), externalKeys: keys, watched: row.watched))
             }
         }
-        return entries
+        return (entries, fetchedAt)
     }
 
     func libraries() async throws -> [ArrCore.MediaServerLibrary] {
@@ -81,8 +89,12 @@ nonisolated struct MediaServerFacade: MediaServerClient {
     }
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch] {
+        try await recentlyWatched(limit: limit, policy: .cacheFirst)
+    }
+
+    func recentlyWatched(limit: Int, policy: ReadPolicy) async throws -> [MediaServerWatch] {
         let (gateway, service) = try await context()
-        return try await gateway.store.read(service.watchHistory(limit: limit)).value.compactMap { row in
+        return try await gateway.store.read(service.watchHistory(limit: limit), policy: policy).value.compactMap { row in
             guard !row.title.isEmpty else { return nil }
             return MediaServerWatch(title: row.title, year: nil, kind: row.kind == .movie ? .movie : .show,
                                     watchedAt: row.viewedAt, seriesItemId: row.seriesItemID,
@@ -90,19 +102,24 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         }
     }
 
-    func seasonPosters(seriesItemId: String) async throws -> [Int: URL] {
+    /// Season number → season artwork for one series item; seasons without their own artwork are absent.
+    func seasonPosters(seriesItemId: String) async throws -> [Int: ArtworkReference] {
         let (gateway, service) = try await context()
         let map = try await gateway.store.read(service.seasonArtwork(item: seriesItemId)).value
-        var out: [Int: URL] = [:]
+        var out: [Int: ArtworkReference] = [:]
         for (number, value) in map {
             guard let season = Int(number) else { continue }
             if config.kind == .plex {
-                out[season] = baseURL.appendingPathComponent(value)
+                out[season] = ArtworkReference(url: baseURL.appendingPathComponent(value), headers: ["X-Plex-Token": .credential(service.instance)],
+                                               sizing: .plexTranscode(photoPath: value), kind: .poster)
             } else {
                 let parts = value.split(separator: "|", maxSplits: 1).map(String.init)
                 guard parts.count == 2, var components = URLComponents(url: baseURL.appendingPathComponent("/Items/\(parts[0])/Images/Primary"), resolvingAgainstBaseURL: false) else { continue }
                 components.queryItems = [URLQueryItem(name: "tag", value: parts[1])]
-                if let url = components.url { out[season] = url }
+                guard let url = components.url else { continue }
+                let header = config.kind == .jellyfin ? "Authorization" : "X-Emby-Token"
+                out[season] = ArtworkReference(url: url, headers: [header: .credential(service.instance)],
+                                               sizing: .jellyfinFill(itemID: parts[0], tag: parts[1]), kind: .poster)
             }
         }
         return out

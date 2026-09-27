@@ -62,8 +62,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       (`DownloadClients.swift`, `MediaServerFacade.swift`); their HTTP-level tests retired,
       add-request shapes covered in MediaKit `DownloadAddShapeTests`. `DownloadProgressService`
       and the phase-0 recorder test deleted (parity now uses `MediaKitRecording`).
-- [ ] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory`; `PosterStore` consumes
-      `ArtworkReference` + `kit.artworkHeaders` (today the facade feeds the old index).
+- [x] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory` (first build reads the stored
+      rows with `staleWhileRevalidate`, so a cold start has the last-known index); `PosterStore` consumes
+      `ArtworkReference` + `kit.artworkHeaders`. `MediaServerPosterAccess` deleted.
 - [x] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`: the monitor keeps its
       probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
       service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`
