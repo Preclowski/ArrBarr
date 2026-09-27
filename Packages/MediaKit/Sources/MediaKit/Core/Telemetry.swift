@@ -35,7 +35,7 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
     }
 
     public struct CacheCounters: Sendable, Equatable {
-        public var hits = 0, misses = 0, staleServed = 0, coalesced = 0
+        public var hits = 0, misses = 0, staleServed = 0, coalesced = 0, invalidations = 0
         public init() {}
     }
 
@@ -43,7 +43,6 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
         var hosts: [Host: HostCounters] = [:]
         var caches: [InstanceID: CacheCounters] = [:]
         var operations: [OperationID: Int] = [:]
-        var invalidations = 0
         var since: Date
     }
 
@@ -70,7 +69,8 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
             case let .coalesced(key, _): cache(key) { $0.coalesced += 1 }
             case let .skipped(_, h, _): host(h) { $0.skipped += 1 }
             case let .failure(_, h, _): host(h) { $0.failures += 1 }
-            case .invalidated: s.invalidations += 1
+            case let .invalidated(tags, _):
+                for instance in Set(tags.compactMap(\.instance)) { s.caches[instance, default: CacheCounters()].invalidations += 1 }
             case let .breakerOpened(h, _): host(h) { $0.breakerOpens += 1 }
             case .breakerClosed: break
             case let .rateLimited(h, _): host(h) { $0.rateLimits += 1 }
@@ -91,6 +91,7 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
             }
             let caches = s.caches.values.reduce(into: CacheCounters()) { t, c in
                 t.hits += c.hits; t.misses += c.misses; t.staleServed += c.staleServed; t.coalesced += c.coalesced
+                t.invalidations += c.invalidations
             }
             return (hosts, caches, s.operations)
         }
@@ -105,7 +106,7 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
         }
         for instance in caches.keys.sorted(by: { $0.description < $1.description }) {
             let c = caches[instance]!
-            lines.append("\(instance): hits \(c.hits) misses \(c.misses) stale \(c.staleServed) coalesced \(c.coalesced)")
+            lines.append("\(instance): hits \(c.hits) misses \(c.misses) stale \(c.staleServed) coalesced \(c.coalesced) invalidated \(c.invalidations)")
         }
         for (op, count) in operations.sorted(by: { $0.value == $1.value ? $0.key.rawValue < $1.key.rawValue : $0.value > $1.value }).prefix(10) {
             lines.append("  \(op.rawValue): \(count)")

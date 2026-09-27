@@ -171,10 +171,18 @@ Decided 2026-09-27: delete the composition engine; keep Discovery for a separate
 
 ## Phase H — make the old plan true
 
-- [ ] Uncheck or correct in `2026-09-15-mediakit-migration-plan.md`: criterion 18 and 24 (Wave 6c), "`lastEventAt`
+- [x] Uncheck or correct in `2026-09-15-mediakit-migration-plan.md`: criterion 18 and 24 (Wave 6c), "`lastEventAt`
       drives the realtime-quiet check" (no caller), `liveProgress` as a live stream (never started), widget role
       vs spec §9.3 (not read-only, no refresher), §6.3 two snapshots (one combined).
-- [ ] Criteria partially met, add the missing tests: 2 (cancel one waiter), 8 (100 parallel reads), 10 (last waiter
+- [x] Criteria partially met, add the missing tests: 2 (cancel one waiter), 8 (100 parallel reads), 10 (last waiter
       cancels the fetch), 15 (ArrCore cold start), 17 (20-card composition on fixtures), 21 (invalidations line,
       per-host counters), 26 (golden parity through recording), 27 (per-screen counters, `swift test` time).
-- [ ] Still open from the old plan: `Observations` for `ConfigStore` consumers; criterion 28.
+- [x] Still open from the old plan: `Observations` for `ConfigStore` consumers; criterion 28.
+- Outcome: the old plan carries dated corrections (`lastEventAt`, `liveProgress`, §6.3, §9.3, criterion 18;
+  24 checked and true). New tests: 2 `cancellingOneCoalescedReaderLeavesTheOtherItsValue`, 8
+  `hundredDistinctReadsNeverExceedTheHostLimit(limit:)`, 10 `cancellingEveryReaderCancelsTheRequestAndCommitsNothing`,
+  21 `telemetryReportCountsEveryKindOfEventPerHost` (the report now counts invalidations per instance). Already
+  covered: 15 (library snapshot first paint, live-stream snapshot, store cold start), 17
+  (`chunkedBatchIsOneRequestPerChunk`; the composition engine is gone), 26 (`GoldenParityTests`, recording through
+  `mediakit-record`). 27 stays owner-read (Developer options → MediaKit telemetry). `Observations` for
+  `ConfigStore` and criterion 28 live in `docs/superpowers/follow-ups.md`.

@@ -72,16 +72,21 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       split `tmdbMovie`/`tmdbSeries` and movie TVDB ids are dropped (12 cross-kind collisions on a real library).
 - [x] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`: the monitor keeps its
       probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
-      service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`
-      already drives the realtime-quiet check in `QueueViewModel`.
-- [x] Widget: `MediaKit(role: .snapshotReader)` on the group container database. (2026-09-27) The widget already
+      service down while its host's breaker is open (worse of recorded and governor). (Corrected
+      2026-09-27: `lastEventAt` has no caller in the app; the realtime-quiet check never used it. The
+      streams read push liveness through `noteAlive` instead.)
+- [x] Widget: `MediaKit(role: .snapshotReader)` on the group container database. (Deviation from spec §9.3,
+      noted 2026-09-27: the reader is not read-only — it can still fetch through the cache-first facades — and
+      there is no widget refresher role; it was deleted unused.) (2026-09-27) The widget already
       read the shared group database through the cache-first facades; an app extension now runs the stack as
       `.snapshotReader` (no capability probes, no sweep of the app's rows, 2 MB memory tier) and opens no hubs.
 - [x] `SpotlightIndexer` as a store consumer (reads through `LibraryIndex`).
 
 ## Wave 4 — QueueViewModel on LiveStream
 
-- [x] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`;
+- [x] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`
+      (corrected 2026-09-27: `liveProgress` is read on demand by `QueueAggregator`, never pumped, so it keeps
+      no checkpoint; the queue's §6.3 snapshots are one combined `Snapshot`, not two);
       `systemDidWake` → `events.wakeAll()` + `governor.noteWake`. (2026-09-27) One queue stream per arr, owned
       by `ServiceGateway` and replayed across demo rebuilds; `QueueViewModel` commits each stream revision once
       (`latest(source:)`), sets foreground/background on panel open/close, and keeps only the calendar and health
@@ -134,10 +139,14 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 - [x] Criterion 18: views and view-models take facades from `ConfigStore` (`radarrClient`, `arrClient(for:)`,
       `tmdbClient`, `mediaServerClient`) or `ServiceHandles` for drafts; `grep "Client("` in Views/ViewModels = 0.
+      (Corrected 2026-09-27: the view-models still built saved-config handles — `SearchViewModel` with a
+      config-signature workaround among them. Fixed in the cleanup plan's Phase C: search reads the live config;
+      `LibraryViewModel` and `ServerStatusModel` go through the one `ServiceHandles` factory.)
 - [x] Criterion 19: `LocalToolBackendFixtureTests` runs all 28 tools on the bundled fixtures through
       `ServiceGateway.override` (task-local), a demo gateway with placeholder origins.
 - [x] Criterion 21: Developer options → "MediaKit telemetry" shows `TelemetryRecorder.report()`.
-- [x] Criterion 24: explicit `@MainActor` on Views/ViewModels types removed (default isolation).
+- [x] Criterion 24: explicit `@MainActor` on Views/ViewModels types removed (default isolation). (Checked
+      2026-09-27: no type-level annotation left; `Task { @MainActor in }` closures remain and are harmless.)
 - [x] `ServiceGateway.reconcileRegistry()` serialises reconciles; two adopters racing produced a second
       concurrent `MediaStack.reconcile` that dropped an in-flight read (flaky `lidarrSearchFormatted`).
 - [x] Dead `SeriesIdentityResolver` session override removed.

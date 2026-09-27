@@ -18,6 +18,7 @@ final class ScriptedTransport: Transport, SocketTransport, @unchecked Sendable {
     var frames: [String] = []
     /// Real sleep before answering, for cancellation tests.
     var delay: Duration = .zero
+    private var inFlight = 0, peakInFlight = 0, cancelled = 0
 
     init() {}
 
@@ -26,6 +27,10 @@ final class ScriptedTransport: Transport, SocketTransport, @unchecked Sendable {
 
     var operations: [String] { lock.withLock { requests.map(\.operation.name) } }
     var count: Int { lock.withLock { requests.count } }
+    /// Most sends that were inside `send` at the same moment.
+    var maxInFlight: Int { lock.withLock { peakInFlight } }
+    /// Sends whose delay was cut short by cancellation.
+    var cancelledSends: Int { lock.withLock { cancelled } }
     func count(_ operation: String) -> Int { lock.withLock { requests.filter { $0.operation.name == operation }.count } }
 
     func send(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -38,7 +43,11 @@ final class ScriptedTransport: Transport, SocketTransport, @unchecked Sendable {
             }
             return try fallback(request)
         }
-        if delay > .zero { try await Task.sleep(for: delay) }
+        lock.withLock { inFlight += 1; peakInFlight = max(peakInFlight, inFlight) }
+        defer { lock.withLock { inFlight -= 1 } }
+        if delay > .zero {
+            do { try await Task.sleep(for: delay) } catch { lock.withLock { cancelled += 1 }; throw error }
+        }
         if let error = answer.error { throw error }
         return HTTPResponse(status: answer.status, headers: answer.headers, body: answer.body)
     }
@@ -134,6 +143,15 @@ struct TestKit {
     func resource<V: Codable & Sendable>(_ operation: String, as type: V.Type = V.self, instance: InstanceID = TestKit.radarr, path: String = "/api/v3/queue",
                                          freshness: FreshnessClass = .live, ttl: Duration? = nil, tags: Set<InvalidationTag> = []) -> Resource<V> {
         Resource<V>.json(plan(operation, instance: instance, path: path), tags: tags.isEmpty ? [.collection(.queue, instance)] : tags, freshness: freshness, ttl: ttl)
+    }
+}
+
+/// Polls a condition in real time; for state reached through unstructured tasks the test cannot await.
+func eventually(within limit: Duration = .seconds(5), _ condition: () -> Bool) async throws {
+    let deadline = ContinuousClock.now + limit
+    while !condition() {
+        guard ContinuousClock.now < deadline else { Issue.record("condition not met within \(limit)"); return }
+        try await Task.sleep(for: .milliseconds(2))
     }
 }
 
