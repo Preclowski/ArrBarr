@@ -9,7 +9,7 @@ import SwiftUI
 
 /// Corner wedge marking a title the media server says has been played.
 ///
-/// A folded corner rather than a floating badge: it reads at a glance across a
+/// A folded corner of tinted glass rather than a floating badge: it reads at a glance across a
 /// grid of covers, costs no artwork (it sits in the corner the poster's
 /// composition never uses), and carries no glyph of its own.
 struct WatchedCornerBadge: View {
@@ -18,9 +18,12 @@ struct WatchedCornerBadge: View {
     var side: CGFloat = 26
 
     var body: some View {
-        Triangle()
-            .fill(Color.accentColor)
+        // Tinted glass: the artwork shows through faintly, the accent still
+        // carries the meaning. The hairline keeps the fold's edge on busy art.
+        Color.clear
             .frame(width: side, height: side)
+            .glassEffect(.regular.tint(Color.accentColor.opacity(0.7)), in: Triangle())
+            .overlay(Triangle().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
             .accessibilityLabel(Text("library.watched.badge", bundle: .module))
             .help(Text("library.watched.badge", bundle: .module))
     }

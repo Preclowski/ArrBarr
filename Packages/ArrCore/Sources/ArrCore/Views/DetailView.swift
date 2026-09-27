@@ -48,6 +48,18 @@ public struct DetailView: View {
     /// the slot → id lookup goes through `episodeIdBySlot` rather than scanning
     /// `sonarrEpisodes`, which on a long-running series cost `queue × episodes`
     /// comparisons per pass (same fix as `EpisodeQuickDetail`'s copy).
+    /// Earliest regular-season episode whose air date is still ahead.
+    private var nextEpisode: SonarrEpisodeDetail? {
+        let now = Date()
+        return sonarrEpisodes
+            .compactMap { ep -> (SonarrEpisodeDetail, Date)? in
+                guard (ep.seasonNumber ?? 0) > 0,
+                      let air = ep.airDateUtc.flatMap(parseArrDate), air > now else { return nil }
+                return (ep, air)
+            }
+            .min { $0.1 < $1.1 }?.0
+    }
+
     private var sonarrQueueByEpisodeId: [Int: [QueueItem]] {
         var map: [Int: [QueueItem]] = [:]
         for q in siblings where q.arrQueueId != 0 {
@@ -1078,7 +1090,12 @@ public struct DetailView: View {
                             seriesId: item.entityId ?? 0,
                             seasonNumber: season.seasonNumber,
                             title: seasonSearchTitle(season.seasonNumber))
-                    }
+                    },
+                    nextEpisode: nextEpisode,
+                    posterURL: arrPosterURL(images: sonarrDetail?.images, for: item, in: configStore,
+                                            mediaServerKeys: sonarrDetail?.mediaServerKeys ?? []) ?? item.posterURL,
+                    posterRequiresAuth: item.posterRequiresAuth,
+                    posterAPIKey: configStore.sonarr.apiKey
                 )
             case .lidarr:
                 LidarrDetailPanel(

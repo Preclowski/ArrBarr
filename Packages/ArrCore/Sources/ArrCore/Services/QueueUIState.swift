@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import OSLog
 
 /// The queue's own view state: which sections are collapsed, and how titles
 /// group. Two settings, out on their own.
@@ -19,9 +20,13 @@ import Observation
 @Observable
 public final class QueueUIState {
     public static let shared = QueueUIState()
+    private static let logger = Logger(category: "Queue")
 
     static let queueTitleGroupingKey = "ArrBarr.queueTitleGrouping"
     static let collapsedArrsKey = "ArrBarr.collapsedArrs"
+    // Device-local on purpose: not in `SyncedKeys`.
+    static let hiddenQueueItemsKey = "ArrBarr.hiddenQueueItems"
+    static let hideHintSuppressedKey = "ArrBarr.queueHideHintSuppressed"
 
     public var queueTitleGrouping: QueueTitleGroupingMode = .collapsed {
         didSet {
@@ -36,6 +41,28 @@ public final class QueueUIState {
             defaults.set(Array(collapsedArrs), forKey: Self.collapsedArrsKey)
         }
     }
+
+    /// `hideKey`s of rows the user hid; pruned once the download leaves the queue.
+    public var hiddenQueueItems: Set<String> = [] {
+        didSet {
+            guard !isLoading, hiddenQueueItems != oldValue else { return }
+            defaults.set(Array(hiddenQueueItems), forKey: Self.hiddenQueueItemsKey)
+        }
+    }
+
+    public var hideHintSuppressed = false {
+        didSet {
+            guard !isLoading, hideHintSuppressed != oldValue else { return }
+            defaults.set(hideHintSuppressed, forKey: Self.hideHintSuppressedKey)
+        }
+    }
+
+    /// "Show hidden" from the menu; session-only.
+    public var showHiddenQueueItems = false
+    /// ⌥ held while the panel is key (macOS).
+    public var optionKeyHeld = false
+
+    public var revealsHiddenQueueItems: Bool { showHiddenQueueItems || optionKeyHeld }
 
     /// True while `load(from:)` assigns — the setters above persist, and a
     /// reload writing the values it just read back is at best pointless work
@@ -71,6 +98,8 @@ public final class QueueUIState {
             rawValue: source.string(forKey: Self.queueTitleGroupingKey) ?? ""
         ) ?? .collapsed
         collapsedArrs = Set(source.stringArray(forKey: Self.collapsedArrsKey) ?? [])
+        hiddenQueueItems = Set(source.stringArray(forKey: Self.hiddenQueueItemsKey) ?? [])
+        hideHintSuppressed = source.bool(forKey: Self.hideHintSuppressedKey)
     }
 
     // MARK: - Collapse
@@ -89,4 +118,34 @@ public final class QueueUIState {
 
     public func toggleCollapsed(_ arr: QueueItem.Source) { toggleCollapsed(arr.rawValue) }
     public func isCollapsed(_ arr: QueueItem.Source) -> Bool { isCollapsed(arr.rawValue) }
+
+    // MARK: - Hidden rows
+
+    public func isHidden(_ item: QueueItem) -> Bool {
+        guard !hiddenQueueItems.isEmpty else { return false }
+        return item.hideMatchKeys.contains { hiddenQueueItems.contains($0) }
+    }
+
+    public func areHidden(_ items: [QueueItem]) -> Bool {
+        !items.isEmpty && items.allSatisfy(isHidden)
+    }
+
+    public func hide(_ items: [QueueItem]) {
+        hiddenQueueItems.formUnion(items.map(\.hideKey))
+    }
+
+    public func unhide(_ items: [QueueItem]) {
+        hiddenQueueItems.subtract(items.flatMap(\.hideMatchKeys))
+    }
+
+    /// Drop keys of `source` that no longer match anything in a fresh, successful fetch.
+    func pruneHidden(source: QueueItem.Source, present: [QueueItem]) {
+        let prefix = "\(source.rawValue)|"
+        guard hiddenQueueItems.contains(where: { $0.hasPrefix(prefix) }) else { return }
+        let live = Set(present.flatMap(\.hideMatchKeys))
+        let kept = hiddenQueueItems.filter { !$0.hasPrefix(prefix) || live.contains($0) }
+        guard kept != hiddenQueueItems else { return }
+        Self.logger.notice("dropped \(self.hiddenQueueItems.count - kept.count, privacy: .public) hidden \(source.rawValue, privacy: .public) row(s) no longer in a queue of \(present.count, privacy: .public)")
+        hiddenQueueItems = kept
+    }
 }

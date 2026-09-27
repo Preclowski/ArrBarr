@@ -43,6 +43,9 @@ struct QueueHeaderRow<Trailing: View>: View {
     let icon: AnyView
     let title: String
     var count: Int? = nil
+    /// "N hidden" beside the count; omitted at 0. Tapping it toggles Show hidden.
+    var hiddenCount: Int = 0
+    var onToggleHidden: (() -> Void)? = nil
     let collapsed: Bool
     /// Hidden (slot preserved) for a genuine reachable arr error so the icon and
     /// label don't shift sideways.
@@ -69,6 +72,15 @@ struct QueueHeaderRow<Trailing: View>: View {
                 Text(verbatim: "\(count)")
                     .scaledFont(size: QueueHeaderType.count)
                     .foregroundStyle(.tertiary)
+            }
+            if hiddenCount > 0 {
+                Button { onToggleHidden?() } label: {
+                    Text("queue.hiddenCount \(hiddenCount)", bundle: .module)
+                        .scaledFont(size: QueueHeaderType.count)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .disabled(onToggleHidden == nil)
             }
             Spacer(minLength: 4)
             trailing()

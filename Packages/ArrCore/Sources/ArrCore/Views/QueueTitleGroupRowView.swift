@@ -165,6 +165,9 @@ struct QueueTitleGroupRowView: View {
                         Label { Text("Resume all (\(group.downloadCount))", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     }
                 }
+            }
+            QueueHideMenuItem(items: group.allItems)
+            if !isOffline {
                 Button(role: .destructive) {
                     requestDeleteAllConfirm()
                 } label: {

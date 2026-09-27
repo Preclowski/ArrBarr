@@ -1082,6 +1082,7 @@ public final class QueueViewModel {
         unreachableArrs = updateUnreachable(unreachable: stillUnreachable, only: source)
         if result.error == nil {
             lastSuccessfulRefresh = Date()
+            QueueUIState.shared.pruneHidden(source: source, present: committed)
         }
         updateConnectionHealth(errors: newErrors, only: source)
         recomputeNeedsYou()

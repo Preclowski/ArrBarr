@@ -24,6 +24,12 @@ struct SonarrDetailPanel<Header: View>: View {
     /// menu (the host owns both the arr call and the release-list push).
     var onAutomaticSeasonSearch: ((SonarrSeasonInfo) async -> Void)? = nil
     var onManualSeasonSearch: ((SonarrSeasonInfo) -> Void)? = nil
+    /// Earliest episode still to air; nil hides the section.
+    var nextEpisode: SonarrEpisodeDetail? = nil
+    /// Series artwork for the next-episode row's tooltip (episodes have none).
+    var posterURL: URL? = nil
+    var posterRequiresAuth: Bool = false
+    var posterAPIKey: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -38,6 +44,27 @@ struct SonarrDetailPanel<Header: View>: View {
                 // cast endpoint). No key → it will never load, so don't pulse a
                 // skeleton for heads that aren't coming.
                 SkeletonCastRow()
+            }
+
+            if let next = nextEpisode {
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("detail.nextEpisode.label")
+                    EpisodeRow(
+                        episode: next,
+                        queueItems: siblings.filter {
+                            $0.arrQueueId != 0 && $0.seasonNumber == next.seasonNumber
+                                && $0.episodeNumber == next.episodeNumber
+                        },
+                        onTap: { ep in
+                            if let season = sonarrDetail?.seasons?.first(where: { $0.seasonNumber == ep.seasonNumber }) {
+                                onTapSeason(season)
+                            }
+                        },
+                        posterURL: posterURL,
+                        posterRequiresAuth: posterRequiresAuth,
+                        posterAPIKey: posterAPIKey
+                    )
+                }
             }
 
             if let seasons = sonarrDetail?.seasons {

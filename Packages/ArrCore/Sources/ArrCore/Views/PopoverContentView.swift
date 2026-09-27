@@ -967,6 +967,13 @@ public struct PopoverContentView: View {
                 Button { queueSelecting = true } label: {
                     Label { Text("queue.selectMultiple.button", bundle: .module) } icon: { Image(systemName: "checkmark.circle") }
                 }
+            }
+            if selectedTab == .queue, !QueueUIState.shared.hiddenQueueItems.isEmpty {
+                Toggle(isOn: Bindable(QueueUIState.shared).showHiddenQueueItems) {
+                    Label { Text("queue.showHidden.button", bundle: .module) } icon: { Image(systemName: "eye") }
+                }
+            }
+            if selectedTab == .queue, viewModel.activeCount > 0 || !QueueUIState.shared.hiddenQueueItems.isEmpty {
                 Divider()
             }
             // No "Refresh" item — the queue refreshes itself and ⌘R (the

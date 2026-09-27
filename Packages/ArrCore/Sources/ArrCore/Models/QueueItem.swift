@@ -153,6 +153,25 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         return "\(source.rawValue)|\(entityId)|\(seasonNumber ?? -1)|\(episodeNumber ?? -1)"
     }
 
+    /// Key for hiding the row. Stable across the queue-id change of a
+    /// delay-profile grab: the download id when there is one, else the
+    /// episode/movie coordinates.
+    var hideKey: String {
+        if let downloadId, !downloadId.isEmpty {
+            return "\(source.rawValue)|dl|\(downloadId.lowercased())"
+        }
+        if let handoffKey { return "\(source.rawValue)|ep|\(handoffKey)" }
+        return "\(source.rawValue)|id|\(id)"
+    }
+
+    /// Every key that hides this row — a pending row hidden by coordinates
+    /// stays hidden once it becomes a real download.
+    var hideMatchKeys: [String] {
+        var keys = [hideKey]
+        if let handoffKey { keys.append("\(source.rawValue)|ep|\(handoffKey)") }
+        return keys
+    }
+
     /// Whether this row is the download `pending` turned into.
     func succeeds(_ pending: QueueItem) -> Bool {
         guard pending.isPendingRelease, !isPendingRelease, let key = handoffKey else { return false }

@@ -208,6 +208,13 @@ struct QueueListView: View {
         .onChange(of: viewModel.activeCount) { _, count in
             if count == 0, selecting { selecting = false }
         }
+        #if os(macOS)
+        // Holding ⌥ peeks at hidden rows.
+        .onModifierKeysChanged(mask: .option) { _, keys in
+            queueUI.optionKeyHeld = keys.contains(.option)
+        }
+        .onDisappear { queueUI.optionKeyHeld = false }
+        #endif
     }
 
     // MARK: - Multi-select
@@ -505,6 +512,12 @@ struct QueueListView: View {
     /// to a section that answered, not so far that the titles stop being
     /// legible — the queue is still what the user came to look at.
     private static let staleRowOpacity: Double = 0.5
+    /// Hidden rows shown on request (⌥ / Show hidden) sit further back than stale ones.
+    private static let hiddenRowOpacity: Double = 0.35
+
+    private func rowOpacity(isStale: Bool, items: [QueueItem]) -> Double {
+        (isStale ? Self.staleRowOpacity : 1) * (queueUI.areHidden(items) ? Self.hiddenRowOpacity : 1)
+    }
 
     @ViewBuilder
     private func arrSection(_ source: QueueItem.Source) -> some View {
@@ -601,7 +614,7 @@ struct QueueListView: View {
         // A stale arr's rows are last-known state, not live state: dim them so
         // that reads at a glance, instead of leaving them looking as current as
         // the sections that did answer.
-        .opacity(isStale ? Self.staleRowOpacity : 1)
+        .opacity(rowOpacity(isStale: isStale, items: group.allItems))
         #if os(iOS)
         header
             .plainQueueRow()
@@ -651,7 +664,7 @@ struct QueueListView: View {
             // only THIS arr is down — the List-level value only covers all-arrs.
             .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
             // See `titleGroupHeader`: last-known rows read as dimmed.
-            .opacity(isStale ? Self.staleRowOpacity : 1)
+            .opacity(rowOpacity(isStale: isStale, items: entry.allItems))
             // Members of an expanded title group keep the list's shared
             // leading edge; the child marker is a bare 24pt TRAILING inset —
             // the rows end short of the right edge, under the header's
@@ -719,6 +732,10 @@ struct QueueListView: View {
             // Count only when healthy; per-arr health surfaces as "Needs you"
             // rows now (not a hover badge here).
             count: error == nil ? itemCount(source) : nil,
+            hiddenCount: error == nil ? hiddenCount(source) : 0,
+            onToggleHidden: {
+                withAnimation(.smooth(duration: 0.22)) { queueUI.showHiddenQueueItems.toggle() }
+            },
             collapsed: collapsed,
             // Offline is a collapsible state like any other — only a genuine
             // (reachable) error hides the chevron.
@@ -1013,7 +1030,10 @@ struct QueueListView: View {
     }
 
     private func entries(for source: QueueItem.Source) -> [QueueRowEntry] {
-        let raw = viewModel.items(for: source)
+        var raw = viewModel.items(for: source)
+        if !queueUI.revealsHiddenQueueItems {
+            raw.removeAll(where: queueUI.isHidden)
+        }
         switch source {
         case .sonarr: return QueueGrouping.group(raw)
         default:      return raw.map { .single($0) }
@@ -1042,12 +1062,11 @@ struct QueueListView: View {
     }
 
     private func itemCount(_ source: QueueItem.Source) -> Int {
-        entries(for: source).reduce(0) { sum, entry in
-            switch entry {
-            case .single: return sum + 1
-            case .group(let g): return sum + g.memberCount
-            }
-        }
+        viewModel.items(for: source).count - hiddenCount(source)
+    }
+
+    private func hiddenCount(_ source: QueueItem.Source) -> Int {
+        viewModel.items(for: source).count(where: queueUI.isHidden)
     }
 
 }

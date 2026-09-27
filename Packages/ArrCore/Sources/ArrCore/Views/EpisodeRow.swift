@@ -64,10 +64,7 @@ struct EpisodeRow: View {
                episode.seasonNumber ?? 0,
                episode.episodeNumber ?? 0)
     }
-    /// Parsed once per row rather than per read: `hasAired` is consulted from
-    /// both `episodeTitleStyle` and `stateIndicator`, and the trailing gutter
-    /// wants the same date again — three parses per row, on every layout pass
-    /// of a list that re-renders on every queue tick.
+    /// Read once per body pass — the list re-renders on every queue tick.
     private var airDate: Date? { episode.airDateUtc.flatMap(parseArrDate) }
     /// Air date treated as past → episode has actually aired. nil airDate
     /// (extremely rare — usually a Sonarr metadata gap) is treated as
@@ -96,9 +93,8 @@ struct EpisodeRow: View {
     }
 
     public var body: some View {
-        // The row's one date parse — every branch below reads these two.
+        // The row's one date parse.
         let air = airDate
-        let aired = hasAired(air)
         Button {
             onTap?(episode)
         } label: {
@@ -176,7 +172,7 @@ struct EpisodeRow: View {
                 // row's own spacing between them the bookmark sat ~20pt in and
                 // read as a right margin on the whole list.
                 HStack(spacing: 0) {
-                    stateIndicator(aired: aired)
+                    stateIndicator
                         .frame(width: 14, height: 14, alignment: .center)
                     // Reserves the glyph's width (the overlay below draws it);
                     // the hit area is wider and simply hangs over the state
@@ -332,29 +328,18 @@ struct EpisodeRow: View {
     }
 
     @ViewBuilder
-    private func stateIndicator(aired: Bool) -> some View {
+    private var stateIndicator: some View {
         // A row-fired automatic search owns the slot while it runs — it is the
         // only transient thing on the row, and it outranks a date the user can
         // read again a second later.
         //
-        // Otherwise: just the not-aired calendar now. The monitored bookmark moved to
-        // the row's leading column, where the season rows keep theirs and
-        // where it can be a toggle instead of a 14pt read-only glyph. The two
-        // states no longer compete for one slot, so an unmonitored future
-        // episode says both. ("Missing" still gets no glyph: the dimmed title
-        // already says "not in your library", and the season row carries the
-        // per-season "X/Y" count.)
+        // A future episode shows only its air date; no glyph of its own.
         if autoSearching {
             ProgressView().controlSize(.small)
         } else if autoDidSearch {
             Image(systemName: "checkmark")
                 .scaledFont(size: 10, weight: .semibold)
                 .foregroundStyle(.secondary)
-        } else if !aired {
-            Image(systemName: "calendar")
-                .scaledFont(size: 10)
-                .foregroundStyle(.tertiary)
-                .help(Text("detail.notAiredYet.button", bundle: .module))
         }
     }
 

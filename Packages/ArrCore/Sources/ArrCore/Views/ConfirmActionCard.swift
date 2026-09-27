@@ -210,8 +210,11 @@ public struct ConfirmAlertOverlay: View {
     let confirmLabelKey: LocalizedStringKey
     let cancelLabelKey: LocalizedStringKey
     let destructive: Bool
+    let suppressionLabelKey: LocalizedStringKey?
     let onConfirm: () -> Void
+    let onSuppress: () -> Void
     let onCancel: () -> Void
+    @State private var suppress = false
 
     public init(
         title: LocalizedStringKey,
@@ -219,7 +222,9 @@ public struct ConfirmAlertOverlay: View {
         confirmLabelKey: LocalizedStringKey = "Confirm",
         cancelLabelKey: LocalizedStringKey = "Cancel",
         destructive: Bool = true,
+        suppressionLabelKey: LocalizedStringKey? = nil,
         onConfirm: @escaping () -> Void,
+        onSuppress: @escaping () -> Void = {},
         onCancel: @escaping () -> Void
     ) {
         self.title = title
@@ -227,7 +232,9 @@ public struct ConfirmAlertOverlay: View {
         self.confirmLabelKey = confirmLabelKey
         self.cancelLabelKey = cancelLabelKey
         self.destructive = destructive
+        self.suppressionLabelKey = suppressionLabelKey
         self.onConfirm = onConfirm
+        self.onSuppress = onSuppress
         self.onCancel = onCancel
     }
 
@@ -265,6 +272,15 @@ public struct ConfirmAlertOverlay: View {
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
 
+            if let suppressionLabelKey {
+                Toggle(isOn: $suppress) {
+                    Text(suppressionLabelKey, bundle: .module).scaledFont(size: 12)
+                }
+                #if os(macOS)
+                .toggleStyle(.checkbox)
+                #endif
+            }
+
             HStack(spacing: 8) {
                 answerButton(cancelLabelKey, weight: .medium,
                              foreground: .primary, background: Color.primary.opacity(0.1),
@@ -273,7 +289,10 @@ public struct ConfirmAlertOverlay: View {
                 answerButton(confirmLabelKey, weight: .medium,
                              foreground: destructive ? .red : .white,
                              background: destructive ? Color.red.opacity(0.22) : Color.accentColor,
-                             action: onConfirm)
+                             action: {
+                                 if suppress { onSuppress() }
+                                 onConfirm()
+                             })
                     .keyboardShortcut(.return, modifiers: [])
             }
         }

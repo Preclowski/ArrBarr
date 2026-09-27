@@ -111,7 +111,7 @@ struct ReleaseListView: View {
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { sortMenu } }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { viewMenu } }
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
@@ -207,76 +207,54 @@ struct ReleaseListView: View {
         Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06)
     }
 
-    /// Rejected releases need an override to grab and are rarely what's
-    /// wanted, so they're out of the list until this chip puts them back —
-    /// sunk to the bottom, with the *arr's reason where the formats were.
-    /// When the arr rejected everything there is nothing to filter, so no chip.
-    @ViewBuilder
-    private var rejectedPill: some View {
-        let count = rejected.count
-        if count > 0, !accepted.isEmpty {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { showRejected.toggle() }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: showRejected ? "eye" : "eye.slash")
-                        .scaledFont(size: 9, weight: .semibold)
-                    (showRejected
-                        ? Text("release.hideRejected \(count)", bundle: .module)
-                        : Text("release.showRejected \(count)", bundle: .module))
-                        .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
-                }
-                .foregroundStyle(showRejected ? Color.orange : Color.secondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .chipOutline(showRejected ? Color.orange : Color.secondary, opacity: showRejected ? 0.55 : 0.35)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(showRejected ? .isSelected : [])
-        }
-    }
-
+    /// macOS only: iOS carries the same menu in the navigation bar.
     @ViewBuilder
     private var filterBar: some View {
+        #if os(macOS)
         HStack(spacing: 8) {
-            if target.isSeasonSearch {
-                Picker(selection: $scope) {
-                    Text("All", bundle: .module).tag(ScopeFilter.all)
-                    Text("Packs", bundle: .module).tag(ScopeFilter.packs)
-                    Text("Episodes", bundle: .module).tag(ScopeFilter.episodes)
-                } label: { EmptyView() }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.small)
-            }
-            rejectedPill
             Spacer(minLength: 0)
-            #if os(macOS)
-            sortMenu
-            #endif
+            viewMenu
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(Color.primary.opacity(0.04))
         Divider().opacity(0.5)
+        #endif
     }
 
-    /// The sort order and nothing else; the label names the order in force.
-    private var sortMenu: some View {
+    /// Sort order and filters in one menu. Rejected releases need an override
+    /// to grab and are rarely what's wanted, so they stay out of the list until
+    /// the toggle brings them back, sunk to the bottom.
+    private var viewMenu: some View {
         Menu {
-            Picker(selection: $sort) {
-                ForEach(ReleaseSort.allCases, id: \.self) { $0.title.tag($0) }
-            } label: { Text("Sort", bundle: .module) }
-            .pickerStyle(.inline)
-            .labelsHidden()
+            Section {
+                Picker(selection: $sort) {
+                    ForEach(ReleaseSort.allCases, id: \.self) { $0.title.tag($0) }
+                } label: { Text("Sort", bundle: .module) }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } header: { Text("Sort", bundle: .module) }
+            Section {
+                if target.isSeasonSearch {
+                    Picker(selection: $scope.animation(.easeInOut(duration: 0.15))) {
+                        Text("All", bundle: .module).tag(ScopeFilter.all)
+                        Text("Packs", bundle: .module).tag(ScopeFilter.packs)
+                        Text("Episodes", bundle: .module).tag(ScopeFilter.episodes)
+                    } label: { EmptyView() }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+                Toggle(isOn: $showRejected.animation(.easeInOut(duration: 0.15))) {
+                    Text("release.showRejected \(rejected.count)", bundle: .module)
+                }
+                .disabled(rejected.isEmpty)
+            } header: { Text("release.filter.header", bundle: .module) }
         } label: {
-            Label { sort.title } icon: { Image(systemName: "arrow.up.arrow.down") }
+            Label { Text("View", bundle: .module) } icon: { Image(systemName: "slider.horizontal.3") }
                 .scaledFont(size: 11, weight: .medium)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help(Text("Sort", bundle: .module))
     }
 
     private func statusState(symbol: String, text: Text) -> some View {

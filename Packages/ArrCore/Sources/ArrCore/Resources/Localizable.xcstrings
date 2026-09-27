@@ -17387,48 +17387,6 @@
       },
       "comment": "Button in detail"
     },
-    "detail.notAiredYet.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not aired yet"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jeszcze nie wyemitowany"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch nicht ausgestrahlt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún no emitido"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pas encore diffusé"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nog niet uitgezonden"
-          }
-        }
-      },
-      "comment": "Button in detail"
-    },
     "detail.notMonitoredNotAired.label": {
       "extractionState": "manual",
       "localizations": {
@@ -41065,37 +41023,37 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Service icons by Dashboard Icons, licensed CC BY 4.0 (recoloured for the UI)."
+            "value": "Service icons licensed CC BY 4.0 (recoloured for the UI)."
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ikony usług autorstwa Dashboard Icons, na licencji CC BY 4.0 (przekolorowane na potrzeby UI)."
+            "value": "Ikony usług na licencji CC BY 4.0 (przekolorowane na potrzeby UI)."
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dienst-Icons von Dashboard Icons, Lizenz CC BY 4.0 (für die Benutzeroberfläche eingefärbt)."
+            "value": "Dienst-Icons, Lizenz CC BY 4.0 (für die Benutzeroberfläche eingefärbt)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Iconos de servicios de Dashboard Icons, con licencia CC BY 4.0 (recoloreados para la interfaz)."
+            "value": "Iconos de servicios con licencia CC BY 4.0 (recoloreados para la interfaz)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Icônes de services par Dashboard Icons, sous licence CC BY 4.0 (recolorées pour l'UI)."
+            "value": "Icônes de services sous licence CC BY 4.0 (recolorées pour l'UI)."
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Servicepictogrammen door Dashboard Icons, onder licentie CC BY 4.0 (gekleurd voor de UI)."
+            "value": "Servicepictogrammen onder licentie CC BY 4.0 (gekleurd voor de UI)."
           }
         }
       },
@@ -49176,7 +49134,7 @@
       }
     },
     "release.showRejected %lld": {
-      "comment": "Manual-search filter chip, off: brings back the releases the arr rejected; %lld is how many.",
+      "comment": "Toggle in the manual-search View menu that shows the releases the arr rejected; %lld is how many.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -49217,44 +49175,590 @@
         }
       }
     },
-    "release.hideRejected %lld": {
-      "comment": "Manual-search filter chip, on: hides the releases the arr rejected again; %lld is how many.",
+    "View": {
+      "comment": "Manual-search menu that holds the sort order and the filters.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Hide rejected (%lld)"
+            "value": "View"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ukryj odrzucone (%lld)"
+            "value": "Widok"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Abgelehnte ausblenden (%lld)"
+            "value": "Ansicht"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ocultar rechazados (%lld)"
+            "value": "Vista"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Masquer les rejetés (%lld)"
+            "value": "Affichage"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Afgewezen verbergen (%lld)"
+            "value": "Weergave"
+          }
+        }
+      }
+    },
+    "detail.nextEpisode.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next episode"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Następny odcinek"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nächste Folge"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Próximo episodio"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prochain épisode"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volgende aflevering"
+          }
+        }
+      },
+      "comment": "Section header above the seasons list in series detail"
+    },
+    "person.openProfile.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open profile"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz profil"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profil öffnen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abrir perfil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir le profil"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profiel openen"
+          }
+        }
+      },
+      "comment": "Person view menu item opening the TMDB profile page"
+    },
+    "queue.hiddenCount %lld": {
+      "comment": "Queue section header: number of hidden rows, beside the item count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld hidden)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld hidden)"
+                }
+              }
+            }
+          }
+        },
+        "pl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ukryty)"
+                }
+              },
+              "few": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ukryte)"
+                }
+              },
+              "many": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ukrytych)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ukrytych)"
+                }
+              }
+            }
+          }
+        },
+        "de": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ausgeblendet)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ausgeblendet)"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld oculto)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld ocultos)"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld masqué)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld masqués)"
+                }
+              }
+            }
+          }
+        },
+        "nl": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld verborgen)"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "(%lld verborgen)"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "queue.hide.button": {
+      "comment": "Queue row context menu: hide the row from the list",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukryj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ocultar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verbergen"
+          }
+        }
+      }
+    },
+    "queue.hideHint.message.ios": {
+      "comment": "Alert after hiding a queue row (iOS)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can peek at hidden items by tapping the hidden count next to the section name."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukryte elementy możesz podejrzeć, stukając licznik ukrytych obok nazwy sekcji."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendete Elemente kannst du ansehen, indem du auf die Anzahl neben dem Abschnittsnamen tippst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes ver los elementos ocultos tocando el contador junto al nombre de la sección."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez voir les éléments masqués en touchant le compteur à côté du nom de la section."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je kunt verborgen items bekijken door op het aantal naast de sectienaam te tikken."
+          }
+        }
+      }
+    },
+    "queue.hideHint.message.macos": {
+      "comment": "Alert after hiding a queue row (macOS)",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can peek at hidden items by holding the Option key (⌥) or by choosing Show hidden from the ⋯ menu."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ukryte elementy możesz podejrzeć, przytrzymując klawisz Option (⌥) lub wybierając „Pokaż ukryte” w menu ⋯."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendete Elemente kannst du ansehen, indem du die Wahltaste (⌥) gedrückt hältst oder im Menü ⋯ „Ausgeblendete anzeigen“ wählst."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puedes ver los elementos ocultos manteniendo pulsada la tecla Opción (⌥) o eligiendo «Mostrar ocultos» en el menú ⋯."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous pouvez voir les éléments masqués en maintenant la touche Option (⌥) ou en choisissant « Afficher les éléments masqués » dans le menu ⋯."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Je kunt verborgen items bekijken door de Option-toets (⌥) ingedrukt te houden of „Verborgen tonen” te kiezen in het ⋯-menu."
+          }
+        }
+      }
+    },
+    "queue.hideHint.suppress": {
+      "comment": "Checkbox / button in the hide alert",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't show this again"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie pokazuj więcej"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nicht mehr anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No volver a mostrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus afficher"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niet meer tonen"
+          }
+        }
+      }
+    },
+    "queue.hideHint.title": {
+      "comment": "Confirmation before hiding a queue row",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide this item?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Czy na pewno ukryć ten element?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieses Element ausblenden?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Ocultar este elemento?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer cet élément ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dit item verbergen?"
+          }
+        }
+      }
+    },
+    "queue.showHidden.button": {
+      "comment": "Overflow menu toggle: show hidden queue rows",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show hidden"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pokaż ukryte"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ausgeblendete anzeigen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar ocultos"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les éléments masqués"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verborgen tonen"
+          }
+        }
+      }
+    },
+    "queue.unhide.button": {
+      "comment": "Queue row context menu: bring a hidden row back",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unhide"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie ukrywaj"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Einblenden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mostrar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus masquer"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonen"
+          }
+        }
+      }
+    },
+    "release.filter.header": {
+      "comment": "Section header in the manual-search View menu, above the filters.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtro"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filtre"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter"
           }
         }
       }

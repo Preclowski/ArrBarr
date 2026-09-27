@@ -87,6 +87,18 @@ public struct PersonView: View {
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(1)
                 Spacer(minLength: 0)
+                Menu { moreActions } label: {
+                    Image(systemName: "ellipsis")
+                        .scaledFont(size: 14, weight: .medium)
+                        .foregroundStyle(.secondary)
+                        .frame(width: 22, height: 22)
+                        .contentShape(Rectangle())
+                }
+                .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
+                .help(Text("common.moreActions.button", bundle: .module))
+                .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -143,6 +155,12 @@ public struct PersonView: View {
         .conditionalNavTitle(displayName, apply: !isDetachedWindow)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Menu { moreActions } label: { Image(systemName: "ellipsis") }
+                    .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
+            }
+        }
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
@@ -160,6 +178,17 @@ public struct PersonView: View {
                 radarrConfig: configStore.radarr, sonarrConfig: configStore.sonarr,
                 lidarrConfig: configStore.lidarr, whisparrConfig: configStore.whisparr,
                 tmdbApiKey: configStore.tmdbApiKey)
+        }
+    }
+
+    @ViewBuilder
+    private var moreActions: some View {
+        Button {
+            if let url = URL(string: "https://www.themoviedb.org/person/\(ref.tmdbId)") {
+                PlatformURLOpener.open(url)
+            }
+        } label: {
+            Label { Text("person.openProfile.button", bundle: .module) } icon: { Image(systemName: "safari") }
         }
     }
 

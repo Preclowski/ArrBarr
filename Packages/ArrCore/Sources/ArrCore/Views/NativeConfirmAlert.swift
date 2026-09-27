@@ -20,11 +20,15 @@ enum NativeConfirmAlert {
         let confirmButton = alert.addButton(withTitle: AppLocalized.string(pending.confirmLabel, locale: locale))
         alert.addButton(withTitle: AppLocalized.string(pending.cancelLabel, locale: locale))
         confirmButton.hasDestructiveAction = pending.isDestructive
+        if let suppression = pending.suppressionLabel {
+            alert.showsSuppressionButton = true
+            alert.suppressionButton?.title = AppLocalized.string(suppression, locale: locale)
+        }
         // The app has no window in front at this point (the panel just closed),
         // so without this the alert can open behind whatever the user is in.
         NSApp.activate(ignoringOtherApps: true)
         if alert.runModal() == .alertFirstButtonReturn {
-            ConfirmCenter.shared.confirm()
+            ConfirmCenter.shared.confirm(suppressing: alert.suppressionButton?.state == .on)
         } else {
             ConfirmCenter.shared.cancel()
         }

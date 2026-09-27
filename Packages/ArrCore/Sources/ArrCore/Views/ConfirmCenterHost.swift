@@ -41,7 +41,9 @@ private struct ConfirmCenterHost: ViewModifier {
                         confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
                         cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
                         destructive: pending.isDestructive,
+                        suppressionLabelKey: pending.suppressionLabel.map { LocalizedStringKey($0) },
                         onConfirm: { center.confirm() },
+                        onSuppress: pending.onSuppress,
                         onCancel: { center.cancel() }
                     )
                 }
@@ -63,6 +65,12 @@ private struct ConfirmCenterHost: ViewModifier {
                 center.confirm()
             } label: {
                 Text(LocalizedStringKey(pending.confirmLabel), bundle: .module)
+            }
+            // iOS alerts hold no checkbox: "don't show again" is its own answer.
+            if let suppression = pending.suppressionLabel {
+                Button { center.confirm(suppressing: true) } label: {
+                    Text(LocalizedStringKey(suppression), bundle: .module)
+                }
             }
             Button(role: .cancel) { center.cancel() } label: {
                 Text(LocalizedStringKey(pending.cancelLabel), bundle: .module)

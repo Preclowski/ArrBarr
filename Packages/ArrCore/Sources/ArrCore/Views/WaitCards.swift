@@ -215,11 +215,10 @@ enum WaitStoryProvider {
 
 // MARK: - Surface
 
-/// The wait screen for a manual search: the poster, large and tilted, beside
-/// a "Did you know that…" sentence, on a flat ground in the poster's
-/// own colour. Stories come in random order and rotate every few seconds;
-/// click the right side to skip ahead, the left to go back. A spinner sits at
-/// the foot, so the wait itself is never hidden.
+/// The wait screen for a manual search: the poster, tilted, beside a "Did you
+/// know that…" sentence, with the standard spinner and label centred under
+/// them. Stories come in random order and rotate every few seconds; click the
+/// right side to skip ahead, the left to go back.
 struct WaitStories: View {
     let context: WaitCardContext
     var interval: TimeInterval = 7
@@ -228,48 +227,39 @@ struct WaitStories: View {
     @State private var stories: [WaitStory] = []
     @State private var index = 0
     @State private var forward = true
-    @State private var tint: Color?
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                ground
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    HStack(alignment: .top, spacing: 18) {
-                        poster
-                        if !stories.isEmpty {
-                            let story = stories[index % stories.count]
-                            StoryText(story: story)
-                                .id(story.id)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                    removal: .opacity))
-                        }
+            VStack(spacing: 28) {
+                HStack(alignment: .top, spacing: 18) {
+                    poster
+                    if !stories.isEmpty {
+                        let story = stories[index % stories.count]
+                        StoryText(story: story)
+                            .id(story.id)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                                removal: .opacity))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    Spacer(minLength: 0)
-                    footer
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                LoadingStateView(label: "wait.releases.heading")
             }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .onTapGesture(coordinateSpace: .local) { point in
                 advance(point.x < proxy.size.width / 3 ? -1 : 1)
             }
         }
-        .environment(\.colorScheme, .dark)
         .task {
             stories = WaitStoryProvider.localStories(context, locale: configStore.currentLocale).shuffled()
-            async let color = PosterTint.color(for: context.posterURL)
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
             // The story on screen stays put; everything after it is reshuffled with the new ones.
             let current = stories.isEmpty ? [] : [stories[index % stories.count]]
             let rest = (stories.filter { !current.contains($0) } + remote).shuffled()
             index = 0
             stories = current + rest
-            tint = await color
         }
         .task(id: index) {
             try? await Task.sleep(for: .seconds(interval))
@@ -286,38 +276,12 @@ struct WaitStories: View {
         }
     }
 
-    /// The poster's colour, pulled down to a ground that white text sits on.
-    private var ground: some View {
-        ZStack {
-            Color(white: 0.08)
-            (tint ?? .clear).opacity(0.55)
-            LinearGradient(colors: [.white.opacity(0.06), .clear, .black.opacity(0.25)],
-                           startPoint: .top, endPoint: .bottom)
-        }
-        .animation(.easeInOut(duration: 0.6), value: tint)
-        .ignoresSafeArea()
-    }
-
     private var poster: some View {
         RemotePoster(url: context.posterURL, apiKey: context.posterApiKey, tier: .card,
                      size: CGSize(width: 112, height: 168), cornerRadius: 8, fallbackSymbol: "film")
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(.white.opacity(0.22), lineWidth: 1))
             .rotationEffect(.degrees(-3))
-            .shadow(color: .black.opacity(0.5), radius: 18, y: 12)
+            .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
             .padding(.top, 6)
-    }
-
-    private var footer: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-            Text("wait.releases.heading", bundle: .module)
-                .scaledFont(size: 12)
-                .foregroundStyle(.white.opacity(0.6))
-            Spacer()
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -328,18 +292,18 @@ private struct StoryText: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("wait.story.lead", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .kerning(0.9)
             Text(markdown(story.sentence))
                 .scaledFont(size: 17, weight: .regular)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
             if let support = story.support {
                 Text(markdown(support))
                     .scaledFont(size: 13)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.secondary)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -349,7 +313,7 @@ private struct StoryText: View {
                         RemotePoster(url: person.imageURL, apiKey: nil, tier: .icon,
                                      size: CGSize(width: 34, height: 34), cornerRadius: 17,
                                      fallbackSymbol: "person.fill")
-                            .overlay(Circle().strokeBorder(.white.opacity(0.75), lineWidth: 1.5))
+                            .overlay(Circle().strokeBorder(.background, lineWidth: 1.5))
                     }
                 }
                 .padding(.top, 2)

@@ -182,6 +182,9 @@ public struct QueueGroupRowView: View {
                         }
                     }
                 }
+            }
+            QueueHideMenuItem(items: group.items)
+            if !isOffline {
                 Button(role: .destructive) {
                     requestDeleteConfirm()
                 } label: {

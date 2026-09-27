@@ -11,7 +11,11 @@ public struct PendingConfirm: Sendable, Identifiable {
     public var confirmLabel: String
     public var cancelLabel: String
     public var isDestructive: Bool
+    /// Catalog key of a "don't show again" checkbox; `onSuppress` fires when
+    /// the user confirms with it ticked.
+    public var suppressionLabel: String?
     public var onConfirm: @MainActor () -> Void
+    public var onSuppress: @MainActor () -> Void
 
     public init(
         title: String,
@@ -19,14 +23,18 @@ public struct PendingConfirm: Sendable, Identifiable {
         confirmLabel: String,
         cancelLabel: String = "Cancel",
         isDestructive: Bool = false,
-        onConfirm: @escaping @MainActor () -> Void
+        suppressionLabel: String? = nil,
+        onConfirm: @escaping @MainActor () -> Void,
+        onSuppress: @escaping @MainActor () -> Void = {}
     ) {
         self.title = title
         self.message = message
         self.confirmLabel = confirmLabel
         self.cancelLabel = cancelLabel
         self.isDestructive = isDestructive
+        self.suppressionLabel = suppressionLabel
         self.onConfirm = onConfirm
+        self.onSuppress = onSuppress
     }
 }
 
@@ -61,9 +69,10 @@ public final class ConfirmCenter: ObservableObject {
     /// Any view in the tree can ask for a confirmation; the host renders it.
     public static func request(_ p: PendingConfirm) { shared.request(p) }
 
-    public func confirm() {
+    public func confirm(suppressing: Bool = false) {
         guard let p = pending else { return }
         pending = nil
+        if suppressing { p.onSuppress() }
         p.onConfirm()
     }
 
