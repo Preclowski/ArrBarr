@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Compact full-popover episode detail. Pushed on top of `DetailView`
 /// when the user taps an `EpisodeRow`. Shows episode metadata, the
@@ -19,7 +20,7 @@ public struct EpisodeDetailOverlay: View {
     /// from `DetailView.sonarrEpisodeFiles` (works in demo too) instead
     /// of the per-episode async `/episodefile/{id}` fetch we used to
     /// fire, which returned nil in demo and broke the diff view.
-    let episodeFile: SonarrEpisodeFile?
+    let episodeFile: ArrFile?
     /// ALL active queue items for this episode (usually 0 or 1; 2+ when the
     /// same episode was grabbed twice). Powers the "new file" section that
     /// sits alongside the existing file — both can be present (upgrade in
@@ -160,7 +161,7 @@ public struct EpisodeDetailOverlay: View {
         posterURL: URL?,
         posterRequiresAuth: Bool,
         apiKey: String?,
-        episodeFile: SonarrEpisodeFile? = nil,
+        episodeFile: ArrFile? = nil,
         queueItems: [QueueItem] = [],
         onClose: @escaping () -> Void,
         onSearch: ((Int) async -> Void)?,
@@ -290,7 +291,7 @@ public struct EpisodeDetailOverlay: View {
         .personDestination($personRef)
         .navigationDestination(item: $manualSearchTarget) { wrapper in
             ReleaseListView(target: wrapper.target,
-                            existing: episodeFile.map(UpgradeDiffView.side(episodeFile:)),
+                            existing: episodeFile.map(UpgradeDiffView.side(file:)),
                             waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL),
                             onBack: { manualSearchTarget = nil })
         }
@@ -639,7 +640,7 @@ public struct EpisodeDetailOverlay: View {
             // now — this block is captioned by what it actually is.
             VStack(alignment: .leading, spacing: 6) {
                 DetailSectionHeader("Existing file")
-                ExistingFileBanner(episodeFile: existing)
+                ExistingFileBanner(file: existing)
             }
         }
     }
@@ -673,7 +674,7 @@ public struct EpisodeDetailOverlay: View {
                 // same "Existing file" caption as the idle in-library block.
                 VStack(alignment: .leading, spacing: 6) {
                     DetailSectionHeader("Existing file")
-                    ExistingFileBanner(episodeFile: existing)
+                    ExistingFileBanner(file: existing)
                 }
             }
         }
@@ -709,7 +710,7 @@ public struct EpisodeDetailOverlay: View {
     /// carries quality/size/score + delta. CF chip diff (added /
     /// removed) follows the new chip strip if the sets differ.
     @ViewBuilder
-    private func queueFileWithDiff(new q: QueueItem, existing: SonarrEpisodeFile) -> some View {
+    private func queueFileWithDiff(new q: QueueItem, existing: ArrFile) -> some View {
         // Sonarr ships existing-file metadata in a separate
         // `/episodefile/{id}` payload (not on the QueueItem), so we
         // tunnel it into the card via `existingOverride`. The card

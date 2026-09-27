@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Detail view for a queue item — replaces the popover content while shown.
 /// Fetches data from Radarr/Sonarr/Lidarr based on `item.entityId` and
@@ -148,10 +149,10 @@ public struct DetailView: View {
     /// custom-format score in the right gutter instead of falling back to
     /// the air date — the score is the actionable info once an episode is
     /// on disk.
-    @State private var sonarrEpisodeFiles: [Int: SonarrEpisodeFile] = [:]
+    @State private var sonarrEpisodeFiles: [Int: ArrFile] = [:]
     @State private var lidarrAlbum: LidarrAlbumDetail?
     @State private var lidarrTracks: [LidarrTrackDetail] = []
-    @State private var lidarrTrackFiles: [LidarrTrackFile] = []
+    @State private var lidarrTrackFiles: [ArrFile] = []
     /// Cast strip. Movies pull from Radarr's `/credit` (no key needed);
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
     /// key is set. Empty = unavailable; the row just doesn't render.
@@ -825,7 +826,7 @@ public struct DetailView: View {
         for episode in sonarrEpisodes where episode.seasonNumber == season {
             guard let number = episode.episodeNumber,
                   let file = episode.episodeFileId.flatMap({ sonarrEpisodeFiles[$0] }) else { continue }
-            out[number] = UpgradeDiffView.side(episodeFile: file)
+            out[number] = UpgradeDiffView.side(file: file)
         }
         return out
     }

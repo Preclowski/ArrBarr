@@ -17,7 +17,7 @@ nonisolated public struct LidarrClient: ArrAPIClient {
         return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
     }
 
-    func fetchTrackFiles(albumId: Int) async throws -> [LidarrTrackFile] { try await read([LidarrTrackFile].self) { $0.filesOf(parent: albumId) } }
+    func fetchTrackFiles(albumId: Int) async throws -> [ArrFile] { try await read([ArrFile].self) { $0.filesOf(parent: albumId) } }
     func fetchAlbumDetails(id: Int) async throws -> LidarrAlbumDetail { try await read(LidarrAlbumDetail.self) { $0.album(id: id) } }
     func fetchTracks(albumId: Int) async throws -> [LidarrTrackDetail] { try await read([LidarrTrackDetail].self) { $0.tracks(albumID: albumId) } }
     func fetchArtistDetails(id: Int) async throws -> LidarrArtistDetail { try await read(LidarrArtistDetail.self) { $0.artist(id: id) } }

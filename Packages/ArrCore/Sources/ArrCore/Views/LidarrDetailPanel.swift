@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 struct LidarrDetailPanel: View {
     let item: QueueItem
@@ -7,7 +8,7 @@ struct LidarrDetailPanel: View {
     let lidarrTracks: [LidarrTrackDetail]
     /// `/trackfile` records for this album — joined per-track by
     /// `trackFileId` in the pushed track detail.
-    var lidarrTrackFiles: [LidarrTrackFile] = []
+    var lidarrTrackFiles: [ArrFile] = []
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
     let loadError: String?

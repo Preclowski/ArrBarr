@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Side-by-side "current file → incoming release" upgrade comparison:
 /// quality, custom-format score and size per side, plus the gained (green)
@@ -54,23 +55,14 @@ struct UpgradeDiffView: View {
 
     /// Ways to build a side out of the *library* payloads (as opposed to the
     /// queue's `existing*` fields above) — what manual search compares its
-    /// candidates against. Mirrors `ExistingFileBanner`'s two file inits so the
-    /// banner and the diff can't disagree about what's on disk.
+    /// candidates against. Mirrors `ExistingFileBanner.init(file:)` so the banner
+    /// and the diff can't disagree about what's on disk.
     static func side(file: ArrFile) -> Side {
         Side(quality: file.quality?.name,
              score: file.customFormatScore,
              size: file.size,
              formats: (file.customFormats ?? []).map(\.name),
-             filename: file.relativePath)
-    }
-
-    /// Sonarr's `episodefile` payload — same fields as `ArrFile` plus an id.
-    static func side(episodeFile: SonarrEpisodeFile) -> Side {
-        Side(quality: episodeFile.quality?.name,
-             score: episodeFile.customFormatScore,
-             size: episodeFile.size,
-             formats: (episodeFile.customFormats ?? []).map(\.name),
-             filename: episodeFile.relativePath)
+             filename: file.relativePath ?? file.path.map { URL(fileURLWithPath: $0).lastPathComponent })
     }
 
     /// A manual-search candidate as the *incoming* side.

@@ -18,7 +18,7 @@ nonisolated public struct RadarrClient: ArrAPIClient {
     }
 
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail { try await read(RadarrMovieDetail.self) { $0.movie(id: id) } }
-    func fetchMovieFile(movieId: Int) async throws -> ArrCore.ArrFile? { try await read([ArrCore.ArrFile].self) { $0.movieFiles([movieId]) }.first }
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read([ArrFile].self) { $0.movieFiles([movieId]) }.first }
     func fetchCredits(movieId: Int) async throws -> [ArrCore.ArrCredit] { try await read([ArrCore.ArrCredit].self) { $0.credits(movieID: movieId) } }
     func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
     func lookupMovies(term: String) async throws -> [RadarrLookupRecord] { try await read([RadarrLookupRecord].self) { $0.lookupMovies(term: term) } }

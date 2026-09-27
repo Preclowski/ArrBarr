@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // MARK: - Radarr movie detail
 

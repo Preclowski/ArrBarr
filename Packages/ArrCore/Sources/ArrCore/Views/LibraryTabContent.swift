@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Library tab — a browsable cover grid of everything already on the arrs.
 /// Top strip: arr picker (menu-chip) + status filter chips + sort menu.

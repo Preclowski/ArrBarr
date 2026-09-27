@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// One album as the chat renders it. A slim view-shape rather than the raw
 /// `LidarrAlbumListRecord`: the rich payload needs `Equatable` (the whole

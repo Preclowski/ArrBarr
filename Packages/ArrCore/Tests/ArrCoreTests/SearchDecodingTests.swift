@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("Search Decoding")
@@ -77,22 +78,19 @@ struct SearchDecodingTests {
     /// trusting it produced a scheme-less URL and artist posters never
     /// loaded anywhere (search rows AND the artist detail header).
     @Test("Relative remoteUrl is ignored; url resolves against base")
-    func relativeRemoteUrlFallsThrough() {
-        let images = [ArrImage(
-            coverType: "poster",
-            url: "/MediaCover/82/poster.jpg?lastWrite=639220808915209853",
-            remoteUrl: "/config/MediaCover/82/poster.jpg"
-        )]
+    func relativeRemoteUrlFallsThrough() throws {
+        let images = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "url": "/MediaCover/82/poster.jpg?lastWrite=639220808915209853",
+              "remoteUrl": "/config/MediaCover/82/poster.jpg"}]
+            """#.utf8))
         let (url, auth) = images.posterURL(baseURL: "https://lidarr.example")
         #expect(url?.absoluteString == "https://lidarr.example/MediaCover/82/poster.jpg")
         #expect(auth == true)
 
         // A genuine absolute remoteUrl still wins (no auth needed).
-        let remote = [ArrImage(
-            coverType: "poster",
-            url: "/MediaCover/1/poster.jpg",
-            remoteUrl: "https://images.example/p.jpg"
-        )]
+        let remote = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "url": "/MediaCover/1/poster.jpg", "remoteUrl": "https://images.example/p.jpg"}]
+            """#.utf8))
         let (rUrl, rAuth) = remote.posterURL(baseURL: "https://lidarr.example")
         #expect(rUrl?.absoluteString == "https://images.example/p.jpg")
         #expect(rAuth == false)

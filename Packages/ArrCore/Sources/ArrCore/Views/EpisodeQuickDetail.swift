@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Hashable marker for "push the series DetailView for this queue item"
 /// nav action. Lives next to `EpisodeQuickDetail` since the only place
@@ -61,7 +62,7 @@ public struct EpisodeQuickDetail: View {
     /// The series' quality-profile name, for the episode hero's chip.
     @State private var profileName: String?
     @State private var fullEpisode: SonarrEpisodeDetail?
-    @State private var episodeFileMap: [Int: SonarrEpisodeFile] = [:]
+    @State private var episodeFileMap: [Int: ArrFile] = [:]
     @State private var loadError: String?
     /// Series drill-down. Owned HERE (not at the root NavigationStack)
     /// so the series push nests as a CHILD of this episode view: the

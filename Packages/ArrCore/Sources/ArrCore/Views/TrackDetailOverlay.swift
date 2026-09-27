@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Per-track detail — the audio counterpart of `EpisodeDetailOverlay`,
 /// trimmed to what a track actually has: album-art hero with title /
@@ -9,7 +10,7 @@ struct TrackDetailOverlay: View {
     let track: LidarrTrackDetail
     /// The joined `/trackfile` record — nil when the track has no file
     /// (or the file list hasn't loaded), which renders the missing state.
-    let file: LidarrTrackFile?
+    let file: ArrFile?
     let albumTitle: String?
     /// Album's artist — rendered as a drill-in link when `onOpenArtist` is
     /// wired (mirrors the album hero's artist line).
@@ -145,7 +146,7 @@ struct TrackDetailOverlay: View {
             // by what it shows — same as movie / episode details.
             VStack(alignment: .leading, spacing: 6) {
                 DetailSectionHeader("Existing file")
-                ExistingFileBanner(trackFile: file)
+                ExistingFileBanner(file: file)
             }
         } else if track.hasFile != true {
             Text("search.missing.button", bundle: .module)

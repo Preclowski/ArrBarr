@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Pushed when the user taps a season in the series detail. Identifies which
 /// season to open — kept a distinct type from `ManualSearchTarget` etc. so its
@@ -34,7 +35,7 @@ struct SeasonDetailView: View {
     let sonarrDetail: SonarrSeriesDetail?
     let episodes: [SonarrEpisodeDetail]
     let queueByEpisodeId: [Int: [QueueItem]]
-    let fileByEpisodeFileId: [Int: SonarrEpisodeFile]
+    let fileByEpisodeFileId: [Int: ArrFile]
     let seriesPosterURL: URL?
     let seriesPosterRequiresAuth: Bool
     let seriesPosterAPIKey: String?
@@ -262,7 +263,7 @@ struct SeasonDetailView: View {
         for episode in episodes {
             guard let number = episode.episodeNumber,
                   let file = episode.episodeFileId.flatMap({ fileByEpisodeFileId[$0] }) else { continue }
-            out[number] = UpgradeDiffView.side(episodeFile: file)
+            out[number] = UpgradeDiffView.side(file: file)
         }
         return out
     }

@@ -1,17 +1,7 @@
 import Foundation
+import MediaKit
 
 // MARK: - Shared Radarr/Sonarr v3 types
-nonisolated public struct ArrCustomFormat: Codable, Equatable, Sendable {
-    // `id` is optional because some arr endpoints (notably Radarr's
-    // movie detail when CFs are referenced rather than embedded) ship
-    // the format with a name but no id. A required `id` made the
-    // whole `[ArrCustomFormat]` array fail decoding silently —
-    // upstream that surfaces as "no chips visible in detail view"
-    // even when the API has populated the list.
-    let id: Int?
-    let name: String
-}
-
 /// Full custom-format payload from `/api/v3/customformat` — carries the
 /// matching `specifications` (the conditions that make a release match
 /// this format) on top of the bare id/name in `ArrCustomFormat`. Used by
@@ -89,32 +79,7 @@ nonisolated public struct ArrCredit: Codable, Equatable, Sendable {
     }
 }
 
-nonisolated public struct ArrQuality: Codable, Sendable {
-    let quality: ArrQualityName?
-    nonisolated struct ArrQualityName: Codable, Sendable { let name: String? }
-    var name: String? { quality?.name }
-}
-
-nonisolated public struct ArrImage: Codable, Equatable, Sendable {
-    let coverType: String?
-    let url: String?
-    let remoteUrl: String?
-}
-
 // MARK: - Radarr
-
-
-
-nonisolated public struct ArrFile: Codable, Sendable {
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let size: Int64?
-    let relativePath: String?
-    /// Library tooltip extras — lazily fetched via `/moviefile?movieId=`.
-    var releaseGroup: String? = nil
-    var languages: [ArrFileLanguage]? = nil
-}
 
 
 
@@ -122,16 +87,6 @@ nonisolated public struct ArrFile: Codable, Sendable {
 
 
 
-
-nonisolated public struct SonarrEpisodeFile: Codable, Sendable {
-    let id: Int
-    let seriesId: Int?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let size: Int64?
-    let relativePath: String?
-}
 
 // MARK: - Lidarr
 
@@ -141,24 +96,6 @@ nonisolated public struct LidarrArtist: Codable, Sendable {
     let artistName: String
     let foreignArtistId: String?
     let images: [ArrImage]?
-}
-
-
-/// One on-disk track file (`/api/v1/trackfile?albumId=N`). Lidarr's queue is
-/// per-album, so an album upgrade replaces N of these — the client aggregates
-/// them into the album-level existing-file diff fields (quality / size / score
-/// / formats). Only the fields the diff needs are decoded; extra JSON is
-/// ignored.
-nonisolated public struct LidarrTrackFile: Codable, Sendable {
-    let id: Int
-    let albumId: Int?
-    let customFormats: [ArrCustomFormat]?
-    let customFormatScore: Int?
-    let quality: ArrQuality?
-    let size: Int64?
-    /// Absolute on-disk path (Lidarr sends no relativePath here) — the
-    /// banner shows just the last component.
-    let path: String?
 }
 
 
@@ -431,7 +368,7 @@ nonisolated public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
     /// Library tab: the on-disk file's actual quality ("WEBDL-1080p").
     /// Present in `/api/v3/movie` whenever `hasFile` — we just never
     /// decoded it before.
-    var movieFile: ArrLibraryFile? = nil
+    var movieFile: ArrFile? = nil
     /// Library tab fallback when there's no file yet — resolved to the
     /// profile's name via `/qualityprofile`. (`var … = nil` so the demo
     /// mocks' memberwise inits keep compiling; Decodable still decodes it.)
@@ -529,7 +466,7 @@ nonisolated public struct WhisparrLibraryRecord: Codable, Sendable, Equatable {
     public let images: [ArrImage]?
     public let sizeOnDisk: Int64?
     /// See `RadarrLibraryRecord.movieFile` / `qualityProfileId` / `status`.
-    public var movieFile: ArrLibraryFile? = nil
+    public var movieFile: ArrFile? = nil
     public var qualityProfileId: Int? = nil
     public var status: String? = nil
     public var isAvailable: Bool? = nil
@@ -609,18 +546,3 @@ nonisolated public extension Array where Element == ArrImage {
     }
 }
 
-nonisolated public struct ArrLibraryFile: Codable, Sendable, Equatable {
-    nonisolated public struct Quality: Codable, Sendable, Equatable {
-        nonisolated public struct Name: Codable, Sendable, Equatable { let name: String? }
-        let quality: Name?
-    }
-    let quality: Quality?
-    var customFormats: [ArrCustomFormat]? = nil
-    var customFormatScore: Int? = nil
-    var relativePath: String? = nil
-    var qualityName: String? { quality?.quality?.name }
-}
-
-nonisolated public struct ArrFileLanguage: Codable, Sendable {
-    let name: String?
-}

@@ -152,7 +152,7 @@ public actor SearchClient {
 
     // MARK: - Result mapping
 
-    nonisolated private static func poster(_ images: [ArrCore.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"],
+    nonisolated private static func poster(_ images: [ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"],
                                            keys: [MediaServerExternalKey] = []) -> URL? {
         images?.posterURL(baseURL: baseURL, coverTypes: coverTypes, mediaServerKeys: keys).0
     }

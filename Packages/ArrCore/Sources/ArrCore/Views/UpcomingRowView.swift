@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Long-hover tooltip for any surface presenting an `UpcomingItem` (the
 /// Upcoming tab's rows, the queue's "Next week" banner rows). Owns the
@@ -214,20 +215,6 @@ public struct UpcomingItemTooltip: View {
             size = f.size
             releaseGroup = f.releaseGroup
             languages = (f.languages ?? []).compactMap(\.name)
-            formats = (f.customFormats ?? []).map(\.name)
-            score = f.customFormatScore ?? 0
-            fileName = f.relativePath
-        }
-
-        // Episodes carry ONLY what the episode surfaces (detail banner)
-        // show: quality, size, formats, file name. No group/languages —
-        // the tooltip must stay a subset of the library/detail views for
-        // the same entity type, never a superset.
-        init(_ f: SonarrEpisodeFile) {
-            quality = f.quality?.name
-            size = f.size
-            releaseGroup = nil
-            languages = []
             formats = (f.customFormats ?? []).map(\.name)
             score = f.customFormatScore ?? 0
             fileName = f.relativePath

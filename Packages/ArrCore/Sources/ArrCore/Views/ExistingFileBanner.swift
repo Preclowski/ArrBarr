@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Known arr availability/run states ("released", "inCinemas", "continuing",
 /// …) mapped to localized labels; unknown values fall back to the
@@ -25,15 +26,14 @@ enum ArrReleaseStatusLabel {
 }
 
 /// Banner describing the file an arr already has on disk for this item —
-/// built from `RadarrMovieDetail.movieFile` / similar.
+/// built from the arr's `ArrFile`.
 struct ExistingFileBanner: View {
     let quality: String?
     let size: Int64?
     let customFormatScore: Int?
     let customFormats: [String]
     let fileName: String?
-    /// Extra file facts, mirroring the Library tooltip (movie callers only —
-    /// the queue/episode/track variants leave them nil).
+    /// Extra file facts, mirroring the Library tooltip.
     var releaseGroup: String?
     var languages: String?
 
@@ -48,46 +48,18 @@ struct ExistingFileBanner: View {
         self.languages = languages
     }
 
-    /// Build the banner from an arr's library `movieFile` — the file the
-    /// user already owns, no queue activity required. (Release status is a
-    /// TITLE fact and lives in the hero card next to the library badge.)
-    init(movieFile: ArrFile) {
-        let languages = (movieFile.languages ?? []).compactMap(\.name)
+    /// The file an arr already has: a movie's `movieFile`, an episode file, or a track file (Lidarr sends
+    /// only an absolute `path`, so the name falls back to its last component).
+    init(file: ArrFile) {
+        let languages = (file.languages ?? []).compactMap(\.name)
         self.init(
-            quality: movieFile.quality?.name,
-            size: movieFile.size,
-            customFormatScore: movieFile.customFormatScore,
-            customFormats: (movieFile.customFormats ?? []).map(\.name),
-            fileName: movieFile.relativePath,
-            releaseGroup: movieFile.releaseGroup,
+            quality: file.quality?.name,
+            size: file.size,
+            customFormatScore: file.customFormatScore,
+            customFormats: (file.customFormats ?? []).map(\.name),
+            fileName: file.relativePath ?? file.path.map { URL(fileURLWithPath: $0).lastPathComponent },
+            releaseGroup: file.releaseGroup,
             languages: languages.isEmpty ? nil : languages.joined(separator: ", ")
-        )
-    }
-
-    /// Sonarr `episodefile` variant — same payload as `ArrFile` plus
-    /// an `id` we don't need here. Lets `EpisodeDetailOverlay` build
-    /// the banner from the already-loaded `sonarrEpisodeFiles` map
-    /// instead of a separate per-episode fetch.
-    init(episodeFile: SonarrEpisodeFile) {
-        self.init(
-            quality: episodeFile.quality?.name,
-            size: episodeFile.size,
-            customFormatScore: episodeFile.customFormatScore,
-            customFormats: (episodeFile.customFormats ?? []).map(\.name),
-            fileName: episodeFile.relativePath
-        )
-    }
-
-    /// Lidarr `trackfile` variant — same chrome as movie / episode files.
-    /// Lidarr sends an absolute `path` (no relativePath), so trim to the
-    /// filename the same way the episode diff line does.
-    init(trackFile: LidarrTrackFile) {
-        self.init(
-            quality: trackFile.quality?.quality?.name,
-            size: trackFile.size,
-            customFormatScore: trackFile.customFormatScore,
-            customFormats: (trackFile.customFormats ?? []).map(\.name),
-            fileName: trackFile.path.map { URL(fileURLWithPath: $0).lastPathComponent }
         )
     }
 

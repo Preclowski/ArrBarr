@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import MediaKit
 
 /// Pure helpers used by `DetailView`'s per-arr sections. Lifted out as free
 /// functions so the per-arr `*Content` view-builders don't have to be members

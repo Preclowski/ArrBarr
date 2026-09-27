@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 struct EpisodeRow: View {
     let episode: SonarrEpisodeDetail
@@ -13,7 +14,7 @@ struct EpisodeRow: View {
     /// `ScoreLabel` treatment as an in-progress download — so the
     /// "available" rows surface their points instead of the air date the
     /// user already knows.
-    var episodeFile: SonarrEpisodeFile? = nil
+    var episodeFile: ArrFile? = nil
     /// Tap the row body (not the state indicator) to drill into the
     /// episode detail surface. `nil` keeps the row passive (the
     /// legacy behaviour) for callers that don't want this drill-down.

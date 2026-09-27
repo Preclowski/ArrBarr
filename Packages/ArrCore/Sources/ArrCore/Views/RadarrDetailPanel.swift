@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 // MARK: - Movie (Radarr + Whisparr share the same layout since Whisparr
 //          is a Radarr fork operating on the same RadarrMovieDetail type)
@@ -95,7 +96,7 @@ struct RadarrDetailPanel<Header: View>: View {
                 if let file = radarrMovieFile ?? radarrDetail?.movieFile {
                     VStack(alignment: .leading, spacing: 6) {
                         DetailSectionHeader("Existing file")
-                        ExistingFileBanner(movieFile: file)
+                        ExistingFileBanner(file: file)
                     }
                 }
             }

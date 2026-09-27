@@ -40,11 +40,12 @@ struct MediaServerIndexTests {
     }
 
     @Test("Arr poster resolution falls back when the index has no match")
-    func posterFallback() {
+    func posterFallback() throws {
         // The whole safety property of the override: no media server, or a
         // title it doesn't hold, must leave the arr's artwork untouched.
-        let images = [ArrImage(coverType: "poster", url: "/MediaCover/1/poster.jpg",
-                               remoteUrl: "https://image.tmdb.org/p/w500/x.jpg")]
+        let images = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "url": "/MediaCover/1/poster.jpg", "remoteUrl": "https://image.tmdb.org/p/w500/x.jpg"}]
+            """#.utf8))
         let (url, auth) = images.posterURL(baseURL: "http://radarr:7878",
                                            mediaServerKeys: [.tmdbMovie(999)])
         #expect(url?.absoluteString == "https://image.tmdb.org/p/w500/x.jpg")
@@ -52,9 +53,10 @@ struct MediaServerIndexTests {
     }
 
     @Test("No keys at all is the same as no match")
-    func posterFallbackWithoutKeys() {
-        let images = [ArrImage(coverType: "poster", url: nil,
-                               remoteUrl: "https://image.tmdb.org/p/w500/x.jpg")]
+    func posterFallbackWithoutKeys() throws {
+        let images = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "remoteUrl": "https://image.tmdb.org/p/w500/x.jpg"}]
+            """#.utf8))
         let (url, _) = images.posterURL(baseURL: "http://radarr:7878", mediaServerKeys: [])
         #expect(url?.absoluteString == "https://image.tmdb.org/p/w500/x.jpg")
     }

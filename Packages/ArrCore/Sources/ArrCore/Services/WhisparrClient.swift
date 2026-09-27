@@ -18,7 +18,7 @@ nonisolated public struct WhisparrClient: ArrAPIClient {
         return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
     }
 
-    func fetchMovieFile(movieId: Int) async throws -> ArrCore.ArrFile? { try await read([ArrCore.ArrFile].self) { $0.movieFiles([movieId]) }.first }
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read([ArrFile].self) { $0.movieFiles([movieId]) }.first }
     /// `revalidate: false` serves whatever the on-disk store holds and says so
     /// in `isStale`, refreshing behind the caller — what the Library's first
     /// paint of a session wants.
