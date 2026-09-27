@@ -536,6 +536,44 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
 }
 
 /// Typed read-modify-write: the fields MediaKit models plus everything else, echoed back on PUT.
+/// The settings the Edit form reads and writes on a movie, series or artist; nil means "leave as is".
+public struct ArrRecordSettings: Codable, Equatable, Sendable {
+    public var qualityProfileId: Int?
+    public var metadataProfileId: Int?
+    public var minimumAvailability: String?
+    public var seriesType: String?
+    public var monitorNewItems: String?
+    public var seasonFolder: Bool?
+    public var rootFolderPath: String?
+    public var path: String?
+
+    public init(qualityProfileId: Int? = nil, metadataProfileId: Int? = nil, minimumAvailability: String? = nil, seriesType: String? = nil,
+                monitorNewItems: String? = nil, seasonFolder: Bool? = nil, rootFolderPath: String? = nil) {
+        self.qualityProfileId = qualityProfileId; self.metadataProfileId = metadataProfileId
+        self.minimumAvailability = minimumAvailability; self.seriesType = seriesType
+        self.monitorNewItems = monitorNewItems; self.seasonFolder = seasonFolder; self.rootFolderPath = rootFolderPath
+    }
+
+    mutating func merge(_ edit: ArrRecordSettings) {
+        qualityProfileId = edit.qualityProfileId ?? qualityProfileId
+        metadataProfileId = edit.metadataProfileId ?? metadataProfileId
+        minimumAvailability = edit.minimumAvailability ?? minimumAvailability
+        seriesType = edit.seriesType ?? seriesType
+        monitorNewItems = edit.monitorNewItems ?? monitorNewItems
+        seasonFolder = edit.seasonFolder ?? seasonFolder
+        rootFolderPath = edit.rootFolderPath ?? rootFolderPath
+    }
+
+    /// The record's folder under the new root, when this edit changes the root.
+    func movedPath(from current: ArrRecordSettings) -> String? {
+        let slash = CharacterSet(charactersIn: "/")
+        guard let newRoot = rootFolderPath, let oldRoot = current.rootFolderPath,
+              newRoot.trimmingCharacters(in: slash) != oldRoot.trimmingCharacters(in: slash),
+              let folder = current.path?.split(separator: "/").last else { return nil }
+        return (newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot) + "/" + folder
+    }
+}
+
 public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
     public var known: Known
     public var extra: [String: JSONValue]

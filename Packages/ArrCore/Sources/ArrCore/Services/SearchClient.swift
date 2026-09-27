@@ -82,7 +82,7 @@ public actor SearchClient {
     private func ensureRefCompatible(_ result: SearchResult) throws {
         let ref = result.mediaRef
         guard ref.compatibleSources.contains(source) else {
-            throw HTTPError.wrongSource(refKind: String(describing: ref).split(separator: "(").first.map(String.init) ?? "ref", clientSource: source.rawValue)
+            throw SearchAddError.wrongSource(serviceName: client.serviceName)
         }
     }
 
@@ -107,8 +107,7 @@ public actor SearchClient {
         try ensureRefCompatible(result)
         let tvdbId = result.externalId
         guard tvdbId > 0 else {
-            throw HTTPError.decoding(NSError(domain: "ArrBarr.SonarrAdd", code: 0, userInfo: [
-                NSLocalizedDescriptionKey: String(format: String(localized: "search.unresolvedSeries.error", bundle: .module), result.title)]))
+            throw SearchAddError.unresolvedSeries(title: result.title)
         }
         var payload = ArrAddPayload(qualityProfileId: qualityProfileId, rootFolderPath: rootFolderPath)
         payload.tvdbId = tvdbId
@@ -210,5 +209,18 @@ public actor SearchClient {
             rating: r.ratings?.value, votes: r.ratings?.votes, imdb: nil, rottenTomatoes: nil, metacritic: nil, overview: r.overview, runtime: nil,
             genres: r.genres ?? [], network: nil, certification: nil, posterURL: poster(r.images, baseURL: baseURL, coverTypes: ["poster", "cover"]),
             source: .lidarr, sourceRank: sourceRank)
+    }
+}
+
+/// Adds refused before any request: the result can't go to this arr, or has no id the arr can add by.
+nonisolated enum SearchAddError: LocalizedError {
+    case wrongSource(serviceName: String)
+    case unresolvedSeries(title: String)
+
+    var errorDescription: String? {
+        switch self {
+        case let .wrongSource(serviceName): String(format: String(localized: "search.wrongSource.error", bundle: .module), serviceName)
+        case let .unresolvedSeries(title): String(format: String(localized: "search.unresolvedSeries.error", bundle: .module), title)
+        }
     }
 }

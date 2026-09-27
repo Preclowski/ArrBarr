@@ -50,7 +50,7 @@ struct MediaEditPanel: View {
     @State private var seasonFolder = true
     /// Root folder the record lives in right now — a differing selection
     /// shows the "files will move on disk" note (the save then goes out
-    /// with `moveFiles=true`, see `updateLibraryRecord`).
+    /// with `moveFiles=true`, see `ServarrService.updateSettings`).
     @State private var originalRootFolder: String?
 
     #if os(iOS)
@@ -369,14 +369,6 @@ struct MediaEditPanel: View {
     }
 
     /// The record's REST path — the same one the raw fetch and the PUT hit.
-    private var recordPath: String {
-        switch request.source {
-        case .radarr, .whisparr: return "/movie/\(request.entityId)"
-        case .sonarr: return "/series/\(request.entityId)"
-        case .lidarr: return "/artist/\(request.entityId)"
-        }
-    }
-
     private func normalizedRoot(_ path: String) -> String {
         path.hasSuffix("/") ? String(path.dropLast()) : path
     }
@@ -409,24 +401,14 @@ struct MediaEditPanel: View {
         }
 
         do {
-            let record = try await client.getRawObject(recordPath)
-            selectedProfileId = record["qualityProfileId"] as? Int
-            selectedMetadataProfileId = record["metadataProfileId"] as? Int
-            if let raw = record["minimumAvailability"] as? String,
-               let parsed = RadarrMinimumAvailability(rawValue: raw) {
-                availability = parsed
-            }
-            if let raw = record["seriesType"] as? String,
-               let parsed = SonarrSeriesType(rawValue: raw) {
-                seriesType = parsed
-            }
-            if let raw = record["monitorNewItems"] as? String {
-                monitorNewItems = raw
-            }
-            if let raw = record["seasonFolder"] as? Bool {
-                seasonFolder = raw
-            }
-            if let recordRoot = record["rootFolderPath"] as? String, !recordRoot.isEmpty {
+            let record = try await client.read { $0.settings(entityID: request.entityId) }
+            selectedProfileId = record.qualityProfileId
+            selectedMetadataProfileId = record.metadataProfileId
+            if let parsed = record.minimumAvailability.flatMap(RadarrMinimumAvailability.init(rawValue:)) { availability = parsed }
+            if let parsed = record.seriesType.flatMap(SonarrSeriesType.init(rawValue:)) { seriesType = parsed }
+            if let raw = record.monitorNewItems { monitorNewItems = raw }
+            if let raw = record.seasonFolder { seasonFolder = raw }
+            if let recordRoot = record.rootFolderPath, !recordRoot.isEmpty {
                 if let match = rootFolders.first(where: { normalizedRoot($0) == normalizedRoot(recordRoot) }) {
                     selectedRootFolder = match
                 } else {
@@ -452,23 +434,21 @@ struct MediaEditPanel: View {
         saveError = nil
         defer { saving = false }
 
-        var fields: [String: Any] = [:]
-        if let pid = selectedProfileId { fields["qualityProfileId"] = pid }
-        if let root = selectedRootFolder { fields["rootFolderPath"] = root }
+        var settings = ArrRecordSettings(qualityProfileId: selectedProfileId, rootFolderPath: selectedRootFolder)
         switch request.source {
         case .radarr, .whisparr:
-            fields["minimumAvailability"] = availability.rawValue
+            settings.minimumAvailability = availability.rawValue
         case .sonarr:
-            fields["seriesType"] = seriesType.rawValue
-            fields["monitorNewItems"] = monitorNewItems
-            fields["seasonFolder"] = seasonFolder
+            settings.seriesType = seriesType.rawValue
+            settings.monitorNewItems = monitorNewItems
+            settings.seasonFolder = seasonFolder
         case .lidarr:
-            if let mid = selectedMetadataProfileId { fields["metadataProfileId"] = mid }
-            fields["monitorNewItems"] = monitorNewItems
+            settings.metadataProfileId = selectedMetadataProfileId
+            settings.monitorNewItems = monitorNewItems
         }
 
         do {
-            try await client.updateLibraryRecord(path: recordPath, fields: fields)
+            try await client.run { $0.updateSettings(entityID: request.entityId, settings) }
             onBack()
         } catch {
             saveError = error.localizedDescription

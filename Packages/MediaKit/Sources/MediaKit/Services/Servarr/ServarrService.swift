@@ -311,15 +311,23 @@ public struct ServarrService: Sendable {
         }
     }
 
-    public func update(entityID: Int, moveFiles: Bool = false, edit: @escaping @Sendable (inout ArrRecordEnvelope<JSONValue>) -> Void) -> Command {
+    /// The record's editable settings, read fresh for the Edit form.
+    public func settings(entityID: Int) -> Resource<ArrRecordSettings> {
+        .json(plan("fetchRecordSettings", path: "/\(profile.entityNoun)/{id}", values: ["id": String(entityID)]), tags: [entityTag(entityID)], freshness: .volatile)
+    }
+
+    /// Writes the non-nil fields over the current record; a changed root folder moves the files along.
+    public func updateSettings(entityID: Int, _ settings: ArrRecordSettings) -> Command {
         let service = self
         let noun = profile.entityNoun
         return command("updateLibraryRecord", invalidates: [entityTag(entityID), tag(.library), tag(.calendar)]) { ctx in
             let get = service.plan("updateLibraryRecord", path: "/\(noun)/{id}", values: ["id": String(entityID)])
-            var envelope = try await ctx.decode(ArrRecordEnvelope<JSONValue>.self, from: try await ctx.send(get), operation: get.operation)
-            edit(&envelope)
+            var envelope = try await ctx.decode(ArrRecordEnvelope<ArrRecordSettings>.self, from: try await ctx.send(get), operation: get.operation)
+            let movedPath = settings.movedPath(from: envelope.known)
+            envelope.known.merge(settings)
+            if let movedPath { envelope.known.path = movedPath }
             let put = service.plan("updateLibraryRecord", method: "PUT", path: "/\(noun)/{id}", values: ["id": String(entityID)],
-                                   query: [("moveFiles", String(moveFiles))], body: try RequestBuilder.json(envelope))
+                                   query: [("moveFiles", String(movedPath != nil))], body: try RequestBuilder.json(envelope))
             let r = try await ctx.send(put)
             return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: r.body))
         }

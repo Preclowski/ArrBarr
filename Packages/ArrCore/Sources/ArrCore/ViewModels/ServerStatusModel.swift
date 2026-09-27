@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Owns the disk-space fetch behind Settings → Status. Connection health and
 /// queue activity are read straight from their shared singletons
@@ -6,7 +7,7 @@ import Foundation
 /// fetch, so that's all this model carries.
 @Observable
 public final class ServerStatusModel {
-    public private(set) var disks: [DiskSpace] = []
+    public private(set) var disks: [ArrDiskSpace] = []
     public private(set) var isRefreshing = false
     public private(set) var lastRefresh: Date?
 
@@ -27,13 +28,6 @@ public final class ServerStatusModel {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            disks = Self.demoDisks
-            lastRefresh = Date()
-            return
-        }
-
         let fetched = await Self.fetchAll(targets)
         disks = Self.dedupe(fetched)
         lastRefresh = Date()
@@ -41,12 +35,12 @@ public final class ServerStatusModel {
 
     /// Fetch `/diskspace` from every target concurrently; a failing arr
     /// contributes nothing rather than aborting the sweep.
-    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> [DiskSpace] {
-        await withTaskGroup(of: [DiskSpace].self) { group in
+    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> [ArrDiskSpace] {
+        await withTaskGroup(of: [ArrDiskSpace].self) { group in
             for (kind, cfg) in targets {
                 group.addTask { (try? await client(kind, cfg).fetchDiskSpace()) ?? [] }
             }
-            var all: [DiskSpace] = []
+            var all: [ArrDiskSpace] = []
             for await chunk in group { all += chunk }
             return all
         }
@@ -61,17 +55,12 @@ public final class ServerStatusModel {
     /// Different arrs sharing a mount report it identically — collapse by path
     /// (keeping the largest-capacity read), drop capacity-less mounts, and sort
     /// fullest-first so the disks that need attention lead.
-    private static func dedupe(_ disks: [DiskSpace]) -> [DiskSpace] {
-        var byPath: [String: DiskSpace] = [:]
+    private static func dedupe(_ disks: [ArrDiskSpace]) -> [ArrDiskSpace] {
+        var byPath: [String: ArrDiskSpace] = [:]
         for d in disks where d.isMeaningful {
-            if let existing = byPath[d.path], existing.totalSpace >= d.totalSpace { continue }
-            byPath[d.path] = d
+            if let existing = byPath[d.mountPath], existing.capacity >= d.capacity { continue }
+            byPath[d.mountPath] = d
         }
         return byPath.values.sorted { $0.usedFraction > $1.usedFraction }
     }
-
-    private static let demoDisks: [DiskSpace] = [
-        DiskSpace(path: "/data/media", label: "Media", freeSpace: 2_400_000_000_000, totalSpace: 16_000_000_000_000),
-        DiskSpace(path: "/data/downloads", label: "Downloads", freeSpace: 180_000_000_000, totalSpace: 2_000_000_000_000),
-    ]
 }

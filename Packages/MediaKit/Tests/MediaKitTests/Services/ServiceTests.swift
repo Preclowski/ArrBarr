@@ -259,7 +259,7 @@ enum ProducedOperations {
                     s.artist(id: 1).plan, s.album(id: 1).plan, s.episodes(seriesID: 1).plan, s.albums(artistID: 1).plan, s.tracks(albumID: 1).plan,
                     s.credits(movieID: 1).plan, s.alternateTitles().plan, s.qualityProfiles().plan, s.metadataProfiles().plan, s.rootFolders().plan,
                     s.customFormats().plan, s.downloadClients().plan, s.commands().plan, s.lookupMovies(term: "").plan, s.lookupSeries(term: "").plan,
-                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(entityID: 1).plan].map(\.operation)
+                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(entityID: 1).plan, s.settings(entityID: 1).plan].map(\.operation)
             switch s.files.strategy {
             case let .chunked(_, make, _): ops.append(make([1]).plan.operation)
             case let .perKey(make): ops.append(make(1).plan.operation)
@@ -269,7 +269,7 @@ enum ProducedOperations {
                     s.command(named: "RefreshMovie"), s.setMonitored(entityID: 1, true), s.setAlbumMonitored(albumID: 1, true), s.setEpisodesMonitored(ids: [1], true),
                     s.setSeasonMonitored(seriesID: 1, season: 1, true), s.add(ArrAddPayload(qualityProfileId: 1, rootFolderPath: "/")),
                     s.addAlbum(foreignAlbumID: "x", term: "x", payload: ArrAddPayload(qualityProfileId: 1, rootFolderPath: "/")),
-                    s.update(entityID: 1) { _ in }, s.delete(entityID: 1, deleteFiles: false, addImportExclusion: false)].map(\.name)
+                    s.updateSettings(entityID: 1, ArrRecordSettings()), s.delete(entityID: 1, deleteFiles: false, addImportExclusion: false)].map(\.name)
             ops += ["search.fetchLibraryOwnership", "search.fetchQualityProfiles"].map { OperationID(kind, $0) }   // same requests as library/qualityProfiles
         }
         let downloads: [any DownloadService] = [QBittorrentService(instance: InstanceID(.qbittorrent), capabilities: caps), TransmissionService(instance: InstanceID(.transmission)),

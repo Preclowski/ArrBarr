@@ -315,7 +315,13 @@ nonisolated extension Int64 {
 /// The user-facing text for a MediaKit failure; the arr's own reason wins when it sent one.
 nonisolated enum MediaKitErrorPresenter {
     static func message(for error: MediaKitError) -> String {
-        if let server = error.serverMessage, !server.isEmpty { return server }
+        let server = error.serverMessage.flatMap { $0.isEmpty ? nil : $0 }
+        // Servarr answers a bad key with an empty body; name the fix either way, and keep what a client did say.
+        if case let .unauthorized(_, status, _) = error {
+            let hint = text("mediakit.error.unauthorized", String(status))
+            return server.map { "\(hint) (\($0))" } ?? hint
+        }
+        if let server { return server }
         switch error {
         // Name the service, not the app: "qBittorrent is not configured" is
         // the sentence the user can act on.
@@ -359,4 +365,10 @@ nonisolated enum MediaKitErrorPresenter {
         default: return false
         }
     }
+}
+
+nonisolated public extension Error {
+    /// The message to put in front of a user: `localizedDescription` alone drops a
+    /// `LocalizedError`'s own text and the arr's reason a `MediaKitError` carries.
+    var userFacingMessage: String { MediaKitErrorPresenter.message(for: self) }
 }

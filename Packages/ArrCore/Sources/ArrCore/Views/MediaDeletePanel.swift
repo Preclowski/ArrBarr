@@ -202,14 +202,6 @@ struct MediaDeletePanel: View {
     }
 
     /// The record's REST path — the same one the edit panel reads and writes.
-    private var recordPath: String {
-        switch request.source {
-        case .radarr, .whisparr: return "/movie/\(request.entityId)"
-        case .sonarr: return "/series/\(request.entityId)"
-        case .lidarr: return "/artist/\(request.entityId)"
-        }
-    }
-
     private func performDelete() async {
         // Same gate as the edit panel: changing what is in the library is the
         // Control side of the app.
@@ -218,7 +210,7 @@ struct MediaDeletePanel: View {
         deleteError = nil
         defer { deleting = false }
         do {
-            try await client.deleteLibraryRecord(path: recordPath,
+            try await client.deleteLibraryRecord(entityId: request.entityId,
                                                  deleteFiles: deleteFiles,
                                                  addImportExclusion: addExclusion)
             onDeleted()

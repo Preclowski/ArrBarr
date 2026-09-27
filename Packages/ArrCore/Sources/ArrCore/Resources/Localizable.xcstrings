@@ -34527,6 +34527,48 @@
         }
       }
     },
+    "search.wrongSource.error": {
+      "comment": "Error when a search result is handed to an arr that can't hold it (a series to Radarr). %@ is the service name.",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This title can't be added to %@."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tego tytułu nie można dodać do %@."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dieser Titel kann nicht zu %@ hinzugefügt werden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Este título no se puede añadir a %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce titre ne peut pas être ajouté à %@."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deze titel kan niet aan %@ worden toegevoegd."
+          }
+        }
+      }
+    },
     "settings.about.button": {
       "extractionState": "manual",
       "localizations": {

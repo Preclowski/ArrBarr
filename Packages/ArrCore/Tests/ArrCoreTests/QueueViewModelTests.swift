@@ -514,7 +514,7 @@ struct QueueViewModelActionHealthTests {
     func actionFailedRejectionKeepsClientUp() async {
         let (sut, fake) = await makeReadySUT()
         // Usenet clients answer HTTP 200 then report the failure in the body,
-        // surfaced as their own error type (not an HTTPError) — still reachable.
+        // surfaced as their own error type (not a MediaKitError) — still reachable.
         fake.actionError = TestError()
 
         await sut.resume(torrentItem("a"))

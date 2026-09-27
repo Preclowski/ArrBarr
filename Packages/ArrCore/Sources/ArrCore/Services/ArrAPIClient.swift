@@ -39,21 +39,6 @@ extension ArrAPIClient {
         return try await context.store.read(make(context.service), policy: policy, maxAge: maxAge, priority: priority)
     }
 
-    /// See `readCacheFirst(_:revalidate:_:)`.
-    func readCacheFirst<V>(revalidate: Bool, _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<V> {
-        if !revalidate, let cached = try? await readFetched(policy: .cacheOnly, make) { return cached }
-        return try await readFetched(policy: .cacheFirst, make)
-    }
-
-    /// Reads a MediaKit resource decoded into one of ArrCore's own record types (same plan, same tags, same freshness).
-    func read<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
-                                        priority: RequestPriority = .interactive, _ make: (ServarrService) -> Resource<V>) async throws -> T {
-        let context = try await context()
-        let template = make(context.service)
-        let resource = Resource<T>.json(template.plan, tags: template.tags, freshness: template.freshness, ttl: template.ttl)
-        return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority).value
-    }
-
     /// Read for the big library lists. `revalidate: false` takes the stored row
     /// however old; otherwise the store's own freshness decides (`warm` TTL,
     /// invalidated by imports, adds and edits).
@@ -61,29 +46,12 @@ extension ArrAPIClient {
     /// `.cacheOnly` rather than `.staleWhileRevalidate`, because the rows we
     /// want are exactly the ones SWR refuses: an import event marks the
     /// library tag changed (`stale_at` in the past), and from then on the
-    /// store treats the row as known-stale and goes to the network — which is
-    /// why the Library still opened on a spinner every launch. Serving it is
-    /// safe here ONLY because the caller follows a stale answer with a real
+    /// store treats the row as known-stale and goes to the network. Serving it
+    /// is safe here ONLY because the caller follows a stale answer with a real
     /// fetch (see `LibraryViewModel.loadIfNeeded`); `isStale` says when.
-    func readCacheFirst<T: Codable & Sendable, V>(_ type: T.Type, revalidate: Bool,
-                                                  _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<T> {
-        if !revalidate, let cached = try? await readFetched(type, policy: .cacheOnly, make) {
-            return cached
-        }
-        return try await readFetched(type, policy: .cacheFirst, make)
-    }
-
-    /// As `read`, but keeping the store's verdict on what it handed back.
-    /// `isStale` is the one bit callers act on: it means "this is an old row,
-    /// ask again when you can" — the Library's first paint of a session does
-    /// exactly that, and must not ask twice when the read already went out.
-    func readFetched<T: Codable & Sendable, V>(_ type: T.Type, policy: ReadPolicy = .cacheFirst, maxAge: Duration? = nil,
-                                               priority: RequestPriority = .interactive,
-                                               _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<T> {
-        let context = try await context()
-        let template = make(context.service)
-        let resource = Resource<T>.json(template.plan, tags: template.tags, freshness: template.freshness, ttl: template.ttl)
-        return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority)
+    func readCacheFirst<V>(revalidate: Bool, _ make: (ServarrService) -> Resource<V>) async throws -> Fetched<V> {
+        if !revalidate, let cached = try? await readFetched(policy: .cacheOnly, make) { return cached }
+        return try await readFetched(policy: .cacheFirst, make)
     }
 
     @discardableResult
@@ -94,21 +62,11 @@ extension ArrAPIClient {
 
     // MARK: - Shared reads
 
-    /// The record as the arr sent it, for forms that read fields MediaKit does not model.
-    func getRawObject(_ path: String) async throws -> [String: Any] {
-        let context = try await context()
-        let plan = RequestPlan(instance: context.instance, operation: "fetchRawRecord", pathTemplate: context.service.profile.apiBase + path, auth: .header("X-Api-Key"))
-        let value = try await context.store.read(Resource<JSONValue>.json(plan, tags: [], freshness: .volatile), policy: .mustRevalidate).value
-        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
-        guard let dictionary = object as? [String: Any] else { throw MediaKitError.decoding(plan.operation, detail: "expected a JSON object") }
-        return dictionary
-    }
-
     func fetchCustomFormats() async throws -> [ArrCustomFormatDetail] { try await read { $0.customFormats() } }
-    func fetchIndexers() async throws -> [MediaKit.ArrIndexerDefinition] { try await read([MediaKit.ArrIndexerDefinition].self) { $0.indexers() } }
+    func fetchIndexers() async throws -> [MediaKit.ArrIndexerDefinition] { try await read { $0.indexers() } }
     func fetchQualityProfiles() async throws -> [ArrQualityProfile] { try await read { $0.qualityProfiles() } }
-    func fetchHealth() async throws -> [ArrHealth] { try await read([ArrHealth].self, policy: .mustRevalidate) { $0.health() } }
-    func fetchDiskSpace() async throws -> [DiskSpace] { try await read([DiskSpace].self) { $0.diskSpace() } }
+    func fetchHealth() async throws -> [ArrHealth] { try await read(policy: .mustRevalidate) { $0.health() } }
+    func fetchDiskSpace() async throws -> [ArrDiskSpace] { try await read { $0.diskSpace() } }
 
     func fetchReleases(query: [URLQueryItem]) async throws -> [Release] {
         let context = try await context()
@@ -118,12 +76,12 @@ extension ArrAPIClient {
     }
 
     func testConnection() async throws -> String {
-        let status = try await read(MediaKit.ArrSystemStatus.self, policy: .mustRevalidate) { $0.status() }
+        let status = try await read(policy: .mustRevalidate) { $0.status() }
         return status.version.map { "\(serviceName) \($0)" } ?? "OK"
     }
 
     func isSearchRunning(entityId: Int) async -> Bool {
-        let commands = (try? await read([ArrCommand].self, policy: .mustRevalidate) { $0.commands() }) ?? []
+        let commands = (try? await read(policy: .mustRevalidate) { $0.commands() }) ?? []
         return commands.contains { $0.isSearch(for: entityId) }
     }
 
@@ -133,39 +91,9 @@ extension ArrAPIClient {
         try await run { $0.setMonitored(entityID: movieId, monitored) }
     }
 
-    /// Merges `fields` over the current record; a changed root folder moves the files along.
-    func updateLibraryRecord(path recordPath: String, fields: [String: Any]) async throws {
-        let context = try await context()
-        let operation = OperationID(context.instance.kind, "updateLibraryRecord")
-        guard let id = Int(recordPath.split(separator: "/").last ?? "") else { throw MediaKitError.decoding(operation, detail: "no id in \(recordPath)") }
-        let edits = try JSONDecoder().decode([String: JSONValue].self, from: JSONSerialization.data(withJSONObject: fields))
-        let plan = RequestPlan(instance: context.instance, operation: "updateLibraryRecord", pathTemplate: context.service.profile.apiBase + recordPath, auth: .header("X-Api-Key"))
-        let current = try await context.store.read(Resource<JSONValue>.json(plan, tags: [], freshness: .volatile), policy: .mustRevalidate).value
-        var movedPath: String?
-        if let newRoot = fields["rootFolderPath"] as? String, let oldRoot = current["rootFolderPath"]?.stringValue,
-           newRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")) != oldRoot.trimmingCharacters(in: CharacterSet(charactersIn: "/")),
-           let folder = current["path"]?.stringValue?.split(separator: "/").last.map(String.init) {
-            movedPath = (newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot) + "/" + folder
-        }
-        let path = movedPath
-        _ = try await context.store.run(context.service.update(entityID: id, moveFiles: path != nil) { envelope in
-            for (key, value) in edits { envelope.set(key, value) }
-            if let path { envelope.set("path", .string(path)) }
-        })
-    }
-
-    func deleteLibraryRecord(path: String, deleteFiles: Bool, addImportExclusion: Bool) async throws {
-        guard let id = Int(path.split(separator: "/").last ?? "") else { return }
-        try await run { $0.delete(entityID: id, deleteFiles: deleteFiles, addImportExclusion: addImportExclusion) }
+    func deleteLibraryRecord(entityId: Int, deleteFiles: Bool, addImportExclusion: Bool) async throws {
+        try await run { $0.delete(entityID: entityId, deleteFiles: deleteFiles, addImportExclusion: addImportExclusion) }
     }
 
     func grabRelease(guid: String, indexerId: Int) async throws { try await run { $0.grabRelease(guid: guid, indexerID: indexerId) } }
-
-    func postCommand(_ body: [String: Any]) async throws {
-        guard let name = body["name"] as? String else { return }
-        var extra = try JSONDecoder().decode([String: JSONValue].self, from: JSONSerialization.data(withJSONObject: body))
-        extra.removeValue(forKey: "name")
-        let entityID = (body["movieId"] as? Int) ?? (body["seriesId"] as? Int) ?? (body["artistId"] as? Int) ?? (body["movieIds"] as? [Int])?.first
-        try await run { $0.command(named: name, body: extra, entityID: entityID) }
-    }
 }

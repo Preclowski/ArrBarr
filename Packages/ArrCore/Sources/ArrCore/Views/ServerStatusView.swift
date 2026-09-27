@@ -147,28 +147,28 @@ struct ServerStatusView: View {
         }
     }
 
-    private func diskRow(_ disk: DiskSpace) -> some View {
+    private func diskRow(_ disk: ArrDiskSpace) -> some View {
         let hasLabel = !(disk.label ?? "").isEmpty
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "internaldrive")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                Text(verbatim: hasLabel ? disk.label! : disk.path)
+                Text(verbatim: hasLabel ? disk.label! : disk.mountPath)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 Text(String(
                     format: String(localized: "status.freeOfTotal.label", bundle: .module),
-                    Self.bytes(disk.freeSpace),
-                    Self.bytes(disk.totalSpace)
+                    Self.bytes(disk.free),
+                    Self.bytes(disk.capacity)
                 ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
             }
-            usageBar(fraction: disk.usedFraction, tint: Self.usageTint(free: disk.freeSpace, total: disk.totalSpace))
+            usageBar(fraction: disk.usedFraction, tint: Self.usageTint(free: disk.free, total: disk.capacity))
             if hasLabel {
-                Text(verbatim: disk.path)
+                Text(verbatim: disk.mountPath)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)

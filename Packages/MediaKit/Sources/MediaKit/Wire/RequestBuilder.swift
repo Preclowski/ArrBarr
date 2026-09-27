@@ -84,10 +84,15 @@ public enum RequestBuilder {
         }
         switch value {
         case let .array(items):
-            let messages = items.compactMap { $0["errorMessage"]?.stringValue ?? $0["message"]?.stringValue }
+            let messages = items.compactMap { $0["errorMessage"]?.stringValue ?? $0["message"]?.stringValue }.filter { !$0.isEmpty }
             return messages.isEmpty ? nil : messages.joined(separator: "; ")
-        case .object:
-            return value["message"]?.stringValue ?? value["error"]?.stringValue ?? value["title"]?.stringValue ?? value["detail"]?.stringValue
+        case let .object(object):
+            // ASP.NET ProblemDetails: {"title": "...", "errors": {"field": ["...", ...]}}
+            if case let .object(errors)? = object["errors"] {
+                let messages = errors.keys.sorted().flatMap { key in errors[key]?.arrayValue?.compactMap(\.stringValue) ?? errors[key]?.stringValue.map { [$0] } ?? [] }
+                if !messages.isEmpty { return messages.joined(separator: "; ") }
+            }
+            return ["errorMessage", "message", "error", "title", "detail"].lazy.compactMap { value[$0]?.stringValue }.first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         case let .string(s): return s
         default: return nil
         }

@@ -1,5 +1,6 @@
 import Foundation
 import os
+import MediaKit
 
 /// Why an arr didn't show up in the add window is invisible from the UI — the
 /// arr is simply absent, whether it wasn't configured, wasn't reachable, or had
@@ -85,7 +86,7 @@ public actor DownloadDropService {
     ) async throws {
         guard let config = configs[destination.serviceKind],
               let client = Self.addSource(destination.serviceKind, config) else {
-            throw HTTPError.notConfigured
+            throw MediaKitError.notConfigured(InstanceID(destination.serviceKind.instanceKind))
         }
         try await client.add(drop, category: destination.client.category, paused: paused)
     }
