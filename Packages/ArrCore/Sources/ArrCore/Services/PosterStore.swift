@@ -260,6 +260,21 @@ public actor PosterStore {
         }
     }
 
+    /// Arr posters the media server's artwork replaced, keyed by the media server URL.
+    nonisolated private static let superseded = OSAllocatedUnfairLock<[URL: URL]>(initialState: [:])
+
+    /// Where the media server's poster wins over the arr's: the arr copy is dead weight once the replacement is stored.
+    public nonisolated static func supersede(_ arr: URL?, with replacement: URL) {
+        guard let arr, arr != replacement else { return }
+        let isNew = superseded.withLock { map in
+            guard map[replacement] != arr else { return false }
+            map[replacement] = arr
+            return true
+        }
+        // Covers a replacement stored in an earlier launch; a fresh download drops it in `persist`.
+        if isNew { Task(priority: .utility) { await shared.dropSuperseded(by: replacement) } }
+    }
+
     /// True while a recent failure is still cooling off. Expired markers are
     /// deleted here, which re-opens the URL for a retry.
     public nonisolated static func isFreshMiss(_ url: URL, tier: PosterTier) -> Bool {
@@ -423,7 +438,20 @@ public actor PosterStore {
         if let file = Self.file(url, tier) {
             try? data.write(to: file, options: .atomic)
         }
+        dropSuperseded(by: url)
         return data
+    }
+
+    /// Delete the arr poster `replacement` stands in for, once `replacement` is on disk in any tier.
+    private func dropSuperseded(by replacement: URL) {
+        guard let arr = Self.superseded.withLock({ $0[replacement] }),
+              PosterTier.allCases.contains(where: { Self.hasCached(replacement, tier: $0) }) else { return }
+        for tier in PosterTier.allCases {
+            memory.removeObject(forKey: Self.memoryKey(arr, tier) as NSString)
+            for file in [Self.file(arr, tier), Self.missMarker(arr, tier)].compactMap({ $0 }) {
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
     }
 
     private func markMiss(_ url: URL, tier: PosterTier) {

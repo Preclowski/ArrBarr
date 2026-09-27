@@ -12,9 +12,10 @@ nonisolated public enum MediaServerItemKind: String, Sendable, Equatable {
 /// An external metadata id a title can be matched by. Titles and years are a
 /// last resort (remakes, localized titles, "The" prefixes) — every one of the
 /// three servers stores provider ids, and so do the arrs, so the join is done
-/// on ids alone.
+/// on ids alone. TMDB numbers movies and series separately, so its id carries the kind.
 nonisolated public enum MediaServerExternalKey: Hashable, Sendable {
-    case tmdb(Int)
+    case tmdbMovie(Int)
+    case tmdbSeries(Int)
     case tvdb(Int)
     case imdb(String)
 }

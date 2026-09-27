@@ -34,8 +34,8 @@ struct MediaServerIndexTests {
     @Test("An empty index returns no poster and no watch state")
     func emptyIndexIsInert() {
         let index = MediaServerIndex()
-        #expect(index.posterURL(for: [.tmdb(1)]) == nil)
-        #expect(!index.isWatched([.tmdb(1)]))
+        #expect(index.posterURL(for: [.tmdbMovie(1)]) == nil)
+        #expect(!index.isWatched([.tmdbMovie(1)]))
         #expect(index.indexedTitleCount == 0)
     }
 
@@ -46,7 +46,7 @@ struct MediaServerIndexTests {
         let images = [ArrImage(coverType: "poster", url: "/MediaCover/1/poster.jpg",
                                remoteUrl: "https://image.tmdb.org/p/w500/x.jpg")]
         let (url, auth) = images.posterURL(baseURL: "http://radarr:7878",
-                                           mediaServerKeys: [.tmdb(999)])
+                                           mediaServerKeys: [.tmdbMovie(999)])
         #expect(url?.absoluteString == "https://image.tmdb.org/p/w500/x.jpg")
         #expect(auth == false)
     }

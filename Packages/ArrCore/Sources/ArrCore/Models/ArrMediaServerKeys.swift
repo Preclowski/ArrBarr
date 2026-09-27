@@ -14,7 +14,7 @@ import Foundation
 nonisolated public extension RadarrMovieDetail {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
-        if let tmdbId { keys.append(.tmdb(tmdbId)) }
+        if let tmdbId { keys.append(.tmdbMovie(tmdbId)) }
         return keys
     }
 }
@@ -26,14 +26,14 @@ nonisolated public extension SonarrSeriesDetail {
         // TV library will have stored it, whereas tmdbId is populated less
         // consistently across Sonarr versions.
         if let tvdbId { keys.append(.tvdb(tvdbId)) }
-        if let tmdbId { keys.append(.tmdb(tmdbId)) }
+        if let tmdbId { keys.append(.tmdbSeries(tmdbId)) }
         return keys
     }
 }
 
 nonisolated public extension RadarrLibraryRecord {
     var mediaServerKeys: [MediaServerExternalKey] {
-        tmdbId.map { [.tmdb($0)] } ?? []
+        tmdbId.map { [.tmdbMovie($0)] } ?? []
     }
 }
 
@@ -43,7 +43,7 @@ nonisolated public extension SonarrLibraryRecord {
         // TVDB first, tmdb as the second chance — same order and reasoning as
         // `SonarrSeriesDetail`, now that the library record decodes tmdbId too.
         if let tvdbId { keys.append(.tvdb(tvdbId)) }
-        if let tmdbId, tmdbId > 0 { keys.append(.tmdb(tmdbId)) }
+        if let tmdbId, tmdbId > 0 { keys.append(.tmdbSeries(tmdbId)) }
         return keys
     }
 }
@@ -54,7 +54,7 @@ nonisolated public extension UpcomingItem {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         if let tvdbId, tvdbId > 0 { keys.append(.tvdb(tvdbId)) }
-        if let tmdbId, tmdbId > 0 { keys.append(.tmdb(tmdbId)) }
+        if let tmdbId, tmdbId > 0 { keys.append(source == .sonarr ? .tmdbSeries(tmdbId) : .tmdbMovie(tmdbId)) }
         return keys
     }
 }
@@ -69,11 +69,11 @@ nonisolated public extension SearchResult {
     var mediaServerKeys: [MediaServerExternalKey] {
         switch source {
         case .radarr, .whisparr:
-            return externalId != 0 ? [.tmdb(externalId)] : []
+            return externalId != 0 ? [.tmdbMovie(externalId)] : []
         case .sonarr:
             var keys: [MediaServerExternalKey] = []
             if externalId != 0 { keys.append(.tvdb(externalId)) }
-            if let tmdbTVId, tmdbTVId > 0 { keys.append(.tmdb(tmdbTVId)) }
+            if let tmdbTVId, tmdbTVId > 0 { keys.append(.tmdbSeries(tmdbTVId)) }
             return keys
         case .lidarr:
             return []

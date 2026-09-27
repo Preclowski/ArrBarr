@@ -572,10 +572,10 @@ nonisolated public extension Array where Element == ArrImage {
     /// arr headers at all.
     func posterURL(baseURL: String, coverTypes: [String] = ["poster"],
                    mediaServerKeys: [MediaServerExternalKey]) -> (URL?, Bool) {
-        if let override = MediaServerIndex.shared.posterURL(for: mediaServerKeys) {
-            return (override, false)
-        }
-        return posterURL(baseURL: baseURL, coverTypes: coverTypes)
+        let arr = posterURL(baseURL: baseURL, coverTypes: coverTypes)
+        guard let override = MediaServerIndex.shared.posterURL(for: mediaServerKeys) else { return arr }
+        PosterStore.supersede(arr.0, with: override)
+        return (override, false)
     }
 
     func posterURL(baseURL: String, coverTypes: [String] = ["poster"]) -> (URL?, Bool) {

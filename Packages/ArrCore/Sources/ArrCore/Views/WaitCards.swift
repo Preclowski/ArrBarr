@@ -167,7 +167,7 @@ enum WaitStoryProvider {
             if !owned.isEmpty,
                let other = others.filter({ owned[$0.id] != nil }).max(by: { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }),
                let otherTitle = owned[other.id] {
-                let watched = MediaServerIndex.shared.isWatched([.tmdb(other.id)])
+                let watched = MediaServerIndex.shared.isWatched([.tmdbMovie(other.id)])
                 stories.append(WaitStory(sentence: L("wait.story.library \(person.name) \(otherTitle)"),
                                          support: L(watched ? "wait.story.watched" : "wait.story.notWatched"),
                                          people: [portrait]))

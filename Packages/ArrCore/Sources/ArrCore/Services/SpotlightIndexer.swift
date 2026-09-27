@@ -112,6 +112,7 @@ public enum SpotlightIndexer {
         isReindexing = true
         let radarr = configStore.radarr
         let sonarr = configStore.sonarr
+        let mediaServer: MediaServerConfig? = StoreManager.shared.isPro ? configStore.mediaServer : nil
         // Per-source fallback icons (movie→Radarr, series→Sonarr) so every
         // result has a recognisable thumbnail even without a cached poster.
         // Rendered on the main actor (ImageRenderer requirement), cached.
@@ -128,6 +129,8 @@ public enum SpotlightIndexer {
             // unstructured `Task` doesn't inherit cancellation, so this still
             // runs when the pass above it was cancelled.
             defer { Task { @MainActor in isReindexing = false } }
+            // The media server's artwork wins in the app, so the index waits for it rather than store the arr's.
+            if let mediaServer { await MediaServerIndex.shared.refreshIfStale(config: mediaServer) }
             // Both libraries are indexed first, then artwork is filled in for
             // whatever fell back — otherwise Radarr's prefetch would hold up
             // Sonarr's index for the length of a download pass.
@@ -222,7 +225,7 @@ public enum SpotlightIndexer {
             attr.title = rec.year.map { "\(title) (\($0))" } ?? title
             attr.contentDescription = rec.overview
             if let g = rec.genres, !g.isEmpty { attr.keywords = g }
-            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
+            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL, mediaServerKeys: rec.mediaServerKeys)
             return IndexedRecord(
                 item: CSSearchableItem(
                     uniqueIdentifier: identifier(source: .radarr, id: id),
@@ -244,7 +247,7 @@ public enum SpotlightIndexer {
             let attr = CSSearchableItemAttributeSet(contentType: .audiovisualContent)
             attr.title = rec.year.map { "\(title) (\($0))" } ?? title
             attr.contentDescription = rec.overview
-            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
+            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL, mediaServerKeys: rec.mediaServerKeys)
             return IndexedRecord(
                 item: CSSearchableItem(
                     uniqueIdentifier: identifier(source: .sonarr, id: id),

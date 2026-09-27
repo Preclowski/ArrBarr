@@ -48,7 +48,7 @@ nonisolated struct MediaServerFacade: MediaServerClient {
             let fetched = try await gateway.store.read(service.libraryIndex(section: section), policy: policy)
             fetchedAt = min(fetchedAt, fetched.fetchedAt)
             for row in fetched.value {
-                let keys = row.ids.compactMap(Self.externalKey)
+                let keys = row.ids.compactMap { Self.externalKey($0, kind: row.kind) }
                 guard !keys.isEmpty else { continue }
                 entries.append(MediaServerEntry(itemId: row.itemID, poster: service.artwork(for: row, baseURL: baseURL), externalKeys: keys, watched: row.watched))
             }
@@ -125,10 +125,12 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         return out
     }
 
-    private static func externalKey(_ id: MediaID) -> MediaServerExternalKey? {
+    private static func externalKey(_ id: MediaID, kind: MediaKind) -> MediaServerExternalKey? {
         switch id.namespace {
-        case .tmdbMovie, .tmdbSeries: return id.intValue.map { .tmdb($0) }
-        case .tvdb: return id.intValue.map { .tvdb($0) }
+        case .tmdbMovie: return id.intValue.map { .tmdbMovie($0) }
+        case .tmdbSeries: return id.intValue.map { .tmdbSeries($0) }
+        // A movie's TVDB id numbers TVDB's movie records, which overlap its series ids; the arrs only ask TVDB for series.
+        case .tvdb: return kind == .series ? id.intValue.map { .tvdb($0) } : nil
         case .imdb: return .imdb(id.value)
         default: return nil
         }

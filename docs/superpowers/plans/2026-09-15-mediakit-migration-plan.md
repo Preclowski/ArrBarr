@@ -66,6 +66,10 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory` (first build reads the stored
       rows with `staleWhileRevalidate`, so a cold start has the last-known index); `PosterStore` consumes
       `ArtworkReference` + `kit.artworkHeaders`. `MediaServerPosterAccess` deleted.
+- [x] Media server artwork follow-ups (2026-09-27): the index announces a changed poster map
+      (`Snapshot` `didRebuild`) and the queue recomposes; Spotlight and the poster sampler use the
+      override; `PosterStore.supersede` deletes the arr copy once the media server's is stored; keys
+      split `tmdbMovie`/`tmdbSeries` and movie TVDB ids are dropped (12 cross-kind collisions on a real library).
 - [x] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`: the monitor keeps its
       probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
       service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`

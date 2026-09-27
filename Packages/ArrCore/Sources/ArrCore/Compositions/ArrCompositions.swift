@@ -153,7 +153,7 @@ nonisolated enum ArrCompositions {
                 else { (r.inCinemas, "In Cinemas") }
             guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
             let base = r.title ?? "Unknown"
-            let keys: [MediaServerExternalKey] = source == .radarr ? (r.tmdbId.map { [.tmdb($0)] } ?? []) : []
+            let keys: [MediaServerExternalKey] = source == .radarr ? (r.tmdbId.map { [.tmdbMovie($0)] } ?? []) : []
             let (poster, auth) = posterURL(r.images, baseURL: baseURL, keys: keys)
             return UpcomingItem(
                 id: "\(source.rawValue)-cal-\(r.id)", source: source, title: r.year.map { "\(base) (\($0))" } ?? base, subtitle: nil,
@@ -254,11 +254,11 @@ nonisolated enum ArrCompositions {
         }
     }
 
-    static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.tmdbId.map { [.tmdb($0)] } ?? [] }
+    static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.tmdbId.map { [.tmdbMovie($0)] } ?? [] }
     static func keys(series: ArrSeries?) -> [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
         if let tvdb = series?.tvdbId { keys.append(.tvdb(tvdb)) }
-        if let tmdb = series?.tmdbId, tmdb > 0 { keys.append(.tmdb(tmdb)) }
+        if let tmdb = series?.tmdbId, tmdb > 0 { keys.append(.tmdbSeries(tmdb)) }
         return keys
     }
 
@@ -269,7 +269,14 @@ nonisolated enum ArrCompositions {
 
     /// Media-server artwork wins when the server holds the title; otherwise the arr's own image.
     static func posterURL(_ images: [MediaKit.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"], keys: [MediaServerExternalKey] = []) -> (URL?, Bool) {
-        if !keys.isEmpty, let override = MediaServerIndex.shared.posterURL(for: keys) { return (override, false) }
+        let override = keys.isEmpty ? nil : MediaServerIndex.shared.posterURL(for: keys)
+        let arr = ownPosterURL(images, baseURL: baseURL, coverTypes: coverTypes)
+        guard let override else { return arr }
+        PosterStore.supersede(arr.0, with: override)
+        return (override, false)
+    }
+
+    private static func ownPosterURL(_ images: [MediaKit.ArrImage]?, baseURL: String, coverTypes: [String]) -> (URL?, Bool) {
         let normalized = coverTypes.map { $0.lowercased() }
         guard let match = images?.first(where: { normalized.contains(($0.coverType ?? "").lowercased()) }) else { return (nil, false) }
         if let remote = match.remoteUrl, let url = URL(string: remote), url.scheme == "http" || url.scheme == "https" { return (url, false) }
