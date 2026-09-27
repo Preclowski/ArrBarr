@@ -176,6 +176,7 @@ public final class QueueViewModel {
 
     /// Feeds the hub's events into the debounced per-arr refresh; polling stays as fallback.
     @ObservationIgnored private var realtimeTask: Task<Void, Never>?
+    @ObservationIgnored private var breakerTask: Task<Void, Never>?
     @ObservationIgnored private var invalidationObserver: NotificationCenter.ObservationToken?
 
     /// Process-wide shared view-model. Used by both the AppDelegate (status
@@ -248,6 +249,7 @@ public final class QueueViewModel {
             Task { [weak self] in
                 await self?.bootstrapRealtime()
                 self?.bootstrapCalendarInvalidation()
+                self?.bootstrapBreakers()
             }
         }
 
@@ -316,6 +318,7 @@ public final class QueueViewModel {
     /// the timer (`RunLoop.main`, see `commonModeTimer`).
     isolated deinit {
         realtimeTask?.cancel()
+        breakerTask?.cancel()
         upcomingRefreshTask?.cancel()
         configValidatedTask?.cancel()
         // A scheduled `Timer` is owned by the run loop, not by us — dropping
@@ -358,6 +361,25 @@ public final class QueueViewModel {
                 }
             }
         }
+    }
+
+    /// A host whose breaker opens shows down at once instead of after the next probe's strikes.
+    private func bootstrapBreakers() {
+        let changes = configStore.gateway.breakerChanges()
+        breakerTask?.cancel()
+        breakerTask = Task { [weak self] in
+            for await _ in changes {
+                guard let self, !Task.isCancelled else { return }
+                self.applyBreakers()
+            }
+        }
+    }
+
+    private func applyBreakers() {
+        let gateway = configStore.gateway
+        ConnectionHealth.shared.noteBreakers(Set(MonitoredService.allCases.filter {
+            if case .down = gateway.hostHealth(of: $0) { $0.isConfigured(in: configStore) } else { false }
+        }))
     }
 
     /// The calendar row carries "do I have this yet", so an import flips it. Watching the store's invalidation
@@ -884,6 +906,7 @@ public final class QueueViewModel {
         for service in MonitoredService.probeTargets where !service.isConfigured(in: configStore) {
             ConnectionHealth.shared.markUnknown(service)
         }
+        applyBreakers()
         // The sweep contacts every download client plus OpenAI and TMDB, once a
         // minute, purely to colour dots that live inside the panel. With the
         // panel closed that is a round of requests whose result nobody can see;

@@ -18,6 +18,8 @@ public final class ConnectionHealth {
     public static let shared = ConnectionHealth()
 
     public private(set) var snapshots: [MonitoredService: ServiceHealthSnapshot] = [:]
+    /// Services whose host has an open breaker in the governor: shown down at once, without waiting for strikes.
+    private var breakerOpen: Set<MonitoredService> = []
 
     private var consecutiveFailures: [MonitoredService: Int] = [:]
     /// Consecutive failed checks before a service flips to `.down`. Matches
@@ -27,7 +29,20 @@ public final class ConnectionHealth {
     public init() {}
 
     public func snapshot(for service: MonitoredService) -> ServiceHealthSnapshot {
-        snapshots[service] ?? .unknown
+        Self.merged(snapshots[service] ?? .unknown, breakerOpen: breakerOpen.contains(service))
+    }
+
+    /// Replace the set of services whose host breaker is open; traffic that closes a breaker clears it here too.
+    func noteBreakers(_ open: Set<MonitoredService>) {
+        guard open != breakerOpen else { return }
+        breakerOpen = open
+    }
+
+    /// The worse of the recorded state and the governor's, but only while the breaker is open.
+    nonisolated static func merged(_ recorded: ServiceHealthSnapshot, breakerOpen: Bool) -> ServiceHealthSnapshot {
+        guard breakerOpen else { return recorded }
+        if case .down = recorded.state { return recorded }
+        return ServiceHealthSnapshot(state: .down(message: defaultDownMessage))
     }
 
     public func state(for service: MonitoredService) -> ConnectionHealthState {
@@ -75,7 +90,7 @@ public final class ConnectionHealth {
         snapshots[service] = .unknown
     }
 
-    private static var defaultDownMessage: String {
+    nonisolated private static var defaultDownMessage: String {
         String(localized: "health.unreachable.label", bundle: .module)
     }
 }

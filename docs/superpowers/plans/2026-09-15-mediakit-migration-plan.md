@@ -64,7 +64,10 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       and the phase-0 recorder test deleted (parity now uses `MediaKitRecording`).
 - [ ] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory`; `PosterStore` consumes
       `ArtworkReference` + `kit.artworkHeaders` (today the facade feeds the old index).
-- [ ] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`.
+- [x] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`: the monitor keeps its
+      probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
+      service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`
+      already drives the realtime-quiet check in `QueueViewModel`.
 - [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
 - [ ] `SpotlightIndexer` as a store consumer.
 

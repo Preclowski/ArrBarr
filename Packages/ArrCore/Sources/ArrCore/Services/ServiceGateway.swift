@@ -35,6 +35,8 @@ public final class ServiceGateway {
     private var started = false
     private var startTask: Task<Void, Never>?
     private var realtime: [InstanceID: SignalRSource] = [:]
+    private var breakerRelay: Task<Void, Never>?
+    private var breakerContinuations: [UUID: AsyncStream<Void>.Continuation] = [:]
     /// Demo answers from bundled fixtures; held here so a gateway built for a test can be a demo one without the global flag.
     private var demo: Bool
     /// Tests answer through their own transport instead of a URLSession.
@@ -163,6 +165,7 @@ public final class ServiceGateway {
         // Under tests the saved profile is never registered: a client's adopted config is the only way in.
         let instances = descriptors()
         await kit.start(instances: instances)
+        relayBreakers()
         if !Self.isRunningTests {
             await syncRealtime()
             #if DEBUG
@@ -208,7 +211,43 @@ public final class ServiceGateway {
         kitLock.withLock { $0 = fresh }
         if started {
             await kit.start(instances: descriptors())
+            relayBreakers()
             await syncRealtime()
+        }
+    }
+
+    /// Yields whenever some host's breaker opens or closes, across demo rebuilds; read `hostHealth(of:)` on each tick.
+    public func breakerChanges() -> AsyncStream<Void> {
+        let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let id = UUID()
+        breakerContinuations[id] = continuation
+        continuation.onTermination = { _ in Task { @MainActor [weak self] in self?.breakerContinuations[id] = nil } }
+        return stream
+    }
+
+    /// The governor publishes on every request; only a breaker transition reaches the main actor.
+    private func relayBreakers() {
+        breakerRelay?.cancel()
+        let governor = kit.governor
+        breakerRelay = Task { [weak self] in
+            var open: Set<MediaKit.Host> = []
+            for await (host, health) in await governor.healthUpdates() {
+                let isDown = if case .down = health { true } else { false }
+                guard isDown != open.contains(host) else { continue }
+                if isDown { open.insert(host) } else { open.remove(host) }
+                guard let self else { return }
+                for continuation in self.breakerContinuations.values { continuation.yield() }
+            }
+        }
+    }
+
+    /// The governor's passive view of the host behind a monitored service; OpenAI never goes through MediaKit.
+    public func hostHealth(of service: MonitoredService) -> HostHealth {
+        switch service {
+        case .arr(let kind): kit.health(of: kind.instanceID)
+        case .tmdb: kit.health(of: InstanceID(.tmdb))
+        case .mediaServer: kit.health(of: configStore.mediaServer.kind.instanceID)
+        case .openai: .unknown
         }
     }
 
