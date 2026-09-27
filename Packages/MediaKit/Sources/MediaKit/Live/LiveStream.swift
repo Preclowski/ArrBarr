@@ -150,6 +150,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     }
 
     public func notePush(_ instance: InstanceID, at date: Date) async {
+        guard instances.contains(instance) else { return }
         lastPush[instance] = date
         refreshRequested = true
         wake()

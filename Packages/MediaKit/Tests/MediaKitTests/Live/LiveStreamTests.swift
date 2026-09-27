@@ -118,6 +118,20 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         await s.stop()
     }
 
+    @Test func aPushForAnotherInstanceDoesNotFetch() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        let afterStart = calls.value
+        await s.notePush(TestKit.sonarr, at: kit.clock.now)
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == afterStart)
+        await s.stop()
+    }
+
     @Test func anEffectScopedToAnInstancePatchesOnlyThatInstancesRow() async throws {
         let kit = try await TestKit()
         let s = stream(kit, instances: [TestKit.radarr, TestKit.sonarr]) { _, _, _ in [Item(id: "1", status: "downloading")] }
