@@ -391,12 +391,21 @@ public actor PosterStore {
         }
     }
 
-    nonisolated private static let publicHosts: Set<String> = ["image.tmdb.org", "artworks.thetvdb.com"]
-
-    /// The arr's key belongs to the arr: never to a media server or a public CDN, whatever the caller passed.
-    nonisolated static func arrKey(_ apiKey: String?, for url: URL, artwork: ArtworkReference?) -> String? {
-        guard let apiKey, !apiKey.isEmpty, artwork == nil, !publicHosts.contains(url.host ?? "") else { return nil }
+    /// The arr's key goes only to an arr: the URL has to sit under a registered arr's base URL (scheme, host,
+    /// port and path prefix, since a reverse proxy can put Plex and Radarr on one origin), whatever the caller passed.
+    nonisolated static func arrKey(_ apiKey: String?, for url: URL, artwork: ArtworkReference?, arrs: [URL]) -> String? {
+        guard let apiKey, !apiKey.isEmpty, artwork == nil, arrs.contains(where: { isUnder(url, $0) }) else { return nil }
         return apiKey
+    }
+
+    nonisolated private static func isUnder(_ url: URL, _ base: URL) -> Bool {
+        func port(_ u: URL) -> Int? {
+            u.port ?? ["http": 80, "https": 443][u.scheme?.lowercased() ?? ""]
+        }
+        guard url.scheme?.lowercased() == base.scheme?.lowercased(), url.host?.lowercased() == base.host?.lowercased(),
+              port(url) == port(base) else { return false }
+        let prefix = base.path.hasSuffix("/") ? base.path : base.path + "/"
+        return base.path.isEmpty || base.path == "/" || url.path == base.path || url.path.hasPrefix(prefix)
     }
 
     private func download(_ url: URL, apiKey: String?, artwork: ArtworkReference?) async -> Data? {
@@ -411,7 +420,8 @@ public actor PosterStore {
         defer { signpost.endInterval("poster download", state) }
 
         var request = URLRequest(url: url)
-        if let apiKey = Self.arrKey(apiKey, for: url, artwork: artwork) {
+        let arrs = await ServiceGateway.resolve().kit.registry.all.filter { $0.id.kind.family == .servarr }.map(\.baseURL)
+        if let apiKey = Self.arrKey(apiKey, for: url, artwork: artwork, arrs: arrs) {
             request.setValue(apiKey, forHTTPHeaderField: "X-Api-Key")
         }
         // The media server's token never appears in the URL — it would be

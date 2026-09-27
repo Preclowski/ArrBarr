@@ -6,14 +6,14 @@ enum ArrQueueLoader {
     /// A live stream's failed fetch, with the revision it was published under.
     struct LiveFailure: Error {
         let underlying: any Error
-        let revision: UInt64
+        let revision: QueueRevision
     }
 
     struct Measured {
         let items: [QueueItem]
         let measuredAt: Date?
         /// The live stream revision these rows came from; nil for a direct store read.
-        let revision: UInt64?
+        let revision: QueueRevision?
     }
 
     static func items(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String) async throws -> [QueueItem] {
@@ -62,7 +62,7 @@ enum ArrQueueLoader {
 
     /// The saved instance reads through its live stream; a Settings draft (another ordinal) straight from the store.
     private static func queueRecords(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService,
-                                     refresh: Bool) async throws -> (records: [ArrQueueRecord], measuredAt: Date?, revision: UInt64?) {
+                                     refresh: Bool) async throws -> (records: [ArrQueueRecord], measuredAt: Date?, revision: QueueRevision?) {
         guard service.instance == source.instanceID else {
             let fetched = try await gateway.store.read(service.queue(), policy: .mustRevalidate)
             return (fetched.value.records, fetched.fetchedAt, nil)
@@ -70,9 +70,10 @@ enum ArrQueueLoader {
         let stream = gateway.queueStream(source)
         if refresh { await stream.refreshNow() }
         let value = stream.last()
-        if let value, let error = value.failures[service.instance] { throw LiveFailure(underlying: error, revision: value.revision) }
+        let revision = value.map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision) }
+        if let value, let revision, let error = value.failures[service.instance] { throw LiveFailure(underlying: error, revision: revision) }
         let slice = value?.slices[service.instance]
-        return (slice?.elements ?? [], slice?.measuredAt, value?.revision)
+        return (slice?.elements ?? [], slice?.measuredAt, revision)
     }
 
     private static func entityMeta(service: ServarrService, source: QueueItem.Source, ids: [Int], store: ResourceStore, baseURL: String) async -> [Int: ArrCompositions.EntityMeta] {

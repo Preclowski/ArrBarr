@@ -2,6 +2,17 @@ import Foundation
 import MediaKit
 import os
 
+/// A live stream revision tied to the stream that published it: a replaced stream counts from zero again.
+nonisolated public struct QueueRevision: Equatable, Sendable {
+    let stream: ObjectIdentifier
+    let number: UInt64
+
+    /// Already committed: the same stream, at or past this number.
+    func isCovered(by committed: QueueRevision?) -> Bool {
+        committed.map { $0.stream == stream && number <= $0.number } ?? false
+    }
+}
+
 nonisolated public struct SourceQueueResult: Equatable {
     public let source: QueueItem.Source
     public let items: [QueueItem]
@@ -10,8 +21,8 @@ nonisolated public struct SourceQueueResult: Equatable {
     /// When the arr answered the rows; nil when nothing was measured (a failure, an unconfigured arr, a test fake).
     public let measuredAt: Date?
     /// The live stream revision behind this result, so the same fetch is never committed twice; nil commits always.
-    public let revision: UInt64?
-    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date? = nil, revision: UInt64? = nil) {
+    public let revision: QueueRevision?
+    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date? = nil, revision: QueueRevision? = nil) {
         self.source = source; self.items = items; self.error = error; self.unreachable = unreachable
         self.measuredAt = measuredAt; self.revision = revision
     }
@@ -24,7 +35,7 @@ protocol QueueDataProviding: Sendable {
     /// What the source's live stream last published, composed without asking the arr.
     func latest(source: QueueItem.Source) async -> SourceQueueResult
     /// The revision `latest(source:)` would compose, read without composing; nil when there is no stream.
-    func latestRevision(source: QueueItem.Source) -> UInt64?
+    func latestRevision(source: QueueItem.Source) -> QueueRevision?
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult
@@ -34,7 +45,7 @@ protocol QueueDataProviding: Sendable {
 
 extension QueueDataProviding {
     func latest(source: QueueItem.Source) async -> SourceQueueResult { await fetch(source: source) }
-    func latestRevision(source: QueueItem.Source) -> UInt64? { nil }
+    func latestRevision(source: QueueItem.Source) -> QueueRevision? { nil }
 }
 
 /// Queue, calendar, history and health for the four arrs plus the download-client progress overlay, all through MediaKit.
@@ -98,8 +109,9 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         await result(source, refresh: false)
     }
 
-    func latestRevision(source: QueueItem.Source) -> UInt64? {
-        gateway.queueStream(source).last()?.revision
+    func latestRevision(source: QueueItem.Source) -> QueueRevision? {
+        let stream = gateway.queueStream(source)
+        return stream.last().map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision) }
     }
 
     private func result(_ source: QueueItem.Source, refresh: Bool) async -> SourceQueueResult {
@@ -109,19 +121,17 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
                                  unreachable: outcome.unreachable, measuredAt: outcome.measuredAt, revision: outcome.revision)
     }
 
-    private typealias QueueOutcome = (items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date?, revision: UInt64?)
+    private typealias QueueOutcome = (items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date?, revision: QueueRevision?)
 
     private func safeQueue(_ source: QueueItem.Source, refresh: Bool = true) async -> QueueOutcome {
         do {
             let read = try await queueItems(source, refresh: refresh)
             return (read.items, nil, false, read.measuredAt, read.revision)
-        } catch is CancellationError {
-            return ([], nil, false, nil, nil)
-        } catch MediaKitError.notConfigured {
-            return ([], nil, false, nil, nil)
         } catch {
             let revision = (error as? ArrQueueLoader.LiveFailure)?.revision
             let error = (error as? ArrQueueLoader.LiveFailure)?.underlying ?? error
+            if error is CancellationError { return ([], nil, false, nil, nil) }
+            if case MediaKitError.notConfigured = error { return ([], nil, false, nil, revision) }
             let message = MediaKitErrorPresenter.message(for: error)
             Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
             return ([], message, MediaKitErrorPresenter.isUnreachable(error), nil, revision)
@@ -346,7 +356,7 @@ nonisolated public struct AggregateResult: Equatable {
     public let whisparrError: String?
     public let unreachableSources: Set<QueueItem.Source>
     public let measuredAt: [QueueItem.Source: Date]
-    public let revision: [QueueItem.Source: UInt64]
+    public let revision: [QueueItem.Source: QueueRevision]
 
     func slice(for source: QueueItem.Source) -> SourceQueueResult {
         let (items, error): ([QueueItem], String?) = switch source {
@@ -362,7 +372,7 @@ nonisolated public struct AggregateResult: Equatable {
     init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
          radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil, whisparrError: String? = nil,
          unreachableSources: Set<QueueItem.Source> = [], measuredAt: [QueueItem.Source: Date] = [:],
-         revision: [QueueItem.Source: UInt64] = [:]) {
+         revision: [QueueItem.Source: QueueRevision] = [:]) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
         self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError; self.whisparrError = whisparrError
         self.unreachableSources = unreachableSources

@@ -99,7 +99,7 @@ public final class QueueViewModel {
     private let connectionMonitor = ConnectionHealthMonitor()
     private var queueUpdatesTask: Task<Void, Never>?
     /// The live stream revision each source's rows were committed from.
-    private var committedRevision: [QueueItem.Source: UInt64] = [:]
+    private var committedRevision: [QueueItem.Source: QueueRevision] = [:]
     /// Set by the realtime bootstrap; before it (and in a view-model built without autostart) nothing starts a stream.
     private var liveQueuesStarted = false
     /// The launch refresh; the streams start after it so their first tick finds a fresh reading instead of a second fetch.
@@ -160,6 +160,8 @@ public final class QueueViewModel {
     /// blips (network hiccup, brief restart) without flapping the menu bar.
     private var consecutiveFailures: [QueueItem.Source: Int] = [:]
     private static let unreachableThreshold = 3
+
+    private static let overrideLifetime: TimeInterval = 30
 
     private struct OptimisticOverride {
         let kind: Kind
@@ -396,7 +398,7 @@ public final class QueueViewModel {
     private func commitLatestQueue(source: QueueItem.Source) async {
         guard configuredArrs.contains(source) else { return }
         // Composing costs side-load reads; a revision already committed (by the fetch that asked for it) needs none.
-        if let revision = aggregator.latestRevision(source: source), let committed = committedRevision[source], revision <= committed { return }
+        if let revision = aggregator.latestRevision(source: source), revision.isCovered(by: committedRevision[source]) { return }
         let result = await aggregator.latest(source: source)
         if Task.isCancelled { return }
         commitQueue(result)
@@ -570,9 +572,10 @@ public final class QueueViewModel {
         // the health rows, so they should be current the moment it appears.
         // After that the queue streams tick on their own and refetch on pushes.
         isPanelVisible = true
+        // Refresh first: flipping the streams to foreground wakes their pumps, which then find a fresh reading.
         Task {
-            await self.updateLiveQueues()
             await self.refresh()
+            await self.updateLiveQueues()
         }
     }
 
@@ -1061,7 +1064,7 @@ public final class QueueViewModel {
         // A stream revision reaches here twice, from the fetch that asked for it and from the stream's own update;
         // committing both would count one failure twice towards the unreachable threshold.
         if let revision = result.revision {
-            if let committed = committedRevision[source], revision <= committed { return }
+            if revision.isCovered(by: committedRevision[source]) { return }
             committedRevision[source] = revision
         }
         var newErrors = errors
@@ -1255,6 +1258,9 @@ public final class QueueViewModel {
             try await aggregator.deleteAll(items)
             lastError = nil
             for item in items { applyOptimisticUpdate(.delete, on: item) }
+            for source in Set(items.map(\.source)) {
+                await configStore.gateway.queueStream(source).hold(until: Date().addingTimeInterval(Self.overrideLifetime))
+            }
             // Same as `runAction`: confirm the batch instead of waiting.
             if let source = items.first?.source {
                 Task { await self.refreshQueue(source: source) }
@@ -1273,6 +1279,9 @@ public final class QueueViewModel {
             try await aggregator.perform(action, on: item)
             lastError = nil
             applyOptimisticUpdate(action, on: item)
+            // Pushes may cover the arr and nothing may be downloading yet, so the stream would skip the ticks that
+            // confirm the override; hold them until it expires.
+            await configStore.gateway.queueStream(item.source).hold(until: Date().addingTimeInterval(Self.overrideLifetime))
             // Confirm it for real rather than waiting for the arr to get round
             // to broadcasting. The override paints the change instantly; this
             // is what replaces it with a fact — and what makes a "download now"
@@ -1304,7 +1313,7 @@ public final class QueueViewModel {
 
         optimisticOverrides[item.id] = OptimisticOverride(
             kind: overrideKind,
-            expiry: Date().addingTimeInterval(30)
+            expiry: Date().addingTimeInterval(Self.overrideLifetime)
         )
 
         var bucket = queues[item.source, default: []]

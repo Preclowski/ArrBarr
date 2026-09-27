@@ -185,6 +185,71 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         await s.stop()
     }
 
+    @Test func anEventThatAsksForNothingStillKeepsCoverageAlive() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        await s.setActivity(.background)
+        await s.notePush(TestKit.radarr, at: kit.clock.now)
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        let started = calls.value
+        for _ in 0..<5 {
+            kit.clock.advance(by: .seconds(121))
+            await s.noteAlive(TestKit.radarr, at: kit.clock.now)
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(calls.value == started)
+        await s.stop()
+    }
+
+    @Test func aHeldStreamKeepsTickingThoughPushesCoverIt() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        await s.notePush(TestKit.radarr, at: kit.clock.now)
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        let started = calls.value
+        await s.hold(until: kit.clock.now.addingTimeInterval(60))
+        kit.clock.advance(by: .seconds(31))
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == started + 1)
+        await s.stop()
+    }
+
+    @Test func stopReleasesAPumpWaitingForAPush() async throws {
+        let kit = try await TestKit()
+        var policy = LivePolicy.queue
+        policy.foregroundInterval = .zero
+        let calls = Counter()
+        let s = stream(kit, policy: policy) { _, _, _ in calls.increment(); return [] }
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        await s.stop()
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        await s.notePush(TestKit.radarr, at: kit.clock.now)
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == 3)
+        await s.stop()
+    }
+
+    @Test func restartingKeepsTheLiveRowsOverTheCheckpoint() async throws {
+        let kit = try await TestKit(database: .file(in: Temp.directory()))
+        let status = Box("old")
+        let s = stream(kit) { _, _, _ in [Item(id: "a", status: status.value)] }
+        await s.refreshNow()
+        await kit.database!.flush()
+        status.value = "new"
+        await s.refreshNow()
+        await s.start()
+        #expect(s.last()?.elements.first?.status == "new" && s.last()?.isFromSnapshot == false)
+        await s.stop()
+    }
+
     @Test func anEffectScopedToAnInstancePatchesOnlyThatInstancesRow() async throws {
         let kit = try await TestKit()
         let s = stream(kit, instances: [TestKit.radarr, TestKit.sonarr]) { _, _, _ in [Item(id: "1", status: "downloading")] }

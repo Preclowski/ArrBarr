@@ -1,8 +1,11 @@
 import Foundation
 import os
 
-public protocol LiveStreamPushTarget: Sendable {
+public protocol LiveStreamPushTarget: AnyObject, Sendable {
+    /// Something changed for this instance: refetch.
     func notePush(_ instance: InstanceID, at: Date) async
+    /// The instance's hub spoke, whether or not it asked for anything; keeps push coverage alive.
+    func noteAlive(_ instance: InstanceID, at: Date) async
 }
 
 /// Coalesces pushes per instance in a burst window, then invalidates the store and nudges the live streams.
@@ -51,7 +54,10 @@ public actor EventHub {
         await entry.source.stop()
     }
 
-    public func register(_ stream: any LiveStreamPushTarget) { streams.append(stream) }
+    public func register(_ stream: any LiveStreamPushTarget) {
+        guard !streams.contains(where: { $0 === stream }) else { return }
+        streams.append(stream)
+    }
 
     public func setForeground(_ value: Bool) { foreground = value }
 
@@ -82,6 +88,7 @@ public actor EventHub {
         guard let instance = event.instance else { return }
         let now = clock.now
         lastEvent.withLock { $0[instance] = now }
+        for stream in streams { await stream.noteAlive(instance, at: now) }
         var tags = tagMap.tags(for: event, lastCounts: lastCounts[instance])
         if case let .queueStatus(_, counts) = event { lastCounts[instance] = counts }
         // Servarr rebroadcasts the queue on a timer with no diff. With nothing on screen, counts unchanged since the

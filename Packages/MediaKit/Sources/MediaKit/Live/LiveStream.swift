@@ -82,6 +82,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     private var revision: UInt64 = 0
     /// When the last fetch finished, whoever asked for it; a tick inside the interval after it has nothing to add.
     private var lastFetchAt: Date?
+    private var heldUntil: Date?
     private var refreshRequested = false
     private var wakeup: CheckedContinuation<Void, Never>?
     private var lastCheckpoint: Date?
@@ -120,6 +121,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     public func stop() {
         pump?.cancel()
         pump = nil
+        wake()
     }
 
     /// Returns once a fetch that started after this call has published.
@@ -151,6 +153,17 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     public func setPolicy(_ value: LivePolicy) {
         guard policy != value else { return }
         policy = value
+        wake()
+    }
+
+    public func noteAlive(_ instance: InstanceID, at date: Date) async {
+        guard instances.contains(instance) else { return }
+        lastPush[instance] = max(lastPush[instance] ?? date, date)
+    }
+
+    /// Keep ticking until `date` even while pushes cover every instance: a user action is waiting to be confirmed.
+    public func hold(until date: Date) {
+        heldUntil = max(heldUntil ?? date, date)
         wake()
     }
 
@@ -234,7 +247,8 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         let covered = instances.allSatisfy { lastPush[$0].map { now.timeIntervalSince($0) < policy.pushSilence.seconds } ?? false }
         let elements = lastValue.withLock { $0?.elements } ?? []
         let activeMatters = activity == .foreground && isActive(elements)
-        return covered && !activeMatters && pending.isEmpty && !instances.isEmpty
+        let held = heldUntil.map { now < $0 } ?? false
+        return covered && !activeMatters && !held && pending.isEmpty && !instances.isEmpty
     }
 
     /// One fetch at a time; a caller arriving mid-fetch shares the next one, so it never reads a value older than its call.
@@ -284,7 +298,8 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         lastFetchAt = now
         var changed = instances.isEmpty
         var fresh: [InstanceID: [Element]] = [:]
-        for (instance, rows, error) in outcomes {
+        // An instance removed while the fetch ran keeps no slice and no failure.
+        for (instance, rows, error) in outcomes where self.instances.contains(instance) {
             if let rows {
                 slices[instance] = LiveSlice(elements: rows, measuredAt: now)
                 failures[instance] = nil
@@ -356,7 +371,8 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     }
 
     private func loadSnapshot() async {
-        guard let database else { return }
+        // The checkpoint is older than anything fetched in this process.
+        guard let database, revision == 0, slices.isEmpty else { return }
         var found = false
         for instance in instances {
             guard let (data, at) = try? await database.lastKnown(instance: instance, stream: id.rawValue),

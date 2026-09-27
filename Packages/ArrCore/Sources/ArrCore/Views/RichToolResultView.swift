@@ -423,7 +423,8 @@ private struct LibraryRecordCard: View {
     var mediaServerKeys: [MediaServerExternalKey] = []
     var blurred: Bool = false
 
-    private var posterURL: URL? { images?.posterURL(baseURL: baseURL, mediaServerKeys: mediaServerKeys).0 }
+    private var poster: (url: URL?, requiresAuth: Bool) { images?.posterURL(baseURL: baseURL, mediaServerKeys: mediaServerKeys) ?? (nil, false) }
+    private var posterURL: URL? { poster.url }
 
     var body: some View {
         Button {
@@ -462,7 +463,7 @@ private struct LibraryRecordCard: View {
                 PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
                         url: posterURL,
-                        apiKey: apiKey,
+                        apiKey: poster.requiresAuth ? apiKey : nil,
                         size: CGSize(width: 90, height: 135),
                         cornerRadius: Tokens.Radius.card
                     )

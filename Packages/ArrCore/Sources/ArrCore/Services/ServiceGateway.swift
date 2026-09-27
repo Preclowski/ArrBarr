@@ -238,6 +238,9 @@ public final class ServiceGateway {
             forward.cancel()
             await stream.stop()
         }
+        // A just-configured arr reaches here before the debounced reconcile registers it; its first fetch needs it.
+        let starting = sources.filter { source in streams.withLock { $0.queue[source] }.map { pumping[ObjectIdentifier($0)] == nil } ?? true }
+        if !starting.isEmpty, started { await reconcileRegistry() }
         for source in sources {
             let stream = queueStream(source)
             await stream.setPolicy(policy)
