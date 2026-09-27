@@ -595,18 +595,18 @@ public struct ArrRecordSettings: Codable, Equatable, Sendable {
     }
 }
 
-public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
-    public var known: Known
-    public var extra: [String: JSONValue]
+struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
+    var known: Known
+    var extra: [String: JSONValue]
     /// Top-level edits applied last, so `set("monitored", .bool(true))` wins over both.
-    public var overrides: [String: JSONValue] = [:]
+    var overrides: [String: JSONValue] = [:]
 
-    public init(from decoder: any Decoder) throws {
+    init(from decoder: any Decoder) throws {
         known = try Known(from: decoder)
         extra = try [String: JSONValue](from: decoder)
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         let knownData = try WireCodec.encoder.encode(known)
         guard case var .object(merged)? = try? WireCodec.decoder.decode(JSONValue.self, from: knownData) else { return }
         for (k, v) in extra where merged[k] == nil || merged[k] == .null { merged[k] = v }
@@ -614,8 +614,8 @@ public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
         try JSONValue.object(merged).encode(to: encoder)
     }
 
-    public mutating func set(_ key: String, _ value: JSONValue) { overrides[key] = value }
-    public subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
+    mutating func set(_ key: String, _ value: JSONValue) { overrides[key] = value }
+    subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
 }
 
 /// An indexer as configured *in the arr* (`/indexer`). ArrBarr reads two things

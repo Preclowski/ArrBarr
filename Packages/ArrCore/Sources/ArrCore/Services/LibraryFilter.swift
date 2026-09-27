@@ -105,13 +105,13 @@ nonisolated extension ArrSeries: LibraryFilterable {
     public var filterAdded: String? { added }
 }
 
-nonisolated public enum LibraryFilter {
+nonisolated enum LibraryFilter {
 
     /// Apply a query to a library. `isWatched` is injected rather than read
     /// from `MediaServerIndex` inside, so the rule is testable without a
     /// media server and so a caller with no server connected can pass a
     /// closure that admits it doesn't know.
-    public static func apply<T: LibraryFilterable>(
+    static func apply<T: LibraryFilterable>(
         _ records: [T],
         query: LibraryQuery,
         isWatched: (T) -> Bool
@@ -199,7 +199,7 @@ nonisolated public enum LibraryFilter {
     ///
     /// So: every title equally likely, a different draw each time. A sample of
     /// a shelf should look like the shelf, not like its top decile.
-    public static func sample<T>(_ records: [T], count: Int) -> [T] {
+    static func sample<T>(_ records: [T], count: Int) -> [T] {
         guard records.count > count else { return records }
         return Array(records.shuffled().prefix(count))
     }
@@ -207,7 +207,7 @@ nonisolated public enum LibraryFilter {
     /// Titles closest to a query that matched nothing. An empty answer reads as
     /// "you don't own it", which is the worst thing this app can say wrongly —
     /// so a miss always comes back with the nearest few instead.
-    public static func nearest<T: LibraryFilterable>(
+    static func nearest<T: LibraryFilterable>(
         to query: String,
         in records: [T],
         limit: Int = 3

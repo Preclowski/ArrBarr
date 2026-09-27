@@ -10,7 +10,7 @@ import ServiceManagement
 import WidgetKit
 #endif
 
-public enum LaunchAtLogin {
+enum LaunchAtLogin {
     private static let logger = Logger(category: "LaunchAtLogin")
 
     static func set(enabled: Bool) {

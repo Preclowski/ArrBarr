@@ -75,9 +75,9 @@ nonisolated public extension URL {
 ///
 /// Signposts are compiled out of the measurement path when nothing is
 /// recording, so these stay in shipped builds.
-nonisolated public enum AppSignpost {
-    public static let queue = OSSignposter(subsystem: AppLog.subsystem, category: "QueueFetch")
-    public static let posters = OSSignposter(subsystem: AppLog.subsystem, category: "PosterStore")
-    public static let chat = OSSignposter(subsystem: AppLog.subsystem, category: "Chat")
-    public static let quiz = OSSignposter(subsystem: AppLog.subsystem, category: "Quiz")
+nonisolated enum AppSignpost {
+    static let queue = OSSignposter(subsystem: AppLog.subsystem, category: "QueueFetch")
+    static let posters = OSSignposter(subsystem: AppLog.subsystem, category: "PosterStore")
+    static let chat = OSSignposter(subsystem: AppLog.subsystem, category: "Chat")
+    static let quiz = OSSignposter(subsystem: AppLog.subsystem, category: "Quiz")
 }

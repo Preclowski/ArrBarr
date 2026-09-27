@@ -12,9 +12,9 @@ import Foundation
 /// So linking is verified, not trusted: a chat link renders as a link only if
 /// its id appears verbatim in a tool result of this conversation. Anything else
 /// stays plain text — the prose survives, the wrong door doesn't open.
-nonisolated public enum ChatLinkVerification {
+nonisolated enum ChatLinkVerification {
     /// Keys (`tmdb:603`, `person:3063`, …) harvested from every tool result.
-    public static func knownKeys(in messages: [ChatMessage]) -> Set<String> {
+    static func knownKeys(in messages: [ChatMessage]) -> Set<String> {
         var out: Set<String> = []
         for message in messages {
             guard let text = message.toolResult, !text.isEmpty else { continue }
@@ -24,7 +24,7 @@ nonisolated public enum ChatLinkVerification {
     }
 
     /// True when this link points at something a tool actually returned.
-    public static func isVerified(_ link: ChatLink, against known: Set<String>) -> Bool {
+    static func isVerified(_ link: ChatLink, against known: Set<String>) -> Bool {
         known.contains(link.verificationKey)
     }
 

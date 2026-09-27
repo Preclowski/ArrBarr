@@ -31,11 +31,11 @@ nonisolated public struct LLMResponse: Sendable {
 
 /// Shared bits for composing the chat system prompt across providers, so the
 /// OpenAI and Foundation Models prompts stay in sync.
-nonisolated public enum SystemPromptComposer {
+nonisolated enum SystemPromptComposer {
     /// Human-readable clause naming the arrs currently exposed to the model.
     /// Derived from the gated tool list (`sonarr_*`, `radarr_*`, …) so it always
     /// reflects exactly what's enabled — no separate config to keep in step.
-    public static func arrsClause(tools: [LLMTool]) -> String {
+    static func arrsClause(tools: [LLMTool]) -> String {
         let known: [(prefix: String, label: String)] = [
             ("sonarr_", "Sonarr (TV)"),
             ("radarr_", "Radarr (movies)"),
@@ -58,7 +58,7 @@ nonisolated public enum SystemPromptComposer {
     /// here are the ones `ChatLink` parses, and a link that doesn't match them
     /// is rendered as ordinary text, so the wording is deliberately narrow about
     /// where the ids may come from.
-    public static let linkingClause = """
+    static let linkingClause = """
         Link the titles and people you name, using the ids the tools already gave you:
           • a film or show — [Sicario](arrbarr://media/tmdb:68718), taking the exact
             `tmdb:…` / `tvdb:…` / `imdb:tt…` ref printed next to that title in the
@@ -94,10 +94,10 @@ public protocol LLMProvider: Sendable {
 
 /// Fallback provider that says "I'm not available." Useful when no provider has been set up
 /// yet, so the chat UI can render an unavailable banner instead of crashing.
-public struct UnavailableLLMProvider: LLMProvider {
-    public init() {}
-    public var isAvailable: Bool { false }
-    public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+struct UnavailableLLMProvider: LLMProvider {
+    init() {}
+    var isAvailable: Bool { false }
+    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
         LLMResponse(text: String(localized: "chat.unavailable.label", bundle: .module))
     }
 }

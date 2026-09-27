@@ -36,11 +36,11 @@ nonisolated public enum LocalHit: Identifiable {
 /// travels with the id. Without it, a Radarr movie #42 on screen would hide a
 /// Sonarr series #42 from the results — the one wrong answer this app must
 /// never give.
-nonisolated public struct OwnershipKey: Hashable, Sendable {
-    public let source: QueueItem.Source
-    public let arrId: Int
+nonisolated struct OwnershipKey: Hashable, Sendable {
+    let source: QueueItem.Source
+    let arrId: Int
 
-    public init(source: QueueItem.Source, arrId: Int) {
+    init(source: QueueItem.Source, arrId: Int) {
         self.source = source
         self.arrId = arrId
     }

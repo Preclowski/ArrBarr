@@ -21,7 +21,7 @@ extension TMDBTVSummary: TMDBPersonCredit {}
 /// identity. Cast entries read as Actor; crew entries count only when the
 /// department is Directing or Writing (producer-type credits would balloon
 /// the list without saying anything a media library cares about).
-nonisolated public enum PersonCreditMerge {
+nonisolated enum PersonCreditMerge {
     private enum Role: Int, CaseIterable {
         case actor, director, writer
         var label: String {
@@ -43,7 +43,7 @@ nonisolated public enum PersonCreditMerge {
     /// `credits`: one entry per unique title (first occurrence wins — TMDB
     /// lists the primary billing first). `roles`: title id → "Actor, Director"
     /// style line, roles in fixed actor→director→writer order.
-    public static func merge<T: TMDBPersonCredit>(
+    static func merge<T: TMDBPersonCredit>(
         cast: [T], crew: [T]
     ) -> (credits: [T], roles: [Int: String]) {
         var credits: [T] = []
@@ -69,7 +69,7 @@ nonisolated public enum PersonCreditMerge {
     /// Popularity-desc, year-desc. TMDB returns credits unordered; popularity
     /// (TMDB's "what people are searching/watching" metric) beats voteAverage,
     /// whose top entries are niche cameos with a handful of votes.
-    public static func byPopularity<T: TMDBPersonCredit>(_ credits: [T]) -> [T] {
+    static func byPopularity<T: TMDBPersonCredit>(_ credits: [T]) -> [T] {
         credits.sorted { lhs, rhs in
             let lp = lhs.popularity ?? 0, rp = rhs.popularity ?? 0
             if lp != rp { return lp > rp }

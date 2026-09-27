@@ -11,18 +11,18 @@ import SwiftUI
 /// start search" instead of `{"seasonNumber":4,"seriesId":241,…}`.
 /// For unknown tools we fall back to the tool name plus arg count
 /// — still cleaner than a JSON dump.
-public struct ConfirmActionCard: View {
+struct ConfirmActionCard: View {
     let call: ToolCall
     let onConfirm: () -> Void
     let onCancel: () -> Void
 
-    public init(call: ToolCall, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
+    init(call: ToolCall, onConfirm: @escaping () -> Void, onCancel: @escaping () -> Void) {
         self.call = call
         self.onConfirm = onConfirm
         self.onCancel = onCancel
     }
 
-    public var body: some View {
+    var body: some View {
         InlineConfirmCard(
             message: humanDescription,
             confirmLabelKey: "Confirm",
@@ -118,7 +118,7 @@ public struct ConfirmActionCard: View {
 /// strings catalogue — defaults to "Confirm", but the destructive flows
 /// in season/episode rows pass "Search" / "Remove" to mirror the verb in
 /// their alert message.
-public struct InlineConfirmCard: View {
+struct InlineConfirmCard: View {
     let message: Text
     let confirmLabelKey: LocalizedStringKey
     let destructive: Bool
@@ -127,7 +127,7 @@ public struct InlineConfirmCard: View {
 
     /// Verbatim message — used by chat for tool-call descriptions
     /// (already localized strings, no key lookup).
-    public init(
+    init(
         message: String,
         confirmLabelKey: LocalizedStringKey = "Confirm",
         destructive: Bool = true,
@@ -141,7 +141,7 @@ public struct InlineConfirmCard: View {
         self.onCancel = onCancel
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "exclamationmark.shield.fill")
                 .scaledFont(size: 16)
@@ -204,7 +204,7 @@ public struct InlineConfirmCard: View {
 /// which sits *inside* chat content and has to announce itself against the
 /// message flow). An alert already owns the screen; the destructive verb on the
 /// red button is the warning.
-public struct ConfirmAlertOverlay: View {
+struct ConfirmAlertOverlay: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey
     let confirmLabelKey: LocalizedStringKey
@@ -216,7 +216,7 @@ public struct ConfirmAlertOverlay: View {
     let onCancel: () -> Void
     @State private var suppress = false
 
-    public init(
+    init(
         title: LocalizedStringKey,
         message: LocalizedStringKey,
         confirmLabelKey: LocalizedStringKey = "Confirm",
@@ -238,7 +238,7 @@ public struct ConfirmAlertOverlay: View {
         self.onCancel = onCancel
     }
 
-    public var body: some View {
+    var body: some View {
         ZStack {
             // Heavier than the old sheet's scrim: the card is small and sits in
             // the middle of the content it interrupts, so the dimming is what

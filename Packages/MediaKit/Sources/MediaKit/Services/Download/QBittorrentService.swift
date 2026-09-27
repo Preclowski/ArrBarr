@@ -1,9 +1,9 @@
 import Foundation
 
-public struct QBittorrentService: DownloadService {
-    public let instance: InstanceID
+struct QBittorrentService: DownloadService {
+    let instance: InstanceID
     private let capabilities: CapabilityIndex
-    public init(instance: InstanceID, capabilities: CapabilityIndex) { self.instance = instance; self.capabilities = capabilities }
+    init(instance: InstanceID, capabilities: CapabilityIndex) { self.instance = instance; self.capabilities = capabilities }
 
     private func plan(_ op: String, method: String = "GET", path: String, query: [(String, String)] = [], body: HTTPRequest.Body = .none, priority: RequestPriority = .interactive) -> RequestPlan {
         RequestPlan(instance: instance, operation: op, method: method, pathTemplate: "/api/v2" + path, query: query.map { .init($0.0, $0.1) }, body: body, auth: .session, priority: priority)
@@ -11,15 +11,15 @@ public struct QBittorrentService: DownloadService {
 
     struct Torrent: Codable { let hash: String; let name: String; let state: String; let progress: Double; let dlspeed: Int64?; let eta: Int64?; let size: Int64?; let category: String? }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: plan("testConnection", path: "/app/version"), tags: [.capabilities(instance)], freshness: .reference, decode: { String(decoding: $0, as: UTF8.self) })
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan {
+    func tasks(ids: Set<String>) -> RequestPlan {
         plan("fetchProgress", path: "/torrents/info", query: ids.isEmpty ? [] : [("hashes", ids.map { $0.lowercased() }.sorted().joined(separator: "|"))], priority: .background)
     }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         try Self.decodeJSON([Torrent].self, response, operation: OperationID(instance.kind, "fetchProgress")).map { t in
             DownloadTask(id: t.hash, name: t.name, state: Self.state(t.state), progress: t.progress, downloadSpeed: t.dlspeed, sizeBytes: t.size,
                          etaSeconds: t.eta.map { $0 >= 8_640_000 ? nil : Int($0) } ?? nil, category: t.category, instance: instance)
@@ -39,13 +39,13 @@ public struct QBittorrentService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: plan("defaultAddPaused", path: "/app/preferences"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["start_paused_enabled"]?.boolValue
         }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         let hashes = ids.map { $0.lowercased() }.joined(separator: "|")
         let newVerbs = capabilities.has(.qbittorrentStopStartVerbs, instance)
         let (op, path, fields): (String, String, [String: String]) = switch action {
@@ -68,7 +68,7 @@ public struct QBittorrentService: DownloadService {
         }
     }
 
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         var fields: [String: String] = ["paused": String(paused), "stopped": String(paused)]
         if let category { fields["category"] = category }
         let p: RequestPlan

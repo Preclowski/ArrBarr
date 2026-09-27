@@ -8,12 +8,12 @@ import MediaKit
 /// so the mapping — poster URL derivation, genre-id → name, library-owned
 /// tagging, the tvdb-id-is-not-a-tmdb-id caveat — lives here rather than being
 /// re-derived per surface.
-nonisolated public enum TMDBSearchMapping {
+nonisolated enum TMDBSearchMapping {
 
     /// TMDB movies → `SearchResult`. `libraryMap` (tmdbId → ownership) tags
     /// already-owned results, so the UI routes their tap to the detail view
     /// instead of the add flow and shows the right ownership chip.
-    public static func movies(
+    static func movies(
         _ movies: some Sequence<TMDBMovieSummary>,
         libraryMap: [Int: LibraryOwnership] = [:],
         roles: [Int: String] = [:]
@@ -48,7 +48,7 @@ nonisolated public enum TMDBSearchMapping {
     ///
     /// `libraryMap` is **tmdbId → ownership** (`ArrLibraryMaps
     /// .sonarrByTMDBId`), so these rows tag exactly like the movie ones.
-    public static func series(
+    static func series(
         _ shows: some Sequence<TMDBTVSummary>,
         libraryMap: [Int: LibraryOwnership] = [:],
         roles: [Int: String] = [:]

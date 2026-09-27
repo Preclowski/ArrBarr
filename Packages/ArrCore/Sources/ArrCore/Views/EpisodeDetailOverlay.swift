@@ -6,7 +6,7 @@ import MediaKit
 /// download/on-disk file section and the header action cluster
 /// (search / bookmark / safari). Closes via the leading back chevron
 /// or Esc.
-public struct EpisodeDetailOverlay: View {
+struct EpisodeDetailOverlay: View {
     let episode: ArrEpisode
     let seriesTitle: String
     let posterURL: URL?
@@ -155,7 +155,7 @@ public struct EpisodeDetailOverlay: View {
         return seriesTitle
     }
 
-    public init(
+    init(
         episode: ArrEpisode,
         seriesTitle: String,
         posterURL: URL?,
@@ -211,7 +211,7 @@ public struct EpisodeDetailOverlay: View {
         self.onToggleMonitored = onToggleMonitored
     }
 
-    public var body: some View {
+    var body: some View {
         // No solid scrim — would kill the popover's native
         // translucent chrome. Underlying series detail is opacity-
         // hidden in DetailView while this overlay is up, so we don't

@@ -6,8 +6,8 @@ import FoundationModels
 /// Whether the on-device model is actually usable on THIS device — not just a
 /// recent-enough OS, but Apple Intelligence supported AND enabled. The Settings
 /// AI provider picker hides the Foundation Models option when this is false.
-public enum FoundationModelsAvailability {
-    nonisolated public static var isSupported: Bool {
+enum FoundationModelsAvailability {
+    nonisolated static var isSupported: Bool {
         #if canImport(FoundationModels)
         if case .available = SystemLanguageModel.default.availability { return true }
         #endif
@@ -21,7 +21,7 @@ public enum FoundationModelsAvailability {
 import FoundationModels
 import MediaKit
 
-public struct FoundationModelsProvider: LLMProvider {
+struct FoundationModelsProvider: LLMProvider {
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     /// Closure called when a destructive tool needs user confirmation.
@@ -30,7 +30,7 @@ public struct FoundationModelsProvider: LLMProvider {
     /// OpenAI path. Return value: args-to-proceed or nil for cancel.
     private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
-    public init(
+    init(
         invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
         confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
     ) {
@@ -38,7 +38,7 @@ public struct FoundationModelsProvider: LLMProvider {
         self.confirmDestructive = confirmDestructive
     }
 
-    public var isAvailable: Bool {
+    var isAvailable: Bool {
         if case .available = SystemLanguageModel.default.availability { return true }
         return false
     }
@@ -49,7 +49,7 @@ public struct FoundationModelsProvider: LLMProvider {
     /// then drains both calls and results from `DynamicMCPToolBox`. The returned
     /// `LLMResponse` carries `toolResults` so `ChatViewModel` knows the calls are
     /// already done and should only render them, not re-execute.
-    public func respond(
+    func respond(
         prompt: String,
         tools: [LLMTool],
         history: [ChatMessage]

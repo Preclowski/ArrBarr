@@ -11,10 +11,10 @@ import Foundation
 /// library each — search, `suggest_titles`, `discover_in_quiz` and the TMDB
 /// credit tools — share one snapshot instead of pulling a 3000-movie payload
 /// apiece.
-nonisolated public enum ArrLibraryMaps {
+nonisolated enum ArrLibraryMaps {
     /// Radarr: `tmdbId → ownership`. Empty when Radarr isn't configured or the
     /// fetch fails — callers proceed untagged.
-    public static func radarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func radarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.movies(config: config) {
             if let tmdb = rec.tmdbId, let owned = rec.ownership { map[tmdb] = owned }
@@ -24,7 +24,7 @@ nonisolated public enum ArrLibraryMaps {
 
     /// Sonarr: `tvdbId → ownership`. Only flows that carry real tvdbIds can use
     /// this — TMDB-tv ids are not tvdb ids.
-    public static func sonarrByTVDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func sonarrByTVDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
             if let tvdb = rec.tvdbId, let owned = rec.ownership { map[tvdb] = owned }
@@ -40,7 +40,7 @@ nonisolated public enum ArrLibraryMaps {
     /// shipped `tmdbId` on the series resource all along; reading it turns
     /// that guess into an id match, at no extra request (the snapshot behind
     /// `LibraryIndex` is the same one every other map reads).
-    public static func sonarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func sonarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
             if let tmdb = rec.tmdbId, tmdb > 0, let owned = rec.ownership { map[tmdb] = owned }
@@ -53,7 +53,7 @@ nonisolated public enum ArrLibraryMaps {
     /// The free first step of series identity resolution: for anything the
     /// user already owns, both ids are in memory, so translating a TMDB row
     /// to the id Sonarr wants costs zero requests.
-    public static func sonarrTVDBByTMDBId(config: ServiceConfig) async -> [Int: Int] {
+    static func sonarrTVDBByTMDBId(config: ServiceConfig) async -> [Int: Int] {
         var map: [Int: Int] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
             if let tmdb = rec.tmdbId, tmdb > 0, let tvdb = rec.tvdbId, tvdb > 0 { map[tmdb] = tvdb }
@@ -69,12 +69,12 @@ nonisolated public enum ArrLibraryMaps {
     ///
     /// `hashValue` is not stable across process launches; it does not have to
     /// be. Both sides compute it in the same process, and nothing persists it.
-    public static func foreignHashKey(_ foreignId: String) -> Int {
+    static func foreignHashKey(_ foreignId: String) -> Int {
         abs(foreignId.hashValue) & 0x7fffffff
     }
 
     /// Lidarr: `hash(foreignArtistId) → ownership`, off the shared snapshot.
-    public static func lidarrByForeignArtistHash(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func lidarrByForeignArtistHash(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.artists(config: config) {
             if let fid = rec.foreignArtistId, let owned = rec.ownership {
@@ -87,7 +87,7 @@ nonisolated public enum ArrLibraryMaps {
     /// Whisparr: `tmdbId → ownership`, falling back to `hash(foreignId)` for
     /// the scene records that carry no TMDB id. Matches what
     /// `SearchClient.unifyWhisparr` stamps on the lookup rows.
-    public static func whisparrByForeignId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func whisparrByForeignId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.whisparrMovies(config: config) {
             let key: Int? = {

@@ -10,18 +10,18 @@ import SwiftUI
 /// `onQuizStart` is the hero CTA; the parent decides what that
 /// translates to (today: synthesised chat message that triggers the
 /// `discover_in_quiz` tool).
-public struct ChatEmptyStateView: View {
-    public let onQuizStart: (QuizFeatureCard.Kind, QuizFeatureCard.Variant) -> Void
-    public let onSuggestionTap: (String) -> Void
+struct ChatEmptyStateView: View {
+    let onQuizStart: (QuizFeatureCard.Kind, QuizFeatureCard.Variant) -> Void
+    let onSuggestionTap: (String) -> Void
     /// Poster URLs for the Quiz card deck — sampled from the user's library
     /// by the parent (see `LibraryPosterSampler`). Empty renders placeholders.
-    public let quizPosterURLs: [URL]
-    public let quizVariants: [QuizFeatureCard.Variant]
+    let quizPosterURLs: [URL]
+    let quizVariants: [QuizFeatureCard.Variant]
     /// In-app language, so the prompt SENT for a tapped suggestion matches its
     /// visible chip after a live language switch. The chip label follows
     /// `environment(\.locale)`; the sent string must be resolved explicitly
     /// (see `AppLocalized`) or it lags in the process language until relaunch.
-    public var locale: Locale = .current
+    var locale: Locale = .current
 
     /// A chat suggestion is one catalog key: it's localized both for the chip
     /// label AND for the prompt actually sent to the LLM — so tapping an English
@@ -43,7 +43,7 @@ public struct ChatEmptyStateView: View {
     /// stop that gets a still list.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    public init(
+    init(
         quizPosterURLs: [URL] = [],
         quizVariants: [QuizFeatureCard.Variant] = QuizFeatureCard.Variant.allCases,
         locale: Locale = .current,
@@ -57,7 +57,7 @@ public struct ChatEmptyStateView: View {
         self.onSuggestionTap = onSuggestionTap
     }
 
-    public var body: some View {
+    var body: some View {
         // Nothing here scrolls: the surface is a fixed panel, and a scroll bar
         // under a five-item list reads as a mistake. What gives instead is the
         // number of suggestions — `ViewThatFits` drops the ones there is no

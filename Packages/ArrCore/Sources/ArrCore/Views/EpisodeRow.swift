@@ -91,7 +91,7 @@ struct EpisodeRow: View {
         return AnyShapeStyle(Color.primary)
     }
 
-    public var body: some View {
+    var body: some View {
         // The row's one date parse.
         let air = airDate
         Button {

@@ -61,7 +61,7 @@ struct DownloadSection: View {
         items.sorted { ($0.subtitle ?? "") < ($1.subtitle ?? "") }
     }
 
-    public var body: some View {
+    var body: some View {
         if items.count <= 1 {
             // Same caption treatment as the "Existing file" block below it —
             // the two sections read as symmetric siblings. The multi-item

@@ -10,8 +10,8 @@ import UIKit
 /// Uses `NSWorkspace.shared.open` on macOS and `UIApplication.shared.open`
 /// on iOS. Replaces direct `NSWorkspace` references in shared views so
 /// they compile for both platforms.
-public enum PlatformURLOpener {
-    public static func open(_ url: URL) {
+enum PlatformURLOpener {
+    static func open(_ url: URL) {
         #if os(macOS)
         NSWorkspace.shared.open(url)
         #else

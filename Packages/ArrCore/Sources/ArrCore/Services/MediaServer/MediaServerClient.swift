@@ -27,8 +27,8 @@ nonisolated public protocol MediaServerClient: Sendable {
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch]
 }
 
-nonisolated public enum MediaServerClientFactory {
-    public static func make(config: MediaServerConfig) -> MediaServerClient? {
+nonisolated enum MediaServerClientFactory {
+    static func make(config: MediaServerConfig) -> MediaServerClient? {
         guard config.isConfigured else { return nil }
         return MediaServerFacade(config: config)
     }

@@ -11,14 +11,14 @@ import SwiftUI
 /// It renders nothing on its own — callers gate visibility on
 /// `viewModel.isFullyOffline` so the chip simply isn't in the layout when the
 /// stack is reachable.
-public struct OfflineIndicator: View {
+struct OfflineIndicator: View {
     var viewModel: QueueViewModel
 
-    public init(viewModel: QueueViewModel) {
+    init(viewModel: QueueViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
+    var body: some View {
         Button {
             Task { await viewModel.refresh() }
         } label: {

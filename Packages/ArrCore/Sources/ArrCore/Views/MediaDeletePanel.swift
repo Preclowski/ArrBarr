@@ -2,14 +2,14 @@ import SwiftUI
 
 /// What the detail header's pencil menu deletes — the record being removed
 /// from the arr's library.
-public struct MediaDeleteRequest: Identifiable, Hashable {
+struct MediaDeleteRequest: Identifiable, Hashable {
     let source: QueueItem.Source
     /// Arr record id — movie id (Radarr/Whisparr), series id (Sonarr),
     /// ARTIST id (Lidarr; an album is deleted from its artist in the arr).
     let entityId: Int
     /// Shown in the modal so the user confirms against a name, not an id.
     let title: String
-    public var id: String { "\(source.rawValue)-delete-\(entityId)" }
+    var id: String { "\(source.rawValue)-delete-\(entityId)" }
 }
 
 /// True modal for removing an in-library movie / series / artist, with the two

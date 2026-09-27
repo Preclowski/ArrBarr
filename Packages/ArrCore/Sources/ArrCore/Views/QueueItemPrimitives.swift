@@ -18,14 +18,14 @@ import SwiftUI
 /// states are mutually exclusive — every queue entry is one or the
 /// other, never both, since "Upgrade" by definition already implies
 /// the file isn't new to the library.
-public struct MediaBadgeCluster: View {
+struct MediaBadgeCluster: View {
     let isUpgrade: Bool
 
-    public init(isUpgrade: Bool) {
+    init(isUpgrade: Bool) {
         self.isUpgrade = isUpgrade
     }
 
-    public var body: some View {
+    var body: some View {
         // Match TagChip's chrome exactly (9pt medium, 5/1 padding, 30%
         // stroke) so Upgrade / New chips and custom-format chips align
         // pixel-for-pixel when they sit in the same row — no jarring
@@ -43,14 +43,14 @@ public struct MediaBadgeCluster: View {
 /// Download-client label — outline capsule matching `MediaBadgeCluster`
 /// and any other compact label across the app. Neutral secondary tint
 /// so it reads as metadata, not as a status indicator.
-public struct DownloadClientLabel: View {
+struct DownloadClientLabel: View {
     let name: String
 
-    public init(name: String) {
+    init(name: String) {
         self.name = name
     }
 
-    public var body: some View {
+    var body: some View {
         OutlineLabel(text: name, tint: .secondary, fontSize: 8)
     }
 }
@@ -59,18 +59,18 @@ public struct DownloadClientLabel: View {
 /// tinted text. Used by `MediaBadgeCluster`, `DownloadClientLabel`,
 /// and any other compact metadata chip. One look across every
 /// surface; per-callsite tint conveys semantic distinction.
-public struct OutlineLabel: View {
+struct OutlineLabel: View {
     let text: String
     let tint: Color
     var fontSize: CGFloat
 
-    public init(text: String, tint: Color, fontSize: CGFloat = 8) {
+    init(text: String, tint: Color, fontSize: CGFloat = 8) {
         self.text = text
         self.tint = tint
         self.fontSize = fontSize
     }
 
-    public var body: some View {
+    var body: some View {
         Text(text)
             .scaledFont(size: fontSize, weight: .semibold)
             .foregroundStyle(tint)
@@ -116,7 +116,7 @@ public struct OutlineLabel: View {
 ///   value**, which is the only thing left to say.
 ///
 /// The number itself never changes: absolute either way.
-public struct ScoreLabel: View {
+struct ScoreLabel: View {
     let score: Int
     /// Score of the file this one is measured against, when there is one.
     /// `nil` = nothing to compare with, so colour goes by sign.
@@ -124,7 +124,7 @@ public struct ScoreLabel: View {
     var size: CGFloat
     var weight: Font.Weight
 
-    public init(score: Int, baseline: Int? = nil, size: CGFloat = 10, weight: Font.Weight = .medium) {
+    init(score: Int, baseline: Int? = nil, size: CGFloat = 10, weight: Font.Weight = .medium) {
         self.score = score
         self.baseline = baseline
         self.size = size
@@ -137,7 +137,7 @@ public struct ScoreLabel: View {
         return Self.deltaColor(score - baseline)
     }
 
-    public var body: some View {
+    var body: some View {
         if score != 0 {
             Text(verbatim: Self.text(score))
                 .scaledFont(size: size, weight: weight, monospacedDigit: true)
@@ -156,18 +156,18 @@ public struct ScoreLabel: View {
 
     /// Signed absolute score. Rendered verbatim so a locale's grouping
     /// separator can't sneak into a four-digit score.
-    public static func text(_ score: Int) -> String {
+    static func text(_ score: Int) -> String {
         "\(score > 0 ? "+" : "")\(score)"
     }
 
     /// Colour for an absolute score — the sign of the value.
-    public static func color(_ score: Int) -> Color {
+    static func color(_ score: Int) -> Color {
         score > 0 ? .green : (score < 0 ? .red : .secondary)
     }
 
     /// Signed change. `±0` rather than `0` so a wash reads as "compared,
     /// no movement" instead of "score is zero".
-    public static func deltaText(_ delta: Int) -> String {
+    static func deltaText(_ delta: Int) -> String {
         delta == 0 ? "±0" : "\(delta > 0 ? "+" : "")\(delta)"
     }
 
@@ -176,7 +176,7 @@ public struct ScoreLabel: View {
     /// reads green, even though both numbers are negative. The old code
     /// painted every delta green unconditionally, so a losing upgrade
     /// announced itself as a win.
-    public static func deltaColor(_ delta: Int) -> Color {
+    static func deltaColor(_ delta: Int) -> Color {
         delta > 0 ? .green : (delta < 0 ? .red : .secondary)
     }
 }
@@ -197,7 +197,7 @@ public struct ScoreLabel: View {
 /// colour (red for failed, orange for warning) so the banner reads as
 /// "the explanation for that red pill above" rather than a generic
 /// notice. Sits under `ProgressLine` in the detail view.
-public struct QueueStatusMessagesBanner: View {
+struct QueueStatusMessagesBanner: View {
     let messages: [String]
     let tint: Color
     /// Optional arr-side URL to surface as a trailing CTA. When set,
@@ -218,7 +218,7 @@ public struct QueueStatusMessagesBanner: View {
     @State private var fullHeight: CGFloat = 0
     private let collapsedLineLimit = 3
 
-    public init(messages: [String], tint: Color, actionURL: URL? = nil) {
+    init(messages: [String], tint: Color, actionURL: URL? = nil) {
         self.messages = messages
         self.tint = tint
         self.actionURL = actionURL
@@ -247,7 +247,7 @@ public struct QueueStatusMessagesBanner: View {
         expanded || (isTruncated && !hiddenOverflowIsWorthAButton)
     }
 
-    public var body: some View {
+    var body: some View {
         // Warning icon dropped: the status pill rendered immediately
         // above already carries the triangle — repeating it here was
         // visual stutter. The tinted backdrop alone carries the
@@ -362,7 +362,7 @@ private struct BannerFullHeightKey: PreferenceKey {
 /// footprint, one poster size, one header style. The lone hold-out is
 /// `CastTooltip` (a fixed-size person card with async fill), which shares
 /// no anatomy with media tooltips.
-public struct MediaTooltipChrome<Content: View>: View {
+struct MediaTooltipChrome<Content: View>: View {
     let title: String
     let year: Int?
     let subtitle: String?
@@ -383,11 +383,11 @@ public struct MediaTooltipChrome<Content: View>: View {
     @ViewBuilder let content: () -> Content
 
     /// The canonical tooltip poster: 2:3, or square for Lidarr covers.
-    public static func posterSize(for source: QueueItem.Source) -> CGSize {
+    static func posterSize(for source: QueueItem.Source) -> CGSize {
         source == .lidarr ? CGSize(width: 110, height: 110) : CGSize(width: 110, height: 165)
     }
 
-    public init(
+    init(
         title: String,
         year: Int? = nil,
         subtitle: String? = nil,
@@ -417,7 +417,7 @@ public struct MediaTooltipChrome<Content: View>: View {
         self.content = content
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: 12) {
             PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                 RemotePoster(
@@ -476,12 +476,12 @@ public struct MediaTooltipChrome<Content: View>: View {
 /// so the row picks up its semantic colour (blue for Downloading,
 /// orange for Paused, green for Completed, etc.). Lives at the leading
 /// edge of the status line on every surface.
-public struct StatusIconLabel: View {
+struct StatusIconLabel: View {
     let status: QueueItem.Status
     var labelSize: CGFloat
     var labelWeight: Font.Weight
 
-    public init(status: QueueItem.Status,
+    init(status: QueueItem.Status,
                 labelSize: CGFloat = 9,
                 labelWeight: Font.Weight = .medium) {
         self.status = status
@@ -489,7 +489,7 @@ public struct StatusIconLabel: View {
         self.labelWeight = labelWeight
     }
 
-    public var body: some View {
+    var body: some View {
         // Badge-styled to match TagChip / MediaBadgeCluster. Single visual
         // idiom across "status pill", "upgrade chip", "custom format" so the
         // status row reads as one cohesive strip of chips instead of

@@ -212,19 +212,19 @@ public extension QueueItem {
     }
 }
 
-public enum LibraryAddCompletion {
-    public static func post(foreignId: String) {
+enum LibraryAddCompletion {
+    static func post(foreignId: String) {
         guard !foreignId.isEmpty else { return }
         AppMessages.post(AppMessages.DidAddToLibrary(foreignId: foreignId))
     }
 }
 
-public enum PersonRequest {
-    public static func post(_ ref: PersonRef) { AppMessages.post(AppMessages.OpenPerson(ref: ref)) }
+enum PersonRequest {
+    static func post(_ ref: PersonRef) { AppMessages.post(AppMessages.OpenPerson(ref: ref)) }
 }
 
-public enum SearchAddRequest {
-    public static func post(_ result: SearchResult, origin: SearchAddRouter.Origin = .search) {
+enum SearchAddRequest {
+    static func post(_ result: SearchResult, origin: SearchAddRouter.Origin = .search) {
         SearchAddRouter.shared.open(result, origin: origin)
     }
 }

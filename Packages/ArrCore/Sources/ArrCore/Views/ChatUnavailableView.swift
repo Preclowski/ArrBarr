@@ -1,16 +1,16 @@
 import SwiftUI
 
-public struct ChatUnavailableView: View {
-    public enum Reason { case osTooOld, mcpNotConfigured, providerUnavailable }
+struct ChatUnavailableView: View {
+    enum Reason { case osTooOld, mcpNotConfigured, providerUnavailable }
     let reason: Reason
     let onOpenSettings: (() -> Void)?
 
-    public init(reason: Reason, onOpenSettings: (() -> Void)? = nil) {
+    init(reason: Reason, onOpenSettings: (() -> Void)? = nil) {
         self.reason = reason
         self.onOpenSettings = onOpenSettings
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 12) {
             Image(systemName: symbol)
                 .scaledFont(size: 28, weight: .light)

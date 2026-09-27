@@ -2,8 +2,8 @@ import Foundation
 
 /// Handles on the facades. Views and view-models take them from the profile (`ConfigStore`) or, for a Settings
 /// draft, from here; none of them builds a client.
-nonisolated public enum ServiceHandles {
-    public static func arr(_ source: QueueItem.Source, config: ServiceConfig) -> any ArrAPIClient {
+nonisolated enum ServiceHandles {
+    static func arr(_ source: QueueItem.Source, config: ServiceConfig) -> any ArrAPIClient {
         switch source {
         case .radarr: RadarrClient(config: config)
         case .sonarr: SonarrClient(config: config)
@@ -12,16 +12,16 @@ nonisolated public enum ServiceHandles {
         }
     }
 
-    public static func radarr(config: ServiceConfig) -> RadarrClient { RadarrClient(config: config) }
+    static func radarr(config: ServiceConfig) -> RadarrClient { RadarrClient(config: config) }
 
-    public static func search(_ source: QueueItem.Source, config: ServiceConfig) -> SearchClient {
+    static func search(_ source: QueueItem.Source, config: ServiceConfig) -> SearchClient {
         SearchClient(config: config, source: source)
     }
 
-    public static func tmdb(apiKey: String) -> TMDBClient { TMDBClient(apiKey: apiKey) }
+    static func tmdb(apiKey: String) -> TMDBClient { TMDBClient(apiKey: apiKey) }
 
     /// One round trip proving a draft works: the arr's version, or the download client's greeting.
-    public static func testConnection(_ kind: ServiceKind, config: ServiceConfig) async throws -> String {
+    static func testConnection(_ kind: ServiceKind, config: ServiceConfig) async throws -> String {
         switch kind {
         case .radarr, .sonarr, .lidarr, .whisparr: try await arr(QueueItem.Source(rawValue: kind.rawValue)!, config: config).testConnection()
         case .sabnzbd: try await SabnzbdClient(config: config).testConnection()

@@ -16,10 +16,10 @@ public enum ChatSpoilerSegment: Equatable, Sendable {
 /// no idea it can be clicked. Prose that merely contains two `||` runs (a
 /// logical-or in a code span, a Markdown table with empty cells) used to hit
 /// exactly that, because any second `||` closed the first.
-public enum ChatSpoilerMarkup {
+enum ChatSpoilerMarkup {
     private static let marker = "||"
 
-    public static func parse(_ raw: String) -> [ChatSpoilerSegment] {
+    static func parse(_ raw: String) -> [ChatSpoilerSegment] {
         guard !raw.isEmpty else { return [] }
         var segments: [ChatSpoilerSegment] = []
         // `pending` is plain text not yet flushed — we hold it until we know
@@ -53,7 +53,7 @@ public enum ChatSpoilerMarkup {
         return segments
     }
 
-    public static func containsSpoiler(_ raw: String) -> Bool {
+    static func containsSpoiler(_ raw: String) -> Bool {
         parse(raw).contains { if case .spoiler = $0 { return true } else { return false } }
     }
 }

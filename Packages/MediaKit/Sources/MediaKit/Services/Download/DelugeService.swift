@@ -1,27 +1,27 @@
 import Foundation
 
-public struct DelugeService: DownloadService {
-    public let instance: InstanceID
-    public init(instance: InstanceID) { self.instance = instance }
+struct DelugeService: DownloadService {
+    let instance: InstanceID
+    init(instance: InstanceID) { self.instance = instance }
 
     private func rpc(_ op: String, method: String, params: [JSONValue] = [], priority: RequestPriority = .interactive) -> RequestPlan {
         RequestPlan(instance: instance, operation: op, method: "POST", pathTemplate: "/json", body: try! RequestBuilder.jsonRPC(method: method, params: .array(params)),
                     auth: .session, priority: priority, retry: method.hasPrefix("core.get") || method == "daemon.info" ? .idempotent : .never, rpcMethod: method)
     }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: rpc("testConnection", method: "daemon.info"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["result"]?.stringValue ?? ""
         }
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan {
+    func tasks(ids: Set<String>) -> RequestPlan {
         let fields: JSONValue = .array(["name", "state", "progress", "download_payload_rate", "total_size", "eta", "hash", "label"].map { .string($0) })
         let filter: JSONValue = ids.isEmpty ? .object([:]) : .object(["id": .array(ids.sorted().map { .string($0) })])
         return rpc("fetchProgress", method: "core.get_torrents_status", params: [filter, fields], priority: .background)
     }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let result = try Self.rpcResult(response, instance: instance, operation: OperationID(instance.kind, "fetchProgress"))
         guard case let .object(table) = result else { return [] }
         return table.map { hash, t in
@@ -40,13 +40,13 @@ public struct DelugeService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: rpc("defaultAddPaused", method: "core.get_config"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["result"]?["add_paused"]?.boolValue
         }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let service = self
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
@@ -62,7 +62,7 @@ public struct DelugeService: DownloadService {
         }
     }
 
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         let service = self
         return command("addMagnet") { ctx in
             let options: JSONValue = .object(["add_paused": .bool(paused)])

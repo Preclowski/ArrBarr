@@ -6,18 +6,18 @@ import Observation
 /// reassigned, so we wrap the VM in a holder that rebuilds it when the AI
 /// configuration actually changes.
 @Observable
-public final class ChatViewModelHolder {
-    public private(set) var vm: ChatViewModel
+final class ChatViewModelHolder {
+    private(set) var vm: ChatViewModel
     /// Internal bookkeeping — not view state, so keep it out of observation.
     @ObservationIgnored private var lastSignature: String = ""
 
-    public init() {
+    init() {
         self.vm = ChatViewModelFactory.makePlaceholder()
     }
 
     /// Rebuild the underlying VM if (and only if) the relevant config bits changed.
     /// No-op when the signature matches the last build — preserves message history.
-    public func reconfigure(store: ConfigStore) {
+    func reconfigure(store: ConfigStore) {
         let next = Self.signature(store: store)
         guard next != lastSignature else { return }
         lastSignature = next
@@ -53,7 +53,7 @@ public final class ChatViewModelHolder {
         )
     }
 
-    public static func signature(store: ConfigStore) -> String {
+    static func signature(store: ConfigStore) -> String {
         [
             store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
             store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",

@@ -9,18 +9,18 @@ import os
 /// content's frame, producing fuzzy edges past the poster. We `.compositingGroup()`
 /// to rasterize the blur, then `.clipShape(RoundedRectangle)` to confine it back
 /// to the poster's shape so the bleed disappears.
-public struct PosterBlurContainer<Content: View>: View {
+struct PosterBlurContainer<Content: View>: View {
     let blurred: Bool
     let cornerRadius: CGFloat
     @ViewBuilder let content: () -> Content
 
-    public init(blurred: Bool, cornerRadius: CGFloat = 4, @ViewBuilder content: @escaping () -> Content) {
+    init(blurred: Bool, cornerRadius: CGFloat = 4, @ViewBuilder content: @escaping () -> Content) {
         self.blurred = blurred
         self.cornerRadius = cornerRadius
         self.content = content
     }
 
-    public var body: some View {
+    var body: some View {
         content()
             .blur(radius: blurred ? 12 : 0)
             .compositingGroup()
@@ -38,7 +38,7 @@ public struct PosterBlurContainer<Content: View>: View {
 /// Lidarr ones can't just adopt `MediaHeaderCard`: their right columns are
 /// genuinely different (artist chevron subtitle, album statistics). So the
 /// POSTER is what gets shared, not the whole card.
-public struct DetailHeroPoster: View {
+struct DetailHeroPoster: View {
     let url: URL?
     var apiKey: String?
     var size: CGSize
@@ -60,7 +60,7 @@ public struct DetailHeroPoster: View {
     /// user has already hovered long enough to wonder.
     @State private var hovering = false
 
-    public init(
+    init(
         url: URL?,
         apiKey: String? = nil,
         size: CGSize,
@@ -82,7 +82,7 @@ public struct DetailHeroPoster: View {
         self.onTap = onTap
     }
 
-    public var body: some View {
+    var body: some View {
         artwork
             // `monitored: nil` — the ribbon here is the interactive toggle the
             // host hands down as `cornerAction`, not a drawn-on marker.
@@ -155,7 +155,7 @@ private struct PosterContentMode: ViewModifier {
     }
 }
 
-public struct RemotePoster: View {
+struct RemotePoster: View {
     let url: URL?
     let apiKey: String?
     /// How large a copy to fetch and keep. Stated explicitly rather than
@@ -187,7 +187,7 @@ public struct RemotePoster: View {
     @State private var failed = false
     @State private var isLoading = true
 
-    public var body: some View {
+    var body: some View {
         Group {
             if let image {
                 Image(platformImage: image)

@@ -14,8 +14,8 @@ import AppKit
 /// and the panel to become key, so the system actually routes mouse
 /// events to the dialog. NSPopover doesn't need this — its host
 /// activates automatically.
-public enum PanelActivation {
-    public static func bringForward() {
+enum PanelActivation {
+    static func bringForward() {
         #if os(macOS)
         NSApp.activate(ignoringOtherApps: true)
         NSApp.keyWindow?.makeKeyAndOrderFront(nil)

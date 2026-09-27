@@ -4,8 +4,8 @@ import Foundation
 /// via iCloud KVS. Secrets are NOT here — they sync via iCloud Keychain. Keys
 /// not listed (platform-specific prefs, MCP server, one-shot/migration flags)
 /// stay device-local.
-public enum SyncedKeys {
-    public static let all: Set<String> = {
+enum SyncedKeys {
+    static let all: Set<String> = {
         var keys: Set<String> = [
             "ArrBarr.notifyRadarr", "ArrBarr.notifySonarr", "ArrBarr.notifyLidarr",
             "ArrBarr.notificationSoundName",
@@ -24,5 +24,5 @@ public enum SyncedKeys {
         return keys
     }()
 
-    public static func isSynced(_ key: String) -> Bool { all.contains(key) }
+    static func isSynced(_ key: String) -> Bool { all.contains(key) }
 }

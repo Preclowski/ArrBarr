@@ -20,11 +20,11 @@ import MediaKit
 ///     FoundationModels provider already takes), and the rest of the
 ///     pipeline — tool-message rendering, RichToolResultView — is
 ///     completely unchanged.
-public struct DemoChatProvider: LLMProvider {
-    public init() {}
-    public var isAvailable: Bool { true }
+struct DemoChatProvider: LLMProvider {
+    init() {}
+    var isAvailable: Bool { true }
 
-    public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
         // A tiny artificial latency so the "thinking" indicator gets a
         // moment on-screen — without it, replies feel instant in a way
         // that reads as canned. 600ms is short enough to stay snappy.

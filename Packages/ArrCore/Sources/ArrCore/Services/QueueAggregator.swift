@@ -15,16 +15,16 @@ nonisolated public struct QueueRevision: Equatable, Sendable {
     }
 }
 
-nonisolated public struct SourceQueueResult: Equatable {
-    public let source: QueueItem.Source
-    public let items: [QueueItem]
-    public let error: String?
-    public let unreachable: Bool
+nonisolated struct SourceQueueResult: Equatable {
+    let source: QueueItem.Source
+    let items: [QueueItem]
+    let error: String?
+    let unreachable: Bool
     /// When the arr answered the rows; nil when nothing was measured (a failure, an unconfigured arr, a test fake).
-    public let measuredAt: Date?
+    let measuredAt: Date?
     /// The live stream revision behind this result, so the same fetch is never committed twice; nil commits always.
-    public let revision: QueueRevision?
-    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date? = nil, revision: QueueRevision? = nil) {
+    let revision: QueueRevision?
+    init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date? = nil, revision: QueueRevision? = nil) {
         self.source = source; self.items = items; self.error = error; self.unreachable = unreachable
         self.measuredAt = measuredAt; self.revision = revision
     }
@@ -51,7 +51,7 @@ extension QueueDataProviding {
 }
 
 /// Queue, calendar, history and health for the four arrs plus the download-client progress overlay, all through MediaKit.
-public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
+final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     enum AggregateError: LocalizedError {
         case noDownloadId
         case downloadProtocolUnknown
@@ -320,11 +320,11 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     }
 }
 
-nonisolated public struct HistoryResult: Equatable {
-    public let items: [HistoryItem]
-    public let hasMore: Bool
-    public let error: String?
-    public init(items: [HistoryItem], hasMore: Bool = false, error: String?) {
+nonisolated struct HistoryResult: Equatable {
+    let items: [HistoryItem]
+    let hasMore: Bool
+    let error: String?
+    init(items: [HistoryItem], hasMore: Bool = false, error: String?) {
         self.items = items; self.hasMore = hasMore; self.error = error
     }
 }
@@ -348,18 +348,18 @@ nonisolated public struct HealthResult: Equatable {
     }
 }
 
-nonisolated public struct AggregateResult: Equatable {
-    public let radarr: [QueueItem]
-    public let sonarr: [QueueItem]
-    public let lidarr: [QueueItem]
-    public let whisparr: [QueueItem]
-    public let radarrError: String?
-    public let sonarrError: String?
-    public let lidarrError: String?
-    public let whisparrError: String?
-    public let unreachableSources: Set<QueueItem.Source>
-    public let measuredAt: [QueueItem.Source: Date]
-    public let revision: [QueueItem.Source: QueueRevision]
+nonisolated struct AggregateResult: Equatable {
+    let radarr: [QueueItem]
+    let sonarr: [QueueItem]
+    let lidarr: [QueueItem]
+    let whisparr: [QueueItem]
+    let radarrError: String?
+    let sonarrError: String?
+    let lidarrError: String?
+    let whisparrError: String?
+    let unreachableSources: Set<QueueItem.Source>
+    let measuredAt: [QueueItem.Source: Date]
+    let revision: [QueueItem.Source: QueueRevision]
 
     func slice(for source: QueueItem.Source) -> SourceQueueResult {
         let (items, error): ([QueueItem], String?) = switch source {

@@ -2,12 +2,12 @@ import SwiftUI
 import MediaKit
 
 /// What the detail header's pencil opens — the record being edited.
-public struct MediaEditRequest: Identifiable, Hashable {
+struct MediaEditRequest: Identifiable, Hashable {
     let source: QueueItem.Source
     /// Arr record id — movie id (Radarr/Whisparr), series id (Sonarr),
     /// ARTIST id (Lidarr; albums have no editable profile of their own).
     let entityId: Int
-    public var id: String { "\(source.rawValue)-edit-\(entityId)" }
+    var id: String { "\(source.rawValue)-edit-\(entityId)" }
 }
 
 /// True modal for editing an in-library movie / series / artist — quality

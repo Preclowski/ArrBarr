@@ -12,7 +12,7 @@ import SwiftUI
 /// release-name footer, or any other download-context decoration
 /// stays the responsibility of the surrounding container so the
 /// card itself stays focused on the progress narrative.
-public struct DownloadProgressCard: View {
+struct DownloadProgressCard: View {
     let item: QueueItem
     /// Override the displayed progress — used by season-pack rows
     /// where the rendered % is an *aggregate* over member items, not
@@ -43,13 +43,13 @@ public struct DownloadProgressCard: View {
     /// `↑` row as the movie/album path.
     let existingOverride: ExistingFileSnapshot?
 
-    public struct ExistingFileSnapshot {
-        public let quality: String?
-        public let size: Int64?
-        public let score: Int?
-        public let formats: [String]
-        public let filename: String?
-        public init(quality: String?, size: Int64?, score: Int?, formats: [String], filename: String? = nil) {
+    struct ExistingFileSnapshot {
+        let quality: String?
+        let size: Int64?
+        let score: Int?
+        let formats: [String]
+        let filename: String?
+        init(quality: String?, size: Int64?, score: Int?, formats: [String], filename: String? = nil) {
             self.quality = quality
             self.size = size
             self.score = score
@@ -58,7 +58,7 @@ public struct DownloadProgressCard: View {
         }
     }
 
-    public init(
+    init(
         item: QueueItem,
         progressOverride: Double? = nil,
         showUpgradeDiff: Bool = true,
@@ -100,7 +100,7 @@ public struct DownloadProgressCard: View {
         if existingOverride != nil { return hasExistingMetadata }
         return item.isUpgrade && hasExistingMetadata
     }
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             // Status + spec row sits ABOVE the progress bar (per user
             // direction) so the row reads top-down: what/quality, then the
@@ -253,16 +253,16 @@ public struct DownloadProgressCard: View {
 /// what is happening to a download right now. Lives here rather than inside
 /// `DownloadProgressCard`'s header because the detail surfaces put the same
 /// cluster on their "Downloading" section header instead.
-public struct DownloadStatusCluster: View {
+struct DownloadStatusCluster: View {
     let item: QueueItem
     var showUpgradeBadge: Bool = true
 
-    public init(item: QueueItem, showUpgradeBadge: Bool = true) {
+    init(item: QueueItem, showUpgradeBadge: Bool = true) {
         self.item = item
         self.showUpgradeBadge = showUpgradeBadge
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 6) {
             StatusIconLabel(status: item.status)
             if showUpgradeBadge {
@@ -278,12 +278,12 @@ public struct DownloadStatusCluster: View {
 /// "Downloading" with the live status chips on its trailing edge. The one
 /// header for an active download, shared by the movie detail and the episode
 /// detail — the episode one had no header at all before.
-public struct DownloadingSectionHeader: View {
+struct DownloadingSectionHeader: View {
     let item: QueueItem
 
-    public init(item: QueueItem) { self.item = item }
+    init(item: QueueItem) { self.item = item }
 
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 8) {
             DetailSectionHeader("Downloading")
                 // The header gives way, never the chips: a status word wrapped

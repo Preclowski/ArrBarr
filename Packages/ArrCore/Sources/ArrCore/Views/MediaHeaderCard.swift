@@ -106,26 +106,26 @@ public extension RatingChip {
 /// Builders for the pages a rating chip can deep-link to. Direct record
 /// links when an id is known; the site's search otherwise — RT and
 /// Metacritic ids never reach the arr payloads at all.
-public enum RatingSiteLink {
+enum RatingSiteLink {
     private static func q(_ s: String) -> String {
         s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
     }
-    public static func imdb(id: String?, title: String) -> URL? {
+    static func imdb(id: String?, title: String) -> URL? {
         if let id, !id.isEmpty { return URL(string: "https://www.imdb.com/title/\(id)/") }
         return URL(string: "https://www.imdb.com/find/?q=\(q(title))")
     }
-    public static func tmdbMovie(id: Int?, title: String) -> URL? {
+    static func tmdbMovie(id: Int?, title: String) -> URL? {
         if let id, id > 0 { return URL(string: "https://www.themoviedb.org/movie/\(id)") }
         return URL(string: "https://www.themoviedb.org/search?query=\(q(title))")
     }
-    public static func tvdbSeries(id: Int?, title: String) -> URL? {
+    static func tvdbSeries(id: Int?, title: String) -> URL? {
         if let id, id > 0 { return URL(string: "https://thetvdb.com/dereferrer/series/\(id)") }
         return URL(string: "https://thetvdb.com/search?query=\(q(title))")
     }
-    public static func rottenTomatoes(title: String) -> URL? {
+    static func rottenTomatoes(title: String) -> URL? {
         URL(string: "https://www.rottentomatoes.com/search?search=\(q(title))")
     }
-    public static func metacritic(title: String) -> URL? {
+    static func metacritic(title: String) -> URL? {
         URL(string: "https://www.metacritic.com/search/\(q(title))/")
     }
 }
@@ -134,7 +134,7 @@ public enum RatingSiteLink {
 /// panel, and any other "what is this thing?" surface. Right column
 /// scales by what's provided — every field is optional, callers pass
 /// only the data their source can supply.
-public struct MediaHeaderCard: View {
+struct MediaHeaderCard: View {
     let title: String
     var subtitle: String?
     var year: Int?
@@ -214,7 +214,7 @@ public struct MediaHeaderCard: View {
     /// `Locale.current`) so a live language switch re-renders the row.
     @Environment(\.locale) private var locale
 
-    public init(
+    init(
         title: String,
         subtitle: String? = nil,
         year: Int? = nil,
@@ -276,7 +276,7 @@ public struct MediaHeaderCard: View {
         self.onTapPerson = onTapPerson
     }
 
-    public var body: some View {
+    var body: some View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
@@ -446,7 +446,7 @@ public struct MediaHeaderCard: View {
 // (frosted scrim, GeometryReader-fit poster, Apple-style xmark
 // dismiss, tap-anywhere-to-close) lives in exactly one place.
 
-public struct PosterLightbox: View {
+struct PosterLightbox: View {
     let url: URL
     var apiKey: String?
     /// Width / height ratio of the underlying art. Movie / series
@@ -455,7 +455,7 @@ public struct PosterLightbox: View {
     var aspectRatio: CGFloat
     let onDismiss: () -> Void
 
-    public init(
+    init(
         url: URL,
         apiKey: String? = nil,
         aspectRatio: CGFloat = 2.0 / 3.0,
@@ -601,7 +601,7 @@ public struct PosterLightbox: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         ZStack(alignment: .topTrailing) {
             // Frosted-glass scrim — `.regularMaterial` blurs the
             // popover chrome underneath without going solid black.
@@ -843,7 +843,7 @@ struct RatingPill: View {
     /// a live in-app language switch (see `AppLocalized`).
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         if let url = chip.url {
             Button { PlatformURLOpener.open(url) } label: {
                 pill.contentShape(Rectangle())

@@ -73,7 +73,7 @@ struct ServiceFields: View {
         case failure(String)
     }
 
-    public var body: some View {
+    var body: some View {
         Toggle(isOn: enableBinding) { Text("settings.enabled.button", bundle: .module) }
             .alert(Text("settings.adultContent.button", bundle: .module), isPresented: $showAgeGate) {
                 Button(role: .cancel) { } label: { Text("common.cancel.button", bundle: .module) }

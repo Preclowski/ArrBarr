@@ -15,7 +15,7 @@ import SwiftUI
 /// measure its height, and compare against the visible-4-line
 /// height. If they disagree, the visible text is clipping; show
 /// the disclosure.
-public struct ExpandableOverview: View {
+struct ExpandableOverview: View {
     let text: String
     @State private var expanded = false
     @State private var clampedHeight: CGFloat = 0
@@ -46,7 +46,7 @@ public struct ExpandableOverview: View {
         expanded || (isTruncated && !hiddenOverflowIsWorthAButton)
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text)
                 .scaledFont(size: 12)

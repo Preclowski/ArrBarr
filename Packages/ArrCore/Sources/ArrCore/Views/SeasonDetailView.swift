@@ -4,18 +4,18 @@ import MediaKit
 /// Pushed when the user taps a season in the series detail. Identifies which
 /// season to open — kept a distinct type from `ManualSearchTarget` etc. so its
 /// `.navigationDestination` never collides with others in the same stack.
-public struct SeasonDrill: Identifiable, Hashable, Sendable {
-    public let seriesId: Int
-    public let seasonNumber: Int
-    public let seriesTitle: String
-    public let seriesYear: Int?
-    public init(seriesId: Int, seasonNumber: Int, seriesTitle: String, seriesYear: Int?) {
+struct SeasonDrill: Identifiable, Hashable, Sendable {
+    let seriesId: Int
+    let seasonNumber: Int
+    let seriesTitle: String
+    let seriesYear: Int?
+    init(seriesId: Int, seasonNumber: Int, seriesTitle: String, seriesYear: Int?) {
         self.seriesId = seriesId
         self.seasonNumber = seasonNumber
         self.seriesTitle = seriesTitle
         self.seriesYear = seriesYear
     }
-    public var id: String { "\(seriesId)-s\(seasonNumber)" }
+    var id: String { "\(seriesId)-s\(seasonNumber)" }
 }
 
 /// Distinct wrapper so the season's "Manual search" push doesn't share a value

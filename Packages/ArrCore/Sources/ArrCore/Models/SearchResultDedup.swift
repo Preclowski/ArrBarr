@@ -7,8 +7,8 @@ import Foundation
 /// Add-new hits, titles owned by a *different* arr, and owned titles the local
 /// match missed all stay: hiding an owned title reads as "you don't own it",
 /// the one wrong answer this app must never give.
-nonisolated public enum SearchResultDedup {
-    public static func removingLocalDuplicates(
+nonisolated enum SearchResultDedup {
+    static func removingLocalDuplicates(
         results: [SearchResult],
         localHits: [LocalHit]
     ) -> [SearchResult] {

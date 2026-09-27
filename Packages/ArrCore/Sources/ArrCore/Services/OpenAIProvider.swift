@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 import MediaKit
 
-public struct OpenAIProvider: LLMProvider {
+struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
     private let session: URLSession
     /// Human-readable language the assistant should reply in by default
@@ -10,18 +10,18 @@ public struct OpenAIProvider: LLMProvider {
     private let replyLanguage: String
     private static let log = Logger(category: "Chat")
 
-    public init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
+    init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
         self.config = config
         self.session = session
         self.replyLanguage = replyLanguage
     }
 
-    public var isAvailable: Bool { config.isConfigured }
+    var isAvailable: Bool { config.isConfigured }
 
     /// Lightweight key/endpoint check: `GET {baseURL}/models` with the Bearer
     /// key. 200 means the key + base URL are valid; throws otherwise. Used by the
     /// Settings "Test key" button.
-    public func testConnection() async throws {
+    func testConnection() async throws {
         let base = config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + "/models") else { throw OpenAIError.empty }
         var req = URLRequest(url: url)
@@ -34,7 +34,7 @@ public struct OpenAIProvider: LLMProvider {
         }
     }
 
-    public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
         var body = Self.buildRequestBody(
             model: config.model,
             prompt: prompt,
@@ -282,12 +282,12 @@ public struct OpenAIProvider: LLMProvider {
     }
 }
 
-public enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
+enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
     case http(status: Int, body: String)
     case decoding(String)
     case empty
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .http(let status, let body):
             // Try to surface the OpenAI/OpenRouter-style {"error":{"message":"..."}}.
@@ -308,71 +308,71 @@ public enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
 
 // MARK: - Wire types
 
-public struct ChatCompletionsRequest: Encodable, Sendable {
-    public let model: String
-    public let messages: [Message]
-    public let tools: [Tool]?
-    public let tool_choice: String?
-    public var stream: Bool? = nil
-    public var thinking: Thinking? = nil
-    public var reasoning: Reasoning? = nil
+struct ChatCompletionsRequest: Encodable, Sendable {
+    let model: String
+    let messages: [Message]
+    let tools: [Tool]?
+    let tool_choice: String?
+    var stream: Bool? = nil
+    var thinking: Thinking? = nil
+    var reasoning: Reasoning? = nil
 
-    public struct Thinking: Encodable, Sendable { public let type: String }
-    public struct Reasoning: Encodable, Sendable { public let enabled: Bool }
+    struct Thinking: Encodable, Sendable { let type: String }
+    struct Reasoning: Encodable, Sendable { let enabled: Bool }
 
-    public struct Message: Encodable, Sendable {
-        public let role: String
-        public let content: String?
-        public let tool_calls: [ToolCallWire]?
-        public let tool_call_id: String?
+    struct Message: Encodable, Sendable {
+        let role: String
+        let content: String?
+        let tool_calls: [ToolCallWire]?
+        let tool_call_id: String?
     }
 
-    public struct ToolCallWire: Encodable, Sendable {
-        public let id: String
-        public let type: String
-        public let function: Function
-        public struct Function: Encodable, Sendable {
-            public let name: String
-            public let arguments: String
+    struct ToolCallWire: Encodable, Sendable {
+        let id: String
+        let type: String
+        let function: Function
+        struct Function: Encodable, Sendable {
+            let name: String
+            let arguments: String
         }
     }
 
-    public struct Tool: Encodable, Sendable {
-        public let type: String
-        public let function: Function
-        public struct Function: Encodable, Sendable {
-            public let name: String
-            public let description: String
-            public let parameters: JSONValue
+    struct Tool: Encodable, Sendable {
+        let type: String
+        let function: Function
+        struct Function: Encodable, Sendable {
+            let name: String
+            let description: String
+            let parameters: JSONValue
         }
     }
 }
 
-public struct ChatCompletionsResponse: Decodable, Sendable {
-    public let choices: [Choice]
-    public struct Choice: Decodable, Sendable {
-        public let message: Message
+struct ChatCompletionsResponse: Decodable, Sendable {
+    let choices: [Choice]
+    struct Choice: Decodable, Sendable {
+        let message: Message
     }
-    public struct Message: Decodable, Sendable {
-        public let role: String
-        public let content: String?
-        public let tool_calls: [ToolCallWire]?
+    struct Message: Decodable, Sendable {
+        let role: String
+        let content: String?
+        let tool_calls: [ToolCallWire]?
     }
-    public struct ToolCallWire: Decodable, Sendable {
-        public let id: String
-        public let type: String
-        public let function: Function
-        public struct Function: Decodable, Sendable {
-            public let name: String
-            public let arguments: String
+    struct ToolCallWire: Decodable, Sendable {
+        let id: String
+        let type: String
+        let function: Function
+        struct Function: Decodable, Sendable {
+            let name: String
+            let arguments: String
         }
     }
 }
 
 /// Lets whoever runs a turn watch tool-call arguments while the model is still
 /// writing them. Called with the arguments accumulated so far.
-public enum ToolCallStreamContext {
-    @TaskLocal nonisolated public static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
+enum ToolCallStreamContext {
+    @TaskLocal nonisolated static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
 }
 
 nonisolated struct ChatCompletionChunk: Decodable, Sendable {

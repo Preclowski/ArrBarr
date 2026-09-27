@@ -56,7 +56,7 @@ struct MultiRow: View {
         item.isPaused || item.status == .queued
     }
 
-    public var body: some View {
+    var body: some View {
         // `.center` so the control column floats vertically centred against
         // the card + chip strip, like the poster centres on a queue row.
         HStack(alignment: .center, spacing: 10) {

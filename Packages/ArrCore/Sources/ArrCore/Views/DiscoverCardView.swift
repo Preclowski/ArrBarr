@@ -27,7 +27,7 @@ func discoverRatingChips(for result: SearchResult, imdbId: String? = nil) -> [Ra
 /// that opens the full detail card. Swipe tint + stamp overlays give the
 /// drag its like/skip feedback. No hover-flip back face — details live on
 /// the detail card the "Więcej" link opens.
-public struct DiscoverCardView: View {
+struct DiscoverCardView: View {
     let item: DiscoverItem
     var dragOffset: CGSize = .zero
     /// Vertical space reserved at the bottom for the floating action
@@ -49,7 +49,7 @@ public struct DiscoverCardView: View {
     @State private var resolvedIMDbId: String?
     @EnvironmentObject private var configStore: ConfigStore
 
-    public init(item: DiscoverItem,
+    init(item: DiscoverItem,
                 dragOffset: CGSize = .zero,
                 bottomInset: CGFloat = 0,
                 onMore: @escaping () -> Void = {}) {
@@ -82,7 +82,7 @@ public struct DiscoverCardView: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         GeometryReader { geo in
             let w = geo.size.width
             let h = geo.size.height

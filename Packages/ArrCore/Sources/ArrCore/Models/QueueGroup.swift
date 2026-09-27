@@ -128,7 +128,7 @@ nonisolated public enum QueueDisplayRow: Identifiable {
     }
 }
 
-nonisolated public enum QueueGrouping {
+nonisolated enum QueueGrouping {
     /// Bucket Sonarr queue items by `downloadId`. Items in a bucket of ≥2
     /// form a `.pack` group (one physical download with multiple expected
     /// episodes). Singletons — including the previously "virtual"
@@ -171,7 +171,7 @@ nonisolated public enum QueueGrouping {
     /// through untouched, so a typical queue renders exactly as before. The
     /// group takes the list position of its first member (the best-ranked one
     /// under the incoming order).
-    public static func groupByTitle(_ entries: [QueueRowEntry]) -> [QueueDisplayRow] {
+    static func groupByTitle(_ entries: [QueueRowEntry]) -> [QueueDisplayRow] {
         var counts: [String: Int] = [:]
         for entry in entries {
             counts[titleKey(for: entry.representativeItem), default: 0] += 1

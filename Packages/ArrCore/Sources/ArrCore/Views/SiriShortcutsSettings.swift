@@ -6,14 +6,14 @@ import AppIntents
 /// app. Embedded as Form sections on both platforms. Read-only actions, so
 /// no per-command toggles — they're always available.
 @available(iOS 16.0, macOS 13.0, *)
-public struct SiriShortcutsSettingsContent: View {
+struct SiriShortcutsSettingsContent: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var configStore: ConfigStore
     @State private var clearingIntents = false
     @State private var clearedIntents = false
-    public init() {}
+    init() {}
 
-    public var body: some View {
+    var body: some View {
         #if os(iOS)
         // SiriTipView is iOS-only — one-tap "Add to Siri" per action.
         Section {

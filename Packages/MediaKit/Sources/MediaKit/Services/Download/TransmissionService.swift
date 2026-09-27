@@ -1,8 +1,8 @@
 import Foundation
 
-public struct TransmissionService: DownloadService {
-    public let instance: InstanceID
-    public init(instance: InstanceID) { self.instance = instance }
+struct TransmissionService: DownloadService {
+    let instance: InstanceID
+    init(instance: InstanceID) { self.instance = instance }
 
     private func rpc(_ op: String, method: String, arguments: [String: JSONValue] = [:], priority: RequestPriority = .interactive) -> RequestPlan {
         let body = try! RequestBuilder.json(JSONValue.object(["method": .string(method), "arguments": .object(arguments)]))
@@ -10,19 +10,19 @@ public struct TransmissionService: DownloadService {
                            priority: priority, retry: method.hasSuffix("-get") ? .idempotent : .never, rpcMethod: method)
     }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: rpc("testConnection", method: "session-get"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["arguments"]?["version"]?.stringValue ?? ""
         }
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan {
+    func tasks(ids: Set<String>) -> RequestPlan {
         var arguments: [String: JSONValue] = ["fields": .array(["hashString", "percentDone", "rateDownload", "status", "name", "totalSize", "eta"].map { .string($0) })]
         if !ids.isEmpty { arguments["ids"] = .array(ids.sorted().map { .string($0) }) }
         return rpc("fetchProgress", method: "torrent-get", arguments: arguments, priority: .background)
     }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let json = try Self.decodeJSON(JSONValue.self, response, operation: OperationID(instance.kind, "fetchProgress"))
         guard json["result"]?.stringValue == "success" else {
             throw MediaKitError.serviceError(instance, code: nil, message: json["result"]?.stringValue)
@@ -45,13 +45,13 @@ public struct TransmissionService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: rpc("defaultAddPaused", method: "session-get"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["arguments"]?["start-added-torrents"]?.boolValue.map { !$0 }
         }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let method = switch action { case .pause: "torrent-stop"; case .resume: "torrent-start"; default: "torrent-remove" }
         var arguments: [String: JSONValue] = ["ids": .array(ids.map { .string($0) })]
@@ -61,7 +61,7 @@ public struct TransmissionService: DownloadService {
     }
 
     /// `download-dir` comes from `session-get`, then the category is a sub-folder: two requests in one run.
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         let service = self
         return command("addMagnet") { ctx in
             var arguments: [String: JSONValue] = ["paused": .bool(paused)]

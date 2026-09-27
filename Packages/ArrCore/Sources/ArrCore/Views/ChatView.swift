@@ -1,17 +1,17 @@
 import SwiftUI
 
-public struct ChatView: View {
+struct ChatView: View {
     var viewModel: ChatViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var draft: String = ""
     @State private var quizPosterURLs: [URL] = LibraryPosterSampler.cached ?? []
     @FocusState private var inputFocused: Bool
 
-    public init(viewModel: ChatViewModel) {
+    init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
+    var body: some View {
         // iMessage-style: scrolling messages fill the surface, the input bar
         // floats over the bottom with a liquid-glass / material background.
         // ZStack — not `safeAreaInset` — because the inset modifier reacts

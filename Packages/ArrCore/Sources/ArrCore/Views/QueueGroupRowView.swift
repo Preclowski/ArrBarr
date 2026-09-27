@@ -6,7 +6,7 @@ import SwiftUI
 /// (because internally it gathers N items into one), but visually it reads
 /// as a normal queue row with a season tag and an episode count badge —
 /// no expansion, no chevron. The whole download is one unit, period.
-public struct QueueGroupRowView: View {
+struct QueueGroupRowView: View {
     let group: QueueGroup
     /// Acts on the whole download. Applied to the representative item; all
     /// members share its downloadId so the arr's queue API affects the
@@ -52,7 +52,7 @@ public struct QueueGroupRowView: View {
         rep.isPaused || rep.status == .queued
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: 10) {
             PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
                 RemotePoster(
@@ -300,7 +300,7 @@ public struct QueueGroupRowView: View {
 /// subtitle for season + episode-count metadata, and a list of expected
 /// episodes is appended at the bottom so the user can see which episodes
 /// the pack covers without expanding the row.
-public struct QueueGroupTooltip: View {
+struct QueueGroupTooltip: View {
     let group: QueueGroup
     var apiKey: String? = nil
     /// Action cluster pinned at the bottom of the tooltip — see
@@ -308,7 +308,7 @@ public struct QueueGroupTooltip: View {
 
     private var rep: QueueItem { group.representative }
 
-    public var body: some View {
+    var body: some View {
         // Shared tooltip chrome — see MediaTooltipChrome.
         MediaTooltipChrome(
             title: rep.title,
@@ -521,7 +521,7 @@ public struct QueueGroupTooltip: View {
 /// Compact queue row used inside the season-pack tooltip. Mirrors the
 /// detail-view multi-row look: status icon, episode code, headline,
 /// percent, thin progress bar and custom-format chips.
-public struct TooltipQueueRow: View {
+struct TooltipQueueRow: View {
     let item: QueueItem
     /// When false, the row hides quality + new-custom-format chips —
     /// they would otherwise repeat the pack header's identical info on
@@ -531,12 +531,12 @@ public struct TooltipQueueRow: View {
     /// different new-file metadata.
     var showNewFileMeta: Bool = true
 
-    public init(item: QueueItem, showNewFileMeta: Bool = true) {
+    init(item: QueueItem, showNewFileMeta: Bool = true) {
         self.item = item
         self.showNewFileMeta = showNewFileMeta
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             // Match `EpisodeRow`'s chrome — the row's background is
             // the progress visualiser (status-tint bar filling

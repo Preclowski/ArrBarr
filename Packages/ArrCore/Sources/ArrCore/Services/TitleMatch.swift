@@ -13,14 +13,14 @@ import Foundation
 /// Deliberately not a search engine: normalize hard, then rank exact → prefix →
 /// contains → edit-distance. That covers the human ways of typing a title the
 /// user already knows they own, and nothing else.
-nonisolated public enum TitleMatch {
+nonisolated enum TitleMatch {
 
     /// Case, accent, width and punctuation-insensitive form — articles intact.
     /// This is the space a live filter field compares in: dropping a leading
     /// article here would empty the list the moment someone types "a" or "the"
     /// on the way to a longer query. Relevance ranking compares in this space
     /// too, for the same reason: articles must survive.
-    public static func fold(_ raw: String) -> String {
+    static func fold(_ raw: String) -> String {
         let folded = raw.folding(options: [.diacriticInsensitive, .caseInsensitive, .widthInsensitive],
                                  locale: nil)
         // Punctuation becomes a space rather than vanishing, so "wall-e" and
@@ -43,7 +43,7 @@ nonisolated public enum TitleMatch {
     /// Entries join on a newline. `fold` emits only letters, digits and
     /// spaces, so a newline is a boundary no folded query can contain, and a
     /// query therefore cannot match across two different titles.
-    public static func searchIndex(_ titles: [String?]) -> String {
+    static func searchIndex(_ titles: [String?]) -> String {
         var seen = Set<String>()
         return titles
             .compactMap { $0.map(fold) }
@@ -60,7 +60,7 @@ nonisolated public enum TitleMatch {
     /// Order is the caller's — a filter field must not reshuffle the grid
     /// under the cursor on every keystroke. The query folds once; the
     /// candidates were folded at index-build time.
-    public static func indexedFilter<T>(
+    static func indexedFilter<T>(
         _ candidates: [T],
         query: String,
         index: (T) -> String
@@ -73,7 +73,7 @@ nonisolated public enum TitleMatch {
     /// `fold` plus a leading article dropped — do not use for relevance
     /// ranking, where `fold` is the right space. Everything that matches one
     /// title against a library compares here; nothing compares raw.
-    public static func normalize(_ raw: String) -> String {
+    static func normalize(_ raw: String) -> String {
         let tokens = fold(raw).split(separator: " ").map(String.init)
         guard let first = tokens.first else { return "" }
         // Drop a leading article only when something follows it — "The Thing"
@@ -102,7 +102,7 @@ nonisolated public enum TitleMatch {
     ///     record the user actually wanted.
     ///   - **Never the only token.** `1917` stays a search for the FILM
     ///     rather than an empty query with a year attached.
-    public static func splitTrailingYear(_ foldedQuery: String) -> (query: String, year: Int?) {
+    static func splitTrailingYear(_ foldedQuery: String) -> (query: String, year: Int?) {
         var tokens = foldedQuery.split(separator: " ")
         guard tokens.count > 1, let last = tokens.last, isPlausibleYear(last) else {
             return (foldedQuery, nil)
@@ -114,7 +114,7 @@ nonisolated public enum TitleMatch {
     /// 1880…(this year + 5). The upper bound is what keeps "Blade Runner
     /// 2049" intact — 2049 is not a plausible release year, so the title
     /// keeps its last word instead of being read as a year filter.
-    public static func isPlausibleYear(_ token: some StringProtocol) -> Bool {
+    static func isPlausibleYear(_ token: some StringProtocol) -> Bool {
         guard token.count == 4, let n = Int(token) else { return false }
         let currentYear = Calendar.current.component(.year, from: Date())
         return n >= 1880 && n <= currentYear + 5
@@ -123,7 +123,7 @@ nonisolated public enum TitleMatch {
     /// How well `query` matches `title`, both already normalized. Lower is
     /// better; nil means "not a match at all". The scale is coarse on purpose —
     /// callers sort by it, they don't display it.
-    public static func score(query: String, title: String) -> Int? {
+    static func score(query: String, title: String) -> Int? {
         guard !query.isEmpty, !title.isEmpty else { return nil }
         if query == title { return 0 }
         if title.hasPrefix(query) { return 1 }
@@ -147,7 +147,7 @@ nonisolated public enum TitleMatch {
 
     /// Levenshtein distance, abandoned as soon as it exceeds `limit`.
     /// Bounded because it runs against every title in a 3000-item library.
-    public static func editDistance(_ a: String, _ b: String, limit: Int) -> Int {
+    static func editDistance(_ a: String, _ b: String, limit: Int) -> Int {
         let x = Array(a), y = Array(b)
         if abs(x.count - y.count) > limit { return limit + 1 }
         if x.isEmpty { return y.count }
@@ -177,7 +177,7 @@ nonisolated public enum TitleMatch {
     /// land on Lynch's 1984 — so an exact year beats a better title score, and
     /// a candidate whose year contradicts the query is only accepted when
     /// nothing else matches at all.
-    public static func best<T>(
+    static func best<T>(
         query: String,
         year: Int?,
         candidates: [T],
@@ -206,7 +206,7 @@ nonisolated public enum TitleMatch {
 
     /// Every candidate matching `query`, best first. Used by the library list
     /// tools, where the user asked for a substring rather than one title.
-    public static func matches<T>(
+    static func matches<T>(
         query: String,
         candidates: [T],
         title: (T) -> String

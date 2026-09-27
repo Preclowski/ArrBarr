@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct HistoryView: View {
+struct HistoryView: View {
     /// nil = "All" — merge history across every configured arr (iOS filter).
     /// macOS passes a concrete source (per-arr "Show history").
     let source: QueueItem.Source?
@@ -23,7 +23,7 @@ public struct HistoryView: View {
     /// returns to this list; nil leaves the rows inert.
     var onOpenDetail: ((QueueItem) -> Void)? = nil
 
-    public var body: some View {
+    var body: some View {
         // Header in the safe area, not as a stacked row: the rows scroll under
         // it and the system blurs the seam, like every other surface here.
         content(feed)
@@ -205,7 +205,7 @@ public struct HistoryView: View {
 /// centres the text on the poster and parks its accessory in a column of its
 /// own, which leaves no full-width line for the chip strip. Time lives in the
 /// section header; the upgrade diff in the tooltip.
-public struct HistoryRowView: View {
+struct HistoryRowView: View {
     let item: HistoryItem
     /// Show the item's arr icon (used by the "All" history filter where rows
     /// from different services are interleaved).
@@ -213,7 +213,7 @@ public struct HistoryRowView: View {
     var onOpenDetail: ((QueueItem) -> Void)? = nil
     @EnvironmentObject var configStore: ConfigStore
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: 8) {
             PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: item.source), cornerRadius: 3) {
                 RemotePoster(

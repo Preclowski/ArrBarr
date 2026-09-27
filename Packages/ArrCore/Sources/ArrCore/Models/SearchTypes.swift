@@ -173,9 +173,9 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
 
 // MARK: - Monitor modes
 
-nonisolated public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     case movieOnly, movieAndCollection, none
-    public var id: String { rawValue }
+    var id: String { rawValue }
     /// Localized through the catalog, not returned raw. A bare English string
     /// here reaches the UI via `Text(someString)`, which takes the
     /// *non-localizing* StringProtocol overload — so the catalog is never
@@ -189,9 +189,9 @@ nonisolated public enum RadarrMonitorMode: String, CaseIterable, Identifiable {
     }
 }
 
-nonisolated public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
-    public var id: String { rawValue }
+    var id: String { rawValue }
     /// Value Sonarr expects for `addOptions.monitor`. Sonarr's
     /// `MonitorTypes` enum serialises to camelCase (`firstSeason`,
     /// `latestSeason`) — sending our short `first`/`latest` raw values
@@ -221,9 +221,9 @@ nonisolated public enum SonarrMonitorMode: String, CaseIterable, Identifiable {
 /// Lidarr `addOptions.monitor` for a new artist. Mirrors Lidarr's
 /// `MonitorTypes` (serialised lowercase/camelCase 1:1 — unlike Sonarr,
 /// `first`/`latest` need no remapping).
-nonisolated public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated enum LidarrMonitorMode: String, CaseIterable, Identifiable {
     case all, future, missing, existing, first, latest, none
-    public var id: String { rawValue }
+    var id: String { rawValue }
     /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
@@ -240,9 +240,9 @@ nonisolated public enum LidarrMonitorMode: String, CaseIterable, Identifiable {
 
 /// Radarr's `minimumAvailability` — when a monitored movie becomes eligible
 /// for searching/downloading. Serialises 1:1 to Radarr v3's enum values.
-nonisolated public enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
+nonisolated enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
     case announced, inCinemas, released
-    public var id: String { rawValue }
+    var id: String { rawValue }
     /// See `RadarrMonitorMode.displayName` — localized, not raw.
     var displayName: String {
         switch self {
@@ -253,9 +253,9 @@ nonisolated public enum RadarrMinimumAvailability: String, CaseIterable, Identif
     }
 }
 
-nonisolated public enum SonarrSeriesType: String, CaseIterable, Identifiable {
+nonisolated enum SonarrSeriesType: String, CaseIterable, Identifiable {
     case standard, daily, anime
-    public var id: String { rawValue }
+    var id: String { rawValue }
     /// Was `rawValue.capitalized` — cheap, and English-only forever: a
     /// capitalized raw value can't be translated because it never existed as a
     /// catalog key. See `RadarrMonitorMode.displayName`.

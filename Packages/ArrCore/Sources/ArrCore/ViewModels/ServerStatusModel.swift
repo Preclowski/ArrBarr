@@ -6,12 +6,12 @@ import MediaKit
 /// (`ConnectionHealth`, `QueueViewModel`); only `/diskspace` needs its own
 /// fetch, so that's all this model carries.
 @Observable
-public final class ServerStatusModel {
-    public private(set) var disks: [ArrDiskSpace] = []
-    public private(set) var isRefreshing = false
-    public private(set) var lastRefresh: Date?
+final class ServerStatusModel {
+    private(set) var disks: [ArrDiskSpace] = []
+    private(set) var isRefreshing = false
+    private(set) var lastRefresh: Date?
 
-    public init() {}
+    init() {}
 
     /// Configured + keyed arrs — the only services that answer `/diskspace`.
     private var targets: [(ServiceKind, ServiceConfig)] {
@@ -23,7 +23,7 @@ public final class ServerStatusModel {
         }
     }
 
-    public func refresh() async {
+    func refresh() async {
         if isRefreshing { return }
         isRefreshing = true
         defer { isRefreshing = false }

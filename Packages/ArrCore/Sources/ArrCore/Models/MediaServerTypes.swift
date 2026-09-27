@@ -87,7 +87,7 @@ nonisolated public struct MediaServerHandshake: Sendable, Equatable {
     }
 }
 
-nonisolated public enum MediaServerError: LocalizedError {
+nonisolated enum MediaServerError: LocalizedError {
     case notConfigured
     /// "Empty trash" is a Plex concept — Jellyfin and Emby delete an item when
     /// its file goes, so there is nothing to purge.
@@ -95,7 +95,7 @@ nonisolated public enum MediaServerError: LocalizedError {
     /// Jellyfin / Emby need a user id for play state and none could be found.
     case noUserResolved
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .notConfigured:
             return String(localized: "Media server is not configured.", bundle: .module)

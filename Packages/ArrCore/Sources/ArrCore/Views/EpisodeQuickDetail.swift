@@ -41,7 +41,7 @@ struct EpisodeSlot: Hashable {
 /// so EpisodeDetailOverlay below can render the same hero / sticky CTA
 /// it does inside DetailView. Stub data built from the queue row lets
 /// the hero render immediately while the fetch is in flight.
-public struct EpisodeQuickDetail: View {
+struct EpisodeQuickDetail: View {
     let item: QueueItem
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
@@ -86,7 +86,7 @@ public struct EpisodeQuickDetail: View {
     /// be one more thing to keep in sync (and to render stale).
     @State private var episodeIdBySlot: [EpisodeSlot: Int] = [:]
 
-    public init(
+    init(
         item: QueueItem,
         viewModel: QueueViewModel,
         onBack: @escaping () -> Void
@@ -96,7 +96,7 @@ public struct EpisodeQuickDetail: View {
         self.onBack = onBack
     }
 
-    public var body: some View {
+    var body: some View {
         // No full-view spinner: render the overlay immediately from the stub
         // built off the queue row (hero = series · SxxExx · poster · download
         // status); `isLoadingDetails` skeletons the episode title / overview

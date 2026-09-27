@@ -13,7 +13,7 @@ struct CustomFormatChips: View {
     let score: Int
     var existingFormats: [String]? = nil
 
-    public var body: some View {
+    var body: some View {
         let oldSet: Set<String> = existingFormats.map(Set.init) ?? []
         let highlightAdded = existingFormats != nil
         TooltipFlowLayout(spacing: 4) {

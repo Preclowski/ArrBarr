@@ -37,9 +37,9 @@ extension DownloadClientFacade {
     }
 }
 
-nonisolated public struct QbittorrentClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .qbittorrent; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct SabnzbdClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .sabnzbd; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct TransmissionClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .transmission; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct DelugeClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .deluge; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct RtorrentClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .rtorrent; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct NzbgetClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .nzbget; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct QbittorrentClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .qbittorrent; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct SabnzbdClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .sabnzbd; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct TransmissionClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .transmission; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct DelugeClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .deluge; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct RtorrentClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .rtorrent; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct NzbgetClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .nzbget; init(config: ServiceConfig) { self.config = config } }

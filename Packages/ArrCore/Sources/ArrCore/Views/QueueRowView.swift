@@ -56,7 +56,7 @@ struct SelectionCircle: View {
     }
 }
 
-public struct QueueRowView: View {
+struct QueueRowView: View {
     let item: QueueItem
 
     /// Compound title: `Show · S03E04 · Episode title` for series rows,
@@ -119,7 +119,7 @@ public struct QueueRowView: View {
         item.isPaused || item.status == .queued
     }
 
-    public var body: some View {
+    var body: some View {
         HStack(alignment: .top, spacing: 10) {
             // Multi-select mode overlays the selection ring ON the poster
             // (dark scrim + circle) — the artwork stays visible underneath.
@@ -400,12 +400,12 @@ struct QueueRowFormatStrip: View {
 
 // MARK: - Rich tooltip
 
-public struct QueueItemTooltip: View {
+struct QueueItemTooltip: View {
     let item: QueueItem
     var apiKey: String? = nil
     @EnvironmentObject var configStore: ConfigStore
 
-    public var body: some View {
+    var body: some View {
         // Shared tooltip chrome — one footprint/header/poster treatment for
         // every media tooltip (see MediaTooltipChrome).
         MediaTooltipChrome(
@@ -486,7 +486,7 @@ public struct QueueItemTooltip: View {
 // progress bar in the app — listing rows, group rows, season tooltips,
 // detail panels — now goes through `ThinProgressBar` so thickness stays
 // pixel-identical regardless of context.
-public struct ThinProgressBar: View {
+struct ThinProgressBar: View {
     let progress: Double
     /// Filled-portion tint — typically `status.tint` (blue for
     /// Downloading, orange for Paused, red for Warning). Restored
@@ -497,13 +497,13 @@ public struct ThinProgressBar: View {
     var tint: Color = .primary
     var height: CGFloat = 3
 
-    public init(progress: Double, tint: Color = .primary, height: CGFloat = 3) {
+    init(progress: Double, tint: Color = .primary, height: CGFloat = 3) {
         self.progress = progress
         self.tint = tint
         self.height = height
     }
 
-    public var body: some View {
+    var body: some View {
         GeometryReader { geo in
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: height / 2)

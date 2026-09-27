@@ -9,7 +9,7 @@ import SwiftUI
 /// Custom-format chips plus an optional score chip, wrapping with
 /// `TooltipFlowLayout`. Used inside tooltips and detail surfaces.
 @ViewBuilder
-public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
+func customFormatChipStrip(tags: [String], score: Int?) -> some View {
     if !tags.isEmpty || (score ?? 0) != 0 {
         TooltipFlowLayout(spacing: 3) {
             ForEach(tags, id: \.self) { TagChip(text: $0) }
@@ -28,10 +28,10 @@ public func customFormatChipStrip(tags: [String], score: Int?) -> some View {
 /// as a quieter status tag than the filled chips elsewhere on the
 /// row. Orange tint matches in-flight semantics used in the rest
 /// of the app for paused / processing states.
-public struct InQueueBadge: View {
-    public init() {}
+struct InQueueBadge: View {
+    init() {}
 
-    public var body: some View {
+    var body: some View {
         Text("queue.queued.button", bundle: .module)
             .font(.system(size: 9, weight: .semibold))
             .textCase(.lowercase)
@@ -52,12 +52,12 @@ public struct InQueueBadge: View {
 /// now encoded by the section header. The arr's name is spelled out
 /// (not just the glyph) so the chip carries the same identity the
 /// per-arr section headers use elsewhere in the app.
-public struct SourceGlyphChip: View {
+struct SourceGlyphChip: View {
     let source: QueueItem.Source
-    public init(source: QueueItem.Source) {
+    init(source: QueueItem.Source) {
         self.source = source
     }
-    public var body: some View {
+    var body: some View {
         HStack(spacing: 3) {
             ServiceIcon(source: source, size: 9)
             Text(verbatim: source.displayName)
@@ -114,7 +114,7 @@ public extension LibraryEntry.FileState {
 /// and tooltips draw it from a `LibraryEntry`; the detail heroes compute the
 /// same state from the arr's own payload. One mapping, so "Downloaded" is the
 /// same word and the same green everywhere.
-public struct MediaStateChip: View {
+struct MediaStateChip: View {
     let state: LibraryEntry.FileState
     /// Files on disk / files expected — only rendered for the counted states
     /// (a series part-way through, a movie is complete or it isn't).
@@ -122,14 +122,14 @@ public struct MediaStateChip: View {
     var total: Int? = nil
     let locale: Locale
 
-    public init(state: LibraryEntry.FileState, have: Int? = nil, total: Int? = nil, locale: Locale) {
+    init(state: LibraryEntry.FileState, have: Int? = nil, total: Int? = nil, locale: Locale) {
         self.state = state
         self.have = have
         self.total = total
         self.locale = locale
     }
 
-    public var body: some View {
+    var body: some View {
         StateChip(
             text: state.statusText(have: have, total: total, locale: locale),
             color: state.chipColor ?? .secondary
@@ -140,18 +140,18 @@ public struct MediaStateChip: View {
 /// The one ownership chip: "Downloaded" (green) when the title is on disk,
 /// "library" when it's on the arr but not downloaded yet. Never both — they
 /// used to sit side by side, or disagree between a row and its detail view.
-public struct LibraryStateBadge: View {
+struct LibraryStateBadge: View {
     /// Rows get it from `SearchResult.libraryDownloaded` (stamped from
     /// `LibraryOwnership`); calendar / episode / track pass their own file state.
     let isDownloaded: Bool
 
     @Environment(\.locale) private var locale
 
-    public init(isDownloaded: Bool) {
+    init(isDownloaded: Bool) {
         self.isDownloaded = isDownloaded
     }
 
-    public var body: some View {
+    var body: some View {
         if isDownloaded {
             MediaStateChip(state: .complete, locale: locale)
         } else {
@@ -160,10 +160,10 @@ public struct LibraryStateBadge: View {
     }
 }
 
-public struct InLibraryBadge: View {
-    public init() {}
+struct InLibraryBadge: View {
+    init() {}
 
-    public var body: some View {
+    var body: some View {
         Text("search.library.button", bundle: .module)
             .scaledFont(size: 9, weight: .semibold)
             .textCase(.lowercase)
@@ -181,14 +181,14 @@ public struct InLibraryBadge: View {
 /// in a chip's exact metrics (same padding, same 9 pt line) so it
 /// baseline-aligns with the TagChips beside it — but with NO stroke, so
 /// it doesn't read as one more format.
-public struct ScoreChip: View {
+struct ScoreChip: View {
     let score: Int
 
-    public init(score: Int) {
+    init(score: Int) {
         self.score = score
     }
 
-    public var body: some View {
+    var body: some View {
         ScoreLabel(score: score, size: 9, weight: .semibold)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
@@ -209,14 +209,14 @@ public struct ScoreChip: View {
 /// of from a hue. The purple this replaces was the only saturated colour in
 /// the strip and read as an alert rather than a label. Text metrics stay
 /// `TagChip`'s so it still baseline-aligns with the chips beside it.
-public struct ProfileChip: View {
+struct ProfileChip: View {
     let name: String
 
-    public init(name: String) {
+    init(name: String) {
         self.name = name
     }
 
-    public var body: some View {
+    var body: some View {
         Text(verbatim: name)
             .scaledFont(size: 9, weight: .medium)
             .foregroundStyle(.secondary)
@@ -252,16 +252,16 @@ extension View {
 /// stroke than `TagChip`. The ONE rendering for ownership/download-state
 /// words ("Downloaded", "Missing", "8/10") — Library rows/tiles/tooltips
 /// and the Upcoming tooltip all draw their state through this.
-public struct StateChip: View {
+struct StateChip: View {
     let text: String
     var color: Color = .secondary
 
-    public init(text: String, color: Color = .secondary) {
+    init(text: String, color: Color = .secondary) {
         self.text = text
         self.color = color
     }
 
-    public var body: some View {
+    var body: some View {
         Text(verbatim: text)
             .scaledFont(size: 9, weight: .semibold)
             .foregroundStyle(color)
@@ -278,16 +278,16 @@ public struct StateChip: View {
 /// We avoid `.quaternary` (hierarchical material) because inside a
 /// popover that container resolves to a much darker tone and the
 /// chips render as solid black pills.
-public struct TagChip: View {
+struct TagChip: View {
     let text: String
     var color: Color
 
-    public init(text: String, color: Color = .primary) {
+    init(text: String, color: Color = .primary) {
         self.text = text
         self.color = color
     }
 
-    public var body: some View {
+    var body: some View {
         // Stroke mirrors the text tint — neutral chips keep the
         // primary outline, but the green/red diff chips and the
         // ±score chip need the border to read in the same colour
@@ -311,21 +311,21 @@ public struct TagChip: View {
 /// wraps to the next line when the proposed width is exhausted.
 /// Lighter than SwiftUI's `LazyVGrid` (no row-major alignment) which
 /// is what you want for tag lists where each tag has its own width.
-public struct TooltipFlowLayout: Layout {
+struct TooltipFlowLayout: Layout {
     var spacing: CGFloat
 
-    public init(spacing: CGFloat = 4) {
+    init(spacing: CGFloat = 4) {
         self.spacing = spacing
     }
 
-    public func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let rows = computeRows(maxWidth: proposal.width ?? .infinity, subviews: subviews)
         guard !rows.isEmpty else { return .zero }
         let height = rows.reduce(CGFloat(0)) { $0 + $1.height } + CGFloat(rows.count - 1) * spacing
         return CGSize(width: proposal.width ?? 0, height: height)
     }
 
-    public func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let rows = computeRows(maxWidth: bounds.width, subviews: subviews)
         var y = bounds.minY
         for row in rows {

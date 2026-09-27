@@ -9,10 +9,10 @@ import os
 /// same `/lookup?term=tmdb:N` path a typed `tmdb:123` query uses, tagged against
 /// the library map, and then handed to `DetailRequest.tap` — which owns the
 /// "owned → detail, missing → add panel" decision for every other surface too.
-public enum ChatLinkRouter {
+enum ChatLinkRouter {
     private static let log = Logger(category: "ChatLink")
 
-    public static func open(_ link: ChatLink) {
+    static func open(_ link: ChatLink) {
         switch link {
         case .person(let id, let name):
             PersonRequest.post(PersonRef(tmdbId: id, name: name))

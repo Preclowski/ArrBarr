@@ -286,7 +286,7 @@ private struct PageDot: View {
         return Color.secondary.opacity(0.32)
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Capsule()
                 .fill(fillColor)
@@ -313,7 +313,7 @@ private struct EdgeArrowButton: View {
     /// Bare chevron, no background. Sits on a tall transparent hit area so
     /// it's easy to click but invisible until you hover. Color goes from
     /// nearly-invisible tertiary to primary on hover.
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Image(systemName: direction == .previous ? "chevron.left" : "chevron.right")
                 .scaledFont(size: 18, weight: .medium)
@@ -338,7 +338,7 @@ private struct MenuBarIllustration: View {
     /// Mock display with a menu bar strip up top and a small popover
     /// "preview" hanging from the ArrBarr status item — exactly what the
     /// app actually does when you click its menu-bar icon.
-    public var body: some View {
+    var body: some View {
         ZStack(alignment: .top) {
             // Background "screen" card
             RoundedRectangle(cornerRadius: Tokens.Radius.panel)
@@ -470,7 +470,7 @@ private struct TonightIllustration: View {
     /// header row with the moon icon and count badge, followed by upcoming
     /// rows that match UpcomingRowView's layout (small poster, title +
     /// subtitle, time + release-type on the right).
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             tonightHeader
                 .padding(.horizontal, 10)
@@ -581,7 +581,7 @@ private struct CustomizeIllustration: View {
         Row(id: 2, symbol: "server.rack",             label: Text(verbatim: "Lidarr"), on: false),
     ]
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 5) {
             ForEach(rows) { row in
                 HStack(spacing: 8) {

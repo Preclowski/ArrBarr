@@ -5,13 +5,13 @@ import Foundation
 /// the URL hands off to Apple Calendar's native "Subscribe to calendar"
 /// flow on both iOS and macOS — the arr then serves the feed and Calendar
 /// refreshes it on its own, so ArrBarr needs zero sync code.
-public enum CalendarFeed {
+enum CalendarFeed {
 
     /// `webcal://host[:port][/base]/feed/<v>/calendar/<App>.ics?apikey=…`
     /// Returns nil for non-arr kinds, an unconfigured service, or a missing
     /// API key (the feed requires it). The base path is preserved so it works
     /// behind a reverse proxy subpath.
-    public static func subscriptionURL(kind: ServiceKind, config: ServiceConfig) -> URL? {
+    static func subscriptionURL(kind: ServiceKind, config: ServiceConfig) -> URL? {
         guard config.isConfigured, !config.apiKey.isEmpty else { return nil }
         let feedPath: String
         switch kind {

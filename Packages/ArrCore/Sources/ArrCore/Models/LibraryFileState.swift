@@ -12,12 +12,12 @@ import MediaKit
 /// Files on disk vs episodes expected, summed from Sonarr's per-season
 /// statistics — the arr's own numbers. Counting the episode list instead would
 /// call every ongoing series half-missing, since unaired episodes are in it too.
-nonisolated public struct EpisodeFileCounts: Equatable, Sendable {
-    public let have: Int
-    public let total: Int
+nonisolated struct EpisodeFileCounts: Equatable, Sendable {
+    let have: Int
+    let total: Int
 
     /// Every counted episode has a file.
-    public var isComplete: Bool { total > 0 && have >= total }
+    var isComplete: Bool { total > 0 && have >= total }
 
     init(have: Int, total: Int) {
         self.have = have

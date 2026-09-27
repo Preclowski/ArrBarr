@@ -10,13 +10,13 @@ import SwiftUI
 /// The whole pane grays out while the assistant is off or unconfigured: the
 /// note travels inside chat prompts and the signals only accumulate through
 /// quiz decks, both of which need the assistant.
-public struct QuizSettingsPane: View {
+struct QuizSettingsPane: View {
 
     @State private var signalsTick = 0   // bumps to re-read the store
     @State private var userNote: String = TasteProfileStore.shared.userNote
     @State private var useInChat: Bool = TasteProfileStore.shared.useInChat
 
-    public init() {}
+    init() {}
 
     /// Mirrors PopoverContentView.chatAvailable — the pane is about features
     /// that ride on the assistant, so it follows the same gate.
@@ -32,7 +32,7 @@ public struct QuizSettingsPane: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         Form {
             if !assistantAvailable {
                 Section {

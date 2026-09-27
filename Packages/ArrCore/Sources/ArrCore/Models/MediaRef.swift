@@ -214,8 +214,8 @@ nonisolated public enum SearchInput: Equatable, Sendable {
 /// 2049" cases burn more value than the feature provides. If a year
 /// filter is ever needed, add it as an explicit UI control rather
 /// than parsing it out of the free-text field.
-nonisolated public enum QueryParser {
-    public static func parse(_ input: String) -> SearchInput {
+nonisolated enum QueryParser {
+    static func parse(_ input: String) -> SearchInput {
         let trimmed = input.trimmingCharacters(in: .whitespacesAndNewlines)
         if let ref = MediaRef(urlString: trimmed) {
             return .ref(ref)

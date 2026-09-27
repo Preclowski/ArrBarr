@@ -3,7 +3,7 @@ import MediaKit
 
 // MARK: - Public entry point
 
-public struct RichToolResultView: View {
+struct RichToolResultView: View {
     let content: ChatRichContent
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
@@ -14,7 +14,7 @@ public struct RichToolResultView: View {
     @State private var visibleCount: Int = Self.pageSize
     private static let pageSize = 10
 
-    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
+    init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
                 lidarr: ServiceConfig = .empty, whisparr: ServiceConfig = .empty,
                 blurWhisparr: Bool = true) {
         self.content = content
@@ -25,7 +25,7 @@ public struct RichToolResultView: View {
         self.blurWhisparr = blurWhisparr
     }
 
-    public var body: some View {
+    var body: some View {
         // Two payloads are vertical stacks rather than a bare rail: people (one
         // card per candidate) and a filmography (the person, then their titles).
         // Everything else is the carousel as it was.

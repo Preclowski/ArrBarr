@@ -60,10 +60,10 @@ nonisolated public enum ChatRichContent: Sendable, Equatable {
 ///
 /// Scoped to the turn, not the conversation — asking about the same actor again
 /// ten messages later should of course show them again.
-nonisolated public enum ChatPersonCardDedupe {
+nonisolated enum ChatPersonCardDedupe {
     /// Rich payloads that need to change, keyed by message id. `nil` means the
     /// message has nothing left to draw and should be dropped entirely.
-    public static func adjustments(for messages: [ChatMessage]) -> [UUID: ChatRichContent?] {
+    static func adjustments(for messages: [ChatMessage]) -> [UUID: ChatRichContent?] {
         var out: [UUID: ChatRichContent?] = [:]
         for turn in turns(messages) { adjust(turn, into: &out) }
         return out

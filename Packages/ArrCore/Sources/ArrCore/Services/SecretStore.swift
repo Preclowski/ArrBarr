@@ -69,8 +69,8 @@ nonisolated public extension SecretStore {
 
 /// Keychain-backed `SecretStore`. All items share the `service` namespace; the
 /// `SecretKey.account` distinguishes them.
-nonisolated public struct KeychainSecretStore: SecretStore {
-    public static let service = "pl.incred.ArrBarr"
+nonisolated struct KeychainSecretStore: SecretStore {
+    static let service = "pl.incred.ArrBarr"
     /// Shared Keychain access group (team-prefixed) so the app and its iOS widget
     /// extension read the same items. Applied only when the signature actually
     /// provisions the `keychain-access-groups` entitlement — the App Store
@@ -78,7 +78,7 @@ nonisolated public struct KeychainSecretStore: SecretStore {
     /// needs a profile issued by Apple, and those builds sign ad-hoc). The team
     /// prefix is fixed for this developer account, so a fork signed by another
     /// team fails the probe and stays on `UserDefaultsSecretStore`.
-    public static let accessGroup = "9M6DR2Z85Y.pl.incred.ArrBarr.shared"
+    static let accessGroup = "9M6DR2Z85Y.pl.incred.ArrBarr.shared"
     private static let logger = Logger(category: "SecretStore")
 
     /// Device-local UserDefaults key mirroring `ConfigStore.iCloudSyncEnabled`.
@@ -89,18 +89,18 @@ nonisolated public struct KeychainSecretStore: SecretStore {
 
     /// Whether iCloud sync is currently enabled, read from the App Group suite
     /// (defaults to `true` when unset or unavailable). Overridable for tests.
-    public static var syncEnabledProvider: @Sendable () -> Bool = {
+    static var syncEnabledProvider: @Sendable () -> Bool = {
         syncEnabled(in: WidgetDataStore.groupDefaults())
     }
 
     /// Pure reader for the device-local flag, defaulting to `true`.
-    nonisolated public static func syncEnabled(in defaults: UserDefaults?) -> Bool {
+    nonisolated static func syncEnabled(in defaults: UserDefaults?) -> Bool {
         guard let defaults, defaults.object(forKey: iCloudSyncEnabledKey) != nil
         else { return true }
         return defaults.bool(forKey: iCloudSyncEnabledKey)
     }
 
-    public init() {}
+    init() {}
 
     /// The identifying query fields + storage policy for a key. Exposed so tests
     /// can assert the synchronizable/accessibility gating without touching the
@@ -120,7 +120,7 @@ nonisolated public struct KeychainSecretStore: SecretStore {
     ///
     /// iCloud Keychain sync stays App-Store-only: it rides on the paid
     /// KVS/iCloud entitlements that only that build carries.
-    public static func baseQuery(for key: SecretKey) -> [String: Any] {
+    static func baseQuery(for key: SecretKey) -> [String: Any] {
         let synchronizable = AppCapabilities.isAppStore && key.synced && Self.syncEnabledProvider()
         var q: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
@@ -142,13 +142,13 @@ nonisolated public struct KeychainSecretStore: SecretStore {
     /// state (`SecItemCopyMatching`/`SecItemDelete` treat every attribute as a
     /// match predicate, so a fixed synchronizable value would miss items written
     /// under the other build flavor). Use `baseQuery` only for adds.
-    public static func matchQuery(for key: SecretKey) -> [String: Any] {
+    static func matchQuery(for key: SecretKey) -> [String: Any] {
         var q = baseQuery(for: key)
         q[kSecAttrSynchronizable as String] = kSecAttrSynchronizableAny
         return q
     }
 
-    public func read(_ key: SecretKey) -> String? {
+    func read(_ key: SecretKey) -> String? {
         var q = Self.matchQuery(for: key)
         q[kSecReturnData as String] = true
         q[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -169,7 +169,7 @@ nonisolated public struct KeychainSecretStore: SecretStore {
         return String(data: data, encoding: .utf8)
     }
 
-    public func set(_ value: String, for key: SecretKey) {
+    func set(_ value: String, for key: SecretKey) {
         delete(key)
         var q = Self.baseQuery(for: key)
         q[kSecValueData as String] = Data(value.utf8)
@@ -179,7 +179,7 @@ nonisolated public struct KeychainSecretStore: SecretStore {
         }
     }
 
-    public func delete(_ key: SecretKey) {
+    func delete(_ key: SecretKey) {
         let status = SecItemDelete(Self.matchQuery(for: key) as CFDictionary)
         // Deleting something that isn't there is the normal path (`set` calls
         // this first, every time). A real failure is not: it leaves the old
@@ -210,30 +210,30 @@ nonisolated public extension SecretKey {
     var plaintextDefaultsKey: String { "ArrBarr.\(account)" }
 }
 
-nonisolated public struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
+nonisolated struct UserDefaultsSecretStore: SecretStore, @unchecked Sendable {
     private let defaults: UserDefaults
-    public init(defaults: UserDefaults) { self.defaults = defaults }
+    init(defaults: UserDefaults) { self.defaults = defaults }
     private func key(_ k: SecretKey) -> String { k.plaintextDefaultsKey }
-    public func read(_ k: SecretKey) -> String? {
+    func read(_ k: SecretKey) -> String? {
         let v = defaults.string(forKey: key(k))
         return (v?.isEmpty == false) ? v : nil
     }
-    public func set(_ value: String, for k: SecretKey) { defaults.set(value, forKey: key(k)) }
-    public func delete(_ k: SecretKey) { defaults.removeObject(forKey: key(k)) }
+    func set(_ value: String, for k: SecretKey) { defaults.set(value, forKey: key(k)) }
+    func delete(_ k: SecretKey) { defaults.removeObject(forKey: key(k)) }
 }
 
 /// In-memory `SecretStore` for tests — never touches the real Keychain.
-nonisolated public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
+nonisolated final class InMemorySecretStore: SecretStore, @unchecked Sendable {
     private let lock = NSLock()
     private var values: [String: String] = [:]
-    public init() {}
-    public func read(_ key: SecretKey) -> String? {
+    init() {}
+    func read(_ key: SecretKey) -> String? {
         lock.lock(); defer { lock.unlock() }; return values[key.account]
     }
-    public func set(_ value: String, for key: SecretKey) {
+    func set(_ value: String, for key: SecretKey) {
         lock.lock(); defer { lock.unlock() }; values[key.account] = value
     }
-    public func delete(_ key: SecretKey) {
+    func delete(_ key: SecretKey) {
         lock.lock(); defer { lock.unlock() }; values[key.account] = nil
     }
 }

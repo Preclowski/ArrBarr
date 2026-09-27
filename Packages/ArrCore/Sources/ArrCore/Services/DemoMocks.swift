@@ -79,7 +79,7 @@ nonisolated public enum DemoMode {
 
 /// Public-domain / CC-licensed titles used as preview content.
 /// Posters come from picsum.photos with deterministic seeds, no auth.
-nonisolated public enum DemoMocks {
+nonisolated enum DemoMocks {
 
     /// Real, stable Wikipedia-hosted poster art for the open-source / CC titles
     /// used in demo mode. Wikipedia's `Special:FilePath` endpoint resolves to the

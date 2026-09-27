@@ -1,23 +1,23 @@
 import Foundation
 
-public struct NZBGetService: DownloadService {
-    public let instance: InstanceID
-    public init(instance: InstanceID) { self.instance = instance }
+struct NZBGetService: DownloadService {
+    let instance: InstanceID
+    init(instance: InstanceID) { self.instance = instance }
 
     private func rpc(_ op: String, method: String, params: [JSONValue] = [], priority: RequestPriority = .interactive) -> RequestPlan {
         RequestPlan(instance: instance, operation: op, method: "POST", pathTemplate: "/jsonrpc", body: try! RequestBuilder.jsonRPC(method: method, params: .array(params)),
                     auth: .basic, priority: priority, retry: ["version", "listgroups", "history", "status"].contains(method) ? .idempotent : .never, rpcMethod: method)
     }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: rpc("testConnection", method: "version"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["result"]?.stringValue ?? ""
         }
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan { rpc("fetchProgress", method: "listgroups", params: [.number(0)], priority: .background) }
+    func tasks(ids: Set<String>) -> RequestPlan { rpc("fetchProgress", method: "listgroups", params: [.number(0)], priority: .background) }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let result = try Self.rpcResult(response, instance: instance, operation: OperationID(instance.kind, "fetchProgress"))
         return (result.arrayValue ?? []).compactMap { g in
             guard let id = g["NZBID"]?.intValue else { return nil }
@@ -34,18 +34,18 @@ public struct NZBGetService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: rpc("defaultAddPaused", method: "version"), tags: [.capabilities(instance)], freshness: .reference) { _ in nil }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let verb = switch action { case .pause: "GroupPause"; case .resume: "GroupResume"; default: deleteFiles ? "GroupDelete" : "GroupFinalDelete" }
         let p = rpc(action.rawValue, method: "editqueue", params: [.string(verb), .string(""), .array(ids.compactMap { Int($0) }.map { .number(Double($0)) })])
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         guard case let .file(data, filename) = payload.content else {
             return Command(name: OperationID(instance.kind, "addFile"), instance: instance, invalidates: []) { _ in throw MediaKitError.unsupported(self.instance, Capability(rawValue: "magnet")) }
         }

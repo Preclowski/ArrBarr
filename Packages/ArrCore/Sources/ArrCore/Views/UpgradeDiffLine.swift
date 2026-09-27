@@ -7,7 +7,7 @@ import SwiftUI
 ///
 /// The list surface uses the plain inline spec (no diff) because list
 /// rows don't have horizontal room for three lateral comparisons.
-public struct UpgradeDiffTable: View {
+struct UpgradeDiffTable: View {
     let newQuality: String?
     let newSize: Int64?
     let newScore: Int
@@ -30,7 +30,7 @@ public struct UpgradeDiffTable: View {
     let indexer: String?
     let tint: Color
 
-    public init(
+    init(
         newQuality: String?,
         newSize: Int64?,
         newScore: Int,
@@ -58,7 +58,7 @@ public struct UpgradeDiffTable: View {
         self.tint = tint
     }
 
-    public var body: some View {
+    var body: some View {
         // No old metadata to compare against (a fresh "new" download,
         // not an upgrade) → render the same labelled grid but as a
         // plain spec: labels + values only, no OLD column, no arrows,

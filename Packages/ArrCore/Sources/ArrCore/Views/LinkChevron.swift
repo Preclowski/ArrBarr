@@ -54,15 +54,15 @@ private struct LinkRowHoverModifier: ViewModifier {
 /// Disclosure chevrons (section collapse, season expand) deliberately
 /// do NOT use this — they rotate to show open/closed state and aren't
 /// navigation links.
-public struct LinkChevron: View {
+struct LinkChevron: View {
     var size: CGFloat
     @Environment(\.linkRowHovering) private var rowHovering
 
-    public init(size: CGFloat = 9) {
+    init(size: CGFloat = 9) {
         self.size = size
     }
 
-    public var body: some View {
+    var body: some View {
         Image(systemName: "chevron.right")
             .scaledFont(size: size, weight: .semibold)
             .foregroundStyle(rowHovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))

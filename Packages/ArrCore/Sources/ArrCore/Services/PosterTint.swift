@@ -22,7 +22,7 @@ import UIKit
 /// The bottom third is what's sampled, not the whole image: that's the region
 /// the panel actually covers, and a poster's sky or title treatment up top is
 /// frequently nothing like the colour at its feet.
-public enum PosterTint {
+enum PosterTint {
     /// Keyed by absolute URL. Posters are immutable at a given URL and the
     /// deck revisits cards (peek → top), so this is a small dictionary that
     /// saves a decode per revisit rather than a real cache with eviction.
@@ -40,7 +40,7 @@ public enum PosterTint {
     /// tint arrived seconds after the artwork it was supposed to match. A 1×1
     /// average is no more accurate from a smaller source anyway; sharing the
     /// card's own fetch is what makes the colour land *with* the card.
-    public static func color(for url: URL?) async -> Color? {
+    static func color(for url: URL?) async -> Color? {
         guard let url else { return nil }
         let key = url.absoluteString
         if let cached = cache[key] { return cached }
@@ -97,7 +97,7 @@ public enum PosterTint {
     /// Drop every derived colour. Public because `AppCaches.clearArtwork()`
     /// has to: these are keyed by poster URL and would otherwise outlive the
     /// images they were sampled from.
-    public static func resetCache() { cache.removeAll() }
+    static func resetCache() { cache.removeAll() }
 }
 
 extension PlatformImage {

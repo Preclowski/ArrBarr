@@ -132,7 +132,7 @@ nonisolated public struct DownloadDestination: Identifiable, Sendable, Hashable 
 
 /// A download client that can be handed a new torrent/nzb, as opposed to only
 /// reporting on the ones it already has (`DownloadProgressSource`).
-nonisolated public protocol DownloadAddSource: Sendable {
+nonisolated protocol DownloadAddSource: Sendable {
     func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws
     /// The client's own "add downloads paused" preference, so the sheet's
     /// checkbox starts on what the client would have done anyway. nil when the
@@ -140,6 +140,6 @@ nonisolated public protocol DownloadAddSource: Sendable {
     func defaultAddPaused() async -> Bool?
 }
 
-nonisolated public extension DownloadAddSource {
+nonisolated extension DownloadAddSource {
     func defaultAddPaused() async -> Bool? { nil }
 }

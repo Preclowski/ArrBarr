@@ -52,16 +52,16 @@ public enum MonitorEntity: Sendable {
 /// Inert state glyph for list rows. No hit area, no hover, no button —
 /// the row it sits in owns the tap. Rows pair it with a dimmed label so
 /// "unmonitored" reads at a glance without hunting for a 10pt icon.
-public struct MonitorBookmark: View {
+struct MonitorBookmark: View {
     let isMonitored: Bool
     var size: CGFloat
 
-    public init(isMonitored: Bool, size: CGFloat = 10) {
+    init(isMonitored: Bool, size: CGFloat = 10) {
         self.isMonitored = isMonitored
         self.size = size
     }
 
-    public var body: some View {
+    var body: some View {
         Image(systemName: isMonitored ? "bookmark.fill" : "bookmark")
             .scaledFont(size: size, weight: .medium)
             .foregroundStyle(isMonitored ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
@@ -77,14 +77,14 @@ public struct MonitorBookmark: View {
 /// arbitrary — a black poster and a white one both happen — so the mark can't
 /// rely on the material underneath; the ribbon's own shadows do that job (see
 /// `MonitorRibbon`).
-public struct MonitorPosterToggle: View {
+struct MonitorPosterToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
     let onToggle: ((Bool) async -> Void)?
 
     @State private var inFlight = false
 
-    public init(isMonitored: Bool, entity: MonitorEntity, onToggle: ((Bool) async -> Void)? = nil) {
+    init(isMonitored: Bool, entity: MonitorEntity, onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
         self.entity = entity
         self.onToggle = onToggle
@@ -97,7 +97,7 @@ public struct MonitorPosterToggle: View {
         return isMonitored ? entity.disableKey : entity.enableKey
     }
 
-    public var body: some View {
+    var body: some View {
         Group {
             if let onToggle {
                 Button {
@@ -152,7 +152,7 @@ public struct MonitorPosterToggle: View {
 /// the tap lands here instead of on the row's drill-in button underneath.
 /// Leading-aligned inside that area so the glyph still sits exactly where the
 /// row's state column starts.
-public struct MonitorRowToggle: View {
+struct MonitorRowToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
     var size: CGFloat
@@ -164,7 +164,7 @@ public struct MonitorRowToggle: View {
 
     @State private var inFlight = false
 
-    public init(isMonitored: Bool, entity: MonitorEntity, size: CGFloat = 10,
+    init(isMonitored: Bool, entity: MonitorEntity, size: CGFloat = 10,
                 alignment: Alignment = .leading,
                 onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
@@ -181,7 +181,7 @@ public struct MonitorRowToggle: View {
         return isMonitored ? entity.disableKey : entity.enableKey
     }
 
-    public var body: some View {
+    var body: some View {
         Group {
             if let onToggle {
                 Button {

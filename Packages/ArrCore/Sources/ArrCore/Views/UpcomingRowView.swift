@@ -54,11 +54,11 @@ extension View {
     }
 }
 
-public struct UpcomingRowView: View {
+struct UpcomingRowView: View {
     let item: UpcomingItem
     @EnvironmentObject var configStore: ConfigStore
 
-    public var body: some View {
+    var body: some View {
         PosterMetadataRow(
             posterURL: item.posterURL,
             posterAPIKey: item.posterRequiresAuth ? apiKeyForSource : nil,
@@ -194,7 +194,7 @@ public struct UpcomingRowView: View {
 // row. Surfaces what's actually useful before the episode/movie airs:
 // air date/time, runtime, IMDb, release type, overview.
 
-public struct UpcomingItemTooltip: View {
+struct UpcomingItemTooltip: View {
     let item: UpcomingItem
     var apiKey: String? = nil
     @EnvironmentObject var configStore: ConfigStore
@@ -228,7 +228,7 @@ public struct UpcomingItemTooltip: View {
     @State private var countries: [String] = []
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         MediaTooltipChrome(
             title: item.title,
             subtitle: item.subtitle,

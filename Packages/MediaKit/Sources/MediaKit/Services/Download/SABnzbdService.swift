@@ -1,8 +1,8 @@
 import Foundation
 
-public struct SABnzbdService: DownloadService {
-    public let instance: InstanceID
-    public init(instance: InstanceID) { self.instance = instance }
+struct SABnzbdService: DownloadService {
+    let instance: InstanceID
+    init(instance: InstanceID) { self.instance = instance }
 
     private func api(_ op: String, method: String = "GET", query: [(String, String)], body: HTTPRequest.Body = .none, priority: RequestPriority = .interactive) -> RequestPlan {
         RequestPlan(instance: instance, operation: op, method: method, pathTemplate: "/api", query: (query + [("output", "json")]).map { .init($0.0, $0.1) },
@@ -13,15 +13,15 @@ public struct SABnzbdService: DownloadService {
     struct QueueBody: Codable { let paused: Bool?; let slots: [Slot]; let kbpersec: String? }
     struct QueueResponse: Codable { let queue: QueueBody }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: api("testConnection", query: [("mode", "version")]), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? JSONDecoder().decode(JSONValue.self, from: data))?["version"]?.stringValue ?? ""
         }
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan { api("fetchProgress", query: [("mode", "queue")], priority: .background) }
+    func tasks(ids: Set<String>) -> RequestPlan { api("fetchProgress", query: [("mode", "queue")], priority: .background) }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let queue = try Self.decodeJSON(QueueResponse.self, response, operation: OperationID(instance.kind, "fetchProgress")).queue
         let speed = queue.kbpersec.flatMap(Double.init).map { Int64($0 * 1024) }
         return queue.slots.map { s in
@@ -38,11 +38,11 @@ public struct SABnzbdService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: api("defaultAddPaused", query: [("mode", "version")]), tags: [.capabilities(instance)], freshness: .reference) { _ in nil }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let name = switch action { case .pause: "pause"; case .resume: "resume"; default: "delete" }
         var query = [("mode", "queue"), ("name", name), ("value", ids.joined(separator: ","))]
@@ -51,7 +51,7 @@ public struct SABnzbdService: DownloadService {
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         var query = [("mode", "addfile")]
         if let category { query.append(("cat", category)) }
         if paused { query.append(("priority", "-2")) }

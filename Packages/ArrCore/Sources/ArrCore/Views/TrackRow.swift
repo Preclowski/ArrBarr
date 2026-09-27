@@ -17,7 +17,7 @@ struct TrackRow: View {
         return AnyShapeStyle(Color.primary.opacity(0.75))
     }
 
-    public var body: some View {
+    var body: some View {
         Button { onTap?() } label: { row.contentShape(Rectangle()) }
             .buttonStyle(.plain)
             .linkRowHover()

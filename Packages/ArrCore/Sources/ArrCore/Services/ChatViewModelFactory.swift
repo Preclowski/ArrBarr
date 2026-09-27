@@ -1,8 +1,8 @@
 import Foundation
 import MediaKit
 
-public enum ChatViewModelFactory {
-    public static func makePlaceholder() -> ChatViewModel {
+enum ChatViewModelFactory {
+    static func makePlaceholder() -> ChatViewModel {
         ChatViewModel(
             provider: UnavailableLLMProvider(),
             tools: [],
@@ -10,7 +10,7 @@ public enum ChatViewModelFactory {
         )
     }
 
-    public static func make(
+    static func make(
         sonarr: ServiceConfig,
         radarr: ServiceConfig,
         lidarr: ServiceConfig = .empty,

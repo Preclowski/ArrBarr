@@ -40,7 +40,7 @@ public extension View {
 /// as `PersonFilmographyRow`s (owned → detail, new → add). The external IMDb /
 /// TMDB links that cast heads used to open directly now live here, in the
 /// header.
-public struct PersonView: View {
+struct PersonView: View {
     let ref: PersonRef
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
@@ -71,12 +71,12 @@ public struct PersonView: View {
 
     enum Kind: Hashable { case movie, series }
 
-    public init(ref: PersonRef, onBack: @escaping () -> Void = {}) {
+    init(ref: PersonRef, onBack: @escaping () -> Void = {}) {
         self.ref = ref
         self.onBack = onBack
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
             // Detached window / popover draw no NavigationStack chevron — mirror

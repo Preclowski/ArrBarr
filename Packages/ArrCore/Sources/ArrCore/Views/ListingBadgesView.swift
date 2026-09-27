@@ -6,14 +6,14 @@ import SwiftUI
 /// capsule + download-client capsule. Shown in the movie detail header
 /// (under the ratings) so the user knows which client is grinding away
 /// without having to scroll to the download section.
-public struct ListingBadgesView: View {
+struct ListingBadgesView: View {
     let item: QueueItem
 
     /// Only the Upgrade pill, and only when the row is actually an upgrade.
     /// "New" is implicit (no existing-file banner = brand new download), and
     /// the download client already shows up in `ProgressLine` below — both
     /// previously duplicated here.
-    public var body: some View {
+    var body: some View {
         if item.isUpgrade {
             HStack(spacing: 4) {
                 Text("detail.upgrade.button", bundle: .module)

@@ -7,18 +7,18 @@ import SwiftUI
 /// resume / delete live there. The full-fat `QueueRowView` (progress
 /// bar + inline actions) is still used in the empty-filter default
 /// view.
-public struct QueueSearchRow: View {
+struct QueueSearchRow: View {
     let item: QueueItem
     let onTap: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
 
-    public init(item: QueueItem, onTap: @escaping () -> Void) {
+    init(item: QueueItem, onTap: @escaping () -> Void) {
         self.item = item
         self.onTap = onTap
     }
 
-    public var body: some View {
+    var body: some View {
         PosterMetadataRow(
             posterURL: item.posterURL,
             posterAPIKey: nil,

@@ -3,19 +3,19 @@ import SwiftUI
 /// Full-width pill row used in the chat empty state under "OR ASK".
 /// Tapping it injects the underlying prompt into the chat (same as
 /// typing and pressing return).
-public struct SuggestionPromptRow: View {
+struct SuggestionPromptRow: View {
     /// Catalog key, not a `LocalizedStringKey`: the row identifies the line it
     /// is showing by it (see the cross-fade below), and `LocalizedStringKey`
     /// isn't `Hashable`.
-    public let titleKey: String
-    public let onTap: () -> Void
+    let titleKey: String
+    let onTap: () -> Void
 
-    public init(_ titleKey: String, onTap: @escaping () -> Void) {
+    init(_ titleKey: String, onTap: @escaping () -> Void) {
         self.titleKey = titleKey
         self.onTap = onTap
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: onTap) {
             HStack {
                 // The pill stays; only the sentence inside it changes. Keyed by

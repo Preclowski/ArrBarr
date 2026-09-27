@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct SearchResultRow: View {
+struct SearchResultRow: View {
     let result: SearchResult
     let onTap: () -> Void
 
@@ -28,7 +28,7 @@ public struct SearchResultRow: View {
     /// DetailView; without it, tap opens SearchAddPanel).
     private var isInLibrary: Bool { result.inLibraryArrId != nil }
 
-    public var body: some View {
+    var body: some View {
         PosterMetadataRow(
             posterURL: result.posterURL,
             // Library-sourced rows point at the arr's own MediaCover route,
@@ -129,14 +129,14 @@ public struct SearchResultRow: View {
 // info grid + overview) so the user reads one tooltip vocabulary
 // across the app.
 
-public struct SearchResultTooltip: View {
+struct SearchResultTooltip: View {
     let result: SearchResult
     /// Country codes the row already fetched — the tooltip never fetches.
     var countries: [String] = []
     @EnvironmentObject var configStore: ConfigStore
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         MediaTooltipChrome(
             title: result.title,
             year: result.year,

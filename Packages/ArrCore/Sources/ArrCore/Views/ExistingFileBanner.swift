@@ -63,7 +63,7 @@ struct ExistingFileBanner: View {
         )
     }
 
-    public var body: some View {
+    var body: some View {
         // Key-value grid for Jakość / Rozmiar / Ocena — the same labels,
         // order and styling as the download section's `UpgradeDiffTable`,
         // so the on-disk file and the incoming release read as the same

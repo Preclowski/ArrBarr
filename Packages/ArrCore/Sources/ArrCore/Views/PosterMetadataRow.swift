@@ -11,7 +11,7 @@ import SwiftUI
 /// plus the same hover-tint background. Diverged by ~2pt on padding /
 /// spacing across iterations and the user noticed; pulling it into one
 /// place keeps them in lock-step from now on.
-public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: View, TrailingAccessory: View>: View {
+struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: View, TrailingAccessory: View>: View {
     let posterURL: URL?
     let posterAPIKey: String?
     /// Every caller so far is a list row at 26×38, comfortably inside the icon
@@ -62,7 +62,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataB
     /// Used by Upcoming rows that don't have a backing `entityId` —
     /// nothing meaningful to drill into.
     let disabled: Bool
-    public init(
+    init(
         posterURL: URL?,
         posterAPIKey: String?,
         posterTier: PosterTier = .icon,
@@ -104,7 +104,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataB
         self.trailing = trailing
     }
 
-    public var body: some View {
+    var body: some View {
         // A non-interactive row is plain content, not a disabled Button — a
         // disabled plain-style Button greys its whole label (title, poster,
         // chips), which read as "unavailable" rather than "nothing to open".
@@ -212,7 +212,7 @@ public struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataB
 // subtree — which is what type erasure costs in a scrolling list. Most rows
 // carry no badge at all, hence these: the generic parameter is pinned to
 // `EmptyView` and the argument disappears from the call site.
-public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
+extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -243,7 +243,7 @@ public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge 
     }
 }
 
-public extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
+extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -275,7 +275,7 @@ public extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBad
     }
 }
 
-public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == EmptyView {
+extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == EmptyView {
     init(
         posterURL: URL?,
         posterAPIKey: String?,
@@ -308,7 +308,7 @@ public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2
 }
 
 
-public extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
+extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == EmptyView {
     /// Rows whose only chip leads the SECOND metadata line (Upcoming's score).
     init(
         posterURL: URL?,

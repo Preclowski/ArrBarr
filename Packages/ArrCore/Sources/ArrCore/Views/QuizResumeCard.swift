@@ -9,7 +9,7 @@ import SwiftUI
 /// and an empty items list — the receiver (`PopoverContentView`)
 /// interprets that as "reopen the overlay without disturbing the
 /// current session" and flips `showDiscoverOverlay = true`.
-public struct QuizResumeCard: View {
+struct QuizResumeCard: View {
     let mood: String
     let posterURLs: [URL]
     /// Direct singleton ref — chat-message-bubble context doesn't
@@ -18,7 +18,7 @@ public struct QuizResumeCard: View {
     /// the shared instance avoids a "No ObservableObject found" trap.
     private var discoverViewModel = DiscoverViewModel.shared
 
-    public init(mood: String, posterURLs: [URL]) {
+    init(mood: String, posterURLs: [URL]) {
         self.mood = mood
         self.posterURLs = posterURLs
     }
@@ -28,7 +28,7 @@ public struct QuizResumeCard: View {
         discoverViewModel.sessionMatched.count
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: resumeQuiz) {
             VStack(alignment: .leading, spacing: 8) {
                 deckHeader
