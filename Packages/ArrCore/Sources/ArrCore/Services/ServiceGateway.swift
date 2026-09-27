@@ -284,6 +284,11 @@ public final class ServiceGateway {
     /// Drops every cached response; the next reads go to the network.
     public nonisolated func purgeDataCache() async { await kit.store.purgeAll() }
 
+    public nonisolated func dataCacheBytes() async -> Int64 {
+        let stats = await kit.store.statistics()
+        return Int64(stats.bytes + stats.memoryBytes)
+    }
+
     public func systemDidWake() async {
         await kit.governor.noteWake(at: Date())
         await kit.events.wakeAll()

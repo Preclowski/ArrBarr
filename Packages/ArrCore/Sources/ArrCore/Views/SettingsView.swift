@@ -37,6 +37,8 @@ public struct SettingsView: View {
     /// after a clear. `nil` until the first measurement lands.
     @State private var artworkBytes: Int64?
     @State private var isClearingArtwork = false
+    @State private var dataCacheBytes: Int64?
+    @State private var isClearingDataCache = false
     #if os(macOS)
     /// Which sidebar row is selected in the macOS System-Settings-style layout.
     @State private var macSelection: SettingsSection = .general
@@ -99,7 +101,7 @@ public struct SettingsView: View {
         .onAppear {
             if initialAppLanguage == nil { initialAppLanguage = configStore.appLanguage }
         }
-        .task { refreshArtworkBytes() }
+        .task { refreshArtworkBytes(); refreshDataCacheBytes() }
         // Paywall presentation is handled centrally (iOS: a sheet on
         // iOSAppRoot's TabView; macOS: a dedicated NSWindow opened by
         // AppDelegate observing StoreManager.gatedFeature). The Download
@@ -1261,9 +1263,7 @@ public struct SettingsView: View {
         } header: { Text("Upcoming", bundle: .module) }
     }
 
-    /// Storage: what the app is holding on disk, and the one button that gives
-    /// it back. Artwork only — see `AppCaches` for why the metadata store and
-    /// the in-memory caches are not offered here.
+    /// Storage: what the app is holding on disk, and the buttons that give it back.
     @ViewBuilder
     private var storageSection: some View {
         Section {
@@ -1285,6 +1285,22 @@ public struct SettingsView: View {
             // Nothing to reclaim is a reason to say so, not to offer a button
             // that does nothing perceptible.
             .disabled(isClearingArtwork || (artworkBytes ?? 0) == 0)
+            LabeledContent {
+                if let dataCacheBytes {
+                    Text(verbatim: ByteCountFormatter.string(fromByteCount: dataCacheBytes, countStyle: .file))
+                        .foregroundStyle(.secondary)
+                } else {
+                    ProgressView().controlSize(.small)
+                }
+            } label: {
+                Text("settings.dataCache.label", bundle: .module)
+            }
+            Button {
+                clearDataCache()
+            } label: {
+                Label { Text("settings.clearDataCache.button", bundle: .module) } icon: { Image(systemName: "trash") }
+            }
+            .disabled(isClearingDataCache || (dataCacheBytes ?? 0) == 0)
         } header: {
             Text("settings.storage.label", bundle: .module)
         }
@@ -1292,6 +1308,19 @@ public struct SettingsView: View {
 
     private func refreshArtworkBytes() {
         Task { artworkBytes = await AppCaches.artworkBytes() }
+    }
+
+    private func refreshDataCacheBytes() {
+        Task { dataCacheBytes = await configStore.gateway.dataCacheBytes() }
+    }
+
+    private func clearDataCache() {
+        isClearingDataCache = true
+        Task {
+            await configStore.gateway.purgeDataCache()
+            dataCacheBytes = await configStore.gateway.dataCacheBytes()
+            isClearingDataCache = false
+        }
     }
 
     private func clearArtworkCache() {
