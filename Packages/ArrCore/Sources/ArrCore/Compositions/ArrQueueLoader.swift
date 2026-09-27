@@ -70,7 +70,7 @@ enum ArrQueueLoader {
         let stream = gateway.queueStream(source)
         if refresh { await stream.refreshNow() }
         let value = stream.last()
-        let revision = value.map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision) }
+        let revision = value.map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision, overlay: $0.overlay) }
         if let value, let revision, let error = value.failures[service.instance] { throw LiveFailure(underlying: error, revision: revision) }
         let slice = value?.slices[service.instance]
         return (slice?.elements ?? [], slice?.measuredAt, revision)

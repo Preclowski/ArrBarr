@@ -264,7 +264,7 @@ enum ProducedOperations {
             case let .chunked(_, make, _): ops.append(make([1]).plan.operation)
             case let .perKey(make): ops.append(make(1).plan.operation)
             }
-            ops += [s.deleteQueueItem(id: 1, removeFromClient: true, blocklist: false, now: Date()), s.grabQueueItem(id: 1), s.grabRelease(guid: "g", indexerID: 1),
+            ops += [s.deleteQueueItem(id: 1, removeFromClient: true, blocklist: false), s.grabQueueItem(id: 1), s.grabRelease(guid: "g", indexerID: 1),
                     s.search(.movies([1])), s.search(.series(1)), s.search(.season(seriesID: 1, season: 1)), s.search(.episodes([1])), s.search(.albums([1])),
                     s.command(named: "RefreshMovie"), s.setMonitored(entityID: 1, true), s.setAlbumMonitored(albumID: 1, true), s.setEpisodesMonitored(ids: [1], true),
                     s.setSeasonMonitored(seriesID: 1, season: 1, true), s.add(ArrAddPayload(qualityProfileId: 1, rootFolderPath: "/")),

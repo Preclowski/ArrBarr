@@ -46,7 +46,7 @@ public struct RTorrentService: DownloadService {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let method = switch action { case .pause: "d.stop"; case .resume: "d.start"; default: "d.erase" }
         let service = self
-        return command(action.rawValue) { ctx in
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
             for id in ids { _ = try await ctx.send(service.call(action.rawValue, method: method, params: [.string(id.uppercased())])) }
             return CommandReceipt(acceptedAt: ctx.clock.now)
         }

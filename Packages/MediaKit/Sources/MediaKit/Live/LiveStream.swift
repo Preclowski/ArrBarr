@@ -39,6 +39,8 @@ public struct LiveValue<Element: Codable & Sendable>: Sendable {
     public let isFromSnapshot: Bool
     /// Bumped by every fetch; an overlay change republishes the same revision. 0 is the snapshot.
     public let revision: UInt64
+    /// Bumped by every applied effect, so a republish of the same revision still reads as new.
+    public let overlay: UInt64
 }
 
 public struct LiveSlice<Element: Codable & Sendable>: Sendable {
@@ -49,6 +51,15 @@ public struct LiveSlice<Element: Codable & Sendable>: Sendable {
 /// An element that can carry an optimistic status while the source catches up.
 public protocol LivePatchable {
     func applying(_ change: PendingEffect.Change) -> Self?
+    /// Other ids an effect may name this element by (a queue row by its download id).
+    var liveAliases: [String] { get }
+    /// Whether this element is what `gone` turned into, so `gone`'s ghost can retire.
+    func succeeds(_ gone: Self) -> Bool
+}
+
+public extension LivePatchable {
+    var liveAliases: [String] { [] }
+    func succeeds(_ gone: Self) -> Bool { false }
 }
 
 private struct StoredLive<Element: Codable>: Codable { let elements: [Element]; let measuredAt: Date }
@@ -74,15 +85,17 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     private var activity: LiveActivity = .foreground
     private var scope: LiveScope = .all
     private var lastPush: [InstanceID: Date] = [:]
-    private var pending: [PendingEffect] = []
-    private var lastSeen: [String: (instance: InstanceID, element: Element)] = [:]
+    private var pending: [(effect: PendingEffect, expiresAt: Date)] = []
+    private var lastSeen: [String: (instance: InstanceID, element: Element, position: Int)] = [:]
+    /// The element ids present when each effect was applied: a successor has to be new.
+    private var presentAtApply: [String: Set<String>] = [:]
+    private var overlay: UInt64 = 0
     private var slices: [InstanceID: LiveSlice<Element>] = [:]
     private var failures: [InstanceID: any Error] = [:]
     private var fromSnapshot = false
     private var revision: UInt64 = 0
     /// When the last fetch finished, whoever asked for it; a tick inside the interval after it has nothing to add.
     private var lastFetchAt: Date?
-    private var heldUntil: Date?
     private var refreshRequested = false
     private var wakeup: CheckedContinuation<Void, Never>?
     private var lastCheckpoint: Date?
@@ -153,12 +166,6 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         lastPush[instance] = max(lastPush[instance] ?? date, date)
     }
 
-    /// Keep ticking until `date` even while pushes cover every instance: a user action is waiting to be confirmed.
-    public func hold(until date: Date) {
-        heldUntil = max(heldUntil ?? date, date)
-        wake()
-    }
-
     public func notePush(_ instance: InstanceID, at date: Date) async {
         guard instances.contains(instance) else { return }
         lastPush[instance] = date
@@ -166,15 +173,21 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         wake()
     }
 
-    /// Optimistic overlay; the store is untouched.
+    /// Optimistic overlay; the store is untouched. The pump keeps ticking while an effect waits to be confirmed.
+    ///
+    /// `.status` patches the row until the source reports the same status, and ghosts it at its last position while
+    /// the source omits it, until expiry or until a new row `succeeds` it. `.removed` hides the row until expiry,
+    /// even if the source briefly returns it.
     public func apply(_ effect: PendingEffect) {
-        pending.removeAll { $0.elementID == effect.elementID && $0.instance == effect.instance }
-        pending.append(effect)
+        pending.removeAll { $0.effect.elementID == effect.elementID && $0.effect.instance == effect.instance }
+        pending.append((effect, clock.now.addingTimeInterval(effect.lifetime.seconds)))
+        let present = (effect.instance.map { [$0] } ?? instances).flatMap { slices[$0]?.elements ?? [] }.map(elementID)
+        presentAtApply[Self.effectKey(effect)] = Set(present)
+        overlay += 1
+        wake()
         guard lastValue.withLock({ $0 }) != nil else { return }
         publish()
     }
-
-    public func clear(elementID: String) { pending.removeAll { $0.elementID == elementID } }
 
     private func wake() {
         wakeup?.resume()
@@ -239,8 +252,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         let covered = instances.allSatisfy { lastPush[$0].map { now.timeIntervalSince($0) < policy.pushSilence.seconds } ?? false }
         let elements = lastValue.withLock { $0?.elements } ?? []
         let activeMatters = activity == .foreground && isActive(elements)
-        let held = heldUntil.map { now < $0 } ?? false
-        return covered && !activeMatters && !held && pending.isEmpty && !instances.isEmpty
+        return covered && !activeMatters && pending.isEmpty && !instances.isEmpty
     }
 
     /// One fetch at a time; a caller arriving mid-fetch shares the next one, so it never reads a value older than its call.
@@ -306,45 +318,61 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         fromSnapshot = false
         revision += 1
         for (instance, rows) in fresh {
-            for e in rows { lastSeen[Self.key(instance, elementID(e))] = (instance, e) }
+            for (position, e) in rows.enumerated() { lastSeen[Self.key(instance, elementID(e))] = (instance, e, position) }
         }
         publish()
         if !fresh.isEmpty { await checkpoint(fresh, at: now) }
     }
 
     private static func key(_ instance: InstanceID, _ element: String) -> String { "\(instance)|\(element)" }
+    private static func effectKey(_ effect: PendingEffect) -> String { "\(effect.instance.map { "\($0)" } ?? "*")|\(effect.elementID)" }
+
+    private func matches(_ element: Element, _ id: String) -> Bool { elementID(element) == id || element.liveAliases.contains(id) }
+
+    private func lastSeenRow(_ instance: InstanceID, _ id: String) -> (element: Element, position: Int)? {
+        if let hit = lastSeen[Self.key(instance, id)] { return (hit.element, hit.position) }
+        return lastSeen.values.first { $0.instance == instance && $0.element.liveAliases.contains(id) }.map { ($0.element, $0.position) }
+    }
 
     private func publish() {
         let now = clock.now
         pending.removeAll { $0.expiresAt <= now }
         var overlaid: [InstanceID: [Element]] = [:]
         for instance in instances { overlaid[instance] = slices[instance]?.elements ?? [] }
-        var live: [PendingEffect] = []
-        for effect in pending {
+        var live: [(effect: PendingEffect, expiresAt: Date)] = []
+        for entry in pending {
+            let effect = entry.effect
             let targets = effect.instance.map { [$0] } ?? instances
             var matched = false
             for instance in targets {
                 guard var rows = overlaid[instance] else { continue }
-                let index = rows.firstIndex { elementID($0) == effect.elementID }
+                let index = rows.firstIndex { matches($0, effect.elementID) }
                 switch effect.change {
                 case let .status(status):
-                    // Dropped once the source reports the same status, or the row is gone.
-                    guard let index, let patched = rows[index].applying(.status(status)), patched != rows[index] else { continue }
-                    rows[index] = patched
+                    if let index {
+                        // Dropped once the source reports the same status.
+                        guard let patched = rows[index].applying(.status(status)), patched != rows[index] else { continue }
+                        rows[index] = patched
+                    } else {
+                        guard let seen = lastSeenRow(instance, effect.elementID), let ghost = seen.element.applying(.status(status)) else { continue }
+                        let before = presentAtApply[Self.effectKey(effect)] ?? []
+                        if rows.contains(where: { $0.succeeds(seen.element) && !before.contains(elementID($0)) }) { continue }
+                        rows.insert(ghost, at: min(seen.position, rows.count))
+                    }
                 case .removed:
-                    guard let index else { continue }
-                    rows.remove(at: index)
+                    if let index { rows.remove(at: index) }
                 case .keepAlive:
                     // Ghosts the last seen row while the source omits it; only expiry ends it.
-                    if index == nil, let ghost = lastSeen[Self.key(instance, effect.elementID)] { rows.append(ghost.element) }
+                    if index == nil, let ghost = lastSeenRow(instance, effect.elementID) { rows.insert(ghost.element, at: min(ghost.position, rows.count)) }
                     else if index == nil { continue }
                 }
                 overlaid[instance] = rows
                 matched = true
             }
-            if matched || effect.change == .keepAlive { live.append(effect) }
+            if matched || effect.change == .keepAlive || effect.change == .removed { live.append(entry) }
         }
         pending = live
+        presentAtApply = presentAtApply.filter { key, _ in live.contains { Self.effectKey($0.effect) == key } }
         let partial = Set(failures.keys)
         var outSlices: [InstanceID: LiveSlice<Element>] = [:]
         for instance in instances {
@@ -357,7 +385,8 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
             slices[instance].map { now.timeIntervalSince($0.measuredAt) >= policy.staleGrace.seconds } ?? false
         }
         let value = LiveValue(elements: elements, slices: outSlices, measuredAt: measuredAt, partial: partial, failures: failures,
-                              isStale: isStale, pending: live, isFromSnapshot: fromSnapshot, revision: revision)
+                              isStale: isStale, pending: live.map(\.effect), isFromSnapshot: fromSnapshot, revision: revision,
+                              overlay: overlay)
         lastValue.withLock { $0 = value }
         for c in subscribers.values { c.yield(value) }
     }

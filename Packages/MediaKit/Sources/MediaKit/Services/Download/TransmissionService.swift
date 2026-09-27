@@ -57,7 +57,7 @@ public struct TransmissionService: DownloadService {
         var arguments: [String: JSONValue] = ["ids": .array(ids.map { .string($0) })]
         if action == .delete { arguments["delete-local-data"] = .bool(deleteFiles) }
         let p = rpc(action.rawValue, method: method, arguments: arguments)
-        return command(action.rawValue) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
     /// `download-dir` comes from `session-get`, then the category is a sub-folder: two requests in one run.

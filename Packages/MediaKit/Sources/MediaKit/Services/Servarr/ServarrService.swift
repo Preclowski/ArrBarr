@@ -155,16 +155,16 @@ public struct ServarrService: Sendable {
 
     // MARK: - Commands
 
-    private func command(_ name: String, invalidates: Set<InvalidationTag>, optimistic: PendingEffect? = nil, tracking: Command.Tracking? = nil,
+    private func command(_ name: String, invalidates: Set<InvalidationTag>, effects: [PendingEffect] = [], tracking: Command.Tracking? = nil,
                          run: @escaping @Sendable (CommandContext) async throws -> CommandReceipt) -> Command {
-        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: invalidates, optimistic: optimistic, tracking: tracking, run: run)
+        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: invalidates, effects: effects, tracking: tracking, run: run)
     }
 
-    public func deleteQueueItem(id: Int, removeFromClient: Bool, blocklist: Bool, now: Date) -> Command {
+    public func deleteQueueItem(id: Int, removeFromClient: Bool, blocklist: Bool) -> Command {
         let p = plan("deleteQueueItem", method: "DELETE", path: "/queue/{id}", values: ["id": String(id)],
                      query: [("removeFromClient", String(removeFromClient)), ("blocklist", String(blocklist))])
         return command("deleteQueueItem", invalidates: [tag(.queue), tag(.history)],
-                       optimistic: PendingEffect(elementID: "\(instance)/\(id)", change: .removed, expiresAt: now.addingTimeInterval(30))) { ctx in
+                       effects: [PendingEffect(elementID: String(id), instance: instance, change: .removed)]) { ctx in
             let r = try await ctx.send(p)
             return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: r.body))
         }
@@ -172,7 +172,8 @@ public struct ServarrService: Sendable {
 
     public func grabQueueItem(id: Int) -> Command {
         let p = plan("grabQueueItem", method: "POST", path: "/queue/grab/{id}", values: ["id": String(id)], body: .bytes(Data("{}".utf8), contentType: "application/json"))
-        return command("grabQueueItem", invalidates: [tag(.queue)]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
+        return command("grabQueueItem", invalidates: [tag(.queue)],
+                       effects: [PendingEffect(elementID: String(id), instance: instance, change: .status("downloading"))]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
     /// The arr's own indexer definitions — how a release's `indexerId` is

@@ -305,146 +305,21 @@ struct QueueViewModelPerSourceTests {
     }
 }
 
-@Suite("QueueViewModel optimistic updates")
+@Suite("QueueViewModel actions")
 @MainActor
-struct QueueViewModelOptimisticTests {
-    @Test("Pause flips the row to paused immediately")
-    func pauseMarksPaused() async {
+struct QueueViewModelActionTests {
+    @Test("Pause, resume and delete reach the aggregator")
+    func actionsReachTheAggregator() async {
         let (sut, fake, _) = makeSUT()
         let item = makeItem("a", source: .sonarr, status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item], lidarr: [], whisparr: [])
-        await sut.refresh()
-
-        await sut.pause(item)
-        #expect(sut.items(for: .sonarr).first?.status == .paused)
-        #expect(fake.performedActions.map(\.0) == [.pause])
-    }
-
-    @Test("Delete removes the row immediately")
-    func deleteRemovesRow() async {
-        let (sut, fake, _) = makeSUT()
-        let item = makeItem("a", source: .sonarr, status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item], lidarr: [], whisparr: [])
-        await sut.refresh()
-
-        await sut.delete(item)
-        #expect(sut.items(for: .sonarr).isEmpty)
-    }
-
-    @Test("The override holds across a refresh until the backend catches up")
-    func overridePersistsThenClears() async {
-        let (sut, fake, _) = makeSUT()
-        let item = makeItem("a", source: .sonarr, status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item], lidarr: [], whisparr: [])
-        await sut.refresh()
-        await sut.pause(item)
-
-        // Backend still reports "downloading" — override keeps it paused.
-        fake.fetchResult = AggregateResult(
-            radarr: [], sonarr: [makeItem("a", source: .sonarr, status: .downloading)],
-            lidarr: [], whisparr: []
-        )
-        await sut.refresh()
-        #expect(sut.items(for: .sonarr).first?.status == .paused)
-
-        // Backend now agrees — override clears and the real status flows through.
-        fake.fetchResult = AggregateResult(
-            radarr: [], sonarr: [makeItem("a", source: .sonarr, status: .paused)],
-            lidarr: [], whisparr: []
-        )
-        await sut.refresh()
-        #expect(sut.items(for: .sonarr).first?.status == .paused)
-    }
-
-    @Test("A force-started queued item the arr briefly drops stays on screen")
-    func ghostRetainedThroughQueuedToActiveGap() async {
-        let (sut, fake, _) = makeSUT()
-        let before = makeItem("before", source: .sonarr, status: .downloading)
         let queued = makeItem("q", source: .sonarr, status: .queued)
-        let after = makeItem("after", source: .sonarr, status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [before, queued, after], lidarr: [], whisparr: [])
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item, queued], lidarr: [], whisparr: [])
         await sut.refresh()
 
-        // Force-start the queued item → optimistic .downloading.
+        await sut.pause(item)
         await sut.resume(queued)
-        #expect(fake.performedActions.map(\.0) == [.continueDownload])
-        #expect(sut.items(for: .sonarr).first { $0.id == "q" }?.status == .downloading)
-
-        // The arr now momentarily drops "q" from /queue entirely (the gap).
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [before, after], lidarr: [], whisparr: [])
-        await sut.refresh()
-        let rows = sut.items(for: .sonarr)
-        // Still present, still in its optimistic state, and re-inserted at its
-        // original middle position — not blinked out, not shoved to the end.
-        #expect(rows.map(\.id) == ["before", "q", "after"])
-        #expect(rows.first { $0.id == "q" }?.status == .downloading)
-
-        // The arr returns it as downloading — real data flows through, no dup.
-        fake.fetchResult = AggregateResult(
-            radarr: [], sonarr: [before, makeItem("q", source: .sonarr, status: .downloading), after],
-            lidarr: [], whisparr: []
-        )
-        await sut.refresh()
-        let final = sut.items(for: .sonarr)
-        #expect(final.map(\.id) == ["before", "q", "after"])
-        #expect(final.filter { $0.id == "q" }.count == 1)
-    }
-
-    @Test("A grabbed pending release hands its row to the download that replaces it")
-    func pendingGhostYieldsToSuccessor() async {
-        let (sut, fake, _) = makeSUT()
-        let pending = releaseRow("radarr-1", downloadId: nil, status: .queued)
-        fake.fetchResult = AggregateResult(radarr: [pending], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-
-        await sut.resume(pending)
-        #expect(fake.performedActions.map(\.0) == [.continueDownload])
-
-        // Grabbed: the pending row is gone before the arr tracks the download.
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-1"])
-
-        // The download turns up under its own queue id: one row, the real one.
-        let download = releaseRow("radarr-2", downloadId: "nzo-1", status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [download], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-2"])
-    }
-
-    @Test("A download of the same title already in the queue does not retire a grabbed pending row")
-    func existingDownloadIsNotTheSuccessor() async {
-        let (sut, fake, _) = makeSUT()
-        let existing = releaseRow("radarr-5", downloadId: "nzo-old", status: .downloading)
-        let pending = releaseRow("radarr-1", downloadId: nil, status: .queued)
-        fake.fetchResult = AggregateResult(radarr: [existing, pending], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        await sut.resume(pending)
-
-        fake.fetchResult = AggregateResult(radarr: [existing], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-5", "radarr-1"])
-
-        let download = releaseRow("radarr-2", downloadId: "nzo-1", status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [existing, download], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-5", "radarr-2"])
-    }
-
-    @Test("A deleted row the arr still returns briefly stays gone (not re-injected)")
-    func deletedRowIsNotResurrectedAsGhost() async {
-        let (sut, fake, _) = makeSUT()
-        let item = makeItem("a", source: .sonarr, status: .downloading)
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [item], lidarr: [], whisparr: [])
-        await sut.refresh()
         await sut.delete(item)
-        #expect(sut.items(for: .sonarr).isEmpty)
-
-        // The arr momentarily drops it (or keeps returning it) — either way a
-        // delete override must never re-inject a ghost the way a status one does.
-        fake.fetchResult = AggregateResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
-        await sut.refresh()
-        #expect(sut.items(for: .sonarr).isEmpty)
+        #expect(fake.performedActions.map(\.0) == [.pause, .continueDownload, .delete])
     }
 
     @Test("A failed action surfaces lastError and leaves the row untouched")

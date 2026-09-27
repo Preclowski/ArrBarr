@@ -180,7 +180,7 @@ public final class ServiceGateway {
 
     public func start() async {
         started = true
-        // Under tests the saved profile is never registered: a client's adopted config is the only way in.
+        // Under tests the saved profile is registered only on an injected transport (see `descriptors`).
         let instances = descriptors()
         await kit.start(instances: instances)
         relayBreakers()
@@ -346,6 +346,19 @@ public final class ServiceGateway {
 
     public nonisolated func servarr(_ source: QueueItem.Source) -> ServarrService { kit.servarr(source.instanceID)! }
 
+    /// Runs a write and lays the row changes it promises over the live streams, which drop them once the source agrees.
+    @discardableResult
+    nonisolated func run(_ command: Command) async throws -> CommandReceipt {
+        let receipt = try await store.run(command)
+        guard !command.effects.isEmpty else { return receipt }
+        let (queues, progress) = streams.withLock { (Array($0.queue.values), $0.progress?.stream) }
+        for effect in command.effects {
+            for stream in queues { await stream.apply(effect) }
+            await progress?.apply(effect)
+        }
+        return receipt
+    }
+
     /// One queue stream per arr, on its saved instance.
     public nonisolated func queueStream(_ source: QueueItem.Source) -> LiveStream<ArrQueueRecord> {
         let kit = self.kit
@@ -440,7 +453,8 @@ public final class ServiceGateway {
                 if config.enabled { out.append(InstanceDescriptor(id: kind.instanceID, baseURL: Self.demoURL(kind.instanceKind), enabled: true, generation: "demo")) }
                 continue
             }
-            if !Self.isRunningTests, let url = URL(string: config.baseURL), config.isConfigured {
+            // A test registers the saved profile only on its own transport, so nothing reaches a real server.
+            if !Self.isRunningTests || transport != nil, let url = URL(string: config.baseURL), config.isConfigured {
                 let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
                     + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
                 out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isUsable(as: kind), generation: generation))

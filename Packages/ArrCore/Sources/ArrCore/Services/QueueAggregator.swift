@@ -6,10 +6,12 @@ import os
 nonisolated public struct QueueRevision: Equatable, Sendable {
     let stream: ObjectIdentifier
     let number: UInt64
+    /// The stream's optimistic-overlay count: a republish of the same fetch with a new effect on it.
+    var overlay: UInt64 = 0
 
-    /// Already committed: the same stream, at or past this number.
+    /// Already committed: the same stream, at or past this fetch and overlay.
     func isCovered(by committed: QueueRevision?) -> Bool {
-        committed.map { $0.stream == stream && number <= $0.number } ?? false
+        committed.map { $0.stream == stream && (number, overlay) <= ($0.number, $0.overlay) } ?? false
     }
 }
 
@@ -111,7 +113,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     func latestRevision(source: QueueItem.Source) -> QueueRevision? {
         let stream = gateway.queueStream(source)
-        return stream.last().map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision) }
+        return stream.last().map { QueueRevision(stream: ObjectIdentifier(stream), number: $0.revision, overlay: $0.overlay) }
     }
 
     private func result(_ source: QueueItem.Source, refresh: Bool) async -> SourceQueueResult {
@@ -250,7 +252,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             return
         }
         if action == .continueDownload, (item.downloadId?.isEmpty ?? true) {
-            _ = try await gateway.store.run(gateway.servarr(item.source).grabQueueItem(id: item.arrQueueId))
+            try await gateway.run(gateway.servarr(item.source).grabQueueItem(id: item.arrQueueId))
             return
         }
         guard let downloadId = item.downloadId, !downloadId.isEmpty else { throw AggregateError.noDownloadId }
@@ -268,12 +270,12 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         case .continueDownload: .forceStart
         case .delete: .delete
         }
-        _ = try await gateway.store.run(service.action(clientAction, ids: [downloadId], deleteFiles: false))
+        try await gateway.run(service.action(clientAction, ids: [downloadId], deleteFiles: false))
     }
 
     private func deleteViaArr(_ item: QueueItem, removeFromClient: Bool) async throws {
         let service = gateway.servarr(item.source)
-        _ = try await gateway.store.run(service.deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient, blocklist: false, now: Date()))
+        try await gateway.run(service.deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient, blocklist: false))
     }
 
     func deleteAll(_ items: [QueueItem]) async throws {

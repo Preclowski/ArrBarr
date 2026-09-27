@@ -85,9 +85,10 @@ public struct PendingEffect: Sendable, Equatable, Codable {
     /// The instance whose row this is; nil matches the id in every instance.
     public let instance: InstanceID?
     public let change: Change
-    public let expiresAt: Date
-    public init(elementID: String, instance: InstanceID? = nil, change: Change, expiresAt: Date) {
-        self.elementID = elementID; self.instance = instance; self.change = change; self.expiresAt = expiresAt
+    /// How long the overlay waits for the source to agree; the stream starts the clock when it applies it.
+    public let lifetime: Duration
+    public init(elementID: String, instance: InstanceID? = nil, change: Change, lifetime: Duration = .seconds(30)) {
+        self.elementID = elementID; self.instance = instance; self.change = change; self.lifetime = lifetime
     }
 }
 
@@ -97,14 +98,15 @@ public struct Command: Sendable {
     public let name: OperationID
     public let instance: InstanceID
     public let invalidates: Set<InvalidationTag>
-    public let optimistic: PendingEffect?
+    /// The row changes the command promises, laid over the live streams until the source confirms them.
+    public let effects: [PendingEffect]
     public let tracking: Tracking?
     /// Multi-request writes are ordinary code here: GET→PUT, GET→PUT→GET→PUT, GET /search→POST.
     public let run: @Sendable (CommandContext) async throws -> CommandReceipt
 
-    public init(name: OperationID, instance: InstanceID, invalidates: Set<InvalidationTag>, optimistic: PendingEffect? = nil,
+    public init(name: OperationID, instance: InstanceID, invalidates: Set<InvalidationTag>, effects: [PendingEffect] = [],
                 tracking: Tracking? = nil, run: @escaping @Sendable (CommandContext) async throws -> CommandReceipt) {
-        self.name = name; self.instance = instance; self.invalidates = invalidates; self.optimistic = optimistic; self.tracking = tracking; self.run = run
+        self.name = name; self.instance = instance; self.invalidates = invalidates; self.effects = effects; self.tracking = tracking; self.run = run
     }
 }
 

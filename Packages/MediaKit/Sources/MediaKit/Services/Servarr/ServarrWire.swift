@@ -297,6 +297,15 @@ public struct ArrQueueRecord: Codable, Equatable, Sendable, Hashable, LivePatcha
         copy.status = value
         return copy
     }
+
+    public var liveAliases: [String] { downloadId.map { [$0.lowercased()] } ?? [] }
+
+    /// A grabbed pending release (no download id yet) comes back under a new queue id, tracking the same title.
+    public func succeeds(_ gone: ArrQueueRecord) -> Bool {
+        guard gone.downloadId?.isEmpty ?? true, !(downloadId?.isEmpty ?? true) else { return false }
+        return movieId == gone.movieId && episodeId == gone.episodeId && albumId == gone.albumId && seriesId == gone.seriesId
+            && (movieId ?? episodeId ?? albumId) != nil
+    }
 }
 
 public struct ArrHistoryRecord: Codable, Equatable, Sendable, Hashable {

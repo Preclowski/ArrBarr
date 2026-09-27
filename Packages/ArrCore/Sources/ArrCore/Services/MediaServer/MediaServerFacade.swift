@@ -63,13 +63,13 @@ nonisolated struct MediaServerFacade: MediaServerClient {
 
     func scanLibrary(id: String) async throws {
         let (gateway, service) = try await context()
-        _ = try await gateway.store.run(service.scanLibrary(section: id))
+        try await gateway.run(service.scanLibrary(section: id))
     }
 
     func emptyTrash(libraryId: String) async throws {
         guard config.kind == .plex else { throw MediaServerError.trashUnsupported(server: config.kind.displayName) }
         let (gateway, service) = try await context()
-        _ = try await gateway.store.run(service.emptyTrash(section: libraryId))
+        try await gateway.run(service.emptyTrash(section: libraryId))
     }
 
     func nowPlaying() async throws -> [MediaServerSession] {

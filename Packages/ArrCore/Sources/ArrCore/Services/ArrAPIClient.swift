@@ -85,7 +85,7 @@ extension ArrAPIClient {
     @discardableResult
     func run(_ make: (ServarrService) -> Command) async throws -> CommandReceipt {
         let context = try await context()
-        return try await context.store.run(make(context.service))
+        return try await context.gateway.run(make(context.service))
     }
 
     // MARK: - Shared reads

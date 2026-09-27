@@ -56,7 +56,7 @@ public struct QBittorrentService: DownloadService {
         }
         let p = plan(op, method: "POST", path: path, body: .form(fields))
         let service = self
-        return command(op) { ctx in
+        return command(op, effects: effects(action, ids: ids)) { ctx in
             do { _ = try await ctx.send(p) } catch let error as MediaKitError {
                 // 404 on the 5.x verb from a 4.x server (or the reverse): flip the capability and retry once.
                 guard case let .rejected(_, status, _) = error, status == 404, action == .pause || action == .resume else { throw error }

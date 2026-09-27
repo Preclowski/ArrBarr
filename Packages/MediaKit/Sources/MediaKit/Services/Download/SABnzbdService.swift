@@ -66,7 +66,7 @@ public struct SABnzbdService: DownloadService {
         var query = [("mode", "queue"), ("name", name), ("value", ids.joined(separator: ","))]
         if action == .delete { query.append(("del_files", deleteFiles ? "1" : "0")) }
         let p = api(action.rawValue, query: query)
-        return command(action.rawValue) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
     public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {

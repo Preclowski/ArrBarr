@@ -42,7 +42,7 @@ public struct NZBGetService: DownloadService {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let verb = switch action { case .pause: "GroupPause"; case .resume: "GroupResume"; default: deleteFiles ? "GroupDelete" : "GroupFinalDelete" }
         let p = rpc(action.rawValue, method: "editqueue", params: [.string(verb), .string(""), .array(ids.compactMap { Int($0) }.map { .number(Double($0)) })])
-        return command(action.rawValue) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
     public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {

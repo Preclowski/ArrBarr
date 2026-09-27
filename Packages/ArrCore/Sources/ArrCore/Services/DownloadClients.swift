@@ -33,7 +33,7 @@ extension DownloadClientFacade {
         case let .file(data, filename): DownloadPayload(.file(data, filename: filename))
         case let .magnet(link): DownloadPayload(.magnet(link))
         }
-        _ = try await gateway.store.run(service.add(payload, category: category, paused: paused))
+        try await gateway.run(service.add(payload, category: category, paused: paused))
     }
 }
 

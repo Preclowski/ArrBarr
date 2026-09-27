@@ -49,7 +49,7 @@ public struct DelugeService: DownloadService {
     public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let service = self
-        return command(action.rawValue) { ctx in
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
             for id in ids {
                 let p = switch action {
                 case .pause: service.rpc("pause", method: "core.pause_torrent", params: [.array([.string(id)])])

@@ -107,7 +107,6 @@ public final class QueueViewModel {
     private var intervalObservers: Set<AnyCancellable> = []
     private var configValidatedTask: Task<Void, Never>?
     private var artworkChangedTask: Task<Void, Never>?
-    private var optimisticOverrides: [String: OptimisticOverride] = [:]
     public private(set) var isRefreshing = false
     /// Set when `refresh()` is called while another refresh is mid-flight.
     /// The in-flight refresh's `defer` reads this and re-runs once so we
@@ -161,16 +160,6 @@ public final class QueueViewModel {
     private var consecutiveFailures: [QueueItem.Source: Int] = [:]
     private static let unreachableThreshold = 3
 
-    private static let overrideLifetime: TimeInterval = 30
-
-    private struct OptimisticOverride {
-        let kind: Kind
-        let expiry: Date
-        enum Kind {
-            case status(QueueItem.Status)
-            case deleted
-        }
-    }
 
     public var activeCount: Int {
         queues.values.lazy.flatMap { $0 }.filter { $0.status != .completed }.count
@@ -1064,9 +1053,7 @@ public final class QueueViewModel {
         var newErrors = errors
         newErrors[source] = result.error
         //         // `refresh()`; same rule, one source at a time.
-        let committed = result.error != nil
-            ? (queues[source] ?? [])
-            : applyOverrides(to: result.items, previous: queues[source] ?? [])
+        let committed = result.error != nil ? (queues[source] ?? []) : result.items
         var newQueues = queues
         newQueues[source] = committed
 
@@ -1136,67 +1123,6 @@ public final class QueueViewModel {
         return result
     }
 
-    /// Lays the user's in-flight optimistic actions over a freshly fetched
-    /// source queue. Two jobs:
-    ///
-    ///  1. **Present items** — replay a pending status override (pause→paused,
-    ///     resume→downloading) until the arr's own fetch reports the same
-    ///     status, then drop the override; a `.deleted` override hides the row.
-    ///  2. **Vanished items** — re-inject a "ghost". When the user force-starts
-    ///     a *queued* item, the arr briefly drops it from `/queue` entirely
-    ///     (it sits between the download client's queue and its active list)
-    ///     and re-adds it ~10–15 s later as downloading. Without this the row
-    ///     blinks out and pops back — an ugly hole. So any item still carrying
-    ///     a live *status* override that's missing from the fresh fetch is
-    ///     re-inserted at roughly its previous position, in its optimistic
-    ///     state, until the override expires or the arr returns it. Never for
-    ///     `.deleted` (those should stay gone) and never past the 30 s expiry
-    ///     (so a genuinely-removed item isn't held on screen forever).
-    private func applyOverrides(to fresh: [QueueItem], previous: [QueueItem]) -> [QueueItem] {
-        let now = Date()
-        var result: [QueueItem] = fresh.compactMap { item in
-            guard let override = optimisticOverrides[item.id] else { return item }
-            if override.expiry < now {
-                optimisticOverrides.removeValue(forKey: item.id)
-                return item
-            }
-            switch override.kind {
-            case .status(let status):
-                if item.status == status {
-                    optimisticOverrides.removeValue(forKey: item.id)
-                    return item
-                }
-                var copy = item
-                copy.status = status
-                return copy
-            case .deleted:
-                return nil
-            }
-        }
-        // Bridge the queued→active gap: keep a just-actioned row on screen while
-        // the arr momentarily drops it from its queue.
-        let freshIds = Set(fresh.map { $0.id })
-        let previousIds = Set(previous.map { $0.id })
-        for (idx, prev) in previous.enumerated() where !freshIds.contains(prev.id) {
-            guard let override = optimisticOverrides[prev.id] else { continue }
-            // A grabbed pending release comes back under a new id; once it has, the ghost is a duplicate.
-            // A download of the same title that was already queued is not the successor.
-            if fresh.contains(where: { $0.succeeds(prev) && !previousIds.contains($0.id) }) {
-                optimisticOverrides.removeValue(forKey: prev.id)
-                continue
-            }
-            guard override.expiry >= now, case .status(let status) = override.kind else {
-                // Expired status override on a vanished row → stop tracking it.
-                if override.expiry < now { optimisticOverrides.removeValue(forKey: prev.id) }
-                continue
-            }
-            var ghost = prev
-            ghost.status = status
-            result.insert(ghost, at: min(idx, result.count))
-        }
-        return result
-    }
-
     // MARK: - Notifications
 
     /// Decides which newly-seen items warrant a banner. Errored arrs are passed
@@ -1252,10 +1178,6 @@ public final class QueueViewModel {
         do {
             try await aggregator.deleteAll(items)
             lastError = nil
-            for item in items { applyOptimisticUpdate(.delete, on: item) }
-            for source in Set(items.map(\.source)) {
-                await configStore.gateway.queueStream(source).hold(until: Date().addingTimeInterval(Self.overrideLifetime))
-            }
             // Same as `runAction`: confirm the batch instead of waiting.
             if let source = items.first?.source {
                 Task { await self.refreshQueue(source: source) }
@@ -1273,14 +1195,9 @@ public final class QueueViewModel {
         do {
             try await aggregator.perform(action, on: item)
             lastError = nil
-            applyOptimisticUpdate(action, on: item)
-            // Pushes may cover the arr and nothing may be downloading yet, so the stream would skip the ticks that
-            // confirm the override; hold them until it expires.
-            await configStore.gateway.queueStream(item.source).hold(until: Date().addingTimeInterval(Self.overrideLifetime))
-            // Confirm it for real rather than waiting for the arr to get round
-            // to broadcasting. The override paints the change instantly; this
-            // is what replaces it with a fact — and what makes a "download now"
-            // start being tracked from the moment it is pressed.
+            // The command's effect paints the change on the stream at once; this
+            // refresh replaces it with a fact, and starts tracking a "download
+            // now" from the moment it is pressed.
             Task { await self.refreshQueue(source: item.source) }
         } catch {
             let message = error.userFacingMessage
@@ -1296,30 +1213,6 @@ public final class QueueViewModel {
             if actionFailureProvesClientDown(error), let kind = failedDownloadClientKind(for: item) {
                 ConnectionHealth.shared.forceDown(.arr(kind), message: message)
             }
-        }
-    }
-
-    private func applyOptimisticUpdate(_ action: QueueAggregator.Action, on item: QueueItem) {
-        let overrideKind: OptimisticOverride.Kind = switch action {
-        case .pause: .status(.paused)
-        case .resume, .continueDownload: .status(.downloading)
-        case .delete: .deleted
-        }
-
-        optimisticOverrides[item.id] = OptimisticOverride(
-            kind: overrideKind,
-            expiry: Date().addingTimeInterval(Self.overrideLifetime)
-        )
-
-        var bucket = queues[item.source, default: []]
-        if let idx = bucket.firstIndex(where: { $0.id == item.id }) {
-            switch overrideKind {
-            case .status(let newStatus):
-                bucket[idx].status = newStatus
-            case .deleted:
-                bucket.remove(at: idx)
-            }
-            queues[item.source] = bucket
         }
     }
 }

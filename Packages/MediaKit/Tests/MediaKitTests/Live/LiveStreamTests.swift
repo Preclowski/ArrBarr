@@ -5,10 +5,15 @@ import Testing
 struct Item: Codable, Sendable, Equatable, LivePatchable {
     let id: String
     var status: String
+    var alias: String? = nil
+    /// The id of the row this one took over from.
+    var replaces: String? = nil
     func applying(_ change: PendingEffect.Change) -> Item? {
         if case let .status(s) = change { var c = self; c.status = s; return c }
         return nil
     }
+    var liveAliases: [String] { alias.map { [$0] } ?? [] }
+    func succeeds(_ gone: Item) -> Bool { replaces == gone.id }
 }
 
 @Suite struct LiveStreamTests {
@@ -204,16 +209,16 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         await s.stop()
     }
 
-    @Test func aHeldStreamKeepsTickingThoughPushesCoverIt() async throws {
+    @Test func aPendingEffectKeepsTheStreamTickingThoughPushesCoverIt() async throws {
         let kit = try await TestKit()
         kit.clock.autoAdvance = false
         let calls = Counter()
-        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        let s = stream(kit) { _, _, _ in calls.increment(); return [Item(id: "a", status: "downloading")] }
         await s.notePush(TestKit.radarr, at: kit.clock.now)
         await s.start()
         try await Task.sleep(for: .milliseconds(30))
         let started = calls.value
-        await s.hold(until: kit.clock.now.addingTimeInterval(60))
+        await s.apply(PendingEffect(elementID: "a", change: .removed, lifetime: .seconds(60)))
         kit.clock.advance(by: .seconds(31))
         try await Task.sleep(for: .milliseconds(30))
         #expect(calls.value == started + 1)
@@ -254,7 +259,7 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         let kit = try await TestKit()
         let s = stream(kit, instances: [TestKit.radarr, TestKit.sonarr]) { _, _, _ in [Item(id: "1", status: "downloading")] }
         await s.refreshNow()
-        await s.apply(PendingEffect(elementID: "1", instance: TestKit.sonarr, change: .status("paused"), expiresAt: kit.clock.now.addingTimeInterval(30)))
+        await s.apply(PendingEffect(elementID: "1", instance: TestKit.sonarr, change: .status("paused")))
         let value = try #require(s.last())
         #expect(value.slices[TestKit.sonarr]?.elements.first?.status == "paused")
         #expect(value.slices[TestKit.radarr]?.elements.first?.status == "downloading")
@@ -283,7 +288,7 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         let status = Box("downloading")
         let s = stream(kit) { _, _, _ in [Item(id: "a", status: status.value)] }
         await s.refreshNow()
-        await s.apply(PendingEffect(elementID: "a", change: .status("paused"), expiresAt: kit.clock.now.addingTimeInterval(30)))
+        await s.apply(PendingEffect(elementID: "a", change: .status("paused")))
         #expect(s.last()?.elements.first?.status == "paused" && s.last()?.pending.count == 1)
         status.value = "paused"
         await s.refreshNow()
@@ -296,9 +301,63 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         let s = stream(kit) { _, _, _ in rows.value }
         await s.refreshNow()
         rows.value = []
-        await s.apply(PendingEffect(elementID: "a", change: .keepAlive, expiresAt: kit.clock.now.addingTimeInterval(30)))
+        await s.apply(PendingEffect(elementID: "a", change: .keepAlive))
         await s.refreshNow()
         #expect(s.last()?.elements.map(\.id) == ["a"])
+    }
+
+    @Test func aStatusEffectGhostsAVanishedRowAtItsPositionUntilTheSourceReturnsIt() async throws {
+        let kit = try await TestKit()
+        let rows = Box([Item(id: "before", status: "downloading"), Item(id: "q", status: "queued"), Item(id: "after", status: "downloading")])
+        let s = stream(kit) { _, _, _ in rows.value }
+        await s.refreshNow()
+        await s.apply(PendingEffect(elementID: "q", change: .status("downloading")))
+        rows.value = [Item(id: "before", status: "downloading"), Item(id: "after", status: "downloading")]
+        await s.refreshNow()
+        #expect(s.last()?.elements.map(\.id) == ["before", "q", "after"])
+        #expect(s.last()?.elements.first { $0.id == "q" }?.status == "downloading")
+        rows.value = [Item(id: "before", status: "downloading"), Item(id: "q", status: "downloading"), Item(id: "after", status: "downloading")]
+        await s.refreshNow()
+        #expect(s.last()?.elements.map(\.id) == ["before", "q", "after"] && s.last()?.pending.isEmpty == true)
+    }
+
+    @Test func aNewSuccessorRetiresTheGhostButARowAlreadyThereDoesNot() async throws {
+        let kit = try await TestKit()
+        let rows = Box([Item(id: "old", status: "downloading", replaces: "p"), Item(id: "p", status: "delay")])
+        let s = stream(kit) { _, _, _ in rows.value }
+        await s.refreshNow()
+        await s.apply(PendingEffect(elementID: "p", change: .status("downloading")))
+        rows.value = [Item(id: "old", status: "downloading", replaces: "p")]
+        await s.refreshNow()
+        #expect(s.last()?.elements.map(\.id) == ["old", "p"])
+        rows.value = [Item(id: "old", status: "downloading", replaces: "p"), Item(id: "new", status: "downloading", replaces: "p")]
+        await s.refreshNow()
+        #expect(s.last()?.elements.map(\.id) == ["old", "new"])
+    }
+
+    @Test func aRemovedRowStaysHiddenEvenIfTheSourceBrieflyReturnsIt() async throws {
+        let kit = try await TestKit()
+        let rows = Box([Item(id: "a", status: "downloading")])
+        let s = stream(kit) { _, _, _ in rows.value }
+        await s.refreshNow()
+        await s.apply(PendingEffect(elementID: "a", change: .removed))
+        #expect(s.last()?.elements.isEmpty == true)
+        rows.value = []
+        await s.refreshNow()
+        rows.value = [Item(id: "a", status: "downloading")]
+        await s.refreshNow()
+        #expect(s.last()?.elements.isEmpty == true)
+    }
+
+    @Test func anEffectNamesARowByItsAliasAndBumpsTheOverlay() async throws {
+        let kit = try await TestKit()
+        let s = stream(kit) { _, _, _ in [Item(id: "7", status: "downloading", alias: "hash")] }
+        await s.refreshNow()
+        let before = try #require(s.last())
+        await s.apply(PendingEffect(elementID: "hash", change: .status("paused")))
+        let after = try #require(s.last())
+        #expect(after.elements.first?.status == "paused")
+        #expect(after.revision == before.revision && after.overlay > before.overlay)
     }
 
     @Test func snapshotIsAvailableBeforeTheFirstRequest() async throws {
