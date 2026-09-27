@@ -8,11 +8,14 @@ public final class Snapshot<Value: Sendable>: Sendable {
     private let tags: Set<InvalidationTag>
     private let store: ResourceStore
     private let rebuild: @Sendable (ResourceStore) async -> Value
+    private let didRebuild: (@Sendable (Value) -> Void)?
     private let task = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
 
-    public init(tags: Set<InvalidationTag>, initial: Value, store: ResourceStore, rebuild: @escaping @Sendable (ResourceStore) async -> Value) {
+    /// `didRebuild` runs after each new value is readable through `current`, for a consumer that caches something derived from it.
+    public init(tags: Set<InvalidationTag>, initial: Value, store: ResourceStore,
+                didRebuild: (@Sendable (Value) -> Void)? = nil, rebuild: @escaping @Sendable (ResourceStore) async -> Value) {
         state = OSAllocatedUnfairLock(initialState: (initial, 0))
-        self.tags = tags; self.store = store; self.rebuild = rebuild
+        self.tags = tags; self.store = store; self.rebuild = rebuild; self.didRebuild = didRebuild
     }
 
     public var current: (value: Value, version: UInt64) { state.withLock { $0 } }
@@ -37,5 +40,6 @@ public final class Snapshot<Value: Sendable>: Sendable {
     private func refresh() async {
         let value = await rebuild(store)
         state.withLock { $0 = (value, $0.version + 1) }
+        didRebuild?(value)
     }
 }

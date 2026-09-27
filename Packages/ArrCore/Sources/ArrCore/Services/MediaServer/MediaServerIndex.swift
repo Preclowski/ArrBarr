@@ -66,6 +66,8 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
     /// A snapshot being built for a config; poster downloads wait on it rather than go out without a token.
     private var pending: (config: MediaServerConfig, task: Task<Live?, Never>)?
     private var lastAttempt: Date?
+    /// Hash of the key → poster map last announced, so a rebuild that changes no artwork does not recompose the queue.
+    private var announcedPosters: Int?
     /// Season posters per series item id, fetched lazily when a season screen
     /// opens rather than during the library sweep — one extra request per
     /// series the user actually looks at, instead of one per series on the
@@ -220,7 +222,8 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             lock.withLock { if pending?.config == config { pending = nil } }
             return nil
         }
-        let snapshot = Snapshot(tags: Self.tags(scope.instance), initial: State(), store: scope.store) { _ in
+        let snapshot = Snapshot(tags: Self.tags(scope.instance), initial: State(), store: scope.store,
+                                didRebuild: { [weak self] in self?.announceIfPostersChanged($0) }) { _ in
             await Self.state(facade)
         }
         await snapshot.start()
@@ -240,7 +243,22 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             snapshot.stop()
             return nil
         }
+        // The first value landed before `live` was installed, so its announcement was skipped.
+        announceIfPostersChanged(snapshot.current.value)
         return live
+    }
+
+    /// Queue rows resolve their poster when composed; the first launch composes before this index is built.
+    private func announceIfPostersChanged(_ state: State) {
+        let signature = state.byKey.compactMapValues(\.posterURL).hashValue
+        let changed = lock.withLock { () -> Bool in
+            guard live != nil, announcedPosters != signature else { return false }
+            announcedPosters = signature
+            return true
+        }
+        guard changed else { return }
+        Self.log.notice("Media server artwork changed: \(state.byKey.count, privacy: .public) keys, recomposing the queue")
+        AppMessages.post(AppMessages.MediaServerArtworkChanged())
     }
 
     private static func tags(_ instance: InstanceID) -> Set<InvalidationTag> {
@@ -316,6 +334,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             live = nil
             pending = nil
             lastAttempt = nil
+            announcedPosters = nil
             seasonPostersByItem.removeAll()
             return previous
         }

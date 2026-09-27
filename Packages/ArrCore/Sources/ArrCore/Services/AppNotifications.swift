@@ -12,6 +12,11 @@ nonisolated public enum AppMessages {
         public typealias Subject = AppMessageBus
         public init() {}
     }
+    /// The media server index now maps titles to different posters; rows composed before it hold the arr's artwork.
+    public struct MediaServerArtworkChanged: NotificationCenter.AsyncMessage {
+        public typealias Subject = AppMessageBus
+        public init() {}
+    }
     /// Torrent/nzb files or a magnet link dropped on the panel or the detached window; the app opens the add window.
     public struct DropDownloads: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
