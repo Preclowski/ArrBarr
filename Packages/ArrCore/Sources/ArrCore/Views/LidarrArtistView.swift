@@ -386,8 +386,7 @@ struct LidarrArtistView: View {
     /// as search results and Upcoming rows), so spacing, hover and the
     /// drill-in chevron can't drift from the rest of the app.
     private func albumRow(_ album: ArrAlbum) -> some View {
-        let (cover, coverAuth) = album.images?.posterURL(
-            baseURL: configStore.lidarr.baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
+        let (cover, coverAuth) = album.coverURL(baseURL: configStore.lidarr.baseURL)
         let trackCount = album.statistics?.totalTrackCount ?? album.statistics?.trackCount ?? 0
         let fileCount = album.statistics?.trackFileCount ?? 0
         let complete = trackCount > 0 && fileCount >= trackCount

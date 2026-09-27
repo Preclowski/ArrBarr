@@ -35,7 +35,7 @@ struct SearchClientOwnershipTests {
         #expect(map[key]?.isDownloaded == true)
 
         // The row side computes the very same key.
-        let row = SearchClient.unifyLidarr(
+        let row = SearchResult(artist: 
             ArrArtist.testRecord(foreignArtistId: "mbid-radiohead", artistName: "Radiohead"),
             baseURL: cfg.baseURL)
         #expect(row?.externalId == key)

@@ -35,7 +35,7 @@ nonisolated enum ArrCompositions {
         case .radarr, .whisparr:
             if let c = cached { title = c.year.map { "\(c.title) (\($0))" } ?? c.title }
             else if let m = r.movie { title = m.year.map { "\(m.title) (\($0))" } ?? m.title }
-            if poster == nil { (poster, posterAuth) = posterURL(r.movie?.images, baseURL: baseURL, keys: source == .radarr ? keys(movie: r.movie) : []) }
+            if poster == nil { (poster, posterAuth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: source == .radarr ? r.movie?.mediaServerKeys ?? [] : []) }
             slug = slug ?? r.movie?.titleSlug
             if existing.isEmpty, let file = r.movie?.movieFile { existing = [file] }
         case .sonarr:
@@ -50,7 +50,7 @@ nonisolated enum ArrCompositions {
                     subtitle = episodeTitle.map { "\(code) · \($0)" } ?? code
                 }
             }
-            if poster == nil { (poster, posterAuth) = posterURL(r.series?.images, baseURL: baseURL, keys: keys(series: r.series)) }
+            if poster == nil { (poster, posterAuth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? []) }
             if let seasonPoster { poster = seasonPoster; posterAuth = false }
             slug = slug ?? r.series?.titleSlug
             // Episode files are keyed by series; the upgrade comparison wants this episode's file.
@@ -60,8 +60,7 @@ nonisolated enum ArrCompositions {
             let artist = cached?.secondary ?? r.artist?.artistName ?? r.album?.artist?.artistName
             let album = cached?.title ?? r.album?.title ?? r.title ?? "Unknown"
             title = artist.map { "\($0) — \(album)" } ?? album
-            if poster == nil { (poster, posterAuth) = posterURL(r.album?.images, baseURL: baseURL, coverTypes: ["cover", "poster"]) }
-            if poster == nil { (poster, posterAuth) = posterURL(r.artist?.images, baseURL: baseURL, coverTypes: ["poster", "cover"]) }
+            if poster == nil { (poster, posterAuth) = [ArrImage].lidarrCover(album: r.album?.images, artist: r.artist?.images, baseURL: baseURL) }
             slug = slug ?? r.album?.foreignAlbumId
         }
 
@@ -70,8 +69,8 @@ nonisolated enum ArrCompositions {
         let mediaServerKeys: [MediaServerExternalKey] = {
             if let cached, !cached.mediaServerKeys.isEmpty { return cached.mediaServerKeys }
             switch source {
-            case .radarr: return keys(movie: r.movie)
-            case .sonarr: return keys(series: r.series)
+            case .radarr: return r.movie?.mediaServerKeys ?? []
+            case .sonarr: return r.series?.mediaServerKeys ?? []
             case .whisparr, .lidarr: return []
             }
         }()
@@ -153,8 +152,8 @@ nonisolated enum ArrCompositions {
                 else { (r.inCinemas, "In Cinemas") }
             guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
             let base = r.title ?? "Unknown"
-            let keys: [MediaServerExternalKey] = source == .radarr ? (r.tmdbId.map { [.tmdbMovie($0)] } ?? []) : []
-            let (poster, auth) = posterURL(r.images, baseURL: baseURL, keys: keys)
+            let keys: [MediaServerExternalKey] = source == .radarr ? (r.tmdbId.flatMap { $0 > 0 ? [.tmdbMovie($0)] : nil } ?? []) : []
+            let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
             return UpcomingItem(
                 id: "\(source.rawValue)-cal-\(r.id)", source: source, title: r.year.map { "\(base) (\($0))" } ?? base, subtitle: nil,
                 airDate: date, releaseType: releaseType, hasFile: r.hasFile ?? false, overview: r.overview,
@@ -170,7 +169,7 @@ nonisolated enum ArrCompositions {
                 let code = String(format: "S%02dE%02d", s, e)
                 subtitle = (r.title?.isEmpty == false) ? "\(code) · \(r.title!)" : code
             }
-            let (poster, auth) = posterURL(r.series?.images, baseURL: baseURL, keys: keys(series: r.series))
+            let (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? [])
             return UpcomingItem(
                 id: "sonarr-cal-\(r.id)", source: .sonarr, title: r.series?.year.map { "\(base) (\($0))" } ?? base, subtitle: subtitle,
                 airDate: date, releaseType: "Airing", hasFile: r.hasFile ?? false, overview: r.overview,
@@ -180,8 +179,7 @@ nonisolated enum ArrCompositions {
         case .lidarr:
             guard let dateStr = r.releaseDate, let date = parseArrDate(dateStr) else { return nil }
             let album = r.title ?? "Unknown"
-            var (poster, auth) = posterURL(r.images, baseURL: baseURL, coverTypes: ["cover", "poster"])
-            if poster == nil { (poster, auth) = posterURL(r.artist?.images, baseURL: baseURL, coverTypes: ["poster", "cover"]) }
+            let (poster, auth) = [ArrImage].lidarrCover(album: r.images, artist: r.artist?.images, baseURL: baseURL)
             let tracks = r.statistics?.trackCount ?? 0, trackFiles = r.statistics?.trackFileCount ?? 0
             return UpcomingItem(
                 id: "lidarr-cal-\(r.id)", source: .lidarr, title: r.artist?.artistName.map { "\($0) — \(album)" } ?? album, subtitle: nil,
@@ -205,7 +203,7 @@ nonisolated enum ArrCompositions {
         switch source {
         case .radarr, .whisparr:
             title = r.movie?.title ?? title
-            (poster, auth) = posterURL(r.movie?.images, baseURL: baseURL, keys: source == .radarr ? keys(movie: r.movie) : [])
+            (poster, auth) = (r.movie?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: source == .radarr ? r.movie?.mediaServerKeys ?? [] : [])
             arrId = r.movieId ?? r.movie?.id
             fileKey = arrId.map { "movie-\($0)" }
             fileOnDisk = r.movie?.movieFile.map(snapshot)
@@ -219,7 +217,7 @@ nonisolated enum ArrCompositions {
                     groupHint = .init(key: "\(batch)|s\(s)", collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), s))
                 }
             }
-            (poster, auth) = posterURL(r.series?.images, baseURL: baseURL, keys: keys(series: r.series))
+            (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? [])
             arrId = r.seriesId ?? r.series?.id
             fileKey = (r.episodeId ?? r.episode?.id).map { "episode-\($0)" }
             hadFile = r.episode?.hasFile
@@ -229,8 +227,7 @@ nonisolated enum ArrCompositions {
             if eventType == .imported, let albumId = r.albumId, let batch = r.downloadId ?? r.sourceTitle {
                 groupHint = .init(key: "\(batch)|album-\(albumId)")
             }
-            (poster, auth) = posterURL(r.album?.images, baseURL: baseURL, coverTypes: ["cover", "poster"])
-            if poster == nil { (poster, auth) = posterURL(r.artist?.images, baseURL: baseURL, coverTypes: ["poster", "cover"]) }
+            (poster, auth) = [ArrImage].lidarrCover(album: r.album?.images, artist: r.artist?.images, baseURL: baseURL)
             arrId = r.artistId ?? r.artist?.id
         }
         return HistoryItem(
@@ -254,33 +251,9 @@ nonisolated enum ArrCompositions {
         }
     }
 
-    static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.mediaServerKeys ?? [] }
-    static func keys(series: ArrSeries?) -> [MediaServerExternalKey] { series?.mediaServerKeys ?? [] }
-
     static func snapshot(_ file: MediaKit.ArrFile) -> HistoryItem.FileSnapshot {
         HistoryItem.FileSnapshot(quality: file.quality?.name, score: file.customFormatScore, size: file.size,
                                  formats: (file.customFormats ?? []).map(\.name), filename: file.relativePath)
-    }
-
-    /// Media-server artwork wins when the server holds the title; otherwise the arr's own image.
-    static func posterURL(_ images: [MediaKit.ArrImage]?, baseURL: String, coverTypes: [String] = ["poster"], keys: [MediaServerExternalKey] = []) -> (URL?, Bool) {
-        let override = keys.isEmpty ? nil : MediaServerIndex.shared.posterURL(for: keys)
-        let arr = ownPosterURL(images, baseURL: baseURL, coverTypes: coverTypes)
-        guard let override else { return arr }
-        PosterStore.supersede(arr.0, with: override)
-        return (override, false)
-    }
-
-    private static func ownPosterURL(_ images: [MediaKit.ArrImage]?, baseURL: String, coverTypes: [String]) -> (URL?, Bool) {
-        let normalized = coverTypes.map { $0.lowercased() }
-        guard let match = images?.first(where: { normalized.contains(($0.coverType ?? "").lowercased()) }) else { return (nil, false) }
-        if let remote = match.remoteUrl, let url = URL(string: remote), url.scheme == "http" || url.scheme == "https" { return (url, false) }
-        if let path = match.url, let base = URL(string: baseURL) {
-            if let abs = URL(string: path), abs.scheme != nil { return (abs, true) }
-            let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
-            return (URL(string: trimmed, relativeTo: base)?.absoluteURL, true)
-        }
-        return (nil, false)
     }
 
     static func flatten(_ messages: [MediaKit.ArrStatusMessage]?) -> [String] {

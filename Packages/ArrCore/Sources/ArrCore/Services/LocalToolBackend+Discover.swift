@@ -227,53 +227,14 @@ extension LocalToolBackend {
                 guard radarrConfigured,
                       let first = await Self.matchedMovie(pick, client: radarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
-                let tmdbId = first.tmdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: radarrBase, mediaServerKeys: tmdbId > 0 ? [.tmdbMovie(tmdbId)] : []).0
-                let resultBase = SearchResult(
-                    externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
-                    title: first.title, subtitle: nil,
-                    year: first.year,
-                    rating: first.ratings?.tmdb?.value,
-                    imdb: first.ratings?.imdb?.value,
-                    rottenTomatoes: first.ratings?.rottenTomatoes?.value,
-                    metacritic: first.ratings?.metacritic?.value,
-                    overview: first.overview, runtime: first.runtime,
-                    genres: first.genres ?? [], network: first.studio,
-                    certification: first.certification,
-                    posterURL: poster,
-                    source: .radarr,
-                    inLibraryArrId: nil
-                )
-                if let ownership = libraryMap[tmdbId] {
-                    let owned = resultBase.withLibraryOwnership(ownership)
-                    return DiscoverItem(result: owned, kind: .movie)
-                }
-                return DiscoverItem(result: resultBase, kind: .movie)
+                guard let result = SearchResult(radarr: first, baseURL: radarrBase) else { return nil }
+                return DiscoverItem(result: result.withLibraryOwnership(libraryMap[result.externalId]), kind: .movie)
             case "series":
                 guard sonarrConfigured,
                       let first = await Self.matchedSeries(pick, client: sonarrClient) else { return nil }
                 let libraryMap = await libraryMapFetch.value
-                let tvdbId = first.tvdbId ?? 0
-                let poster = (first.images ?? []).posterURL(baseURL: sonarrBase, mediaServerKeys: tvdbId > 0 ? [.tvdb(tvdbId)] : []).0
-                let resultBase = SearchResult(
-                    externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
-                    title: first.title, subtitle: nil,
-                    year: first.year,
-                    rating: first.ratings?.value,
-                    imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                    overview: first.overview, runtime: first.runtime,
-                    genres: first.genres ?? [], network: first.network,
-                    certification: nil,
-                    posterURL: poster,
-                    source: .sonarr,
-                    inLibraryArrId: nil,
-                    tmdbTVId: first.tmdbId
-                )
-                if let ownership = libraryMap[tvdbId] {
-                    let owned = resultBase.withLibraryOwnership(ownership)
-                    return DiscoverItem(result: owned, kind: .show)
-                }
-                return DiscoverItem(result: resultBase, kind: .show)
+                guard let result = SearchResult(sonarr: first, baseURL: sonarrBase) else { return nil }
+                return DiscoverItem(result: result.withLibraryOwnership(libraryMap[result.externalId]), kind: .show)
             default: return nil
             }
         }
@@ -299,23 +260,7 @@ extension LocalToolBackend {
             let all = await LibraryIndex.shared.movies(config: radarr)
             let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
             return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-                guard rec.id != nil else { return nil }
-                let title = rec.title
-                let poster = (rec.images ?? []).posterURL(baseURL: radarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
-                let result = SearchResult(
-                    externalId: rec.tmdbId ?? 0, foreignId: rec.tmdbId.map(String.init) ?? "",
-                    title: title, subtitle: nil,
-                    year: rec.year,
-                    rating: rec.ratings?.tmdb?.value,
-                    imdb: rec.ratings?.imdb?.value,
-                    rottenTomatoes: rec.ratings?.rottenTomatoes?.value,
-                    metacritic: rec.ratings?.metacritic?.value,
-                    overview: rec.overview, runtime: rec.runtime,
-                    genres: rec.genres ?? [], network: rec.studio,
-                    certification: rec.certification,
-                    posterURL: poster, source: .radarr
-                )
-                .withLibraryOwnership(rec.ownership)
+                guard rec.id != nil, let result = SearchResult(radarr: rec, baseURL: radarr.baseURL)?.withLibraryOwnership(rec.ownership) else { return nil }
                 return DiscoverItem(result: result, kind: .movie,
                                     reason: String(localized: "Top-rated on your shelf", bundle: .module))
             }
@@ -324,21 +269,7 @@ extension LocalToolBackend {
         let all = await LibraryIndex.shared.series(config: sonarr)
         let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
         return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-            guard rec.id != nil else { return nil }
-            let title = rec.title
-            let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
-            let result = SearchResult(
-                externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
-                title: title, subtitle: nil,
-                year: rec.year,
-                rating: rec.ratings?.value,
-                imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                overview: rec.overview, runtime: nil,
-                genres: rec.genres ?? [], network: nil, certification: nil,
-                posterURL: poster, source: .sonarr,
-                tmdbTVId: rec.tmdbId
-            )
-            .withLibraryOwnership(rec.ownership)
+            guard rec.id != nil, let result = SearchResult(sonarr: rec, baseURL: sonarr.baseURL)?.withLibraryOwnership(rec.ownership) else { return nil }
             return DiscoverItem(result: result, kind: .show,
                                 reason: String(localized: "Top-rated on your shelf", bundle: .module))
         }
@@ -497,24 +428,7 @@ extension LocalToolBackend {
                             let summaries = try await tmdb.recommendedMovies(movieId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 guard let first = await Self.matchedMovie((s.title, s.year, s.id), client: radarrClient) else { return nil }
-                                let tmdbId = first.tmdbId ?? 0
-                                let poster: URL? = (first.images ?? []).posterURL(baseURL: radarrClient.config.baseURL,
-                                                                                  mediaServerKeys: tmdbId > 0 ? [.tmdbMovie(tmdbId)] : []).0
-                                let result = SearchResult(
-                                    externalId: tmdbId, foreignId: tmdbId == 0 ? "" : String(tmdbId),
-                                    title: first.title, subtitle: nil,
-                                    year: first.year,
-                                    rating: first.ratings?.tmdb?.value,
-                                    imdb: first.ratings?.imdb?.value,
-                                    rottenTomatoes: first.ratings?.rottenTomatoes?.value,
-                                    metacritic: first.ratings?.metacritic?.value,
-                                    overview: first.overview, runtime: first.runtime,
-                                    genres: first.genres ?? [], network: first.studio,
-                                    certification: first.certification,
-                                    posterURL: poster,
-                                    source: .radarr,
-                                    inLibraryArrId: nil
-                                )
+                                guard let result = SearchResult(radarr: first, baseURL: radarrClient.config.baseURL) else { return nil }
                                 return DiscoverItem(result: result, kind: .movie,
                                                     reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }
@@ -523,23 +437,7 @@ extension LocalToolBackend {
                             let summaries = try await tmdb.recommendedTV(seriesId: anchorId)
                             let out: [DiscoverItem] = await ParallelResolve.orderedMap(Array(summaries.prefix(5)), width: 5) { s -> DiscoverItem? in
                                 guard let first = await Self.matchedSeries((s.name, s.year, s.id), client: sonarrClient) else { return nil }
-                                let tvdbId = first.tvdbId ?? 0
-                                let poster: URL? = (first.images ?? []).posterURL(baseURL: sonarrClient.config.baseURL,
-                                                                                  mediaServerKeys: tvdbId > 0 ? [.tvdb(tvdbId)] : []).0
-                                let result = SearchResult(
-                                    externalId: tvdbId, foreignId: tvdbId == 0 ? "" : String(tvdbId),
-                                    title: first.title, subtitle: nil,
-                                    year: first.year,
-                                    rating: first.ratings?.value,
-                                    imdb: nil, rottenTomatoes: nil, metacritic: nil,
-                                    overview: first.overview, runtime: first.runtime,
-                                    genres: first.genres ?? [], network: first.network,
-                                    certification: nil,
-                                    posterURL: poster,
-                                    source: .sonarr,
-                                    inLibraryArrId: nil,
-                                    tmdbTVId: s.id
-                                )
+                                guard let result = SearchResult(sonarr: first, baseURL: sonarrClient.config.baseURL) else { return nil }
                                 return DiscoverItem(result: result, kind: .show,
                                                     reason: String(localized: "Similar to what you kept", bundle: .module))
                             }.compactMap { $0 }

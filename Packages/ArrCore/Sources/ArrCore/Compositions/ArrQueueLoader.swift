@@ -48,7 +48,7 @@ enum ArrQueueLoader {
         files = Dictionary(grouping: files.values.flatMap { $0 }, by: { $0.seriesId ?? 0 })
         let packs = ArrCompositions.seasonPackSeasons(records)
         func keys(_ r: ArrQueueRecord) -> [MediaServerExternalKey] {
-            (r.seriesId ?? r.series?.id).flatMap { meta[$0]?.mediaServerKeys } ?? ArrCompositions.keys(series: r.series)
+            (r.seriesId ?? r.series?.id).flatMap { meta[$0]?.mediaServerKeys } ?? r.series?.mediaServerKeys ?? []
         }
         for r in records where packs[r.downloadId ?? ""] != nil {
             let k = keys(r)
@@ -85,18 +85,17 @@ enum ArrQueueLoader {
                     switch source {
                     case .radarr, .whisparr:
                         guard let m = try? await store.read(service.movie(id: id), priority: .background).value else { return (id, nil) }
-                        let keys = source == .radarr ? ArrCompositions.keys(movie: m) : []
-                        let (poster, auth) = ArrCompositions.posterURL(m.images, baseURL: baseURL, keys: keys)
+                        let keys = source == .radarr ? m.mediaServerKeys : []
+                        let (poster, auth) = (m.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
                         return (id, .init(title: m.title, year: m.year, slug: m.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
                     case .sonarr:
                         guard let s = try? await store.read(service.seriesDetails(id: id), priority: .background).value else { return (id, nil) }
-                        let keys = ArrCompositions.keys(series: s)
-                        let (poster, auth) = ArrCompositions.posterURL(s.images, baseURL: baseURL, keys: keys)
+                        let keys = s.mediaServerKeys
+                        let (poster, auth) = (s.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
                         return (id, .init(title: s.title, year: s.year, slug: s.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
                     case .lidarr:
                         guard let a = try? await store.read(service.album(id: id), priority: .background).value else { return (id, nil) }
-                        var (poster, auth) = ArrCompositions.posterURL(a.images, baseURL: baseURL, coverTypes: ["cover", "poster"])
-                        if poster == nil { (poster, auth) = ArrCompositions.posterURL(a.artist?.images, baseURL: baseURL, coverTypes: ["poster", "cover"]) }
+                        let (poster, auth) = a.coverURL(baseURL: baseURL)
                         return (id, .init(title: a.title, secondary: a.artist?.artistName, slug: a.foreignAlbumId, poster: poster, posterRequiresAuth: auth))
                     }
                 }

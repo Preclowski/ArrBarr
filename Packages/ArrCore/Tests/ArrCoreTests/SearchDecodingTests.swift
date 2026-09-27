@@ -64,11 +64,11 @@ struct SearchDecodingTests {
         #expect(records[2].artist?.artistName == "The Hound Of Love")
 
         // Unify: in-library album keeps its arr id, foreign album has none.
-        let inLibrary = SearchClient.unifyLidarrAlbum(records[0].album!, baseURL: "http://x")
+        let inLibrary = SearchResult(album: records[0].album!, baseURL: "http://x")
         #expect(inLibrary?.inLibraryArrId == 5446)
         #expect(inLibrary?.isLidarrAlbum == true)
         #expect(inLibrary?.subtitle == "Kate Bush · Album")
-        let foreign = SearchClient.unifyLidarrAlbum(records[1].album!, baseURL: "http://x")
+        let foreign = SearchResult(album: records[1].album!, baseURL: "http://x")
         #expect(foreign?.inLibraryArrId == nil)
     }
 

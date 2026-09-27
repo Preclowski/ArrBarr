@@ -45,8 +45,7 @@ struct LidarrDetailPanel: View {
                     file: track.trackFileId.flatMap { fid in lidarrTrackFiles.first { $0.id == fid } },
                     albumTitle: lidarrAlbum?.title ?? item.title,
                     artist: lidarrAlbum?.artist,
-                    posterURL: arrPosterURL(images: lidarrAlbum?.images, for: item, in: configStore)
-                        ?? arrPosterURL(images: lidarrAlbum?.artist?.images, for: item, in: configStore)
+                    posterURL: lidarrAlbum?.coverURL(baseURL: configStore.lidarr.baseURL).0
                         ?? item.posterURL,
                     posterAPIKey: item.posterRequiresAuth ? configStore.lidarr.apiKey : nil,
                     onOpenArtist: onOpenArtist,

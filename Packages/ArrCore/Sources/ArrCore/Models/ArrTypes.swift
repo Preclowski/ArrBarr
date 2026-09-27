@@ -51,59 +51,43 @@ nonisolated extension ArrCommand {
 }
 
 nonisolated public extension Array where Element == ArrImage {
-    /// Resolves a poster URL from an Arr images array.
-    /// Prefers `remoteUrl` (TMDB / MusicBrainz / etc., no auth) over the local server URL.
-    /// - Parameter baseURL: The arr server base URL (used when only a local path is available).
-    /// - Parameter coverTypes: Cover type names to match, in priority order (default: `["poster"]`).
-    /// - Returns: the URL plus whether it requires the X-Api-Key header.
-    /// As `posterURL(baseURL:coverTypes:)`, but preferring the connected media
-    /// server's artwork when it holds this title.
-    ///
-    /// The override lives here rather than at the view because `RemotePoster`
-    /// only ever receives a URL — it has no idea *which* title it is drawing,
-    /// so it cannot do the lookup. Callers that know the title's provider ids
-    /// pass them in; everyone else keeps calling the two-argument version and
-    /// nothing changes.
-    ///
-    /// A media-server poster carries its token in the query string, so the
-    /// returned "requires auth" flag is false: `PosterStore` fetches it with no
-    /// arr headers at all.
+    /// The poster to draw and whether it needs the arr's API key. The media
+    /// server's artwork wins when it holds the title (its token rides in the
+    /// query, so no auth); otherwise the first image of `coverTypes`, preferring
+    /// the no-auth `remoteUrl` over the arr's own copy.
     func posterURL(baseURL: String, coverTypes: [String] = ["poster"],
-                   mediaServerKeys: [MediaServerExternalKey]) -> (URL?, Bool) {
-        let arr = posterURL(baseURL: baseURL, coverTypes: coverTypes)
-        guard let override = MediaServerIndex.shared.posterURL(for: mediaServerKeys) else { return arr }
+                   mediaServerKeys: [MediaServerExternalKey] = []) -> (URL?, Bool) {
+        let arr = ownPosterURL(baseURL: baseURL, coverTypes: coverTypes)
+        guard !mediaServerKeys.isEmpty, let override = MediaServerIndex.shared.posterURL(for: mediaServerKeys) else { return arr }
         PosterStore.supersede(arr.0, with: override)
         return (override, false)
     }
 
-    func posterURL(baseURL: String, coverTypes: [String] = ["poster"]) -> (URL?, Bool) {
+    private func ownPosterURL(baseURL: String, coverTypes: [String]) -> (URL?, Bool) {
         let normalized = coverTypes.map { $0.lowercased() }
-        let match = first { img in
-            guard let type = img.coverType?.lowercased() else { return false }
-            return normalized.contains(type)
-        }
-        guard let match else { return (nil, false) }
-
-        // Only trust remoteUrl when it's a real absolute web URL. Lidarr
-        // artist records ship relative junk here ("/config/MediaCover/…" —
-        // the server's own container path), which URL(string:) happily
-        // accepts as a scheme-less URL that can never load. Anything
-        // relative falls through to the `url` leg below, which resolves
-        // against the arr's base URL.
-        if let remote = match.remoteUrl, let url = URL(string: remote),
-           url.scheme == "http" || url.scheme == "https" {
+        guard let match = first(where: { normalized.contains(($0.coverType ?? "").lowercased()) }) else { return (nil, false) }
+        // Only an absolute web remoteUrl: Lidarr ships container paths ("/config/MediaCover/…") there.
+        if let remote = match.remoteUrl, let url = URL(string: remote), url.scheme == "http" || url.scheme == "https" {
             return (url, false)
         }
         if let path = match.url, let base = URL(string: baseURL) {
-            // Some Arrs return absolute, some relative. Strip query (cache-busting hash) for stable cache keys.
-            if let abs = URL(string: path), abs.scheme != nil {
-                return (abs, true)
-            }
+            if let abs = URL(string: path), abs.scheme != nil { return (abs, true) }
+            // The query is a cache-busting hash; dropping it keeps the cache key stable.
             let trimmed = path.split(separator: "?", maxSplits: 1).first.map(String.init) ?? path
-            let composed = URL(string: trimmed, relativeTo: base)?.absoluteURL
-            return (composed, true)
+            return (URL(string: trimmed, relativeTo: base)?.absoluteURL, true)
         }
         return (nil, false)
     }
 }
 
+nonisolated public extension ArrAlbum {
+    func coverURL(baseURL: String) -> (URL?, Bool) { [ArrImage].lidarrCover(album: images, artist: artist?.images, baseURL: baseURL) }
+}
+
+nonisolated extension Array where Element == ArrImage {
+    /// Lidarr's artwork: the album's cover, else its artist's poster.
+    static func lidarrCover(album: [ArrImage]?, artist: [ArrImage]?, baseURL: String) -> (URL?, Bool) {
+        let own = (album ?? []).posterURL(baseURL: baseURL, coverTypes: ["cover", "poster"])
+        return own.0 != nil ? own : (artist ?? []).posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"])
+    }
+}

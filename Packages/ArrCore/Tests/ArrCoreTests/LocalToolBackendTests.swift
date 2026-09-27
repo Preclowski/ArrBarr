@@ -450,7 +450,7 @@ struct LocalToolBackendTests {
             {"foreignArtistId": "a74b1b7f-71a5-4011-9441-d0b5e4122711", "artistName": "Radiohead",
              "disambiguation": "UK band", "overview": "Alt rock", "ratings": {"value": 8.9}, "genres": ["Alternative"]}
             """#.utf8))
-        let result = SearchClient.unifyLidarr(record, baseURL: "http://lidarr.local:8686")
+        let result = SearchResult(artist: record, baseURL: "http://lidarr.local:8686")
         #expect(result != nil)
         #expect(result?.title == "Radiohead")
         #expect(result?.subtitle == "UK band")
