@@ -23,7 +23,7 @@ nonisolated enum ArrCompositions {
         let entityID = entityID(of: r, source: source)
         let cached = entityID.flatMap { meta[$0] }
 
-        var title = r.title ?? "Unknown"
+        var title = r.title ?? unknownTitle
         var subtitle: String?
         var seasonNumber: Int?, episodeNumber: Int?, episodeTitle: String?
         var poster = cached?.poster
@@ -57,7 +57,7 @@ nonisolated enum ArrCompositions {
             existing = fileID > 0 ? existing.filter { $0.id == fileID } : []
         case .lidarr:
             let artist = cached?.secondary ?? r.artist?.artistName ?? r.album?.artist?.artistName
-            let album = cached?.title ?? r.album?.title ?? r.title ?? "Unknown"
+            let album = cached?.title ?? r.album?.title ?? r.title ?? unknownTitle
             title = artist.map { "\($0) — \(album)" } ?? album
             if poster == nil { (poster, posterAuth) = [ArrImage].lidarrCover(album: r.album?.images, artist: r.artist?.images, baseURL: baseURL) }
             slug = slug ?? r.album?.foreignAlbumId
@@ -150,7 +150,7 @@ nonisolated enum ArrCompositions {
                 else if r.physicalRelease != nil { (r.physicalRelease, "Physical") }
                 else { (r.inCinemas, "In Cinemas") }
             guard let dateStr, let date = parseArrDate(dateStr) else { return nil }
-            let base = r.title ?? "Unknown"
+            let base = r.title ?? unknownTitle
             let keys: [MediaServerExternalKey] = source == .radarr ? (r.tmdbId.flatMap { $0 > 0 ? [.tmdbMovie($0)] : nil } ?? []) : []
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
             return UpcomingItem(
@@ -162,7 +162,7 @@ nonisolated enum ArrCompositions {
                 tmdbId: source == .radarr ? r.tmdbId : nil)
         case .sonarr:
             guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
-            let base = r.series?.title ?? "Unknown"
+            let base = r.series?.title ?? unknownTitle
             var subtitle: String?
             if let s = r.seasonNumber, let e = r.episodeNumber {
                 subtitle = EpisodeCode.line(season: s, episode: e, title: r.title)
@@ -176,7 +176,7 @@ nonisolated enum ArrCompositions {
                 qualityProfileId: r.series?.qualityProfileId, seasonNumber: r.seasonNumber, episodeNumber: r.episodeNumber, tvdbId: r.series?.tvdbId)
         case .lidarr:
             guard let dateStr = r.releaseDate, let date = parseArrDate(dateStr) else { return nil }
-            let album = r.title ?? "Unknown"
+            let album = r.title ?? unknownTitle
             let (poster, auth) = [ArrImage].lidarrCover(album: r.images, artist: r.artist?.images, baseURL: baseURL)
             let tracks = r.statistics?.trackCount ?? 0, trackFiles = r.statistics?.trackFileCount ?? 0
             return UpcomingItem(
@@ -192,7 +192,7 @@ nonisolated enum ArrCompositions {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
         let eventType = HistoryItem.EventType.parse(r.eventType)
         let data = r.data
-        var title = r.sourceTitle ?? "Unknown"
+        var title = r.sourceTitle ?? unknownTitle
         var subtitle: String?
         var groupHint: HistoryItem.GroupHint?
         var poster: URL?, auth = false
@@ -342,3 +342,6 @@ nonisolated public extension Error {
     /// `LocalizedError`'s own text and the arr's reason a `MediaKitError` carries.
     var userFacingMessage: String { MediaKitErrorPresenter.message(for: self) }
 }
+
+/// The title a row wears when the arr sent none.
+nonisolated private var unknownTitle: String { String(localized: "queue.unknown.button", bundle: .module) }

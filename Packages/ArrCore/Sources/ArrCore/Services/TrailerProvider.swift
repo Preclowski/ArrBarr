@@ -19,9 +19,6 @@ enum TrailerProvider {
     static func movieTrailerKey(radarrTrailerId: String?, tmdbId: Int?,
                                 configStore: ConfigStore) async -> String? {
         if let id = radarrTrailerId, !id.isEmpty { return id }
-        // Demo has no TMDB key, so the real lookup can only ever answer nil and
-        // the trailer button would never appear. The fixtures carry their own
-        // ids — see `DemoMocks.trailerKey`.
         guard let tmdbId, tmdbId > 0 else { return nil }
         return await fetch(configStore: configStore) { try await $0.movieVideos(movieId: tmdbId) }
     }

@@ -23,7 +23,7 @@ nonisolated public struct ProwlarrClient: Sendable {
     public func testConnection() async throws -> String {
         let c = try await context()
         let status = try await c.gateway.store.read(c.service.status(), policy: .mustRevalidate).value
-        return status.version.map { "Prowlarr \($0)" } ?? "OK"
+        return status.version.map { "Prowlarr \($0)" } ?? String(localized: "common.ok.label", bundle: .module)
     }
 
     private func context() async throws -> (gateway: ServiceGateway, service: ProwlarrService) {

@@ -30,28 +30,14 @@ enum CastProvider {
     // MARK: - Public API
 
     /// Movie cast + directors. `radarrMovieId` takes Radarr's `/credit` path
-    /// (works with no TMDB key, and in demo); `tmdbId` is the fallback / the
-    /// only route when the caller has no Radarr id (e.g. a TMDB-sourced add-panel
-    /// result).
+    /// (works with no TMDB key); `tmdbId` is the fallback and the only route
+    /// when the caller has no Radarr id (a TMDB-sourced add-panel result).
     static func movieCredits(radarrMovieId: Int?, tmdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        return await fetchMovieCredits(radarrMovieId: radarrMovieId, tmdbId: tmdbId, configStore: configStore)
-    }
-
-    /// Series cast + creators. `tmdbId` is tried first; when absent, `tvdbId`
-    /// is resolved to a tmdb id via TMDB `/find`.
-    /// fixtures.
-    static func seriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        return await fetchSeriesCredits(tmdbId: tmdbId, tvdbId: tvdbId, configStore: configStore)
-    }
-
-    // MARK: - Fetchers (the logic the three call sites used to duplicate)
-
-    private static func fetchMovieCredits(radarrMovieId: Int?, tmdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        // Radarr `/credit` first — it needs no TMDB key and serves demo. Only
+        // Radarr `/credit` first — it needs no TMDB key. Only
         // usable when the caller has a Radarr movie id (the detail view does;
         // a TMDB-search add-panel result does not).
         if let radarrMovieId, configStore.radarr.isConfigured {
-            let credits = (try? await RadarrClient(config: configStore.radarr).fetchCredits(movieId: radarrMovieId)) ?? []
+            let credits = (try? await configStore.radarrClient.fetchCredits(movieId: radarrMovieId)) ?? []
             let members = TitleCredits(cast: CastMember.from(radarrCredits: credits),
                                        directors: CastMember.directors(radarrCredits: credits))
             if !members.isEmpty { return members }
@@ -66,7 +52,8 @@ enum CastProvider {
                             directors: CastMember.directors(tmdbCrew: credits.crew ?? []))
     }
 
-    private static func fetchSeriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
+    /// Series cast + creators, by the series' TMDB id or its TVDB id resolved through `/find`.
+    static func seriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
         guard !configStore.tmdbApiKey.isEmpty else { return .empty }
         let client = configStore.tmdbClient
         guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return .empty }

@@ -100,7 +100,7 @@ extension ArrAPIClient {
 
     func testConnection() async throws -> String {
         let status = try await read(policy: .mustRevalidate) { $0.status() }
-        return status.version.map { "\(serviceName) \($0)" } ?? "OK"
+        return status.version.map { "\(serviceName) \($0)" } ?? String(localized: "common.ok.label", bundle: .module)
     }
 
     func isSearchRunning(entityId: Int) async -> Bool {

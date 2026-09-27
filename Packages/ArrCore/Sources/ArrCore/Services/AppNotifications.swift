@@ -143,7 +143,7 @@ public enum DetailRequest {
         )
     }
 
-    private static let log = Logger(category: "detail")
+    private static let log = Logger(category: "Detail")
 
     public static func post(_ item: QueueItem) {
         log.notice("open detail: \(item.source.rawValue, privacy: .public) #\(item.entityId ?? 0, privacy: .public)")

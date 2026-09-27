@@ -16,9 +16,9 @@ import os
 ///
 /// What is NOT here, on purpose:
 ///
-/// - **In-memory caches** (`CastProvider`, `People`,
-///   `MediaServerIndex`). They die with the process and are rebuilt from the
-///   network; a button for them would promise a fix it cannot deliver.
+/// - **In-memory indexes** (`MediaServerIndex`, `LibraryPosterSampler`). They
+///   die with the process and are rebuilt from the network; a button for them
+///   would promise a fix it cannot deliver.
 /// - **The Spotlight index.** Clearing it is a distinct, user-visible act
 ///   ("stop ArrBarr appearing in Spotlight"), and it has its own button.
 public enum AppCaches {

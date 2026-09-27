@@ -421,8 +421,8 @@ public final class ServiceGateway {
         }
         configuration.role = isAppExtension ? .snapshotReader : .app
         configuration.telemetry = telemetry
-        configuration.log = OSLogSink(subsystem: "pl.incred.ArrBarr")
-        configuration.signposts = OSSignposter(subsystem: "pl.incred.ArrBarr", category: "MediaKit")
+        configuration.log = OSLogSink(subsystem: AppLog.subsystem)
+        configuration.signposts = OSSignposter(subsystem: AppLog.subsystem, category: "MediaKit")
         configuration.mediaServerUserID = configStore.mediaServer.userId.isEmpty ? nil : configStore.mediaServer.userId
         do { return try MediaStack(configuration) } catch {
             log.error("MediaKit database unavailable, running in memory: \(error.localizedDescription, privacy: .public)")

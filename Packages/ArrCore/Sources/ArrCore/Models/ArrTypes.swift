@@ -1,37 +1,6 @@
 import Foundation
 import MediaKit
 
-// MARK: - Shared Radarr/Sonarr v3 types
-// MARK: - Radarr
-
-
-
-// MARK: - Sonarr
-
-
-
-
-// MARK: - Lidarr
-
-
-// MARK: - Health
-
-// MARK: - Commands
-
-// MARK: - Calendar
-
-
-
-// MARK: - Search Lookup
-
-// MARK: - Lidarr library / lookup types
-
-// MARK: - Whisparr
-
-
-
-
-
 // MARK: - ArrImage helpers
 
 nonisolated extension ArrCredit {

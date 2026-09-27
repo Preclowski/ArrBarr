@@ -188,8 +188,8 @@ private struct CastTile: View {
 
 #if os(macOS)
 /// Hover card for a cast head. Instant layer (headshot, name, role) plus a
-/// lazily-fetched layer (age · birthplace, biography). One TMDB call, cached
-/// in `People`.
+/// lazily-fetched layer (age · birthplace, biography). One TMDB call through
+/// `People`, kept by the store.
 private struct CastTooltip: View {
     let person: CastMember
     let tmdbKey: String

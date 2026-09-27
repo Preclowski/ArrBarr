@@ -253,8 +253,8 @@ public final class ChatViewModel {
             }
             if roundsLeft == 0 {
                 Self.log.notice("turn hit the 6-round tool-call cap and stopped")
-                lastError = "Reached the maximum number of tool-call rounds."
-                messages.append(ChatMessage(role: .assistant, content: "Sorry — I got stuck in a loop and stopped."))
+                lastError = String(localized: "chat.error.roundCap", bundle: .module)
+                messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.stuckInLoop", bundle: .module)))
             }
         } catch where Task.isCancelled {
             Self.log.notice("turn cancelled by the user")
@@ -268,7 +268,7 @@ public final class ChatViewModel {
                 "turn failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
             lastError = error.localizedDescription
-            messages.append(ChatMessage(role: .assistant, content: "Sorry — \(error.localizedDescription)"))
+            messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.failed \(error.localizedDescription)", bundle: .module)))
         }
     }
 }

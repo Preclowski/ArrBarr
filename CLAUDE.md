@@ -127,7 +127,7 @@ fastest via SwiftPM:
 ## Key Patterns
 
 - **Localization**: catalog is `ArrCore/Resources/Localizable.xcstrings`
-  (en/de/es/fr/pl). In views use `Text("Key", bundle: .module)`; in
+  (en/de/es/fr/nl/pl). In views use `Text("Key", bundle: .module)`; in
   models/services use `String(localized: "Key", bundle: .module)`. Never inline
   user-facing literals. (The old `loc("…")` helper is gone.)
 - **Shared singletons** cross target boundaries: `ConfigStore.shared`,

@@ -368,7 +368,7 @@ public struct PersonView: View {
     ///
     /// The page is keyed by TMDB person id and nothing here can mix two people
     /// up — the cast tile's name, headshot and id all come from ONE arr credit
-    /// record, `People` caches by id, `PosterStore` by SHA-256 of the URL.
+    /// record, the store keys the person by id, `PosterStore` by SHA-256 of the URL.
     /// So when the headshot you tapped and the photo that loads are different
     /// faces, the disagreement arrived in the data: a credit whose name and
     /// image don't belong to the `personTmdbId` beside them. Invisible unless
@@ -376,10 +376,12 @@ public struct PersonView: View {
     ///
     /// `.notice` (never read back at info level) and both names `.private` —
     /// they are people.
+    private static let identityLog = Logger(category: "SeriesIdentity")
+
     private static func warnIfIdentityDisagrees(ref: PersonRef, details: TMDBPersonDetails?) {
         guard let details,
               TitleMatch.normalize(details.name) != TitleMatch.normalize(ref.name) else { return }
-        Logger(category: "SeriesIdentity").notice("""
+        identityLog.notice("""
             person \(ref.tmdbId, privacy: .public): opened as "\(ref.name, privacy: .private)" \
             but tmdb calls that id "\(details.name, privacy: .private)"
             """)

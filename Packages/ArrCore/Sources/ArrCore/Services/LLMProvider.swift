@@ -98,6 +98,6 @@ public struct UnavailableLLMProvider: LLMProvider {
     public init() {}
     public var isAvailable: Bool { false }
     public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
-        LLMResponse(text: "Chat is unavailable.")
+        LLMResponse(text: String(localized: "chat.unavailable.label", bundle: .module))
     }
 }

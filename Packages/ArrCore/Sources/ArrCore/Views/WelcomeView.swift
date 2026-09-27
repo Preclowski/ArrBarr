@@ -481,14 +481,14 @@ private struct TonightIllustration: View {
                 title: "Pioneer One",
                 subtitle: "S01E03 · Endurance",
                 timeLabel: "9:41 PM",
-                releaseType: "Airing"
+                releaseType: "upcoming.type.airing"
             )
             upcomingRow(
                 posterColor: .purple.opacity(0.55),
                 title: "Sintel",
                 subtitle: nil,
                 timeLabel: "11:30 PM",
-                releaseType: "Digital"
+                releaseType: "upcoming.type.digital"
             )
         }
         .frame(width: 260)
@@ -526,7 +526,7 @@ private struct TonightIllustration: View {
         title: String,
         subtitle: String?,
         timeLabel: String,
-        releaseType: String
+        releaseType: LocalizedStringKey
     ) -> some View {
         HStack(spacing: 8) {
             // Mini poster — same 24x36 ratio as UpcomingRowView
@@ -557,7 +557,7 @@ private struct TonightIllustration: View {
                 Text(timeLabel)
                     .scaledFont(size: 9, weight: .medium)
                     .foregroundStyle(.secondary)
-                Text(releaseType)
+                Text(releaseType, bundle: .module)
                     .scaledFont(size: 8, weight: .medium)
                     .foregroundStyle(.tertiary)
             }

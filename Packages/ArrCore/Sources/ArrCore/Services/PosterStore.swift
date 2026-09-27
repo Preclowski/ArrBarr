@@ -135,7 +135,7 @@ public actor PosterStore {
 
     private let memory = NSCache<NSString, PlatformImage>()
     private let session: URLSession
-    private let logger = Logger(category: "PosterStore")
+    private static let logger = Logger(category: "PosterStore")
     nonisolated private static let memoryCostCap = 50 * 1024 * 1024
 
     private var inflight: [String: Task<PlatformImage?, Never>] = [:]
@@ -427,14 +427,14 @@ public actor PosterStore {
                 // realtime and queue paths apply. A poster URL reaches a host
                 // the user runs, and a Plex transcode URL carries the original
                 // item path (and any legacy `apikey=`) in its query string.
-                logger.debug(
+                Self.logger.debug(
                     "poster \(http.statusCode, privacy: .public) for \(url.loggableDescription, privacy: .private)"
                 )
                 return nil
             }
             return data
         } catch {
-            logger.debug("poster fetch failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger.debug("poster fetch failed: \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }
@@ -597,7 +597,7 @@ public actor PosterStore {
                 // Housekeeping that runs on every launch. `.debug` so it stays
                 // out of the persistent store, where the migrations below and
                 // the queue/tool trail have to survive.
-                logger.debug("purged \(removed, privacy: .public) \(tier.rawValue, privacy: .public) posters")
+                Self.logger.debug("purged \(removed, privacy: .public) \(tier.rawValue, privacy: .public) posters")
             }
         }
     }
@@ -626,7 +626,7 @@ public actor PosterStore {
         if fm.fileExists(atPath: legacyOriginals.path) {
             let freed = (try? fm.contentsOfDirectory(atPath: legacyOriginals.path))?.count ?? 0
             try? fm.removeItem(at: legacyOriginals)
-            logger.notice("dropped \(freed, privacy: .public) full-size posters (superseded by the card tier)")
+            Self.logger.notice("dropped \(freed, privacy: .public) full-size posters (superseded by the card tier)")
         }
     }
 
@@ -649,7 +649,7 @@ public actor PosterStore {
         try? fm.createDirectory(at: iconDir.deletingLastPathComponent(),
                                 withIntermediateDirectories: true)
         try? fm.moveItem(at: legacy, to: iconDir)
-        logger.notice(
+        Self.logger.notice(
             "carried \(carried, privacy: .public) icon posters over from \(source, privacy: .public)"
         )
     }
