@@ -17,14 +17,11 @@ public enum DataEvent: Sendable, Equatable {
     case calendarChanged(InstanceID)
     case commandFinished(InstanceID, name: String)
     case other(InstanceID, resource: String, action: String)
-    case woke(Date)
-    case connectivity(Host, HostHealth)
 
-    public var instance: InstanceID? {
+    public var instance: InstanceID {
         switch self {
         case let .queueChanged(i), let .queueStatus(i, _), let .fileImported(i, _, _), let .entityChanged(i, _, _),
              let .healthChanged(i), let .calendarChanged(i), let .commandFinished(i, _), let .other(i, _, _): i
-        case .woke, .connectivity: nil
         }
     }
 }

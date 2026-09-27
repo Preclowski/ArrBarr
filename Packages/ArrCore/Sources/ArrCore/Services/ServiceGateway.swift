@@ -173,7 +173,6 @@ public final class ServiceGateway {
         return adHoc.withLock { $0[kind].flatMap { $0.indices.contains(instance.ordinal - 1) ? $0[instance.ordinal - 1] : nil } }
     }
 
-
     public func start() async {
         started = true
         // Under tests the saved profile is never registered: a client's adopted config is the only way in.
@@ -214,24 +213,6 @@ public final class ServiceGateway {
         reconcileTask = task
         await task.value
         reconcileTask = nil
-    }
-
-    /// Demo toggles swap the transport and the database; the profile itself is `ConfigStore`'s business.
-    public func rebuild(demo: Bool) async {
-        self.demo = demo
-        for stream in streams.withLock({ Array($0.queue.values) }) { await stream.stop() }
-        await kit.stop()
-        realtime = [:]
-        let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo, transport: transport)
-        kitLock.withLock { $0 = fresh }
-        if started {
-            await kit.start(instances: descriptors())
-            relayBreakers()
-            await syncRealtime()
-        }
-        for forward in pumping.values { forward.cancel() }
-        pumping = [:]
-        if let liveQueues { await setLiveQueues(sources: liveQueues.sources, activity: liveQueues.activity, policy: liveQueues.policy) }
     }
 
     /// Run these arrs' queue streams on their own clock and pushes. Idempotent: called on every panel open and close.
@@ -384,17 +365,11 @@ public final class ServiceGateway {
         }
     }
     public nonisolated func download(_ kind: ServiceKind) -> (any DownloadService)? { kit.download(kind.instanceID) }
-    public var mediaServer: MediaServerService? {
-        guard configStore.mediaServer.isConfigured else { return nil }
-        return kit.mediaServer(configStore.mediaServer.kind.instanceID)
-    }
-    public nonisolated var tmdb: TMDBService { kit.tmdb }
     /// Internal: `ProwlarrClient` is the door, the way `servarr` is for the arrs.
     var prowlarr: ProwlarrService? {
         configStore.prowlarr.isConfigured ? kit.prowlarr : nil
     }
     public nonisolated var store: ResourceStore { kit.store }
-    public nonisolated var engine: CompositionEngine { kit.engine }
     public nonisolated var events: EventHub { kit.events }
 
     public nonisolated func isConfigured(_ source: QueueItem.Source) -> Bool {

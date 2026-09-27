@@ -45,12 +45,6 @@ public final class StoreRevision: @unchecked Sendable {
 /// One per MediaKit; the subject of every typed message so two kits never cross-talk.
 public final class MessageSubject: Sendable { public init() {} }
 
-public struct ConfigurationChanged: NotificationCenter.AsyncMessage {
-    public typealias Subject = MessageSubject
-    public let instances: Set<InstanceID>
-    public init(instances: Set<InstanceID>) { self.instances = instances }
-}
-
 public struct Invalidated: NotificationCenter.AsyncMessage {
     public typealias Subject = MessageSubject
     public let tags: Set<InvalidationTag>
@@ -58,10 +52,3 @@ public struct Invalidated: NotificationCenter.AsyncMessage {
     public init(tags: Set<InvalidationTag>, reason: InvalidationReason) { self.tags = tags; self.reason = reason }
 }
 
-public struct ConnectivityChanged: NotificationCenter.AsyncMessage {
-    public typealias Subject = MessageSubject
-    public let host: Host
-    public let instances: Set<InstanceID>
-    public let health: HostHealth
-    public init(host: Host, instances: Set<InstanceID>, health: HostHealth) { self.host = host; self.instances = instances; self.health = health }
-}

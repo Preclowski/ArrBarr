@@ -45,8 +45,3 @@ public struct OSLogSink: LogSink {
     }
 }
 
-public enum Signposts {
-    public static func make(subsystem: String) -> OSSignposter {
-        OSSignposter(subsystem: subsystem, category: "MediaKit")
-    }
-}

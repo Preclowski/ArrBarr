@@ -176,7 +176,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         } ?? false
         if !(reuse && covered) {
             await stream.setScope(.ids(union))
-            await stream.refreshNow(priority: .interactive)
+            await stream.refreshNow()
         }
         var out: [String: DownloadTask] = [:]
         for task in stream.last()?.elements ?? [] { out[task.id] = task }

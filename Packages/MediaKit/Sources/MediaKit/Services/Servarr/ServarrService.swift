@@ -355,19 +355,6 @@ public struct ServarrService: Sendable {
 
     // MARK: - Artwork and identity
 
-    public func artwork(for images: [ArrImage]?, kind: ArtworkReference.Kind) -> ArtworkReference? {
-        let coverTypes: [String] = switch kind {
-        case .poster: ["poster", "cover"]
-        case .fanart: ["fanart", "background"]
-        case .banner: ["banner"]
-        default: ["poster"]
-        }
-        guard let url = images?.url(coverTypes: coverTypes) else { return nil }
-        return ArtworkReference(url: url, kind: kind)
-    }
-
-    public var supportsMovieVocabulary: Bool { movieVocabularyAvailable }
-
     private var harvestMovie: @Sendable (ArrMovie) -> [Crosswalk] {
         let instance = self.instance
         return { movie in

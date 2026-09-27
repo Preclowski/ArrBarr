@@ -125,7 +125,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     }
 
     /// Returns once a fetch that started after this call has published.
-    public func refreshNow(priority: RequestPriority = .interactive) async {
+    public func refreshNow() async {
         await cycle()
     }
 
@@ -138,14 +138,6 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     public func setScope(_ value: LiveScope) {
         guard scope != value else { return }
         scope = value
-        refreshRequested = true
-        wake()
-    }
-
-    public func setInstances(_ value: [InstanceID]) {
-        instances = value
-        slices = slices.filter { value.contains($0.key) }
-        failures = failures.filter { value.contains($0.key) }
         refreshRequested = true
         wake()
     }

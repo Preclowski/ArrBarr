@@ -8,7 +8,6 @@ public struct Capability: Hashable, Sendable, Codable, RawRepresentable, CustomS
 
     public static let servarrSeasonEndpointV5 = Capability(rawValue: "servarrSeasonEndpointV5")
     public static let whisparrV3 = Capability(rawValue: "whisparrV3")
-    public static let whisparrV2 = Capability(rawValue: "whisparrV2")
     public static let qbittorrentStopStartVerbs = Capability(rawValue: "qbittorrentStopStartVerbs")
 }
 

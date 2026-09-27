@@ -61,13 +61,9 @@ public actor EventHub {
 
     public func setForeground(_ value: Bool) { foreground = value }
 
-    public func setCadence(_ value: Cadence) { cadence = value }
-
-    /// Force a reconnect on every source and emit `.woke`; the governor and streams do the rest.
+    /// Force a reconnect on every source; the governor and streams do the rest.
     public func wakeAll() async {
         for (_, entry) in sources { await entry.source.forceReconnect() }
-        let event = DataEvent.woke(clock.now)
-        for c in subscribers.values { c.yield(event) }
     }
 
     public func events() -> AsyncStream<DataEvent> {
@@ -85,7 +81,7 @@ public actor EventHub {
     /// Entry for events from any source, including tests.
     public func ingest(_ event: DataEvent) async {
         for c in subscribers.values { c.yield(event) }
-        guard let instance = event.instance else { return }
+        let instance = event.instance
         let now = clock.now
         lastEvent.withLock { $0[instance] = now }
         for stream in streams { await stream.noteAlive(instance, at: now) }

@@ -109,7 +109,7 @@ public actor CapabilityProbe {
         switch kind {
         case .sonarr: if let major, major >= 5 { caps.insert(.servarrSeasonEndpointV5) }
         case .whisparr:
-            if major == 3 { caps.insert(.whisparrV3) } else if major == 2 { caps.insert(.whisparrV2) }
+            if major == 3 { caps.insert(.whisparrV3) }
         case .qbittorrent:
             let numeric = version?.trimmingCharacters(in: CharacterSet(charactersIn: "v"))
             if let m = numeric.flatMap({ Int($0.split(separator: ".").first ?? "") }), m >= 5 { caps.insert(.qbittorrentStopStartVerbs) }

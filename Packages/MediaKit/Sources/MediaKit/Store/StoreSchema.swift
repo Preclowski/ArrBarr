@@ -78,7 +78,6 @@ enum StoreSchema {
         captured_at REAL NOT NULL,
         PRIMARY KEY (instance, stream)
     ) STRICT, WITHOUT ROWID;
-    CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL) STRICT;
     PRAGMA user_version = 1;
     """
 }

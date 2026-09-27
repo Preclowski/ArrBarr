@@ -6,7 +6,7 @@ import Testing
     @Test func deriveRules() {
         #expect(CapabilityProbe.derive(kind: .sonarr, statusBody: Data(#"{"version":"5.0.1.2"}"#.utf8)).capabilities == [.servarrSeasonEndpointV5])
         #expect(CapabilityProbe.derive(kind: .sonarr, statusBody: Data(#"{"version":"4.0.19"}"#.utf8)).capabilities.isEmpty)
-        #expect(CapabilityProbe.derive(kind: .whisparr, statusBody: Data(#"{"version":"2.0.0"}"#.utf8)).capabilities == [.whisparrV2])
+        #expect(CapabilityProbe.derive(kind: .whisparr, statusBody: Data(#"{"version":"2.0.0"}"#.utf8)).capabilities.isEmpty)
         #expect(CapabilityProbe.derive(kind: .qbittorrent, statusBody: Data(#""v5.2.3""#.utf8)).capabilities == [.qbittorrentStopStartVerbs])
         #expect(CapabilityProbe.conservativeDefault(for: .whisparr) == [.whisparrV3])
     }

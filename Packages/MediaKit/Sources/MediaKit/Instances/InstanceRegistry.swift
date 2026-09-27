@@ -6,10 +6,9 @@ public struct InstanceDescriptor: Sendable, Equatable {
     public let baseURL: URL
     public let enabled: Bool
     public let generation: String
-    public let limits: HostGovernor.Limits?
 
-    public init(id: InstanceID, baseURL: URL, enabled: Bool = true, generation: String, limits: HostGovernor.Limits? = nil) {
-        self.id = id; self.baseURL = baseURL; self.enabled = enabled; self.generation = generation; self.limits = limits
+    public init(id: InstanceID, baseURL: URL, enabled: Bool = true, generation: String) {
+        self.id = id; self.baseURL = baseURL; self.enabled = enabled; self.generation = generation
     }
 
     public var fingerprint: Fingerprint { Fingerprint(baseURL: baseURL, generation: generation) }
@@ -57,7 +56,6 @@ public actor InstanceRegistry {
                 await d.sessions.invalidate(id)
                 await d.identity.forget(instance: id)
             }
-            center.post(ConfigurationChanged(instances: changed), subject: d.subject)
         }
         log.log(.notice, category: "Store", "configuration changed for \(changed.count) instance(s)")
         return changed

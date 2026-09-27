@@ -67,7 +67,6 @@ import Testing
         #expect(map.tags(for: .queueStatus(radarr, counts), lastCounts: nil) == [.collection(.queue, radarr)])
         #expect(map.tags(for: .fileImported(radarr, kind: .movie, entityID: 5), lastCounts: nil).contains(.entity(radarr, .movie, 5)))
         #expect(map.tags(for: .commandFinished(radarr, name: "MoviesSearch"), lastCounts: nil).contains(.collection(.queue, radarr)))
-        #expect(map.tags(for: .woke(Date()), lastCounts: nil).isEmpty)
     }
 
     @Test func liveHubEndToEnd() async throws {
