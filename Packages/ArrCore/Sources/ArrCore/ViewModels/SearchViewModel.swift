@@ -144,59 +144,31 @@ public final class SearchViewModel {
     @ObservationIgnored var library: LibraryViewModel?
 
     private var searchTask: Task<Void, Never>?
-    private var radarrClient: SearchClient?
-    private var sonarrClient: SearchClient?
-    private var lidarrClient: SearchClient?
-    private var whisparrClient: SearchClient?
-    /// Per-source `ServiceConfig` kept so `loadOptions` can key the
-    /// `SearchOptionsCache` without round-tripping through the client.
-    private var configs: [QueueItem.Source: ServiceConfig] = [:]
-    /// TMDB key for the person lookup (people scope / `person:` prefix / the
-    /// all-scope "Starring X" section). Empty ⇒ people search is skipped.
-    private var tmdbApiKey = ""
+    /// What the searches are built from, read on every use so a server edited
+    /// in Settings is the one the next search asks.
+    @ObservationIgnored private var settings: () -> (configs: [QueueItem.Source: ServiceConfig], tmdbApiKey: String) = { ([:], "") }
+    /// The configured arrs only; also keys the `SearchOptionsCache`.
+    private var configs: [QueueItem.Source: ServiceConfig] { settings().configs }
+    /// Empty ⇒ people search is skipped.
+    private var tmdbApiKey: String { settings().tmdbApiKey }
 
     func setup(radarrConfig: ServiceConfig, sonarrConfig: ServiceConfig,
                lidarrConfig: ServiceConfig = .empty, whisparrConfig: ServiceConfig = .empty,
                tmdbApiKey: String = "") {
-        self.tmdbApiKey = tmdbApiKey
-        if radarrConfig.isConfigured {
-            radarrClient = ServiceHandles.search(.radarr, config: radarrConfig)
-            configs[.radarr] = radarrConfig
-        }
-        if sonarrConfig.isConfigured {
-            sonarrClient = ServiceHandles.search(.sonarr, config: sonarrConfig)
-            configs[.sonarr] = sonarrConfig
-        }
-        if lidarrConfig.isConfigured {
-            lidarrClient = ServiceHandles.search(.lidarr, config: lidarrConfig)
-            configs[.lidarr] = lidarrConfig
-        }
-        if whisparrConfig.isConfigured {
-            whisparrClient = ServiceHandles.search(.whisparr, config: whisparrConfig)
-            configs[.whisparr] = whisparrConfig
-        }
+        let configs = Self.configured([.radarr: radarrConfig, .sonarr: sonarrConfig, .lidarr: lidarrConfig, .whisparr: whisparrConfig])
+        settings = { (configs, tmdbApiKey) }
     }
 
-    /// `setup` from the app's configuration — the one reading of what the
-    /// search clients are built from, so macOS and iOS cannot drift.
     func setup(store: ConfigStore) {
-        setup(radarrConfig: store.radarr, sonarrConfig: store.sonarr,
-              lidarrConfig: store.lidarr, whisparrConfig: store.whisparr,
-              tmdbApiKey: store.tmdbApiKey)
+        settings = { [weak store] in
+            guard let store else { return ([:], "") }
+            return (Self.configured([.radarr: store.radarr, .sonarr: store.sonarr, .lidarr: store.lidarr, .whisparr: store.whisparr]),
+                    store.tmdbApiKey)
+        }
     }
 
-    /// Identity of everything `setup` reads. The hosts observe this and re-run
-    /// `setup` when it moves: the clients are built once from the config, so
-    /// without it a server edited in Settings leaves every search talking to
-    /// the old one for the rest of the session.
-    static func configSignature(store: ConfigStore) -> String {
-        [
-            store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
-            store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
-            store.lidarr.baseURL, store.lidarr.apiKey, "\(store.lidarr.enabled)",
-            store.whisparr.baseURL, store.whisparr.apiKey, "\(store.whisparr.enabled)",
-            store.tmdbApiKey,
-        ].joined(separator: "|")
+    private static func configured(_ all: [QueueItem.Source: ServiceConfig]) -> [QueueItem.Source: ServiceConfig] {
+        all.filter { $0.value.isConfigured }
     }
 
     func onQueryChange() {
@@ -305,10 +277,10 @@ public final class SearchViewModel {
         }
         // Scope gates which arr clients fire — a nil client short-circuits to
         // [] in `fetchOne`, so an out-of-scope source simply doesn't run.
-        async let r = fetchOne(client: effective.allows(.radarr) ? radarrClient : nil, generation: generation)
-        async let s = fetchOne(client: effective.allows(.sonarr) ? sonarrClient : nil, generation: generation)
-        async let l = fetchOne(client: effective.allows(.lidarr) ? lidarrClient : nil, generation: generation)
-        async let w = fetchOne(client: effective.allows(.whisparr) ? whisparrClient : nil, generation: generation)
+        async let r = fetchOne(client: effective.allows(.radarr) ? client(for: .radarr) : nil, generation: generation)
+        async let s = fetchOne(client: effective.allows(.sonarr) ? client(for: .sonarr) : nil, generation: generation)
+        async let l = fetchOne(client: effective.allows(.lidarr) ? client(for: .lidarr) : nil, generation: generation)
+        async let w = fetchOne(client: effective.allows(.whisparr) ? client(for: .whisparr) : nil, generation: generation)
         async let p = fetchPeople(scope: effective)
         let (rRes, sRes, lRes, wRes, pRes) = await (r, s, l, w, p)
 
@@ -527,7 +499,7 @@ public final class SearchViewModel {
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode = .movieOnly, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
-        guard let client = whisparrClient else { return }
+        guard let client = client(for: .whisparr) else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
@@ -544,7 +516,7 @@ public final class SearchViewModel {
     func addMovie(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,
                   monitor: RadarrMonitorMode, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
-        guard let client = radarrClient else { return }
+        guard let client = client(for: .radarr) else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
@@ -562,7 +534,7 @@ public final class SearchViewModel {
                    monitor: SonarrMonitorMode, seriesType: SonarrSeriesType,
                    seasonFolder: Bool, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
-        guard let client = sonarrClient else { return }
+        guard let client = client(for: .sonarr) else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         // A TMDB-sourced row carries a TMDB tv id, not the tvdbId Sonarr posts
@@ -591,7 +563,7 @@ public final class SearchViewModel {
                    rootFolderPath: String, monitor: LidarrMonitorMode = .all,
                    searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
-        guard let client = lidarrClient else { return }
+        guard let client = client(for: .lidarr) else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
@@ -612,7 +584,7 @@ public final class SearchViewModel {
     func addAlbum(_ result: SearchResult, qualityProfileId: Int, metadataProfileId: Int,
                   rootFolderPath: String, searchOnAdd: Bool) async {
         guard StoreManager.shared.requirePro(.addTitle) else { return }
-        guard let client = lidarrClient else { return }
+        guard let client = client(for: .lidarr) else { return }
         isAdding = true; addError = nil
         defer { isAdding = false }
         do {
@@ -643,11 +615,6 @@ public final class SearchViewModel {
     }
 
     private func client(for source: QueueItem.Source) -> SearchClient? {
-        switch source {
-        case .radarr: return radarrClient
-        case .sonarr: return sonarrClient
-        case .lidarr: return lidarrClient
-        case .whisparr: return whisparrClient
-        }
+        configs[source].map { ServiceHandles.search(source, config: $0) }
     }
 }

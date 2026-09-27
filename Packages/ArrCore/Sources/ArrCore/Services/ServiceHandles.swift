@@ -2,7 +2,7 @@ import Foundation
 
 /// Handles on the facades. Views and view-models take them from the profile (`ConfigStore`) or, for a Settings
 /// draft, from here; none of them builds a client.
-public enum ServiceHandles {
+nonisolated public enum ServiceHandles {
     public static func arr(_ source: QueueItem.Source, config: ServiceConfig) -> any ArrAPIClient {
         switch source {
         case .radarr: RadarrClient(config: config)
@@ -25,10 +25,7 @@ public enum ServiceHandles {
     /// One round trip proving a draft works: the arr's version, or the download client's greeting.
     public static func testConnection(_ kind: ServiceKind, config: ServiceConfig) async throws -> String {
         switch kind {
-        case .radarr: try await RadarrClient(config: config).testConnection()
-        case .sonarr: try await SonarrClient(config: config).testConnection()
-        case .lidarr: try await LidarrClient(config: config).testConnection()
-        case .whisparr: try await WhisparrClient(config: config).testConnection()
+        case .radarr, .sonarr, .lidarr, .whisparr: try await arr(QueueItem.Source(rawValue: kind.rawValue)!, config: config).testConnection()
         case .sabnzbd: try await SabnzbdClient(config: config).testConnection()
         case .nzbget: try await NzbgetClient(config: config).testConnection()
         case .qbittorrent: try await QbittorrentClient(config: config).testConnection()

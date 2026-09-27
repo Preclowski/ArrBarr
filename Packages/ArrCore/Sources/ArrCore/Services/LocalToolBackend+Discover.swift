@@ -215,8 +215,8 @@ extension LocalToolBackend {
         let libraryMapFetch = Task { [self] () -> [Int: LibraryOwnership] in
             kind == "series" ? await sonarrLibraryByTVDBId() : await radarrLibraryByTMDBId()
         }
-        let radarrClient = RadarrClient(config: radarr)
-        let sonarrClient = SonarrClient(config: sonarr)
+        let radarrClient = radarrClient
+        let sonarrClient = sonarrClient
         let radarrConfigured = radarr.isConfigured
         let sonarrConfigured = sonarr.isConfigured
         let radarrBase = radarr.baseURL
@@ -410,9 +410,9 @@ extension LocalToolBackend {
         kind: String,
         libraryMode: String
     ) async -> [DiscoverItem] {
-        let tmdb = TMDBClient(apiKey: tmdbApiKey)
-        let radarrClient = RadarrClient(config: radarr)
-        let sonarrClient = SonarrClient(config: sonarr)
+        let tmdb = tmdbClient
+        let radarrClient = radarrClient
+        let sonarrClient = sonarrClient
 
         // Library map for owned cross-ref (same pattern as suggestTitles).
         async let libraryMapFetch: [Int: LibraryOwnership] = (kind == "series")
@@ -522,7 +522,7 @@ extension LocalToolBackend {
 
     /// Today's releases straight from TMDB, as picks carrying their ids.
     private func nowPicks(kind: String) async -> [QuizDeckPipeline.Pick] {
-        let tmdb = TMDBClient(apiKey: tmdbApiKey)
+        let tmdb = tmdbClient
         if kind == "movie" {
             // The user's country, not the app language: "in cinemas" is a place.
             let region = Locale.current.region?.identifier

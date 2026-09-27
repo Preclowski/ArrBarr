@@ -25,7 +25,7 @@ extension LocalToolBackend {
         guard !query.isEmpty else {
             return ToolCallOutput(text: "Please provide a person name to search for.")
         }
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         // TMDB's own result order puts namesakes above the obvious answer often
         // enough to matter; `PersonRelevance` is the ranking the search surface
         // already trusts for "which person did they mean".
@@ -94,7 +94,7 @@ extension LocalToolBackend {
     /// perfectly good answer without the header, so a failure here degrades to
     /// the plain carousel rather than failing the tool.
     private func personCard(_ personId: Int) async -> ChatPerson? {
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         guard let details = try? await client.personDetails(personId: personId) else { return nil }
         return ChatPerson(details)
     }
@@ -110,7 +110,7 @@ extension LocalToolBackend {
     /// The movie filmography itself, reachable both as its own tool and as
     /// `tmdb_search_person(credits:)`'s second half.
     func movieCreditsOutput(personId: Int) async throws -> ToolCallOutput {
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         // Person details and credits are independent — fetch them together so
         // the card costs latency only if TMDB is slow on that one endpoint.
         async let card = personCard(personId)
@@ -140,7 +140,7 @@ extension LocalToolBackend {
 
     /// The TV filmography — see `movieCreditsOutput` for the shared shape.
     func tvCreditsOutput(personId: Int) async throws -> ToolCallOutput {
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         async let card = personCard(personId)
         let credits = try await client.personTVCredits(personId: personId).cast
         // Same popularity-desc ranking rationale as the movie path — see
@@ -176,7 +176,7 @@ extension LocalToolBackend {
                 return ToolCallOutput(text: "Unknown movie genre '\(genreToken)'. Try: \(Self.knownMovieGenres()).")
             }
         }
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         let movies = try await client.discoverMovies(
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )
@@ -209,7 +209,7 @@ extension LocalToolBackend {
                 return ToolCallOutput(text: "Unknown TV genre '\(genreToken)'. Try: \(Self.knownTVGenres()).")
             }
         }
-        let client = TMDBClient(apiKey: tmdbApiKey)
+        let client = tmdbClient
         let shows = try await client.discoverTV(
             genreIds: genreIds, startYear: startYear, endYear: endYear, sortBy: resolvedSort
         )

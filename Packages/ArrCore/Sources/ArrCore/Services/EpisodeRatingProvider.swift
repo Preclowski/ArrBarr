@@ -20,12 +20,8 @@ enum EpisodeRatingProvider {
 
     private static func fetch(tmdbId: Int?, tvdbId: Int?, season: Int, episode: Int,
                               configStore: ConfigStore) async -> Rating? {
-        let client = TMDBClient(apiKey: configStore.tmdbApiKey)
-        var seriesId = tmdbId
-        if seriesId == nil || seriesId == 0, let tvdbId, tvdbId > 0 {
-            seriesId = try? await client.tvIdFromTVDB(tvdbId)
-        }
-        guard let seriesId, seriesId > 0,
+        let client = configStore.tmdbClient
+        guard let seriesId = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId),
               let hit = try? await client.episodeRating(tvId: seriesId, season: season, episode: episode)
         else { return nil }
         return Rating(value: hit.value, votes: hit.votes)

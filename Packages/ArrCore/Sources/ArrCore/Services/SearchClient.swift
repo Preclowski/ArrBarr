@@ -10,12 +10,7 @@ public actor SearchClient {
     init(config: ServiceConfig, source: QueueItem.Source) {
         self.config = config
         self.source = source
-        self.client = switch source {
-        case .radarr: RadarrClient(config: config)
-        case .sonarr: SonarrClient(config: config)
-        case .lidarr: LidarrClient(config: config)
-        case .whisparr: WhisparrClient(config: config)
-        }
+        self.client = ServiceHandles.arr(source, config: config)
     }
 
     func lookup(query: String) async throws -> [SearchResult] { try await lookup(input: .text(query)) }

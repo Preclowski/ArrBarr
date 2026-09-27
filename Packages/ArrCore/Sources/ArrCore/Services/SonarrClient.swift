@@ -4,18 +4,8 @@ import MediaKit
 nonisolated public struct SonarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .sonarr
-    public let serviceName = "Sonarr"
 
     init(config: ServiceConfig) { self.config = config }
-
-    func fetchQueue() async throws -> [QueueItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.items(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
-    func fetchCalendar() async throws -> [UpcomingItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
 
     func fetchEpisodeFileMap(seriesId: Int) async throws -> [Int: ArrFile] {
         let files = try await read { $0.filesOf(parent: seriesId) }

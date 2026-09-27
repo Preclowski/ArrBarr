@@ -239,8 +239,7 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
                 if let rows { items += rows } else { failed.insert(source) }
             }
         }
-        let startOfToday = Calendar.current.startOfDay(for: Date())
-        return (items.filter { $0.airDate >= startOfToday }.sorted { $0.airDate < $1.airDate }, failed)
+        return (UpcomingService.curate(items), failed)
     }
 
     // MARK: - Actions

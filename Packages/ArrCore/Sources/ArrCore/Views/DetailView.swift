@@ -892,7 +892,7 @@ public struct DetailView: View {
             case .radarr:
                 try await configStore.radarrClient.searchMovie(movieId: entityId)
             case .whisparr:
-                try await configStore.whisparrClient.run { $0.search(.movies([entityId])) }
+                try await configStore.whisparrClient.searchMovie(movieId: entityId)
             case .lidarr:
                 try await configStore.lidarrClient.searchAlbum(albumId: entityId)
             case .sonarr:

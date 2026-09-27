@@ -33,11 +33,7 @@ enum TrailerProvider {
                                  configStore: ConfigStore) async -> String? {
         guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }
         return await fetch(configStore: configStore) { client in
-            var resolved = tmdbId
-            if (resolved ?? 0) <= 0, let tvdbId, tvdbId > 0 {
-                resolved = try await client.tvIdFromTVDB(tvdbId)
-            }
-            guard let id = resolved, id > 0 else { return [] }
+            guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
             return try await client.tvVideos(tvId: id)
         }
     }
@@ -46,9 +42,7 @@ enum TrailerProvider {
 
     private static func fetch(configStore: ConfigStore,
                               _ videos: @escaping (TMDBClient) async throws -> [TMDBVideo]) async -> String? {
-        let apiKey = configStore.tmdbApiKey
-        guard !apiKey.isEmpty else { return nil }
-        guard let list = try? await videos(TMDBClient(apiKey: apiKey)) else { return nil }
+        guard !configStore.tmdbApiKey.isEmpty, let list = try? await videos(configStore.tmdbClient) else { return nil }
         return TMDBVideo.bestTrailerKey(list)
     }
 

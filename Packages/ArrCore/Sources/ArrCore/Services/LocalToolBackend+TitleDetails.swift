@@ -22,7 +22,7 @@ extension LocalToolBackend {
         switch service {
         case "sonarr":
             guard sonarr.isConfigured else { return ToolCallOutput(text: "Sonarr is not configured.") }
-            let d = try await SonarrClient(config: sonarr).fetchSeriesDetails(id: id)
+            let d = try await sonarrClient.fetchSeriesDetails(id: id)
             var text = Self.formatSeriesDetails(d)
             guard includeCast else { return ToolCallOutput(text: text) }
             let cast = await seriesCast(tmdbId: d.tmdbId)
@@ -30,7 +30,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: text, rich: Self.castRich(cast.members))
         case "radarr":
             guard radarr.isConfigured else { return ToolCallOutput(text: "Radarr is not configured.") }
-            let d = try await RadarrClient(config: radarr).fetchMovieDetails(id: id)
+            let d = try await radarrClient.fetchMovieDetails(id: id)
             var text = Self.formatMovieDetails(d)
             guard includeCast else { return ToolCallOutput(text: text) }
             let cast = await movieCast(movieId: id)
@@ -55,7 +55,7 @@ extension LocalToolBackend {
 
     /// Movie cast from Radarr's `/credit` — no TMDB key needed.
     private func movieCast(movieId: Int) async -> CastSection {
-        let credits = (try? await RadarrClient(config: radarr).fetchCredits(movieId: movieId)) ?? []
+        let credits = (try? await radarrClient.fetchCredits(movieId: movieId)) ?? []
         // `CastMember.from` owns the cast/crew filter and the billing-order
         // sort, and is what the detail surfaces render, so chat and detail
         // agree on who the top of the cast is.
@@ -73,7 +73,7 @@ extension LocalToolBackend {
         guard let tmdbId, tmdbId > 0 else {
             return ("\n\nCast: unavailable — TMDB id not found for this series.", [])
         }
-        guard let credits = try? await TMDBClient(apiKey: tmdbApiKey).tvCredits(tvId: tmdbId),
+        guard let credits = try? await tmdbClient.tvCredits(tvId: tmdbId),
               !credits.cast.isEmpty else {
             return ("\n\nCast: (TMDB returned none).", [])
         }

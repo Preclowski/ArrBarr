@@ -203,11 +203,10 @@ public enum SpotlightIndexer {
         let cfg = configStore.serviceConfig(for: ref.source)
         guard cfg.isConfigured else { return nil }
         let slug: String?
-        switch ref.source {
-        case .radarr:   slug = try? await RadarrClient(config: cfg).fetchMovieDetails(id: ref.id).titleSlug
-        case .whisparr: slug = try? await WhisparrClient(config: cfg).fetchMovieDetails(id: ref.id).titleSlug
-        case .sonarr:   slug = try? await SonarrClient(config: cfg).fetchSeriesDetails(id: ref.id).titleSlug
-        case .lidarr:   slug = nil
+        switch configStore.arrClient(for: ref.source) {
+        case let movies as any MovieArrClient: slug = try? await movies.fetchMovieDetails(id: ref.id).titleSlug
+        case let series as SonarrClient: slug = try? await series.fetchSeriesDetails(id: ref.id).titleSlug
+        default: slug = nil
         }
         guard let slug, !slug.isEmpty else { return nil }
         let path = ref.source == .sonarr ? "/series/\(slug)" : "/movie/\(slug)"

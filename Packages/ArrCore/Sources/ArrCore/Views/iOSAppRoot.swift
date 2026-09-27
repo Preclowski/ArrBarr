@@ -130,13 +130,6 @@ public struct iOSAppRoot: View {
         .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
             chatHolder.reconfigure(store: configStore)
         }
-        // Root-owned as well, and re-run on a config edit: the search clients
-        // are built once from the config, and the Queue tab's `onAppear` fires
-        // only the first time that tab is built — a server changed in Settings
-        // afterwards left every search talking to the old one.
-        .onChange(of: SearchViewModel.configSignature(store: configStore)) { _, _ in
-            searchVM.setup(store: configStore)
-        }
         // An empty search field left open behind a tab switch is just chrome
         // taking a row; one with a query is a result set worth returning to.
         .onChange(of: selectedTab) { _, _ in

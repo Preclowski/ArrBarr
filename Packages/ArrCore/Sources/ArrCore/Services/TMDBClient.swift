@@ -186,6 +186,13 @@ nonisolated public struct TMDBClient: Sendable {
 
     public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? { try await read { $0.find(tvdbID: tvdbId) }.tvResults.first?.id }
 
+    /// A series' TMDB id: the one the arr shipped, else resolved from its TVDB id.
+    func seriesId(tmdbId: Int?, tvdbId: Int?) async -> Int? {
+        if let tmdbId, tmdbId > 0 { return tmdbId }
+        guard let tvdbId, tvdbId > 0 else { return nil }
+        return try? await tvIdFromTVDB(tvdbId)
+    }
+
     public func tvdbIdFromTVId(_ tvId: Int) async throws -> Int? {
         let ids = try await read { $0.tvExternalIDs(id: tvId) }
         guard let tvdb = ids.tvdbId, tvdb > 0 else { return nil }

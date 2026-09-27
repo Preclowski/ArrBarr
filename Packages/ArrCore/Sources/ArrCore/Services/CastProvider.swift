@@ -60,23 +60,16 @@ enum CastProvider {
         }
         let key = configStore.tmdbApiKey
         guard !key.isEmpty, let tmdbId, tmdbId > 0,
-              let credits = try? await TMDBClient(apiKey: key).movieCredits(movieId: tmdbId)
+              let credits = try? await configStore.tmdbClient.movieCredits(movieId: tmdbId)
         else { return .empty }
         return TitleCredits(cast: CastMember.from(tmdbCast: credits.cast),
                             directors: CastMember.directors(tmdbCrew: credits.crew ?? []))
     }
 
     private static func fetchSeriesCredits(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> TitleCredits {
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty else { return .empty }
-        let client = TMDBClient(apiKey: key)
-        // Prefer the tmdb id; otherwise resolve it from the tvdb id. This
-        // second path is why series with no `tmdbId` from Sonarr now get cast.
-        var resolvedTmdbId = tmdbId
-        if resolvedTmdbId == nil || resolvedTmdbId == 0, let tvdbId, tvdbId > 0 {
-            resolvedTmdbId = try? await client.tvIdFromTVDB(tvdbId)
-        }
-        guard let id = resolvedTmdbId, id > 0 else { return .empty }
+        guard !configStore.tmdbApiKey.isEmpty else { return .empty }
+        let client = configStore.tmdbClient
+        guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return .empty }
         // Creators come from `/tv/{id}`, a second call — run it alongside the
         // credits so the strip and the "Created by" line land together.
         async let creators = (try? await client.tvCreators(tvId: id)) ?? []

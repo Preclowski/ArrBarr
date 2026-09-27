@@ -1,38 +1,14 @@
 import Foundation
 import MediaKit
 
-nonisolated public struct RadarrClient: ArrAPIClient {
+nonisolated public struct RadarrClient: MovieArrClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .radarr
-    public let serviceName = "Radarr"
 
     init(config: ServiceConfig) { self.config = config }
 
-    func fetchQueue() async throws -> [QueueItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.items(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
-    func fetchCalendar() async throws -> [UpcomingItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
-
-    func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
-    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
     func fetchCredits(movieId: Int) async throws -> [ArrCredit] { try await read { $0.credits(movieID: movieId) } }
-    func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
     func lookupMovies(term: String) async throws -> [ArrMovie] { try await read { $0.lookupMovies(term: term) } }
-    /// `revalidate: false` serves whatever the on-disk store holds and says so
-    /// in `isStale`, refreshing behind the caller — what the Library's first
-    /// paint of a session wants.
-    func fetchAllMovies(revalidate: Bool = true) async throws -> [ArrMovie] {
-        try await fetchAllMoviesFetched(revalidate: revalidate).value
-    }
-
-    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[ArrMovie]> {
-        try await readCacheFirst(revalidate: revalidate) { $0.movies() }
-    }
-
     /// Inline alternate titles when the library carries them; otherwise the dedicated endpoint.
     func alternateTitleMap(for movies: [ArrMovie]) async -> [Int: [String]] {
         var inline: [Int: [String]] = [:]

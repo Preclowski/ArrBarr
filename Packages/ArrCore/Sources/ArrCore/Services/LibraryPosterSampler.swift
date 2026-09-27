@@ -48,14 +48,14 @@ public enum LibraryPosterSampler {
     private static func fetch(configStore: ConfigStore, max: Int) async -> [URL] {
         var urls: [URL] = []
         if configStore.radarr.isConfigured,
-           let movies = try? await RadarrClient(config: configStore.radarr).fetchAllMovies() {
+           let movies = try? await configStore.radarrClient.fetchAllMovies() {
             for rec in movies {
                 let (url, needsAuth) = (rec.images ?? []).posterURL(baseURL: configStore.radarr.baseURL, mediaServerKeys: rec.mediaServerKeys)
                 if let url, !needsAuth { urls.append(url) }
             }
         }
         if configStore.sonarr.isConfigured,
-           let series = try? await SonarrClient(config: configStore.sonarr).fetchAllSeries() {
+           let series = try? await configStore.sonarrClient.fetchAllSeries() {
             for rec in series {
                 let (url, needsAuth) = (rec.images ?? []).posterURL(baseURL: configStore.sonarr.baseURL, mediaServerKeys: rec.mediaServerKeys)
                 if let url, !needsAuth { urls.append(url) }

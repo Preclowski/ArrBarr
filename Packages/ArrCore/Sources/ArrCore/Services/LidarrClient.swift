@@ -4,18 +4,8 @@ import MediaKit
 nonisolated public struct LidarrClient: ArrAPIClient {
     public let config: ServiceConfig
     public let source: QueueItem.Source = .lidarr
-    public let serviceName = "Lidarr"
 
     init(config: ServiceConfig) { self.config = config }
-
-    func fetchQueue() async throws -> [QueueItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.items(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
-    func fetchCalendar() async throws -> [UpcomingItem] {
-        let c = try await context()
-        return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
-    }
 
     func fetchTrackFiles(albumId: Int) async throws -> [ArrFile] { try await read { $0.filesOf(parent: albumId) } }
     func fetchAlbumDetails(id: Int) async throws -> ArrAlbum { try await read { $0.album(id: id) } }
@@ -23,7 +13,7 @@ nonisolated public struct LidarrClient: ArrAPIClient {
     func fetchArtistDetails(id: Int) async throws -> ArrArtist { try await read { $0.artist(id: id) } }
     /// See `RadarrClient.fetchAllMovies(revalidate:)`.
     func fetchAllArtists(revalidate: Bool = true) async throws -> [ArrArtist] {
-        (try? await fetchAllArtistsFetched(revalidate: revalidate).value) ?? []
+        try await fetchAllArtistsFetched(revalidate: revalidate).value
     }
 
     func fetchAllArtistsFetched(revalidate: Bool = true) async throws -> Fetched<[ArrArtist]> {

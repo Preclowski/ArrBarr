@@ -47,6 +47,11 @@ public actor LocalToolBackend {
     let whisparr: ServiceConfig
     let aiKnowsAboutWhisparr: Bool
     let tmdbApiKey: String
+    nonisolated var radarrClient: RadarrClient { RadarrClient(config: radarr) }
+    nonisolated var sonarrClient: SonarrClient { SonarrClient(config: sonarr) }
+    nonisolated var lidarrClient: LidarrClient { LidarrClient(config: lidarr) }
+    nonisolated var whisparrClient: WhisparrClient { WhisparrClient(config: whisparr) }
+    nonisolated var tmdbClient: TMDBClient { TMDBClient(apiKey: tmdbApiKey) }
     /// Download-client connection configs, used by the `health` tool to
     /// report reachability of qBittorrent/Transmission/etc. Empty configs
     /// are skipped. Not needed by any other tool, so it defaults to none.

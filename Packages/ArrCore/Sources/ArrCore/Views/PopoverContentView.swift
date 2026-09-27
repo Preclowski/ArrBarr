@@ -216,12 +216,6 @@ public struct PopoverContentView: View {
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
             }
-            // The search clients are built once from the config. The popover
-            // outlives a trip to Settings, so a re-pointed server has to rebuild
-            // them here or every search keeps asking the old one.
-            .onChange(of: SearchViewModel.configSignature(store: configStore)) { _, _ in
-                searchViewModel.setup(store: configStore)
-            }
             .onChange(of: chatAvailable) { _, available in
                 if !available && selectedTab == .chat {
                     selectedTab = .queue

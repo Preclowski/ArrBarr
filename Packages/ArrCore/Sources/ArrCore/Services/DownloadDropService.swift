@@ -122,13 +122,7 @@ public actor DownloadDropService {
     }
 
     nonisolated private static func downloadClients(arr: ServiceKind, config: ServiceConfig) async throws -> [ArrDropClient] {
-        switch arr {
-        case .sonarr:   return try await SonarrClient(config: config).fetchDownloadClients()
-        case .radarr:   return try await RadarrClient(config: config).fetchDownloadClients()
-        case .lidarr:   return try await LidarrClient(config: config).fetchDownloadClients()
-        case .whisparr: return try await WhisparrClient(config: config).fetchDownloadClients()
-        default:        return []
-        }
+        try await ServiceHandles.arr(QueueItem.Source(rawValue: arr.rawValue)!, config: config).fetchDownloadClients()
     }
 
     /// Cheap identity for a config set — enough to notice a URL/key edit

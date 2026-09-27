@@ -7,7 +7,24 @@ import MediaKit
 public protocol ArrAPIClient: Sendable {
     var config: ServiceConfig { get }
     var source: QueueItem.Source { get }
-    var serviceName: String { get }
+}
+
+/// Radarr and Whisparr v3 share the movie vocabulary.
+protocol MovieArrClient: ArrAPIClient {}
+
+extension MovieArrClient {
+    func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
+    func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
+    func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
+    /// `revalidate: false` serves whatever the on-disk store holds and says so
+    /// in `isStale`, refreshing behind the caller — what the Library's first
+    /// paint of a session wants.
+    func fetchAllMovies(revalidate: Bool = true) async throws -> [ArrMovie] {
+        try await fetchAllMoviesFetched(revalidate: revalidate).value
+    }
+    func fetchAllMoviesFetched(revalidate: Bool = true) async throws -> Fetched<[ArrMovie]> {
+        try await readCacheFirst(revalidate: revalidate) { $0.movies() }
+    }
 }
 
 /// The gateway plus the service bound to this client's instance: the saved profile's, or the draft's own ordinal.
@@ -19,6 +36,17 @@ struct ArrContext {
 }
 
 extension ArrAPIClient {
+    var serviceName: String { source.serviceKind.displayName }
+
+    func fetchQueue() async throws -> [QueueItem] {
+        let c = try await context()
+        return try await ArrQueueLoader.items(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
+    }
+    func fetchCalendar() async throws -> [UpcomingItem] {
+        let c = try await context()
+        return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
+    }
+
     func context() async throws -> ArrContext {
         let gateway = await ServiceGateway.resolve()
         let instance = await gateway.adopt(config, for: source.serviceKind)

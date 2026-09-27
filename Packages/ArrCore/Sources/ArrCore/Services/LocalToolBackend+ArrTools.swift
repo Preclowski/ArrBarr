@@ -181,12 +181,7 @@ extension LocalToolBackend {
                 group.addTask { [cfg] in
                     do {
                         let records: [ArrHealth]
-                        switch source {
-                        case .sonarr:   records = try await SonarrClient(config: cfg).fetchHealth()
-                        case .radarr:   records = try await RadarrClient(config: cfg).fetchHealth()
-                        case .lidarr:   records = try await LidarrClient(config: cfg).fetchHealth()
-                        case .whisparr: records = try await WhisparrClient(config: cfg).fetchHealth()
-                        }
+                        records = try await ServiceHandles.arr(source, config: cfg).fetchHealth()
                         return (source, .success(records))
                     } catch {
                         return (source, .failure(error))
@@ -329,7 +324,7 @@ extension LocalToolBackend {
         guard sonarr.isConfigured else {
             return ToolCallOutput(text: "Sonarr is not configured.")
         }
-        let client = SonarrClient(config: sonarr)
+        let client = sonarrClient
 
         func list(_ xs: [Int]) -> String { xs.map(String.init).joined(separator: ", ") }
 
@@ -396,7 +391,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Sonarr is not configured.")
         }
         do {
-            try await SonarrClient(config: sonarr).searchEpisodes(episodeIds: ids)
+            try await sonarrClient.searchEpisodes(episodeIds: ids)
             return ToolCallOutput(text: "Queued search for \(ids.count) episode\(ids.count == 1 ? "" : "s").")
         } catch {
             return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
@@ -434,7 +429,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "movieId \(movieId) is NOT in the Radarr library, so there is nothing to search for. This tool only re-runs the indexer search for movies the user ALREADY has. There is NO tool that adds a movie — adding happens when the USER taps a card from radarr_search and confirms in the add panel. If they asked to add this title, tell them to tap its card.")
         }
         do {
-            try await RadarrClient(config: radarr).searchMovie(movieId: resolvedId)
+            try await radarrClient.searchMovie(movieId: resolvedId)
             return ToolCallOutput(text: "Search queued for \(title) (movieId \(resolvedId)). Indexers will report back into the regular queue.")
         } catch {
             return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
@@ -458,7 +453,7 @@ extension LocalToolBackend {
         let typeFilter = Self.stringArg(args, key: "albumType").lowercased()
         let albums: [ArrAlbum]
         do {
-            albums = try await LidarrClient(config: lidarr).fetchArtistAlbums(artistId: artistId)
+            albums = try await lidarrClient.fetchArtistAlbums(artistId: artistId)
         } catch {
             return ToolCallOutput(text: "Lidarr fetch failed: \(error.localizedDescription)")
         }
@@ -513,7 +508,7 @@ extension LocalToolBackend {
     /// Name for a Lidarr artist id — best effort, purely so the albums answer
     /// can say whose albums these are.
     private func artistName(id: Int) async -> String? {
-        guard let artists = try? await LidarrClient(config: lidarr).fetchAllArtists() else { return nil }
+        guard let artists = try? await lidarrClient.fetchAllArtists() else { return nil }
         return artists.first { $0.id == id }?.artistName
     }
 
@@ -535,7 +530,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Lidarr is not configured.")
         }
         let state = Self.optionalBoolArg(args, key: "state") ?? true
-        let client = LidarrClient(config: lidarr)
+        let client = lidarrClient
         do {
             try await client.setAlbumMonitored(albumId: albumId, monitored: state)
         } catch {
@@ -563,7 +558,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Lidarr is not configured.")
         }
         do {
-            try await LidarrClient(config: lidarr).searchAlbum(albumId: albumId)
+            try await lidarrClient.searchAlbum(albumId: albumId)
             return ToolCallOutput(text: "Search queued for album \(albumId).")
         } catch {
             return ToolCallOutput(text: "Couldn't queue search: \(error.localizedDescription)")
@@ -742,38 +737,15 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "No services are configured.")
         }
 
-        var merged: [UpcomingItem] = []
-        var failures: [String] = []
-        await withTaskGroup(of: (QueueItem.Source, Result<[UpcomingItem], Error>).self) { group in
-            for (source, cfg) in targets {
-                group.addTask { [cfg] in
-                    do { return (source, .success(try await Self.fetchCalendar(source, cfg))) }
-                    catch { return (source, .failure(error)) }
-                }
-            }
-            for await (source, outcome) in group {
-                switch outcome {
-                case .success(let items): merged.append(contentsOf: items)
-                case .failure(let err): failures.append("\(source.displayName) calendar unreachable — \(err.localizedDescription)")
-                }
-            }
-        }
-        merged.sort { $0.airDate < $1.airDate }
+        let (items, failed) = await UpcomingService.calendars(targets)
+        let merged = items.sorted { $0.airDate < $1.airDate }
+        let failures = failed.map { "\($0.0.displayName) calendar unreachable — \($0.1.localizedDescription)" }
 
         var text = Self.formatCalendarCondensed(merged)
         if !failures.isEmpty {
             text += "\n" + failures.map { "⚠️ \($0)" }.joined(separator: "\n")
         }
         return ToolCallOutput(text: text, rich: .calendar(merged))
-    }
-
-    nonisolated private static func fetchCalendar(_ source: QueueItem.Source, _ cfg: ServiceConfig) async throws -> [UpcomingItem] {
-        switch source {
-        case .sonarr:   return try await SonarrClient(config: cfg).fetchCalendar()
-        case .radarr:   return try await RadarrClient(config: cfg).fetchCalendar()
-        case .lidarr:   return try await LidarrClient(config: cfg).fetchCalendar()
-        case .whisparr: return try await WhisparrClient(config: cfg).fetchCalendar()
-        }
     }
 
     // MARK: - Lidarr tool implementations
@@ -786,7 +758,7 @@ extension LocalToolBackend {
         try await runLibraryList(
             args: args, source: .lidarr, config: lidarr,
             itemNounSingular: "artist", itemNounPlural: "artists",
-            fetch: { try await LidarrClient(config: self.lidarr).fetchAllArtists() },
+            fetch: { try await self.lidarrClient.fetchAllArtists() },
             filterMatch: { rec, q in (rec.artistName ?? "").lowercased().contains(q) },
             line: { r in
                 let name = r.artistName ?? "(untitled)"
@@ -816,7 +788,7 @@ extension LocalToolBackend {
         try await runLibraryList(
             args: args, source: .whisparr, config: whisparr,
             itemNounSingular: "scene", itemNounPlural: "scenes",
-            fetch: { try await WhisparrClient(config: self.whisparr).fetchAllMovies() },
+            fetch: { try await self.whisparrClient.fetchAllMovies() },
             filterMatch: { rec, q in rec.title.lowercased().contains(q) },
             line: { r in
                 let title = r.title
@@ -881,12 +853,7 @@ extension LocalToolBackend {
                 group.addTask { [cfg] in
                     do {
                         let queue: [QueueItem]
-                        switch source {
-                        case .sonarr:   queue = try await SonarrClient(config: cfg).fetchQueue()
-                        case .radarr:   queue = try await RadarrClient(config: cfg).fetchQueue()
-                        case .lidarr:   queue = try await LidarrClient(config: cfg).fetchQueue()
-                        case .whisparr: queue = try await WhisparrClient(config: cfg).fetchQueue()
-                        }
+                        queue = try await ServiceHandles.arr(source, config: cfg).fetchQueue()
                         return (source, .success(queue))
                     } catch {
                         return (source, .failure(error))

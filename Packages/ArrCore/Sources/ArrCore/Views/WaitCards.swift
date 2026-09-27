@@ -114,7 +114,7 @@ enum WaitStoryProvider {
                 stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)"),
                                          support: ownedPick.map { L("wait.story.alsoOwned \($0.title)") }))
             }
-        } else if let s = ctx.series, let id = await seriesTMDBId(s, client: client) {
+        } else if let s = ctx.series, let id = await client.seriesId(tmdbId: s.tmdbId, tvdbId: s.tvdbId) {
             if let f = try? await client.tvDetails(tvId: id), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
                seasons > 0, let years = yearsAgo(s.year) {
                 let sentence = L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")
@@ -196,12 +196,6 @@ enum WaitStoryProvider {
         let length = Duration.seconds(minutes * 60)
             .formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
         return perEpisode ? L("wait.story.episodeRuntime \(length)") : L("wait.story.runtime \(length)")
-    }
-
-    private static func seriesTMDBId(_ s: ArrSeries, client: TMDBClient) async -> Int? {
-        if let id = s.tmdbId, id > 0 { return id }
-        guard let tvdb = s.tvdbId, tvdb > 0 else { return nil }
-        return try? await client.tvIdFromTVDB(tvdb)
     }
 
     private static func date(_ s: String) -> Date? {

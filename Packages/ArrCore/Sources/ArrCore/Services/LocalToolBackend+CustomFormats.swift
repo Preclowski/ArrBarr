@@ -27,7 +27,7 @@ extension LocalToolBackend {
     /// enough — `fetchCustomFormats()` / `fetchQualityProfiles()` are
     /// protocol-extension methods that work the same on either.
     private func arrAPIClient(for source: QueueItem.Source, config: ServiceConfig) -> any ArrAPIClient {
-        source == .radarr ? RadarrClient(config: config) : SonarrClient(config: config)
+        ServiceHandles.arr(source, config: config)
     }
 
     /// Single entry point for the merged `custom_formats` tool: no

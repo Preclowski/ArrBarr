@@ -13,23 +13,17 @@ enum CountryProvider {
 
     static func movieCountries(tmdbId: Int?, configStore: ConfigStore) async -> [String] {
         guard let tmdbId, tmdbId > 0 else { return [] }
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty else { return [] }
-        return (try? await TMDBClient(apiKey: key).movieCountries(movieId: tmdbId)) ?? []
+        guard !configStore.tmdbApiKey.isEmpty else { return [] }
+        return (try? await configStore.tmdbClient.movieCountries(movieId: tmdbId)) ?? []
     }
 
     /// Series countries. `tmdbId` is tried first; when Sonarr didn't ship one,
     /// `tvdbId` is resolved via TMDB `/find` — the same fallback the cast strip
     /// needs, and for the same reason.
     static func seriesCountries(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> [String] {
-        let apiKey = configStore.tmdbApiKey
-        guard !apiKey.isEmpty else { return [] }
-        let client = TMDBClient(apiKey: apiKey)
-        var resolved = tmdbId
-        if resolved == nil || resolved == 0, let tvdbId, tvdbId > 0 {
-            resolved = try? await client.tvIdFromTVDB(tvdbId)
-        }
-        guard let id = resolved, id > 0 else { return [] }
+        guard !configStore.tmdbApiKey.isEmpty else { return [] }
+        let client = configStore.tmdbClient
+        guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
         return (try? await client.tvCountries(tvId: id)) ?? []
     }
 
