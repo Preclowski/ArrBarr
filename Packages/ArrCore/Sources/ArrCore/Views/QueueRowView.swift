@@ -107,21 +107,7 @@ public struct QueueRowView: View {
         ))
     }
 
-    /// Pause/resume go straight to the download client (not via the arr), so
-    /// they need a client that's both *configured* and *reachable*. The common
-    /// away-from-home case — arrs exposed publicly, download clients LAN-only —
-    /// keeps the queue visible (and delete works, since the arr performs it) but
-    /// must hide pause/resume because they'd just fail. `.unknown` (not yet
-    /// probed) stays allowed; only a confirmed `.down` gates.
-    private var canControl: Bool {
-        // Demo has no download client to configure, and hiding pause/resume
-        // there would hide one of the things the demo exists to show. The
-        // action is served by the fixture transport.
-        if DemoMode.isActive { return true }
-        guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
-        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
-        return true
-    }
+    private var canControl: Bool { configStore.canControlDownload(item.downloadProtocol) }
 
     private var canPauseResume: Bool {
         item.status == .downloading || item.status == .paused || item.status == .queued

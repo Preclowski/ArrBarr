@@ -390,16 +390,6 @@ struct MediaEditPanel: View {
             metadataProfiles = await search.fetchMetadataProfiles()
         }
 
-        // Demo mode has no raw record to read — seed from the first options
-        // so the form is usable; the save no-ops server-side anyway.
-        if DemoMode.isActive {
-            selectedProfileId = qualityProfiles.first?.id
-            selectedMetadataProfileId = metadataProfiles.first?.id
-            selectedRootFolder = rootFolders.first
-            originalRootFolder = selectedRootFolder
-            return
-        }
-
         do {
             let record = try await client.read { $0.settings(entityID: request.entityId) }
             selectedProfileId = record.qualityProfileId

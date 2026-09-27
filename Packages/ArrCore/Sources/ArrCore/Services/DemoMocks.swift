@@ -50,7 +50,8 @@ nonisolated public enum DemoMode {
 
     /// Seed-done marker. Stored in whichever store the demo configs live in
     /// (the demo suite), so wiping the suite re-arms a fresh seed.
-    public static let seedDoneKey = "ArrBarr.demoSeedDone"
+    /// v2: the demo instances carry a demo URL and key (v1 left them blank and exempted every gate).
+    public static let seedDoneKey = "ArrBarr.demoSeedDone.v2"
 
     public static var isActive: Bool { UserDefaults.standard.bool(forKey: key) }
 
@@ -79,18 +80,6 @@ nonisolated public enum DemoMode {
 /// Public-domain / CC-licensed titles used as preview content.
 /// Posters come from picsum.photos with deterministic seeds, no auth.
 nonisolated public enum DemoMocks {
-    /// Per-service library headlines for the Library Status widget in demo mode,
-    /// matching the curated demo universe (Big Buck Bunny / Sintel / Tears of
-    /// Steel; Pioneer One / Caminandes; Nine Inch Nails / Brad Sucks). Sizes are
-    /// representative so home-screen screenshots look plausible.
-    public static func librarySummaries() -> [LibrarySummary] {
-        [
-            LibrarySummary(source: .radarr, count: 3, totalBytes: 13_500_000_000),
-            LibrarySummary(source: .sonarr, count: 2, totalBytes: 4_750_000_000),
-            LibrarySummary(source: .lidarr, count: 2, totalBytes: 375_000_000),
-            LibrarySummary(source: .whisparr, count: 4, totalBytes: 6_200_000_000),
-        ]
-    }
 
     /// Real, stable Wikipedia-hosted poster art for the open-source / CC titles
     /// used in demo mode. Wikipedia's `Special:FilePath` endpoint resolves to the

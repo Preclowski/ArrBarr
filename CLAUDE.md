@@ -139,6 +139,9 @@ fastest via SwiftPM:
   `--demo` only unlocks Developer options) or `ARRBARR_DEMO_SUITE=1` (iOS).
   Every demo answer comes from MediaKit's bundled fixtures through
   `FixtureTransport`; `DemoMocks` only keeps the chat persona and people search.
+  Demo instances are seeded configured (demo URL, key `demo`, qBittorrent and
+  SABnzbd included), so views gate them like a real profile — no
+  `DemoMode.isActive` exemptions in view code.
 - **MCP server**: `MCPServerController` (actor, NIO HTTP host, bearer auth, tool
   whitelist) is started/stopped from `AppDelegate.wireMCPServer` based on
   `ConfigStore`. swift-log (server + NIO) is bridged into `os.Logger` via

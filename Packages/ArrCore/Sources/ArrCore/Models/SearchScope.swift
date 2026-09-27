@@ -44,7 +44,7 @@ nonisolated public enum SearchScope: String, CaseIterable, Identifiable, Sendabl
         if store.radarr.isVisible { out.append(.movie) }
         if store.sonarr.isVisible { out.append(.series) }
         if store.lidarr.isVisible { out.append(.album) }
-        if !store.tmdbApiKey.isEmpty || DemoMode.isActive { out.append(.people) }
+        if !store.tmdbApiKey.isEmpty { out.append(.people) }
         if store.whisparr.isVisible { out.append(.whisparr) }
         return out
     }

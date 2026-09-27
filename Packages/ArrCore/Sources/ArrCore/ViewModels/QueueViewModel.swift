@@ -787,7 +787,7 @@ public final class QueueViewModel {
     /// previous credentials never lingers.
     private func reprobe(_ service: MonitoredService) {
         ConnectionHealth.shared.markUnknown(service)
-        guard service.isConfigured(in: configStore), !DemoMode.isActive else { return }
+        guard service.isConfigured(in: configStore) else { return }
         let inputs = buildProbeInputs()
         Task { [connectionMonitor] in
             let outcome = await connectionMonitor.probe(service, inputs)

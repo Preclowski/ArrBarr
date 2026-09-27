@@ -32,14 +32,7 @@ struct QueueTitleGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
-    /// Mirrors QueueRowView.canControl — pause/resume bypass the arr and talk
-    /// to the download client, so they need one configured AND not known-down.
-    private var canControl: Bool {
-        if DemoMode.isActive { return true }
-        guard let kind = configStore.selectedDownloadClient(for: rep.downloadProtocol) else { return false }
-        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
-        return true
-    }
+    private var canControl: Bool { configStore.canControlDownload(rep.downloadProtocol) }
 
     private var downloadCountText: String {
         String.localizedStringWithFormat(

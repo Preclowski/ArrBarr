@@ -49,7 +49,7 @@ enum SeriesIdentityResolver {
     static func sonarrRecord(
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> SearchResult? {
-        guard tmdbTVId > 0, !DemoMode.isActive, sonarrConfig.isConfigured else { return nil }
+        guard tmdbTVId > 0, sonarrConfig.isConfigured else { return nil }
         return await resolveRecord(tmdbTVId: tmdbTVId, sonarrConfig: sonarrConfig, tmdbKey: tmdbKey)
     }
 
@@ -59,7 +59,7 @@ enum SeriesIdentityResolver {
     static func tvdbId(
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> Int? {
-        guard tmdbTVId > 0, !DemoMode.isActive else { return nil }
+        guard tmdbTVId > 0 else { return nil }
         // Cheapest first: an id pair seen before (an owned series, an earlier
         // TMDB cross-reference), then the library snapshot — no request either way.
         if let known = await knownTVDBId(tmdbTVId) { return known }

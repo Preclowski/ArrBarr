@@ -742,20 +742,35 @@ public final class ConfigStore: ObservableObject {
         setupSinks()
     }
 
-    /// Seed demo configs once. Enables Radarr/Sonarr/Lidarr; leaves Whisparr off
-    /// (opt-in, age gated). The seed-done flag lives in the current backing
+    /// Seed demo configs once. The demo instances look configured — a demo URL
+    /// and key — so every gate reads them the way it reads a real profile, and
+    /// the gateway answers them from the bundled fixtures. Whisparr is seeded
+    /// off (opt-in, age gated). The seed-done flag lives in the current backing
     /// store, so wiping the demo suite re-arms it. Caller guards on demo being
     /// active (see DemoMode.seedConfigsIfNeeded).
     func seedDemoConfigsIfNeeded() {
         guard !defaults.bool(forKey: DemoMode.seedDoneKey) else { return }
-        if radarr == .empty { radarr.enabled = true }
-        if sonarr == .empty { sonarr.enabled = true }
-        if lidarr == .empty { lidarr.enabled = true }
+        for kind in [ServiceKind.radarr, .sonarr, .lidarr, .whisparr, .qbittorrent, .sabnzbd] where config(for: kind).baseURL.isEmpty {
+            update(kind, with: ServiceConfig(enabled: kind != .whisparr, baseURL: ServiceGateway.demoURL(kind.instanceKind).absoluteString,
+                                             apiKey: "demo", username: "demo", password: "demo"))
+        }
+        if tmdbApiKey.isEmpty { tmdbApiKey = "demo" }
         // Turn the AI chat on so the demo showcases it out of the box. The chat
         // runs on DemoChatProvider (no key / no Apple Intelligence needed); the
         // aiConfigured demo-override makes the tab appear regardless of provider.
         if !aiEnabled { aiEnabled = true }
         defaults.set(true, forKey: DemoMode.seedDoneKey)
+    }
+
+    /// Pause/resume go straight to the download client, so they need one that
+    /// is configured and not known to be down. `.unknown` (not yet probed)
+    /// stays allowed; only a confirmed `.down` gates. The away-from-home case —
+    /// arrs public, clients LAN-only — keeps the queue and delete, and hides
+    /// the actions that would just fail.
+    public func canControlDownload(_ proto: QueueItem.DownloadProtocol) -> Bool {
+        guard let kind = selectedDownloadClient(for: proto) else { return false }
+        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
+        return true
     }
 
     /// `true` when the user has supplied a TMDB v3 API key. Drives whether the

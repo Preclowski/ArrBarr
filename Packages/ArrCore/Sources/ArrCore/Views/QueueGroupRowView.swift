@@ -42,16 +42,7 @@ public struct QueueGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
-    /// See QueueRowView.canControl — pause/resume need a configured AND
-    /// reachable download client (they bypass the arr); a `.down` client hides
-    /// them so the user isn't offered an action that can't reach home.
-    private var canControl: Bool {
-        // See QueueRowView.canControl — demo serves the action from fixtures.
-        if DemoMode.isActive { return true }
-        guard let kind = configStore.selectedDownloadClient(for: rep.downloadProtocol) else { return false }
-        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
-        return true
-    }
+    private var canControl: Bool { configStore.canControlDownload(rep.downloadProtocol) }
 
     private var canPauseResume: Bool {
         rep.status == .downloading || rep.status == .paused || rep.status == .queued

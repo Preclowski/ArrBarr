@@ -138,11 +138,17 @@ Decided 2026-09-27: delete the composition engine; keep Discovery for a separate
 
 ## Phase F — demo branches (the plan said they go)
 
-- [ ] ~~`demoDisks`~~ (done in B); `MediaEditPanel:411-417`;
+- [x] ~~`demoDisks`~~ (done in B); `MediaEditPanel:411-417`;
       `SeriesIdentityResolver:52,62`; `QueueViewModel:235,801`; widget library `DemoMocks.librarySummaries`
       (`ArrBarrWidgets.swift:105`) → fixtures; `canControl`/visibility demo gating (`QueueRowView:120`,
       `QueueGroupRowView:50`, `QueueTitleGroupRowView:38`, `QueueListView:1007`, `DetailView:233`,
       `ServiceConfig:44`, `SearchScope:47`).
+- Outcome: demo instances are seeded configured (seed key v2), so `isVisible`, the five `canControl` copies (now
+  `ConfigStore.canControlDownload`), the people scope and the reprobe gate lose their demo exemptions; the edit
+  panel reads the recorded record (`fetchLibraryRecord`); the widget's demo library comes from fixtures
+  (`LibrarySummaryService.demo`); SABnzbd's GET writes are writes in `FixtureTransport`. Kept: the chat demo
+  (`DemoChatProvider`, `aiConfigured`), people search mocks (CLAUDE.md), and the upcoming-snapshot guard (it keeps
+  the real profile's calendar out of demo).
 
 ## Phase G — conventions and leftovers
 

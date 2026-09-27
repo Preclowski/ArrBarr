@@ -7,6 +7,7 @@ nonisolated public struct LibrarySummary: Sendable, Equatable, Identifiable {
     public enum Source: String, Sendable, CaseIterable, Identifiable {
         case radarr, sonarr, lidarr, whisparr
         public var id: String { rawValue }
+        public var serviceKind: ServiceKind { ServiceKind(rawValue: rawValue)! }
     }
 
     public let source: Source

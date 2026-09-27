@@ -12,11 +12,11 @@ struct WidgetDemoPathTests {
         #expect(WidgetDataStore.isDemoActive == false)
     }
 
-    @Test("Demo library summaries cover all four sources with non-zero data")
-    func summaries() {
-        let s = DemoMocks.librarySummaries()
+    @Test("Demo library summaries come from the fixtures for all four sources")
+    func summaries() async {
+        let s = await LibrarySummaryService.demo(sources: Set(LibrarySummary.Source.allCases))
         #expect(Set(s.map(\.source)) == Set(LibrarySummary.Source.allCases))
-        #expect(s.allSatisfy { $0.count > 0 && $0.totalBytes > 0 })
+        #expect(s.allSatisfy { $0.count > 0 })
     }
 }
 

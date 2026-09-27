@@ -23,6 +23,17 @@ public actor LibrarySummaryService {
         return await [r, s, l, w].compactMap { $0 }
     }
 
+    /// The demo library for `sources`, from the bundled fixtures (the widget's demo mode).
+    public static func demo(sources: Set<LibrarySummary.Source>) async -> [LibrarySummary] {
+        let gateway = await MainActor.run { ServiceGateway.demo(kinds: Set(sources.map(\.serviceKind))) }
+        let configs = await MainActor.run { LibrarySummary.Source.allCases.map { gateway.configStore.config(for: $0.serviceKind) } }
+        let summaries = await ServiceGateway.$override.withValue(gateway) {
+            await LibrarySummaryService().summaries(radarr: configs[0], sonarr: configs[1], lidarr: configs[2], whisparr: configs[3])
+        }
+        await gateway.kit.stop()
+        return summaries
+    }
+
     nonisolated private static func fetch(
         _ config: ServiceConfig,
         _ body: @Sendable (ServiceConfig) async throws -> LibrarySummary

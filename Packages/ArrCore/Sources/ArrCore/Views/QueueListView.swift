@@ -999,16 +999,7 @@ struct QueueListView: View {
         }
     }
 
-    /// Mirrors QueueRowView.canControl — pause/resume needs a download client
-    /// that's configured AND reachable (the action bypasses the arr and goes
-    /// straight to the client), so a `.down` client hides the swipe.
-    private func canControl(_ item: QueueItem) -> Bool {
-        // See QueueRowView.canControl — demo serves the action from fixtures.
-        if DemoMode.isActive { return true }
-        guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
-        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
-        return true
-    }
+    private func canControl(_ item: QueueItem) -> Bool { configStore.canControlDownload(item.downloadProtocol) }
 
     /// Toggle pause/resume on the entry's representative (the whole download /
     /// season pack shares its downloadId, so acting on the rep covers it).

@@ -42,7 +42,9 @@ public actor FixtureTransport: Transport, SocketTransport {
             return s.replacingOccurrences(of: "--", with: "-")
         }()
         let pathKey = "\(kind.rawValue)\(request.url.path)"
-        if request.method != "GET" { noteWrite(request) }
+        // SABnzbd's API writes are GETs; a download action is a write whatever the verb.
+        let isWrite = request.method != "GET" || (kind.family == .download && DownloadAction(rawValue: request.operation.name) != nil)
+        if isWrite { noteWrite(request) }
         if request.method == "PUT", case let .bytes(data, contentType) = request.body, contentType.contains("json"),
            let json = try? JSONDecoder().decode(JSONValue.self, from: data) {
             putBodies[pathKey] = json
@@ -56,7 +58,7 @@ public actor FixtureTransport: Transport, SocketTransport {
             body = applyState(body, kind: kind, name: name)
             return HTTPResponse(status: entry.status, headers: HTTPHeaders(entry.headers), body: try encode(body))
         }
-        guard request.method != "GET" else { throw MediaKitError.fixtureMissing(request.operation) }
+        guard isWrite else { throw MediaKitError.fixtureMissing(request.operation) }
         if request.pathTemplate.hasSuffix("/command") {
             let id = nextCommandID
             nextCommandID += 1

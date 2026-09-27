@@ -38,11 +38,8 @@ nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
     /// this is an arr, and they all need an API key). An arr that's enabled
     /// with a URL but no key is treated as NOT visible: it would only emit a
     /// "missing API key" error in the queue. Settings surfaces that error
-    /// instead. Demo mode runs on mocks, so the URL/key fields stay blank and
-    /// we render as long as `enabled`.
-    public var isVisible: Bool {
-        DemoMode.isActive ? enabled : (isConfigured && !apiKey.isEmpty)
-    }
+    /// instead.
+    public var isVisible: Bool { isConfigured && !apiKey.isEmpty }
 
     /// Should this service be live in the stack? The arrs (and SABnzbd) are
     /// gated on their API key — `isVisible`. The password-based download

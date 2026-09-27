@@ -100,14 +100,14 @@ enum LibraryWidgetData {
     static func entry(sources: Set<LibrarySummary.Source>,
                       featured: LibrarySummary.Source?) async -> LibraryStatusEntry {
         // Demo mode: the app mirrors the flag into the group suite, so the
-        // widget renders the curated demo library instead of hitting servers.
+        // widget reads the bundled fixtures instead of hitting servers.
         if WidgetDataStore.isDemoActive {
-            let demo = DemoMocks.librarySummaries().filter { sources.contains($0.source) }
+            let demo = await LibrarySummaryService.demo(sources: sources)
             return LibraryStatusEntry(date: Date(), summaries: demo, anyConfigured: true, featured: featured)
         }
 
         func config(_ s: LibrarySummary.Source) -> ServiceConfig {
-            sources.contains(s) ? WidgetDataStore.serviceConfig(s.kind) : .empty
+            sources.contains(s) ? WidgetDataStore.serviceConfig(s.serviceKind) : .empty
         }
         let radarr = config(.radarr), sonarr = config(.sonarr)
         let lidarr = config(.lidarr), whisparr = config(.whisparr)
@@ -191,16 +191,6 @@ struct GridWidgetProvider: AppIntentTimelineProvider {
 // MARK: - View presentation per source
 
 private extension LibrarySummary.Source {
-    /// Maps to the ArrCore service kind so we can reuse `ServiceIcon`'s brand art.
-    var kind: ServiceKind {
-        switch self {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
-    }
-
     var label: String {
         switch self {
         case .radarr: return String(localized: "Movies", bundle: .arrCore)
@@ -301,7 +291,7 @@ struct LibraryStatusView: View {
     private var small: some View {
         ZStack(alignment: .topLeading) {
             if let s = entry.featuredSummary {
-                ServiceIcon(kind: s.source.kind, size: 96)
+                ServiceIcon(kind: s.source.serviceKind, size: 96)
                     .foregroundStyle(smallWatermarkStyle)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .offset(x: 22, y: 22)
@@ -358,7 +348,7 @@ struct LibraryStatusView: View {
     // count + label + size on top.
     private func tile(_ s: LibrarySummary) -> some View {
         ZStack(alignment: .topLeading) {
-            ServiceIcon(kind: s.source.kind, size: 66)
+            ServiceIcon(kind: s.source.serviceKind, size: 66)
                 .foregroundStyle(watermarkStyle(s.source))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .offset(x: 16, y: 16)
@@ -449,14 +439,6 @@ struct LibraryStatusGridWidget: Widget {
 // MARK: - Up Next widget (upcoming calendar)
 
 private extension UpcomingItem.Source {
-    var kind: ServiceKind {
-        switch self {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
-    }
     var brandColor: Color {
         switch self {
         case .radarr: return Color(red: 1.00, green: 0.76, blue: 0.18)
@@ -518,7 +500,7 @@ struct UpNextProvider: AppIntentTimelineProvider {
         }
 
         func cfg(_ s: UpcomingItem.Source) -> ServiceConfig {
-            enabled.contains(s) ? WidgetDataStore.serviceConfig(s.kind) : .empty
+            enabled.contains(s) ? WidgetDataStore.serviceConfig(s.serviceKind) : .empty
         }
         let r = cfg(.radarr), s = cfg(.sonarr), l = cfg(.lidarr), w = cfg(.whisparr)
         let anyConfigured = [r, s, l, w].contains { $0.isVisible }

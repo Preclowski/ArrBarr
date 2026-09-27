@@ -313,7 +313,7 @@ public struct ServarrService: Sendable {
 
     /// The record's editable settings, read fresh for the Edit form.
     public func settings(entityID: Int) -> Resource<ArrRecordSettings> {
-        .json(plan("fetchRecordSettings", path: "/\(profile.entityNoun)/{id}", values: ["id": String(entityID)]), tags: [entityTag(entityID)], freshness: .volatile)
+        .json(plan("fetchLibraryRecord", path: "/\(profile.entityNoun)/{id}", values: ["id": String(entityID)]), tags: [entityTag(entityID)], freshness: .volatile)
     }
 
     /// Writes the non-nil fields over the current record; a changed root folder moves the files along.
@@ -321,7 +321,7 @@ public struct ServarrService: Sendable {
         let service = self
         let noun = profile.entityNoun
         return command("updateLibraryRecord", invalidates: [entityTag(entityID), tag(.library), tag(.calendar)]) { ctx in
-            let get = service.plan("updateLibraryRecord", path: "/\(noun)/{id}", values: ["id": String(entityID)])
+            let get = service.plan("fetchLibraryRecord", path: "/\(noun)/{id}", values: ["id": String(entityID)])
             var envelope = try await ctx.decode(ArrRecordEnvelope<ArrRecordSettings>.self, from: try await ctx.send(get), operation: get.operation)
             let movedPath = settings.movedPath(from: envelope.known)
             envelope.known.merge(settings)

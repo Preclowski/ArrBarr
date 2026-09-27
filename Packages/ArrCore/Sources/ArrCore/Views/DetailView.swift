@@ -229,13 +229,7 @@ public struct DetailView: View {
         // configured AND reachable. And don't offer them when the item's arr is
         // unavailable — the data is stale, the action can't land. Both cases
         // hide the CTA (and the episode-row pause/resume/delete callbacks below).
-        // Demo is exempt: no client is configured there and the actions are
-        // served by the fixture transport.
-        if DemoMode.isActive { return true }
-        guard let kind = configStore.selectedDownloadClient(for: item.downloadProtocol) else { return false }
-        if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
-        if viewModel.lastUnreachable.contains(item.source) { return false }
-        return true
+        configStore.canControlDownload(item.downloadProtocol) && !viewModel.lastUnreachable.contains(item.source)
     }
 
     private var canPauseResume: Bool {
