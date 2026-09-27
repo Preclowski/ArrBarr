@@ -222,7 +222,7 @@ public final class QueueViewModel {
         // unreachable (away from the home LAN). The first successful refresh
         // replaces it. Skipped in demo mode (which seeds its own data).
         if autostart, !DemoMode.isActive {
-            Task { @MainActor [weak self] in
+            Task { [weak self] in
                 let cached = await WidgetDataStore.loadUpcomingAsync()
                 guard let self, !cached.isEmpty else { return }
                 // A live refresh may have finished while the snapshot was
@@ -443,7 +443,7 @@ public final class QueueViewModel {
             upcomingRefreshAgain = true
             return
         }
-        upcomingRefreshTask = Task { @MainActor [weak self] in
+        upcomingRefreshTask = Task { [weak self] in
             guard let self else { return }
             repeat {
                 upcomingRefreshAgain = false

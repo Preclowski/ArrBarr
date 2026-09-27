@@ -454,7 +454,7 @@ private struct PersonFilmographyRow: View {
                 isHovering = hovering
                 hoverTask?.cancel()
                 if hovering, hasTooltip {
-                    hoverTask = Task { @MainActor in
+                    hoverTask = Task {
                         try? await Task.sleep(nanoseconds: 600_000_000)
                         if !Task.isCancelled, isHovering { showTooltip = true }
                     }

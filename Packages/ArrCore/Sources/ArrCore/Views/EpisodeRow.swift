@@ -234,7 +234,7 @@ struct EpisodeRow: View {
             isHovering = hovering
             hoverTask?.cancel()
             if hovering && !suppressRowTooltip && hasTooltip {
-                hoverTask = Task { @MainActor [self] in
+                hoverTask = Task { [self] in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     if !Task.isCancelled && self.isHovering { showTooltip = true }
                 }

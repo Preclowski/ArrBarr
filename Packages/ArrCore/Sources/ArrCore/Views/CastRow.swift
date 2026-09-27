@@ -165,7 +165,7 @@ private struct CastTile: View {
                 isHovering = hovering
                 hoverTask?.cancel()
                 if hovering {
-                    hoverTask = Task { @MainActor in
+                    hoverTask = Task {
                         try? await Task.sleep(nanoseconds: 600_000_000)
                         guard !Task.isCancelled, isHovering else { return }
                         showTooltip = true

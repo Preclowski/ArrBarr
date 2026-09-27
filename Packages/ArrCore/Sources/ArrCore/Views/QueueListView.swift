@@ -917,7 +917,7 @@ struct QueueListView: View {
     /// cancels the prior timer and restarts the countdown.
     private func scheduleBannerCollapse() {
         bannerCollapseTask?.cancel()
-        bannerCollapseTask = Task { @MainActor [viewModel] in
+        bannerCollapseTask = Task { [viewModel] in
             try? await Task.sleep(nanoseconds: 30_000_000_000)
             if Task.isCancelled { return }
             withAnimation(.smooth(duration: 0.22)) {

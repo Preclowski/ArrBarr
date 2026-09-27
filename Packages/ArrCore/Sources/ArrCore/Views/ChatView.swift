@@ -277,7 +277,7 @@ public struct ChatView: View {
         // on this tab or the user switched to it. Hopped to the next main-actor
         // turn because the field is not in the responder chain during
         // `onAppear`, and an assignment made before it is there is dropped.
-        .onAppear { Task { @MainActor in inputFocused = true } }
+        .onAppear { Task { inputFocused = true } }
     }
 
     private func send() {
@@ -548,7 +548,7 @@ private struct CopyBadge: View {
         #endif
         copied = true
         // Back to the plain glyph once the confirmation has been read.
-        Task { @MainActor in
+        Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             copied = false
         }

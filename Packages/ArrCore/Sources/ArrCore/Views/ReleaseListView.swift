@@ -435,7 +435,7 @@ private struct ReleaseRow: View {
             hovering = isHovering
             hoverTask?.cancel()
             if isHovering, !isExpanded {
-                hoverTask = Task { @MainActor in
+                hoverTask = Task {
                     try? await Task.sleep(nanoseconds: 400_000_000)
                     if !Task.isCancelled, hovering { showPopover = true }
                 }

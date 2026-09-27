@@ -32,7 +32,7 @@ struct HoverTooltip<TooltipContent: View>: ViewModifier {
                 isHovering = hovering
                 hoverTask?.cancel()
                 if hovering && enabled && !suppressRowTooltip {
-                    hoverTask = Task { @MainActor in
+                    hoverTask = Task {
                         try? await Task.sleep(nanoseconds: 600_000_000)
                         if !Task.isCancelled && isHovering { showTooltip = true }
                     }

@@ -269,7 +269,7 @@ public struct QueueRowView: View {
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
             hoverTask?.cancel()
             if hovering && !suppressRowTooltip {
-                hoverTask = Task { @MainActor [self] in
+                hoverTask = Task { [self] in
                     try? await Task.sleep(nanoseconds: 600_000_000)
                     if !Task.isCancelled && self.isHovering { showTooltip = true }
                 }
