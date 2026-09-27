@@ -15,7 +15,7 @@ struct EpisodeRow: View {
     var posterAPIKey: String? = nil
     var onToggleMonitored: ((Bool) async -> Void)? = nil
     /// Row context-menu search. Both nil → no menu.
-    var onAutomaticSearch: (() async -> Void)? = nil
+    var onAutomaticSearch: (() async throws -> Void)? = nil
     var onManualSearch: (() -> Void)? = nil
 
     private var queueItem: QueueItem? { queueItems.first }
@@ -29,8 +29,7 @@ struct EpisodeRow: View {
     @State private var hoverTask: Task<Void, Never>?
     /// Search fired from the context menu, shown in the trailing state slot
     /// because the menu is gone by the time it runs.
-    @State private var autoSearching = false
-    @State private var autoDidSearch = false
+    @State private var searchFeedback: SearchFeedback = .idle
 
     private var episodeCode: String {
         EpisodeCode.string(season: episode.seasonNumber ?? 0, episode: episode.episodeNumber ?? 0)
@@ -111,7 +110,7 @@ struct EpisodeRow: View {
         }
         .buttonStyle(.plain)
         .modifier(OptionalRowSearchMenu(
-            inFlight: $autoSearching, didQueue: $autoDidSearch,
+            feedback: $searchFeedback,
             onAutomatic: onAutomaticSearch, onManual: onManualSearch))
         // Outside the row Button: a Button nested in a Button's label doesn't
         // reliably win the tap.
@@ -229,13 +228,7 @@ struct EpisodeRow: View {
     private var stateIndicator: some View {
         // A row-fired search owns the slot while it runs; a future episode
         // shows only its air date.
-        if autoSearching {
-            ProgressView().controlSize(.small)
-        } else if autoDidSearch {
-            Image(systemName: "checkmark")
-                .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(.secondary)
-        }
+        SearchFeedbackIcon(feedback: searchFeedback)
     }
 
     private static let formatter: DateFormatter = {

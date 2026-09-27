@@ -14,7 +14,7 @@ struct EpisodeDetailOverlay: View {
     let queueItems: [QueueItem]
     private var queueItem: QueueItem? { queueItems.first }
     let onClose: () -> Void
-    let onSearch: ((Int) async -> Void)?
+    let onSearch: ((Int) async throws -> Void)?
     /// Async so the Pause/Resume CTA can show a spinner until the action and its queue refresh complete.
     let onPauseEpisode: ((QueueItem) async -> Void)?
     let onResumeEpisode: ((QueueItem) async -> Void)?
@@ -49,9 +49,8 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    @State private var isSearching = false
+    @State private var searchFeedback: SearchFeedback = .idle
     @State private var ctaPendingDelete = false
-    @State private var didSearch = false
     @State private var enlargedPoster: URL?
     /// Own wrapper type: SwiftUI ignores all but the root-most `.navigationDestination` for a type,
     /// so reusing the parent's `ManualSearchTarget` would collide.
@@ -92,7 +91,7 @@ struct EpisodeDetailOverlay: View {
         episodeFile: ArrFile? = nil,
         queueItems: [QueueItem] = [],
         onClose: @escaping () -> Void,
-        onSearch: ((Int) async -> Void)?,
+        onSearch: ((Int) async throws -> Void)?,
         warningActionURL: URL? = nil,
         onPauseEpisode: ((QueueItem) async -> Void)? = nil,
         onResumeEpisode: ((QueueItem) async -> Void)? = nil,
@@ -286,8 +285,7 @@ struct EpisodeDetailOverlay: View {
         if hasAired {
             if onSearch != nil {
                 HeaderSearchMenu(
-                    inFlight: isSearching,
-                    didQueue: didSearch,
+                    feedback: searchFeedback,
                     onAutomatic: { performSearch() },
                     onManual: { manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString)) }
                 )
@@ -572,17 +570,9 @@ struct EpisodeDetailOverlay: View {
     }
 
     private func performSearch() {
-        guard let onSearch, !isSearching else { return }
-        isSearching = true
-        Task {
-            await onSearch(episode.id)
-            await MainActor.run {
-                isSearching = false
-                didSearch = true
-            }
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            await MainActor.run { didSearch = false }
-        }
+        guard let onSearch else { return }
+        let id = episode.id
+        SearchFeedback.run($searchFeedback) { try await onSearch(id) }
     }
 
     static let airFormatter: DateFormatter = {

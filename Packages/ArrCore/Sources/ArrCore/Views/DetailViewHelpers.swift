@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import os
 import MediaKit
 
 /// Callers gate on `item.posterRequiresAuth`.
@@ -54,31 +55,80 @@ struct ModalFormToggle: View {
     }
 }
 
+// MARK: - Search feedback
+
+/// A search button's outcome. The arr only confirms it accepted the command, so `queued` is as far as it goes;
+/// `failed` carries the reason the command was refused or never arrived.
+enum SearchFeedback: Equatable {
+    case idle, sending, queued, failed(String)
+
+    var isSending: Bool { self == .sending }
+
+    private static let log = Logger(category: "Search")
+
+    /// Sends `action` once at a time, then shows the outcome briefly.
+    @MainActor
+    static func run(_ feedback: Binding<SearchFeedback>, _ action: @escaping () async throws -> Void) {
+        guard !feedback.wrappedValue.isSending else { return }
+        feedback.wrappedValue = .sending
+        Task {
+            let shown: Duration
+            do {
+                try await action()
+                feedback.wrappedValue = .queued
+                shown = .seconds(1.6)
+            } catch {
+                log.error("search command failed: \(error.localizedDescription, privacy: .public)")
+                feedback.wrappedValue = .failed(error.userFacingMessage)
+                shown = .seconds(4)
+            }
+            try? await Task.sleep(for: shown)
+            feedback.wrappedValue = .idle
+        }
+    }
+}
+
+/// Spinner, checkmark or warning in a row's trailing slot; nothing while idle.
+struct SearchFeedbackIcon: View {
+    let feedback: SearchFeedback
+    var size: CGFloat = 10
+
+    var body: some View {
+        switch feedback {
+        case .idle:
+            EmptyView()
+        case .sending:
+            ProgressView().controlSize(.small)
+        case .queued:
+            Image(systemName: "checkmark")
+                .scaledFont(size: size, weight: .semibold)
+                .foregroundStyle(.secondary)
+        case let .failed(reason):
+            Image(systemName: "exclamationmark.triangle.fill")
+                .scaledFont(size: size, weight: .semibold)
+                .foregroundStyle(.orange)
+                .help(Text(verbatim: reason))
+                .accessibilityLabel(Text(verbatim: reason))
+        }
+    }
+}
+
 // MARK: - Row search context menu
 
 /// Right-click / long-press twin of `HeaderSearchMenu`, so a row can be searched in place.
 struct RowSearchContextMenu: ViewModifier {
-    @Binding var inFlight: Bool
-    @Binding var didQueue: Bool
-    let onAutomatic: () async -> Void
+    @Binding var feedback: SearchFeedback
+    let onAutomatic: () async throws -> Void
     let onManual: () -> Void
 
     func body(content: Content) -> some View {
         content.contextMenu {
             Button {
-                guard !inFlight else { return }
-                Task {
-                    inFlight = true
-                    await onAutomatic()
-                    inFlight = false
-                    didQueue = true
-                    try? await Task.sleep(nanoseconds: 1_600_000_000)
-                    didQueue = false
-                }
+                SearchFeedback.run($feedback, onAutomatic)
             } label: {
                 Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
             }
-            .disabled(inFlight)
+            .disabled(feedback.isSending)
             Button(action: onManual) {
                 Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
             }
@@ -88,38 +138,23 @@ struct RowSearchContextMenu: ViewModifier {
 
 /// With either closure missing there is no menu, rather than a dead item.
 struct OptionalRowSearchMenu: ViewModifier {
-    @Binding var inFlight: Bool
-    @Binding var didQueue: Bool
-    let onAutomatic: (() async -> Void)?
+    @Binding var feedback: SearchFeedback
+    let onAutomatic: (() async throws -> Void)?
     let onManual: (() -> Void)?
 
     func body(content: Content) -> some View {
         if let onAutomatic, let onManual {
-            content.rowSearchContextMenu(inFlight: $inFlight, didQueue: $didQueue,
-                                         onAutomatic: onAutomatic, onManual: onManual)
+            content.modifier(RowSearchContextMenu(feedback: $feedback, onAutomatic: onAutomatic, onManual: onManual))
         } else {
             content
         }
     }
 }
 
-extension View {
-    func rowSearchContextMenu(
-        inFlight: Binding<Bool>,
-        didQueue: Binding<Bool>,
-        onAutomatic: @escaping () async -> Void,
-        onManual: @escaping () -> Void
-    ) -> some View {
-        modifier(RowSearchContextMenu(inFlight: inFlight, didQueue: didQueue,
-                                      onAutomatic: onAutomatic, onManual: onManual))
-    }
-}
-
 // MARK: - Header search menu
 
 struct HeaderSearchMenu: View {
-    let inFlight: Bool
-    let didQueue: Bool
+    let feedback: SearchFeedback
     let onAutomatic: () -> Void
     let onManual: () -> Void
 
@@ -133,16 +168,12 @@ struct HeaderSearchMenu: View {
             }
         } label: {
             Group {
-                if inFlight {
-                    ProgressView().controlSize(.small)
-                } else if didQueue {
-                    Image(systemName: "checkmark")
-                        .scaledFont(size: 13, weight: .medium)
-                        .foregroundStyle(.secondary)
-                } else {
+                if feedback == .idle {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 14, weight: .medium)
                         .foregroundStyle(.secondary)
+                } else {
+                    SearchFeedbackIcon(feedback: feedback, size: 13)
                 }
             }
             .frame(width: 22, height: 22)
@@ -151,9 +182,9 @@ struct HeaderSearchMenu: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .disabled(inFlight)
+        .disabled(feedback.isSending)
         .help(Text("Search", bundle: .module))
-        .accessibilityLabel(inFlight
+        .accessibilityLabel(feedback.isSending
                             ? Text("detail.searchingForRelease.label", bundle: .module)
                             : Text("Search", bundle: .module))
     }

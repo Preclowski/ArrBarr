@@ -349,15 +349,13 @@ struct MediaEditPanel: View {
         }
 
         let search = configStore.searchClient(for: request.source)
-        async let q = search.fetchQualityProfiles()
-        async let f = search.fetchRootFolders()
-        qualityProfiles = await q
-        rootFolders = await f
-        if request.source == .lidarr {
-            metadataProfiles = await search.fetchMetadataProfiles()
-        }
-
         do {
+            async let q = search.fetchQualityProfiles()
+            async let f = search.fetchRootFolders()
+            (qualityProfiles, rootFolders) = try await (q, f)
+            if request.source == .lidarr {
+                metadataProfiles = try await search.fetchMetadataProfiles()
+            }
             let record = try await client.read { $0.settings(entityID: request.entityId) }
             selectedProfileId = record.qualityProfileId
             selectedMetadataProfileId = record.metadataProfileId
@@ -379,7 +377,7 @@ struct MediaEditPanel: View {
         } catch {
             loadError = String(
                 format: String(localized: "Couldn't load details: %@", bundle: .module),
-                error.localizedDescription
+                error.userFacingMessage
             )
         }
     }

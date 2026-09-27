@@ -70,7 +70,7 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     private let configStore: ConfigStore
     private let gateway: ServiceGateway
-    private static let logger = Logger(category: "QueueFetch")
+    nonisolated private static let logger = Logger(category: "QueueFetch")
 
     @MainActor
     init(configStore: ConfigStore) {
@@ -200,17 +200,24 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
     func fetchHealth() async -> HealthResult {
         await gateway.ready()
         var records: [QueueItem.Source: [ArrHealth]] = [:]
-        await withTaskGroup(of: (QueueItem.Source, [ArrHealth]).self) { group in
+        var failed: Set<QueueItem.Source> = []
+        await withTaskGroup(of: (QueueItem.Source, [ArrHealth]?).self) { group in
             for source in QueueItem.Source.allCases {
                 group.addTask {
                     guard self.gateway.isConfigured(source) else { return (source, []) }
-                    let rows = (try? await self.gateway.store.read(self.gateway.servarr(source).health(), policy: .mustRevalidate).value) ?? []
-                    return (source, rows)
+                    do { return (source, try await self.gateway.store.read(self.gateway.servarr(source).health(), policy: .mustRevalidate).value) }
+                    catch {
+                        Self.logger.debug("health for \(source.rawValue, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                        return (source, nil)
+                    }
                 }
             }
-            for await (source, rows) in group { records[source] = rows }
+            for await (source, rows) in group {
+                if let rows { records[source] = rows } else { failed.insert(source) }
+            }
         }
-        return HealthResult(radarr: records[.radarr] ?? [], sonarr: records[.sonarr] ?? [], lidarr: records[.lidarr] ?? [], whisparr: records[.whisparr] ?? [])
+        return HealthResult(radarr: records[.radarr] ?? [], sonarr: records[.sonarr] ?? [], lidarr: records[.lidarr] ?? [],
+                            whisparr: records[.whisparr] ?? [], failed: failed)
     }
 
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult {
@@ -333,8 +340,19 @@ nonisolated public struct HealthResult: Equatable {
     public let sonarr: [ArrHealth]
     public let lidarr: [ArrHealth]
     public let whisparr: [ArrHealth]
-    public init(radarr: [ArrHealth], sonarr: [ArrHealth], lidarr: [ArrHealth], whisparr: [ArrHealth] = []) {
-        self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
+    /// Sources whose health read failed: their records are unknown, not empty.
+    public let failed: Set<QueueItem.Source>
+    public init(radarr: [ArrHealth], sonarr: [ArrHealth], lidarr: [ArrHealth], whisparr: [ArrHealth] = [],
+                failed: Set<QueueItem.Source> = []) {
+        self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr; self.failed = failed
+    }
+
+    /// A failed source keeps `previous`'s records, so an outage neither empties "Needs you" nor re-arms notifications.
+    func keepingLastGood(from previous: HealthResult) -> HealthResult {
+        func pick(_ source: QueueItem.Source) -> [ArrHealth] {
+            failed.contains(source) ? previous.records(for: source) : records(for: source)
+        }
+        return HealthResult(radarr: pick(.radarr), sonarr: pick(.sonarr), lidarr: pick(.lidarr), whisparr: pick(.whisparr), failed: failed)
     }
     public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
     public func records(for source: QueueItem.Source) -> [ArrHealth] {

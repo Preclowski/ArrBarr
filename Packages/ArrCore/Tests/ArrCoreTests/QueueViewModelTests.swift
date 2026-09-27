@@ -640,3 +640,24 @@ private extension ConnectionHealthState {
         return false
     }
 }
+
+@Suite("QueueViewModel health")
+@MainActor
+struct QueueViewModelHealthTests {
+    @Test("A failed health read keeps the last records instead of reading as healthy")
+    func failedReadKeepsLastGood() async {
+        let (sut, fake, _) = makeSUT()
+        let issue = ArrHealth.fixture(type: "error", message: "Indexers unavailable")
+        fake.healthResult = HealthResult(radarr: [issue], sonarr: [], lidarr: [])
+        await sut.refreshHealth()
+        #expect(sut.health.radarr.map(\.message) == ["Indexers unavailable"])
+
+        fake.healthResult = HealthResult(radarr: [], sonarr: [], lidarr: [], failed: [.radarr])
+        await sut.refreshHealth()
+        #expect(sut.health.radarr.map(\.message) == ["Indexers unavailable"])
+
+        fake.healthResult = HealthResult(radarr: [], sonarr: [], lidarr: [])
+        await sut.refreshHealth()
+        #expect(sut.health.radarr.isEmpty)
+    }
+}

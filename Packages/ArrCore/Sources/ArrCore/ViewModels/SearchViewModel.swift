@@ -333,10 +333,15 @@ public final class SearchViewModel {
 
         isLoadingOptions = true
         defer { isLoadingOptions = false }
-        async let profiles = client.fetchQualityProfiles()
-        async let folders = client.fetchRootFolders()
-        async let metadata = source == .lidarr ? client.fetchMetadataProfiles() : []
-        (qualityProfiles, rootFolders, metadataProfiles) = await (profiles, folders, metadata)
+        do {
+            async let profiles = client.fetchQualityProfiles()
+            async let folders = client.fetchRootFolders()
+            async let metadata = source == .lidarr ? client.fetchMetadataProfiles() : []
+            (qualityProfiles, rootFolders, metadataProfiles) = try await (profiles, folders, metadata)
+        } catch {
+            // Empty pickers would read as "this arr has no profiles"; the reason is what the user can act on.
+            addError = error.userFacingMessage
+        }
     }
 
     func addScene(_ result: SearchResult, qualityProfileId: Int, rootFolderPath: String,

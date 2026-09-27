@@ -1,4 +1,5 @@
 import SwiftUI
+import os
 import MediaKit
 
 public struct SeriesPushRequest: Hashable {
@@ -28,6 +29,7 @@ struct EpisodeSlot: Hashable {
 /// Opens straight on the episode a Sonarr queue row downloads; the hero's
 /// series link pushes DetailView. Renders from a queue-row stub while loading.
 struct EpisodeQuickDetail: View {
+    private static let log = Logger(category: "Detail")
     let item: QueueItem
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
@@ -77,7 +79,7 @@ struct EpisodeQuickDetail: View {
             onClose: onBack,
             onSearch: { episodeId in
                 let client = configStore.sonarrClient
-                try? await client.searchEpisodes(episodeIds: [episodeId])
+                try await client.searchEpisodes(episodeIds: [episodeId])
             },
             warningActionURL: arrWebURL(for: item, in: configStore),
             onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
@@ -147,7 +149,9 @@ struct EpisodeQuickDetail: View {
                     do {
                         try await configStore.sonarrClient.setSeasonMonitored(
                             seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
-                    } catch {}
+                    } catch {
+                        Self.log.error("season monitor flip failed: \(error.localizedDescription, privacy: .public)")
+                    }
                     // Refetch: the flip cascades to every episode flag.
                     await load()
                 },

@@ -43,8 +43,7 @@ struct SeasonDetailView: View {
     @State private var selectedEpisode: ArrEpisode?
     @State private var enlargedPoster: URL?
     @State private var manualSearchTarget: SeasonReleaseSearch?
-    @State private var autoSearching = false
-    @State private var autoDidSearch = false
+    @State private var searchFeedback: SearchFeedback = .idle
     /// nil keeps the series poster.
     @State private var mediaServerSeasonPoster: URL?
     @State private var countries: [String] = []
@@ -128,7 +127,7 @@ struct SeasonDetailView: View {
                                     onToggleMonitored: onSetEpisodeMonitored.map { toggle in
                                         { m in await toggle(ep.id, m) }
                                     },
-                                    onAutomaticSearch: { await searchEpisode(ep) },
+                                    onAutomaticSearch: { try await searchEpisode(ep) },
                                     onManualSearch: {
                                         manualSearchTarget = SeasonReleaseSearch(target: .episode(
                                             episodeId: ep.id, title: episodeSearchTitle(ep)))
@@ -179,7 +178,7 @@ struct SeasonDetailView: View {
                 queueItems: queueByEpisodeId[ep.id] ?? [],
                 onClose: { selectedEpisode = nil },
                 onSearch: { episodeId in
-                    try? await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
+                    try await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
                 },
                 onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
                 onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
@@ -230,8 +229,7 @@ struct SeasonDetailView: View {
 
     private var headerSearchMenu: some View {
         HeaderSearchMenu(
-            inFlight: autoSearching,
-            didQueue: autoDidSearch,
+            feedback: searchFeedback,
             onAutomatic: { startAutomaticSearch() },
             onManual: {
                 manualSearchTarget = SeasonReleaseSearch(target: .season(
@@ -246,22 +244,13 @@ struct SeasonDetailView: View {
         return "\(drill.seriesTitle) · \(code)"
     }
 
-    /// Failures are silent: the arr queues the search, it doesn't report on it.
-    private func searchEpisode(_ ep: ArrEpisode) async {
-        try? await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
+    private func searchEpisode(_ ep: ArrEpisode) async throws {
+        try await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
     }
 
     private func startAutomaticSearch() {
-        guard !autoSearching else { return }
-        Task {
-            autoSearching = true
-            try? await configStore.sonarrClient
-                .searchSeason(seriesId: drill.seriesId, seasonNumber: drill.seasonNumber)
-            autoSearching = false
-            autoDidSearch = true
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            autoDidSearch = false
-        }
+        let (client, seriesId, season) = (configStore.sonarrClient, drill.seriesId, drill.seasonNumber)
+        SearchFeedback.run($searchFeedback) { try await client.searchSeason(seriesId: seriesId, seasonNumber: season) }
     }
 
     /// Sonarr's series score is TVDB's.

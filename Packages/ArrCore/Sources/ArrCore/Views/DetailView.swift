@@ -1,10 +1,12 @@
 import SwiftUI
+import os
 import MediaKit
 
 /// Detail view for a queue item — replaces the popover content while shown.
 /// Fetches data from Radarr/Sonarr/Lidarr based on `item.entityId` and
 /// `item.source`, then renders a service-specific layout.
 public struct DetailView: View {
+    private static let searchLog = Logger(category: "Detail")
     let item: QueueItem
     let onBack: () -> Void
     var viewModel: QueueViewModel
@@ -199,8 +201,7 @@ public struct DetailView: View {
     /// "Show history" push — this record's history, scoped by `entityId`.
     @State private var historyShown = false
     /// Automatic-search in flight / just-queued feedback for the bottom CTA.
-    @State private var autoSearching = false
-    @State private var autoDidSearch = false
+    @State private var searchFeedback: SearchFeedback = .idle
     /// The *server* is running an indexer search for this record. Covers the
     /// search the user fires from the CTA and, crucially, the one the arr
     /// starts by itself on add (`addOptions.searchForMovie`) — which the app
@@ -333,7 +334,10 @@ public struct DetailView: View {
         do {
             try await configStore.sonarrClient.setSeasonMonitored(
                 seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
-        } catch {}
+        } catch {
+            // The refetch below snaps the optimistic flip back; the reason only reaches the log.
+            Self.searchLog.error("season monitor flip failed: \(error.localizedDescription, privacy: .public)")
+        }
         await load(showSpinner: false)
     }
 
@@ -710,11 +714,11 @@ public struct DetailView: View {
                     Button { startAutomaticSearch() } label: {
                         Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
                     }
-                    .disabled(autoSearching || searchRunning)
+                    .disabled(searchFeedback.isSending || searchRunning)
                     Button { manualSearchTarget = manualTarget } label: {
                         Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
                     }
-                    .disabled(autoSearching || searchRunning)
+                    .disabled(searchFeedback.isSending || searchRunning)
                 }
             }
             if let url = arrWebURL(for: item, in: configStore) {
@@ -733,7 +737,7 @@ public struct DetailView: View {
             }
         } label: {
             // A running search still has to be visible without opening the menu.
-            if autoSearching || searchRunning {
+            if searchFeedback.isSending || searchRunning {
                 ProgressView().controlSize(.small)
             } else {
                 Image(systemName: "ellipsis")
@@ -749,8 +753,7 @@ public struct DetailView: View {
     private var headerSearchMenu: some View {
         if let target = manualTarget {
             HeaderSearchMenu(
-                inFlight: autoSearching || searchRunning,
-                didQueue: autoDidSearch,
+                feedback: searchRunning ? .sending : searchFeedback,
                 onAutomatic: { startAutomaticSearch() },
                 onManual: { manualSearchTarget = target }
             )
@@ -827,20 +830,12 @@ public struct DetailView: View {
     /// Fire the server-side sweep and drive the CTA's state machine:
     /// spinner (in flight) → checkmark (queued) → spinner (sweep running).
     private func startAutomaticSearch() {
-        guard !autoSearching, !searchRunning else { return }
-        Task {
-            autoSearching = true
-            await runAutomaticSearch()
-            autoSearching = false
-            autoDidSearch = true
-            // Assume it's running rather than waiting for the next poll to
-            // notice — the command was just accepted, and a CTA that goes
-            // idle for three seconds before the indicator appears reads as
-            // "nothing happened" and invites a second tap.
+        guard !searchRunning else { return }
+        SearchFeedback.run($searchFeedback) {
+            try await runAutomaticSearch()
+            // Accepted: show it running now rather than after the next poll, or the CTA idles and invites a second tap.
             searchRunning = true
             searchWatchToken += 1
-            try? await Task.sleep(nanoseconds: 1_600_000_000)
-            autoDidSearch = false
         }
     }
 
@@ -878,20 +873,14 @@ public struct DetailView: View {
     /// Fire the arr's own "search now" command for this movie / album — the
     /// indexer search runs server-side. (Series search is per-season in
     /// SeasonDetailView, so Sonarr never reaches the bottom CTA here.)
-    private func runAutomaticSearch() async {
+    private func runAutomaticSearch() async throws {
         guard let entityId = item.entityId else { return }
-        do {
-            switch item.source {
-            case .radarr:
-                try await configStore.radarrClient.searchMovie(movieId: entityId)
-            case .whisparr:
-                try await configStore.whisparrClient.searchMovie(movieId: entityId)
-            case .lidarr:
-                try await configStore.lidarrClient.searchAlbum(albumId: entityId)
-            case .sonarr:
-                break
-            }
-        } catch {}
+        switch item.source {
+        case .radarr: try await configStore.radarrClient.searchMovie(movieId: entityId)
+        case .whisparr: try await configStore.whisparrClient.searchMovie(movieId: entityId)
+        case .lidarr: try await configStore.lidarrClient.searchAlbum(albumId: entityId)
+        case .sonarr: break
+        }
     }
 
     @ViewBuilder
@@ -1075,7 +1064,7 @@ public struct DetailView: View {
                         await setSeasonMonitored(seasonNumber: season.seasonNumber, monitored: monitored)
                     },
                     onAutomaticSeasonSearch: { season in
-                        try? await configStore.sonarrClient.searchSeason(
+                        try await configStore.sonarrClient.searchSeason(
                             seriesId: item.entityId ?? 0, seasonNumber: season.seasonNumber)
                     },
                     onManualSeasonSearch: { season in

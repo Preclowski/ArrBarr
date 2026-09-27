@@ -17,7 +17,7 @@ struct SonarrDetailPanel<Header: View>: View {
     /// The host owns the write (optimistic flip, Sonarr call, refetch).
     var onSetSeasonMonitored: ((ArrSeason, Bool) async -> Void)? = nil
     /// Both nil: the rows carry no menu.
-    var onAutomaticSeasonSearch: ((ArrSeason) async -> Void)? = nil
+    var onAutomaticSeasonSearch: ((ArrSeason) async throws -> Void)? = nil
     var onManualSeasonSearch: ((ArrSeason) -> Void)? = nil
     var nextEpisode: ArrEpisode? = nil
     /// Episodes have no artwork of their own.
@@ -75,7 +75,7 @@ struct SonarrDetailPanel<Header: View>: View {
                                         { monitored in await set(season, monitored) }
                                     },
                                     onAutomaticSearch: onAutomaticSeasonSearch.map { search in
-                                        { await search(season) }
+                                        { try await search(season) }
                                     },
                                     onManualSearch: onManualSeasonSearch.map { search in
                                         { search(season) }

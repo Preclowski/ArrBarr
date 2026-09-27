@@ -9,11 +9,10 @@ struct SeasonRow: View {
     /// `nil` keeps the bookmark an inert glyph.
     var onSetMonitored: ((Bool) async -> Void)? = nil
     /// Both nil leaves the row without a menu.
-    var onAutomaticSearch: (() async -> Void)? = nil
+    var onAutomaticSearch: (() async throws -> Void)? = nil
     var onManualSearch: (() -> Void)? = nil
 
-    @State private var autoSearching = false
-    @State private var autoDidSearch = false
+    @State private var searchFeedback: SearchFeedback = .idle
 
     private var stats: ArrStatistics? { season.statistics }
     private var have: Int { stats?.episodeFileCount ?? 0 }
@@ -41,13 +40,7 @@ struct SeasonRow: View {
                     .scaledFont(size: 12, weight: .medium)
                 Spacer(minLength: 8)
                 // The context menu closes on click, so the row shows the sweep itself.
-                if autoSearching {
-                    ProgressView().controlSize(.small)
-                } else if autoDidSearch {
-                    Image(systemName: "checkmark")
-                        .scaledFont(size: 10, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                }
+                SearchFeedbackIcon(feedback: searchFeedback)
                 if anyDownloading {
                     MediaBadgeCluster(isUpgrade: isUpgrade)
                 }
@@ -80,7 +73,7 @@ struct SeasonRow: View {
         )
         .buttonStyle(.plain)
         .modifier(OptionalRowSearchMenu(
-            inFlight: $autoSearching, didQueue: $autoDidSearch,
+            feedback: $searchFeedback,
             onAutomatic: onAutomaticSearch, onManual: onManualSearch))
         .linkRowHover()
     }

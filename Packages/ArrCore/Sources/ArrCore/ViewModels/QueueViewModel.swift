@@ -511,7 +511,7 @@ public final class QueueViewModel {
         // A cancelled task's fetches come back empty-with-no-error; committing them would blank the queue.
         if Task.isCancelled { return }
         // Health first: `commitQueue` recomputes "Needs you", which merges it.
-        health = freshHealth
+        health = freshHealth.keepingLastGood(from: health)
         // Configured only: an unconfigured arr's empty-with-no-error slice would read as a successful fetch.
         for source in QueueItem.Source.allCases where configuredArrs.contains(source) {
             commitQueue(queue.slice(for: source))
@@ -725,8 +725,8 @@ public final class QueueViewModel {
     public func refreshHealth() async {
         let result = await aggregator.fetchHealth()
         if Task.isCancelled { return }
-        health = result
-        notifyNewHealthIssues(result)
+        health = result.keepingLastGood(from: health)
+        notifyNewHealthIssues(health)
         recomputeNeedsYou()
     }
 
@@ -734,13 +734,14 @@ public final class QueueViewModel {
     private func notifyNewHealthIssues(_ result: HealthResult) {
         guard configStore.notifyHealth else {
             // Still fold the records in, so enabling the setting later announces only what breaks next.
-            for source in QueueItem.Source.allCases where configuredArrs.contains(source) {
+            for source in QueueItem.Source.allCases where configuredArrs.contains(source) && !result.failed.contains(source) {
                 _ = healthTracker.newIssues(for: source, records: result.records(for: source))
             }
             persistHealthTracker()
             return
         }
-        for source in QueueItem.Source.allCases where configuredArrs.contains(source) {
+        // A failed read says nothing about which issues are gone, so the tracker only hears reachable sources.
+        for source in QueueItem.Source.allCases where configuredArrs.contains(source) && !result.failed.contains(source) {
             let errors = result.records(for: source).filter {
                 $0.type?.lowercased() == "error" && $0.message?.isEmpty == false
             }
