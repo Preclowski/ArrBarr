@@ -38,6 +38,14 @@ public enum IDNamespace: Hashable, Sendable, Codable {
         }
     }
 
+    /// An arr or media-server item: a record, not an external id.
+    var isRecord: Bool {
+        switch self {
+        case .arr, .mediaServer: true
+        default: false
+        }
+    }
+
     init?(token: String) {
         switch token {
         case "tmdb-movie": self = .tmdbMovie
@@ -95,36 +103,6 @@ public struct MediaID: Hashable, Sendable, Codable, CustomStringConvertible {
     public static func server(_ instance: InstanceID, _ id: String) -> MediaID { .init(namespace: .mediaServer(instance), value: id) }
 
     public var intValue: Int? { Int(value) }
-}
-
-/// One model for every kind; flat lineage keeps it Hashable and Codable.
-public struct MediaIdentity: Hashable, Sendable, Codable {
-    public struct Ancestor: Hashable, Sendable, Codable {
-        public let kind: MediaKind
-        public let ids: Set<MediaID>
-        public let ordinal: Int?
-        public init(kind: MediaKind, ids: Set<MediaID>, ordinal: Int? = nil) { self.kind = kind; self.ids = ids; self.ordinal = ordinal }
-    }
-
-    public let kind: MediaKind
-    public let ids: Set<MediaID>
-    public let ordinal: Int?
-    public let lineage: [Ancestor]
-
-    public init(kind: MediaKind, ids: Set<MediaID>, ordinal: Int? = nil, lineage: [Ancestor] = []) {
-        self.kind = kind; self.ids = ids; self.ordinal = ordinal; self.lineage = lineage
-    }
-
-    public func id(in namespace: IDNamespace) -> MediaID? { ids.first { $0.namespace == namespace } }
-
-    public func merging(_ other: MediaIdentity) -> MediaIdentity {
-        MediaIdentity(kind: kind, ids: ids.union(other.ids), ordinal: ordinal ?? other.ordinal, lineage: lineage.isEmpty ? other.lineage : lineage)
-    }
-
-    /// Shared id, same kind, same ordinal; never a title or a year.
-    public func matches(_ other: MediaIdentity) -> Bool {
-        kind == other.kind && ordinal == other.ordinal && !ids.isDisjoint(with: other.ids)
-    }
 }
 
 public struct Crosswalk: Hashable, Sendable, Codable {

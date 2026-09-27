@@ -10,13 +10,19 @@ public actor IdentityStore {
     }
 
     /// Pure lookup, no network.
+    /// Arr and media-server harvests link each record to its external ids, so two external ids meet one hop
+    /// away, through the record that carries both.
     public func known(_ id: MediaID, in namespace: IDNamespace, minimum: Crosswalk.Confidence = .inferred) async -> MediaID? {
-        await lookup(id).filter { $0.to.namespace == namespace && $0.confidence >= minimum }.max { $0.confidence < $1.confidence }?.to
+        let edges = await lookup(id).filter { $0.confidence >= minimum }
+        if let direct = Self.best(edges, in: namespace) { return direct }
+        for edge in edges where edge.to.namespace.isRecord && edge.to.namespace != namespace {
+            if let hit = Self.best(await lookup(edge.to).filter { $0.confidence >= minimum }, in: namespace) { return hit }
+        }
+        return nil
     }
 
-    public func identity(for id: MediaID, kind: MediaKind) async -> MediaIdentity {
-        let ids = Set(await lookup(id).filter { $0.kind == kind }.map(\.to)).union([id])
-        return MediaIdentity(kind: kind, ids: ids)
+    private static func best(_ edges: [Crosswalk], in namespace: IDNamespace) -> MediaID? {
+        edges.filter { $0.to.namespace == namespace }.max { $0.confidence < $1.confidence }?.to
     }
 
     /// Upsert; higher confidence wins; both directions.

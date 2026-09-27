@@ -68,6 +68,11 @@ public final class ServiceGateway {
     /// Consumers await this before their first read so the registry is populated.
     public func ready() async { await startTask?.value }
 
+    /// What the crosswalk already knows about `id` in another id space — no request.
+    nonisolated func known(_ id: MediaID, in namespace: IDNamespace) async -> MediaID? {
+        await kit.identity.known(id, in: namespace)
+    }
+
     /// The registered arrs' base URLs: the only places an arr key may be sent.
     nonisolated var arrBaseURLs: [URL] { kit.registry.all.filter { $0.id.kind.family == .servarr }.map(\.baseURL) }
 

@@ -1,5 +1,6 @@
 import Foundation
 import os
+import MediaKit
 
 /// The one place a TMDB **tv** id becomes a Sonarr-addressable series.
 ///
@@ -59,8 +60,9 @@ enum SeriesIdentityResolver {
         tmdbTVId: Int, sonarrConfig: ServiceConfig, tmdbKey: String
     ) async -> Int? {
         guard tmdbTVId > 0, !DemoMode.isActive else { return nil }
-        // Cheapest first: an owned series has both ids in the library
-        // snapshot already, so this costs no request at all.
+        // Cheapest first: an id pair seen before (an owned series, an earlier
+        // TMDB cross-reference), then the library snapshot — no request either way.
+        if let known = await knownTVDBId(tmdbTVId) { return known }
         if sonarrConfig.isConfigured,
            let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
             return owned
@@ -75,6 +77,10 @@ enum SeriesIdentityResolver {
         return (record?.externalId).flatMap { $0 > 0 ? $0 : nil }
     }
 
+    private static func knownTVDBId(_ tmdbTVId: Int) async -> Int? {
+        await ServiceGateway.resolve().known(.tmdbSeries(tmdbTVId), in: .tvdb)?.intValue
+    }
+
     // MARK: - Resolution
 
     private static func resolveRecord(
@@ -82,7 +88,11 @@ enum SeriesIdentityResolver {
     ) async -> SearchResult? {
         let client = SearchClient(config: sonarrConfig, source: .sonarr)
 
-        // 1. Free: the user already owns it, so both ids are in the snapshot.
+        // 1. Free: an id pair seen before, or an owned series in the snapshot.
+        if let owned = await knownTVDBId(tmdbTVId), let record = await lookupTVDB(owned, client: client) {
+            logResolution(tmdbTVId, record, via: "crosswalk")
+            return record
+        }
         if let owned = await ArrLibraryMaps.sonarrTVDBByTMDBId(config: sonarrConfig)[tmdbTVId] {
             if let record = await lookupTVDB(owned, client: client) {
                 logResolution(tmdbTVId, record, via: "library")
