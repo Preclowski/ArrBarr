@@ -64,7 +64,8 @@ final class ChatViewModelHolder {
             // it's re-read only because `useDemoStore` → `applyValues` always publishes.
             "\(DemoMode.isActive)",
             "\(store.aiEnabled)",
-            // appLanguage is intentionally not part of the signature (a restart rebuilds the VM).
+            // The OpenAI prompt's fallback reply language; the UI switches live, so the chat must too.
+            store.appLanguage,
         ].joined(separator: "|")
     }
 }

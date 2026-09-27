@@ -10,13 +10,14 @@ public enum MCPTokenStore {
 
     public static func read() -> String? {
         if let token = store.read(.mcpBearer) { return token }
-        // Tokens from before the SecretStore refactor lived at a different keychain location.
-        if let legacy = readLegacy() {
-            store.set(legacy, for: .mcpBearer)
-            deleteLegacy()
-            return legacy
-        }
-        return nil
+        // Tokens from before the SecretStore refactor lived in the file keychain, which can prompt for the login
+        // password; look there once per install, not on every read of a missing token.
+        guard !UserDefaults.standard.bool(forKey: legacyCheckedKey) else { return nil }
+        UserDefaults.standard.set(true, forKey: legacyCheckedKey)
+        guard let legacy = readLegacy() else { return nil }
+        store.set(legacy, for: .mcpBearer)
+        deleteLegacy()
+        return legacy
     }
 
     public static func set(_ token: String) { store.set(token, for: .mcpBearer) }
@@ -38,6 +39,7 @@ public enum MCPTokenStore {
 
     private static let legacyService = "com.preclowski.ArrBarr.mcp"
     private static let legacyAccount = "bearer"
+    private static let legacyCheckedKey = "ArrBarr.mcpLegacyTokenChecked"
 
     private static func readLegacy() -> String? {
         let q: [String: Any] = [

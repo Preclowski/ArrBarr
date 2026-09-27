@@ -183,4 +183,11 @@ struct PosterThumbnailTests {
               let h = props[kCGImagePropertyPixelHeight] as? Double else { return nil }
         return CGSize(width: w, height: h)
     }
+
+    @Test("The lightbox's full tier asks TMDB for the original of a small profile photo")
+    func fullTierUpgradesATMDBPortrait() throws {
+        let small = URL(string: "https://image.tmdb.org/t/p/w185/face.jpg")!
+        let full = try #require(PosterStore.sourceURL(for: small, tier: .full))
+        #expect(full.absoluteString == "https://image.tmdb.org/t/p/original/face.jpg")
+    }
 }

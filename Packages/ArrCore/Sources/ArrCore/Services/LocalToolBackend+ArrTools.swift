@@ -191,7 +191,7 @@ extension LocalToolBackend {
 
     private func downloadClientHealthLines() async -> [String] {
         let dc = downloadClients
-        let probes: [(String, DownloadClientKind, ServiceConfig)] = [
+        let probes: [(String, ServiceKind, ServiceConfig)] = [
             ("qBittorrent", .qbittorrent, dc.qbittorrent),
             ("Transmission", .transmission, dc.transmission),
             ("NZBGet", .nzbget, dc.nzbget),
@@ -207,7 +207,7 @@ extension LocalToolBackend {
             for (label, kind, cfg) in probes {
                 group.addTask { [cfg] in
                     do {
-                        let status = try await Self.probeDownloadClient(kind, cfg)
+                        let status = try await ServiceHandles.testConnection(kind, config: cfg)
                         let detail = status.isEmpty ? "" : " (\(status))"
                         return (label, "reachable\(detail)")
                     } catch {
@@ -219,17 +219,6 @@ extension LocalToolBackend {
         }
         results.sort { $0.0 < $1.0 }
         return results.map { "  • \($0.0): \($0.1)" }
-    }
-
-    nonisolated private static func probeDownloadClient(_ kind: DownloadClientKind, _ cfg: ServiceConfig) async throws -> String {
-        switch kind {
-        case .qbittorrent:  return try await QbittorrentClient(config: cfg).testConnection()
-        case .transmission: return try await TransmissionClient(config: cfg).testConnection()
-        case .nzbget:       return try await NzbgetClient(config: cfg).testConnection()
-        case .sabnzbd:      return try await SabnzbdClient(config: cfg).testConnection()
-        case .rtorrent:     return try await RtorrentClient(config: cfg).testConnection()
-        case .deluge:       return try await DelugeClient(config: cfg).testConnection()
-        }
     }
 
     // MARK: - Lifecycle control tools (monitor + search)

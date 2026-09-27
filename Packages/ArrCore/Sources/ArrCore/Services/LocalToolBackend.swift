@@ -334,11 +334,6 @@ public actor LocalToolBackend {
 
 }
 
-/// Plain Sendable enum so it crosses the `health` tool's task group without closures.
-enum DownloadClientKind: Sendable {
-    case qbittorrent, transmission, nzbget, sabnzbd, rtorrent, deluge
-}
-
 /// Each defaults to `.empty` (skipped).
 nonisolated public struct DownloadClientConfigs: Sendable {
     public var qbittorrent: ServiceConfig

@@ -191,29 +191,36 @@ public final class ServiceGateway {
 
     public func reconcile() async {
         guard started else { return }
-        await reconcileRegistry()
+        let changed = await reconcileRegistry()
+        let connected = Set(realtime.keys)
         await syncRealtime()
+        // An open socket keeps talking to the old host or key until it drops; a changed instance reconnects now.
+        for id in changed.intersection(connected) { await realtime[id]?.forceReconnect() }
     }
 
-    private var reconcileTask: Task<Void, Never>?
+    private var reconcileTask: Task<Set<InstanceID>, Never>?
     private var reconcileAgain = false
 
     /// One reconcile at a time; adopters arriving mid-run get a second pass instead of a concurrent one.
-    private func reconcileRegistry() async {
+    /// Returns the instances whose origin or credentials changed.
+    @discardableResult
+    private func reconcileRegistry() async -> Set<InstanceID> {
         if let running = reconcileTask {
             reconcileAgain = true
-            await running.value
-            return
+            return await running.value
         }
         let task = Task { @MainActor in
+            var changed: Set<InstanceID> = []
             repeat {
                 reconcileAgain = false
-                _ = await kit.reconcile(descriptors())
+                changed.formUnion(await kit.reconcile(descriptors()))
             } while reconcileAgain
+            return changed
         }
         reconcileTask = task
-        await task.value
+        let changed = await task.value
         reconcileTask = nil
+        return changed
     }
 
     /// Run these arrs' queue streams on their own clock and pushes. Idempotent: called on every panel open and close.
