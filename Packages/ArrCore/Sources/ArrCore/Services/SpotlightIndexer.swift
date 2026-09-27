@@ -213,8 +213,10 @@ public enum SpotlightIndexer {
 
     private static func reindexRadarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
-        guard let movies = try? await RadarrClient(config: config).fetchAllMovies() else { return [] }
-        return await syncIndex(movies, domain: domainRadarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
+        // Through the store the Library tab reads, so a pass inside its freshness window costs no request.
+        let read = await LibraryIndex.shared.moviesRead(config: config)
+        guard !read.failed else { return [] }
+        return await syncIndex(read.records, domain: domainRadarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .movie)
             attr.title = rec.year.map { "\(title) (\($0))" } ?? title
@@ -235,8 +237,9 @@ public enum SpotlightIndexer {
 
     private static func reindexSonarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
-        guard let series = try? await SonarrClient(config: config).fetchAllSeries() else { return [] }
-        return await syncIndex(series, domain: domainSonarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
+        let read = await LibraryIndex.shared.seriesRead(config: config)
+        guard !read.failed else { return [] }
+        return await syncIndex(read.records, domain: domainSonarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .audiovisualContent)
             attr.title = rec.year.map { "\(title) (\($0))" } ?? title

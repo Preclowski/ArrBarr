@@ -52,8 +52,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       `ArrCompositions`; stub suites keep global `URLProtocol` registration (a test process
       routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override; migrated off
       global registration in Wave 6).
-- [ ] Later: `LibraryIndex`/`LibraryViewModel` as store consumers (today they call the facades
-      with `mustRevalidate` and keep their own snapshot).
+- [x] `LibraryIndex`/`LibraryViewModel` as store consumers: `LibraryIndex` is stateless over the store
+      (`cacheFirst`, versions are the store revision of `c:library@i`, so each test gateway is isolated);
+      the per-source slots, in-flight table and redundant add/import invalidations are gone.
 
 ## Wave 3 — tools, MCP, settings, health, intents, widget
 
@@ -70,7 +71,7 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`
       already drives the realtime-quiet check in `QueueViewModel`.
 - [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
-- [ ] `SpotlightIndexer` as a store consumer.
+- [x] `SpotlightIndexer` as a store consumer (reads through `LibraryIndex`).
 
 ## Wave 4 — QueueViewModel on LiveStream
 

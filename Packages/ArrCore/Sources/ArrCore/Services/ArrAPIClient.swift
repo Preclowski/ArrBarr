@@ -38,8 +38,9 @@ extension ArrAPIClient {
         return try await context.store.read(resource, policy: policy, maxAge: maxAge, priority: priority).value
     }
 
-    /// Cache-first read for the big library lists: the stored row when there
-    /// is one, the arr otherwise.
+    /// Read for the big library lists. `revalidate: false` takes the stored row
+    /// however old; otherwise the store's own freshness decides (`warm` TTL,
+    /// invalidated by imports, adds and edits).
     ///
     /// `.cacheOnly` rather than `.staleWhileRevalidate`, because the rows we
     /// want are exactly the ones SWR refuses: an import event marks the
@@ -53,7 +54,7 @@ extension ArrAPIClient {
         if !revalidate, let cached = try? await readFetched(type, policy: .cacheOnly, make) {
             return cached
         }
-        return try await readFetched(type, policy: .mustRevalidate, make)
+        return try await readFetched(type, policy: .cacheFirst, make)
     }
 
     /// As `read`, but keeping the store's verdict on what it handed back.

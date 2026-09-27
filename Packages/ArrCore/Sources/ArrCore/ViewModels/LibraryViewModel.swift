@@ -144,7 +144,7 @@ public final class LibraryViewModel {
     /// when — and only when — the index says its records changed. The old
     /// 5-minute TTL of its own is what made an add read "not owned" in the grid
     /// for minutes after the index already knew better.
-    private var indexVersions: [QueueItem.Source: Int] = [:]
+    private var indexVersions: [QueueItem.Source: LibraryIndex.Version] = [:]
 
     public init() {}
 
@@ -219,8 +219,8 @@ public final class LibraryViewModel {
         // The cache-first pass is for painting only: an explicit refresh, and
         // every later visit, asks the arr.
         let revalidate = force || revalidated.contains(source)
-        if force { await LibraryIndex.shared.invalidate(source) }
-        let indexVersion = await LibraryIndex.shared.version(for: source)
+        if force { await LibraryIndex.shared.invalidate(source, config: config) }
+        let indexVersion = await LibraryIndex.shared.version(for: source, config: config)
         if !force, entries[source] != nil, indexVersions[source] == indexVersion {
             return
         }
@@ -261,9 +261,13 @@ public final class LibraryViewModel {
         Self.log.notice("\(source.rawValue, privacy: .public) load: profiles in \(elapsed(), privacy: .public) ms (revalidate \(revalidate, privacy: .public))")
         let baseURL = config.baseURL
         let projection: Projection
+        let failed: Bool
+        let stale: Bool
         switch source {
         case .radarr:
-            let movies = await LibraryIndex.shared.movies(config: config, revalidate: revalidate)
+            let read = await LibraryIndex.shared.moviesRead(config: config, revalidate: revalidate)
+            let movies = read.records
+            failed = read.failed; stale = read.stale
             // Alternate titles are what let the filter find a film by its
             // Polish or German name. Best-effort, and only paid when the movie
             // list actually changed — reaching this line at all means the
@@ -278,14 +282,17 @@ public final class LibraryViewModel {
                 Self.unify(movies, baseURL: baseURL, profiles: profiles, alternateTitles: alts)
             }
         case .sonarr:
-            let series = await LibraryIndex.shared.series(config: config, revalidate: revalidate)
-            projection = await Self.project { Self.unify(series, baseURL: baseURL, profiles: profiles) }
+            let read = await LibraryIndex.shared.seriesRead(config: config, revalidate: revalidate)
+            failed = read.failed; stale = read.stale
+            projection = await Self.project { Self.unify(read.records, baseURL: baseURL, profiles: profiles) }
         case .lidarr:
-            let artists = await LibraryIndex.shared.artists(config: config, revalidate: revalidate)
-            projection = await Self.project { Self.unify(artists, baseURL: baseURL, profiles: profiles) }
+            let read = await LibraryIndex.shared.artistsRead(config: config, revalidate: revalidate)
+            failed = read.failed; stale = read.stale
+            projection = await Self.project { Self.unify(read.records, baseURL: baseURL, profiles: profiles) }
         case .whisparr:
-            let movies = await LibraryIndex.shared.whisparrMovies(config: config, revalidate: revalidate)
-            projection = await Self.project { Self.unify(movies, baseURL: baseURL, profiles: profiles) }
+            let read = await LibraryIndex.shared.whisparrMoviesRead(config: config, revalidate: revalidate)
+            failed = read.failed; stale = read.stale
+            projection = await Self.project { Self.unify(read.records, baseURL: baseURL, profiles: profiles) }
         }
 
         Self.log.notice("\(source.rawValue, privacy: .public) load: \(projection.entries.count, privacy: .public) entries projected in \(elapsed(), privacy: .public) ms")
@@ -300,14 +307,14 @@ public final class LibraryViewModel {
         // next `loadIfNeeded` retries instead of treating the failure as done.
         // That quietness is right for the UI and wrong for diagnosis, so the
         // failure is said out loud in the log.
-        if await LibraryIndex.shared.fetchFailed(source) {
+        if failed {
             Self.log.error("\(source.rawValue, privacy: .public) library load failed — index reports an unreachable arr")
             if entries[source] == nil { loadFailed.insert(source) }
             return
         }
 
         commit(projection.entries, byTitle: projection.byTitle, for: source,
-               version: await LibraryIndex.shared.version(for: source))
+               version: await LibraryIndex.shared.version(for: source, config: config))
         LibrarySnapshotStore.save(projection.byTitle, source: source, fingerprint: config.identityFingerprint)
         Self.logAliasCoverage(projection.entries, source: source)
 
@@ -317,7 +324,7 @@ public final class LibraryViewModel {
         // that went to the network is already current and gets no second one.
         if !revalidate {
             revalidated.insert(source)
-            if await LibraryIndex.shared.servedStaleSnapshot(source) {
+            if stale {
                 Self.log.notice("\(source.rawValue, privacy: .public) library painted from the store — refreshing behind the grid")
                 Task { [weak self] in
                     await self?.loadIfNeeded(source: source, config: config, force: true)
@@ -330,7 +337,7 @@ public final class LibraryViewModel {
     /// were unified from — nil for the snapshot paint, which is not a unify
     /// and must not mark the index as already projected.
     private func commit(_ entries: [LibraryEntry], byTitle: [LibraryEntry],
-                        for source: QueueItem.Source, version: Int?) {
+                        for source: QueueItem.Source, version: LibraryIndex.Version?) {
         self.entries[source] = entries
         // The default axis arrives already sorted, so the first Library visit
         // after a fetch renders without paying the sort inside body.

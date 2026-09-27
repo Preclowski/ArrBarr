@@ -351,8 +351,6 @@ public final class QueueViewModel {
                 case .queueChanged:
                     self.scheduleRealtimeRefresh(source: source)
                 case .fileImported:
-                    // An import changes what the user OWNS; the library snapshot must not be stale about it.
-                    LibraryIndex.shared.invalidateSoon(source)
                     self.scheduleRealtimeRefresh(source: source)
                 case .healthChanged:
                     self.scheduleHealthRefresh()

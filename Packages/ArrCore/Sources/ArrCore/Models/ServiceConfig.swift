@@ -17,7 +17,7 @@ nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
 
     /// Cache key for "is this still the same server?".
     ///
-    /// Anything caching per-server state (`LibraryIndex`'s snapshot,
+    /// Anything caching per-server state (the Library grid's saved snapshot,
     /// `SeriesIdentityResolver`'s resolutions and its `tmdb:` capability
     /// probe) has to notice when the user re-points a service, and must do it
     /// identically — two definitions drifting apart would mean one cache

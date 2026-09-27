@@ -413,7 +413,7 @@ public final class SearchViewModel {
     private func fetchOne(client: SearchClient?, generation: Int) async -> [SearchResult] {
         guard let client else { return [] }
         do {
-            // Ownership comes off the shared `LibraryIndex`, whose in-flight
+            // Ownership comes off the shared library read, whose in-flight
             // fetch belongs to every caller and isn't cancelled with this
             // search. As an `async let` child it held a failed lookup's error
             // hostage until the whole library had loaded; unstructured, the
@@ -534,10 +534,6 @@ public final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
                                                   searchOnAdd: searchOnAdd)
             whisparrResults.removeAll { $0.id == result.id }
-            // Search reads ownership from the index; without this the title
-            // just added would read as addable until `LibraryIndex.ttl`, and
-            // the Library grid would keep it "not owned" until its next load.
-            await LibraryIndex.shared.invalidate(.whisparr)
             navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -555,7 +551,6 @@ public final class SearchViewModel {
                                                  rootFolderPath: rootFolderPath, monitor: monitor,
                                                  searchOnAdd: searchOnAdd)
             radarrResults.removeAll { $0.id == result.id }
-            await LibraryIndex.shared.invalidate(.radarr)
             navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -585,7 +580,6 @@ public final class SearchViewModel {
                                                   seriesType: seriesType, seasonFolder: seasonFolder,
                                                   searchOnAdd: searchOnAdd)
             sonarrResults.removeAll { $0.id == result.id }
-            await LibraryIndex.shared.invalidate(.sonarr)
             navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -606,7 +600,6 @@ public final class SearchViewModel {
                                                   monitor: monitor.rawValue,
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
-            await LibraryIndex.shared.invalidate(.lidarr)
             navigateToAdded(result, source: .lidarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -627,9 +620,6 @@ public final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath,
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
-            // An album add creates its artist too, so the whole Lidarr
-            // snapshot is stale.
-            await LibraryIndex.shared.invalidate(.lidarr)
             // The POST returns the ALBUM record — deep-link straight into the
             // album detail (unlike the artist add, which lands on the artist).
             guard let arrId else { return }

@@ -70,7 +70,7 @@ struct LibraryViewModelTests {
         let vm = LibraryViewModel()
         let cfg = config(port: 17302)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
-        await LibraryIndex.shared.invalidate(.radarr)
+        await LibraryIndex.shared.invalidate(.radarr, config: cfg)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
         #expect(libraryVMState.movieHits == 2)
         #expect(vm.entries[.radarr]?.count == 1)
@@ -134,7 +134,7 @@ struct LibraryViewModelTests {
         // fetched, and the grid must still come up off the saved projection
         // rather than showing the error state.
         libraryVMState.fail(port: 17321)
-        await LibraryIndex.shared.invalidate(.radarr)
+        await LibraryIndex.shared.invalidate(.radarr, config: cfg)
         let next = LibraryViewModel()
         await next.loadIfNeeded(source: .radarr, config: cfg)
         #expect(next.entries[.radarr]?.count == 1)
