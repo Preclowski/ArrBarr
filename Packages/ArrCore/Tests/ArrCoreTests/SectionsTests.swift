@@ -314,7 +314,7 @@ struct ComputeNeedsYouTests {
         #expect(result.count == 2)
         let warning = result.first { $0.id == "needsyou.warn" }
         let failed = result.first { $0.id == "needsyou.fail" }
-        #expect(warning?.subtitle == "queue.manualImportRequired.button")
+        #expect(warning?.subtitle == String(localized: "queue.manualImportRequired.button", bundle: .module))
         #expect(failed?.subtitle == QueueItem.Status.failed.displayName)
     }
 
