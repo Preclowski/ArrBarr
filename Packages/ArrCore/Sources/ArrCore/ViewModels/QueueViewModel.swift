@@ -1317,8 +1317,15 @@ public final class QueueViewModel {
         // Bridge the queued→active gap: keep a just-actioned row on screen while
         // the arr momentarily drops it from its queue.
         let freshIds = Set(fresh.map { $0.id })
+        let previousIds = Set(previous.map { $0.id })
         for (idx, prev) in previous.enumerated() where !freshIds.contains(prev.id) {
             guard let override = optimisticOverrides[prev.id] else { continue }
+            // A grabbed pending release comes back under a new id; once it has, the ghost is a duplicate.
+            // A download of the same title that was already queued is not the successor.
+            if fresh.contains(where: { $0.succeeds(prev) && !previousIds.contains($0.id) }) {
+                optimisticOverrides.removeValue(forKey: prev.id)
+                continue
+            }
             guard override.expiry >= now, case .status(let status) = override.kind else {
                 // Expired status override on a vanished row → stop tracking it.
                 if override.expiry < now { optimisticOverrides.removeValue(forKey: prev.id) }

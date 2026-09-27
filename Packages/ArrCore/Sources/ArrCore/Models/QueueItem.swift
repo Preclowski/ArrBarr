@@ -144,6 +144,22 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     public var isPaused: Bool { status == .paused }
     public var isCompleted: Bool { status == .completed }
 
+    /// A release the arr is still holding (delay profile) — it has no download-client id yet.
+    var isPendingRelease: Bool { downloadId?.isEmpty ?? true }
+
+    /// The arr drops a pending row when it grabs it and tracks the download under a new queue id,
+    /// so the entity and episode are all the two rows share.
+    var handoffKey: String? {
+        guard let entityId else { return nil }
+        return "\(source.rawValue)|\(entityId)|\(seasonNumber ?? -1)|\(episodeNumber ?? -1)"
+    }
+
+    /// Whether this row is the download `pending` turned into.
+    func succeeds(_ pending: QueueItem) -> Bool {
+        guard pending.isPendingRelease, !isPendingRelease, let key = handoffKey else { return false }
+        return key == pending.handoffKey
+    }
+
     /// Whether the row actually carries facts about the file it would replace.
     /// `isUpgrade` alone isn't enough — an arr can flag an upgrade and ship
     /// none of the `existing*` fields — and every surface that draws the

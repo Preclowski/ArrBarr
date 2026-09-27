@@ -77,7 +77,7 @@ public struct DetailView: View {
     /// after the user already paused.
     private var focused: QueueItem {
         let pool = viewModel.items(for: item.source)
-        return pool.first { isSameRow($0) } ?? pool.first { isSameEntity($0) } ?? item
+        return pool.first { isSameRow($0) } ?? pool.first { $0.succeeds(item) } ?? pool.first { isSameEntity($0) } ?? item
     }
 
     /// Same *queue row* as the one the detail was opened on. The `arrQueueId`
@@ -109,7 +109,7 @@ public struct DetailView: View {
     /// from `/queue` — the cue to refetch so the detail swaps the stale
     /// download view for the freshly-imported on-disk file.
     private var isInLiveQueue: Bool {
-        viewModel.items(for: item.source).contains { isSameRow($0) || isSameEntity($0) }
+        viewModel.items(for: item.source).contains { isSameRow($0) || $0.succeeds(item) || isSameEntity($0) }
     }
 
     /// True when at least one sibling is a real queue row (non-zero arrQueueId).

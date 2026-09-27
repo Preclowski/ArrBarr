@@ -133,6 +133,20 @@ private func makeItem(
     )
 }
 
+private func releaseRow(_ id: String, downloadId: String?, status: QueueItem.Status) -> QueueItem {
+    QueueItem(
+        id: id, source: .radarr, arrQueueId: Int(id.split(separator: "-").last!)!,
+        downloadId: downloadId, downloadProtocol: .usenet,
+        downloadClient: "SABnzbd", indexer: nil,
+        title: "Sintel (2010)", subtitle: nil,
+        status: status, progress: 0, sizeTotal: 0,
+        sizeLeft: 0, timeLeft: nil,
+        customFormats: [], customFormatScore: 0,
+        quality: nil, isUpgrade: false,
+        contentSlug: nil, entityId: 7
+    )
+}
+
 private let configuredArr = ServiceConfig(
     enabled: true, baseURL: "http://localhost", apiKey: "k",
     username: "", password: ""
@@ -374,6 +388,47 @@ struct QueueViewModelOptimisticTests {
         let final = sut.items(for: .sonarr)
         #expect(final.map(\.id) == ["before", "q", "after"])
         #expect(final.filter { $0.id == "q" }.count == 1)
+    }
+
+    @Test("A grabbed pending release hands its row to the download that replaces it")
+    func pendingGhostYieldsToSuccessor() async {
+        let (sut, fake, _) = makeSUT()
+        let pending = releaseRow("radarr-1", downloadId: nil, status: .queued)
+        fake.fetchResult = AggregateResult(radarr: [pending], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+
+        await sut.resume(pending)
+        #expect(fake.performedActions.map(\.0) == [.continueDownload])
+
+        // Grabbed: the pending row is gone before the arr tracks the download.
+        fake.fetchResult = AggregateResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-1"])
+
+        // The download turns up under its own queue id: one row, the real one.
+        let download = releaseRow("radarr-2", downloadId: "nzo-1", status: .downloading)
+        fake.fetchResult = AggregateResult(radarr: [download], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-2"])
+    }
+
+    @Test("A download of the same title already in the queue does not retire a grabbed pending row")
+    func existingDownloadIsNotTheSuccessor() async {
+        let (sut, fake, _) = makeSUT()
+        let existing = releaseRow("radarr-5", downloadId: "nzo-old", status: .downloading)
+        let pending = releaseRow("radarr-1", downloadId: nil, status: .queued)
+        fake.fetchResult = AggregateResult(radarr: [existing, pending], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        await sut.resume(pending)
+
+        fake.fetchResult = AggregateResult(radarr: [existing], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-5", "radarr-1"])
+
+        let download = releaseRow("radarr-2", downloadId: "nzo-1", status: .downloading)
+        fake.fetchResult = AggregateResult(radarr: [existing, download], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.items(for: .radarr).map(\.id) == ["radarr-5", "radarr-2"])
     }
 
     @Test("A deleted row the arr still returns briefly stays gone (not re-injected)")

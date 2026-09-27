@@ -20,11 +20,15 @@ struct UpgradeDiffView: View {
     /// Detail and tooltip surfaces (wide) show the full file names; the
     /// narrow chat card leaves them off to stay compact.
     let showFilenames: Bool
+    /// Names each column (current file / new file). For surfaces where nothing
+    /// around the diff already says which side is which.
+    let labeled: Bool
 
-    init(current: Side, incoming: Side, showFilenames: Bool = false) {
+    init(current: Side, incoming: Side, showFilenames: Bool = false, labeled: Bool = false) {
         self.current = current
         self.incoming = incoming
         self.showFilenames = showFilenames
+        self.labeled = labeled
     }
 
     /// Build from a queue row's `existing*` (current on-disk file) and
@@ -45,6 +49,7 @@ struct UpgradeDiffView: View {
             filename: item.releaseName
         )
         self.showFilenames = showFilenames
+        self.labeled = false
     }
 
     /// Ways to build a side out of the *library* payloads (as opposed to the
@@ -99,12 +104,12 @@ struct UpgradeDiffView: View {
     private var sideBySideBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
-                column(side: current)
+                column(side: current, title: labeled ? Text("queue.currentFile.button", bundle: .module) : nil)
                 Image(systemName: "arrow.right")
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
-                    .padding(.top, 1)
-                column(side: incoming)
+                    .padding(.top, labeled ? 15 : 1)
+                column(side: incoming, title: labeled ? Text("queue.newFile.button", bundle: .module) : nil)
             }
             if !gained.isEmpty || !lost.isEmpty || !unchanged.isEmpty {
                 // Wrap inline with the shared flow layout + diff-coloured
@@ -225,10 +230,16 @@ struct UpgradeDiffView: View {
         }
     }
 
-    private func column(side: Side) -> some View {
+    private func column(side: Side, title: Text? = nil) -> some View {
         VStack(alignment: .leading, spacing: 3) {
+            if let title {
+                title
+                    .scaledFont(size: 10, weight: .semibold)
+                    .foregroundStyle(.primary)
+            }
+            // Under a column title the quality is a value, not a heading.
             Text(side.quality ?? "—")
-                .scaledFont(size: 12, weight: .semibold)
+                .scaledFont(size: 12, weight: title == nil ? .semibold : .regular)
             if let score = side.score {
                 // Deliberately uncoloured. Tinting a side by its own sign, or
                 // by which side "won", put a third meaning on green inside a

@@ -8,7 +8,9 @@ private func item(
     downloadId: String?,
     season: Int? = nil,
     episode: Int? = nil,
-    title: String = "Supernatural"
+    title: String = "Supernatural",
+    entityId: Int? = nil,
+    status: QueueItem.Status = .downloading
 ) -> QueueItem {
     QueueItem(
         id: "\(source.rawValue)-\(queueId)",
@@ -17,15 +19,65 @@ private func item(
         downloadClient: "qBittorrent",
         title: title, subtitle: nil,
         seasonNumber: season, episodeNumber: episode,
-        status: .downloading, progress: 0.5,
+        status: status, progress: 0.5,
         sizeTotal: 1000, sizeLeft: 500, timeLeft: nil,
         customFormats: [], customFormatScore: 0,
         quality: nil, isUpgrade: false,
-        contentSlug: nil
+        contentSlug: nil, entityId: entityId
     )
 }
 
 @Suite struct QueueNotificationTrackerTests {
+
+    @Test("A pending release and the download it becomes are one banner")
+    func pendingReleaseAndItsDownloadNotifyOnce() {
+        var tracker = QueueNotificationTracker()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        _ = tracker.newItems(for: .radarr, items: [], now: t0)
+        let pending = item(source: .radarr, queueId: 1, downloadId: nil, entityId: 7, status: .queued)
+        #expect(tracker.newItems(for: .radarr, items: [pending], now: t0).count == 1)
+        // Grabbed: gone from the queue before the arr tracks the download.
+        #expect(tracker.newItems(for: .radarr, items: [], now: t0 + 5).isEmpty)
+        let download = item(source: .radarr, queueId: 2, downloadId: "nzo-1", entityId: 7)
+        #expect(tracker.newItems(for: .radarr, items: [download], now: t0 + 40).isEmpty)
+        // A later, unrelated grab of the same title is its own event.
+        let upgrade = item(source: .radarr, queueId: 3, downloadId: "nzo-2", entityId: 7)
+        #expect(tracker.newItems(for: .radarr, items: [upgrade], now: t0 + 60).count == 1)
+    }
+
+    @Test("A download already queued for the title does not use up the pending release's handoff")
+    func existingDownloadKeepsHandoff() {
+        var tracker = QueueNotificationTracker()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        let existing = item(source: .radarr, queueId: 5, downloadId: "nzo-old", entityId: 7)
+        _ = tracker.newItems(for: .radarr, items: [existing], now: t0)
+        let pending = item(source: .radarr, queueId: 1, downloadId: nil, entityId: 7, status: .queued)
+        #expect(tracker.newItems(for: .radarr, items: [existing, pending], now: t0).count == 1)
+        #expect(tracker.newItems(for: .radarr, items: [existing], now: t0 + 5).isEmpty)
+        let download = item(source: .radarr, queueId: 2, downloadId: "nzo-1", entityId: 7)
+        #expect(tracker.newItems(for: .radarr, items: [existing, download], now: t0 + 40).isEmpty)
+    }
+
+    @Test("A pending release that is dropped does not silence a later grab")
+    func expiredHandoffAnnouncesAgain() {
+        var tracker = QueueNotificationTracker()
+        let t0 = Date(timeIntervalSince1970: 1_000_000)
+        _ = tracker.newItems(for: .radarr, items: [], now: t0)
+        let pending = item(source: .radarr, queueId: 1, downloadId: nil, entityId: 7, status: .queued)
+        _ = tracker.newItems(for: .radarr, items: [pending], now: t0)
+        _ = tracker.newItems(for: .radarr, items: [], now: t0 + 5)
+        let later = item(source: .radarr, queueId: 2, downloadId: "nzo-1", entityId: 7)
+        let announced = tracker.newItems(for: .radarr, items: [later], now: t0 + 5 + QueueNotificationTracker.handoffWindow)
+        #expect(announced.count == 1)
+    }
+
+    @Test("A cache persisted before handoffs existed still decodes")
+    func decodesLegacyCache() throws {
+        let legacy = Data(#"{"seen":{"radarr":["radarr|abc"]}}"#.utf8)
+        var tracker = try JSONDecoder().decode(QueueNotificationTracker.self, from: legacy)
+        let known = item(source: .radarr, queueId: 9, downloadId: "abc")
+        #expect(tracker.newItems(for: .radarr, items: [known]).isEmpty)
+    }
 
     @Test("First successful fetch seeds silently — pre-existing items don't notify")
     func seedsSilently() {

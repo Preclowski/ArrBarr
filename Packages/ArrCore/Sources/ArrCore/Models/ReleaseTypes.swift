@@ -91,11 +91,8 @@ nonisolated public struct Release: Codable, Identifiable, Sendable {
 }
 
 /// Row-level answers the manual-search list needs from a release: what the
-/// file covers, what to print as its name, and whether it beats what's on disk.
+/// file covers and what to print as its name.
 nonisolated public extension Release {
-    /// How a release relates to the file already in the library.
-    enum Upgrade: Sendable { case better, same, worse }
-
     /// What one release covers. `.episodes` carries its own already-formatted
     /// label ("E04", "E01–05"); `.pack` is localised by the view.
     enum Scope: Sendable, Equatable { case pack, episodes(String) }
@@ -118,30 +115,6 @@ nonisolated public extension Release {
                                        options: .regularExpression) else { return title }
         let rest = title[marker.upperBound...].drop { $0 == "." || $0 == " " || $0 == "_" || $0 == "-" }
         return rest.count >= 8 ? String(rest) : title
-    }
-
-    /// Vertical resolution parsed out of a quality name ("WEBDL-1080p" → 1080),
-    /// which is how the *arrs rank one quality above another.
-    static func resolution(of qualityName: String?) -> Int? {
-        guard let name = qualityName,
-              let range = name.range(of: "[0-9]{3,4}(?=[pi])", options: .regularExpression)
-        else { return nil }
-        return Int(name[range])
-    }
-
-    /// Resolution first, then custom-format score — the two dimensions the user
-    /// can see on the row. Callers pass the on-disk file's quality and score;
-    /// nil in means nothing to compare against, so nil out.
-    func upgrade(overQuality quality: String?, score: Int?) -> Upgrade? {
-        guard quality != nil || score != nil else { return nil }
-        if let mine = Release.resolution(of: qualityName),
-           let theirs = Release.resolution(of: quality), mine != theirs {
-            return mine > theirs ? .better : .worse
-        }
-        let mineScore = customFormatScore ?? 0
-        let theirScore = score ?? 0
-        if mineScore == theirScore { return .same }
-        return mineScore > theirScore ? .better : .worse
     }
 
     /// The indexer's name as a human would say it. Indexers synced from

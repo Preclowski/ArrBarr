@@ -675,7 +675,7 @@ public struct DiscoverTabView: View {
         VStack(spacing: 10) {
             Spacer()
             if isLookingForMore {
-                LeaderSpinner()
+                ProgressView()
                 Text("discover.lookingForMore.label", bundle: .module)
                     .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(.secondary)

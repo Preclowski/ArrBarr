@@ -40,7 +40,7 @@ struct WaitCardContext {
 /// error or a blank.
 enum WaitStoryProvider {
     /// Stories that need no network, ready on first render.
-    static func localStories(_ ctx: WaitCardContext) -> [WaitStory] {
+    static func localStories(_ ctx: WaitCardContext, locale: Locale = .current) -> [WaitStory] {
         var stories: [WaitStory] = []
         let title = ctx.title
         guard !title.isEmpty else { return [] }
@@ -49,7 +49,7 @@ enum WaitStoryProvider {
             let score = rating.formatted(.number.precision(.fractionLength(1)))
             var support: String?
             if let genres = ctx.movie?.genres ?? ctx.series?.genres, !genres.isEmpty {
-                support = L("wait.story.genres \(genres.prefix(3).joined(separator: ", "))")
+                support = L("wait.story.genres \(genres.prefix(3).map { GenreName.localized($0, locale: locale) }.joined(separator: ", "))")
             }
             stories.append(WaitStory(sentence: L("wait.story.rated \(title) \(score)"), support: support))
         }
@@ -217,9 +217,9 @@ enum WaitStoryProvider {
 // MARK: - Surface
 
 /// The wait screen for a manual search: the poster, large and tilted, beside
-/// a "Did you know that…" sentence in serif, on a flat ground in the poster's
-/// own colour. Stories rotate every few seconds; click the right side to skip
-/// ahead, the left to go back. A leader spinner and the elapsed time sit at
+/// a "Did you know that…" sentence, on a flat ground in the poster's
+/// own colour. Stories come in random order and rotate every few seconds;
+/// click the right side to skip ahead, the left to go back. A spinner sits at
 /// the foot, so the wait itself is never hidden.
 struct WaitStories: View {
     let context: WaitCardContext
@@ -230,7 +230,6 @@ struct WaitStories: View {
     @State private var index = 0
     @State private var forward = true
     @State private var tint: Color?
-    @State private var startedAt = Date.now
 
     var body: some View {
         GeometryReader { proxy in
@@ -263,10 +262,14 @@ struct WaitStories: View {
         }
         .environment(\.colorScheme, .dark)
         .task {
-            stories = WaitStoryProvider.localStories(context)
+            stories = WaitStoryProvider.localStories(context, locale: configStore.currentLocale).shuffled()
             async let color = PosterTint.color(for: context.posterURL)
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
-            withAnimation(.easeInOut(duration: 0.3)) { stories += remote }
+            // The story on screen stays put; everything after it is reshuffled with the new ones.
+            let current = stories.isEmpty ? [] : [stories[index % stories.count]]
+            let rest = (stories.filter { !current.contains($0) } + remote).shuffled()
+            index = 0
+            stories = current + rest
             tint = await color
         }
         .task(id: index) {
@@ -308,25 +311,12 @@ struct WaitStories: View {
 
     private var footer: some View {
         HStack(spacing: 8) {
-            LeaderSpinner(height: 15)
-            TimelineView(.periodic(from: startedAt, by: 1)) { timeline in
-                let seconds = Int(timeline.date.timeIntervalSince(startedAt))
-                Text("wait.story.elapsed \(seconds)", bundle: .module)
-                    .scaledFont(size: 12)
-                    .foregroundStyle(.white.opacity(0.6))
-                    .monospacedDigit()
-            }
+            ProgressView()
+                .controlSize(.small)
+            Text("wait.releases.heading", bundle: .module)
+                .scaledFont(size: 12)
+                .foregroundStyle(.white.opacity(0.6))
             Spacer()
-            if stories.count > 1 {
-                HStack(spacing: 5) {
-                    ForEach(0..<stories.count, id: \.self) { i in
-                        Capsule()
-                            .fill(.white.opacity(i == index % stories.count ? 0.95 : 0.3))
-                            .frame(width: i == index % stories.count ? 16 : 6, height: 6)
-                    }
-                }
-                .animation(.snappy(duration: 0.3), value: index)
-            }
         }
         .accessibilityElement(children: .combine)
     }
@@ -343,13 +333,13 @@ private struct StoryText: View {
                 .textCase(.uppercase)
                 .kerning(0.9)
             Text(markdown(story.sentence))
-                .scaledFont(size: 18, design: .serif)
+                .scaledFont(size: 17, weight: .regular)
                 .foregroundStyle(.white)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
             if let support = story.support {
                 Text(markdown(support))
-                    .scaledFont(size: 13, design: .serif)
+                    .scaledFont(size: 13)
                     .foregroundStyle(.white.opacity(0.72))
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)

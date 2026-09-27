@@ -43,6 +43,14 @@ nonisolated struct QueueNotificationTracker: Codable, Equatable {
     /// download volume — and currently-queued items are exempt anyway.
     static let capPerSource = 2000
 
+    /// Pending releases by `handoffKey` → when they left the queue (`distantFuture` while still
+    /// pending). Their download arrives under a new identity and is the same event, already announced.
+    /// Optional so caches persisted before it existed still decode.
+    private var pendingHandoffs: [String: Date]?
+
+    /// How long after a pending row leaves the queue its download may still turn up.
+    static let handoffWindow: TimeInterval = 15 * 60
+
     /// Returns the items that should fire a notification this cycle and folds
     /// the successful snapshots into internal state.
     ///
@@ -72,9 +80,11 @@ nonisolated struct QueueNotificationTracker: Codable, Equatable {
     /// the moment they did arrive. Committing four sources one at a time through
     /// the all-sources shape used to do exactly that on a fresh cache, turning a
     /// first launch with a busy queue into one banner per queued item.
-    mutating func newItems(for source: QueueItem.Source, items: [QueueItem]) -> [QueueItem] {
+    mutating func newItems(for source: QueueItem.Source, items: [QueueItem], now: Date = Date()) -> [QueueItem] {
         let raw = source.rawValue
         let currentKeys = items.map(Self.key(for:))
+        var handoffs = Self.foldHandoffs(pendingHandoffs ?? [:], source: source, items: items, now: now)
+        defer { pendingHandoffs = handoffs.isEmpty ? nil : handoffs }
 
         guard let history = seen[raw] else {
             // First successful fetch for this arr: remember what's already
@@ -84,9 +94,28 @@ nonisolated struct QueueNotificationTracker: Codable, Equatable {
         }
 
         let known = Set(history)
-        let fresh = items.filter { !known.contains(Self.key(for: $0)) }
+        let fresh = items.filter { item in
+            guard !known.contains(Self.key(for: item)) else { return false }
+            guard !item.isPendingRelease, let handoff = item.handoffKey, handoffs[handoff] != nil else { return true }
+            handoffs[handoff] = nil
+            return false
+        }
         seen[raw] = Self.merged(current: currentKeys, history: history)
         return fresh
+    }
+
+    /// Stamps this source's pending rows as present, starts the clock on the ones that just left,
+    /// and drops the ones whose download never turned up.
+    private static func foldHandoffs(_ handoffs: [String: Date], source: QueueItem.Source, items: [QueueItem], now: Date) -> [String: Date] {
+        let present = Set(items.filter(\.isPendingRelease).compactMap(\.handoffKey))
+        var out: [String: Date] = [:]
+        for (key, leftAt) in handoffs {
+            guard key.hasPrefix("\(source.rawValue)|"), !present.contains(key) else { out[key] = leftAt; continue }
+            let stamped = leftAt == .distantFuture ? now : leftAt
+            if now.timeIntervalSince(stamped) < handoffWindow { out[key] = stamped }
+        }
+        for key in present { out[key] = .distantFuture }
+        return out
     }
 
     /// Builds the next remembered list: every currently-queued key is retained
