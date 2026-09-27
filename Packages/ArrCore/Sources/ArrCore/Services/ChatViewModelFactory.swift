@@ -33,11 +33,9 @@ enum ChatViewModelFactory {
 
         // Warm the library snapshot so the first quiz call hits the cache and the prompt's
         // library-size line is populated before the first turn.
-        if !DemoMode.isActive {
-            Task.detached(priority: .utility) {
-                if radarr.isConfigured { _ = await LibraryIndex.shared.movies(config: radarr) }
-                if sonarr.isConfigured { _ = await LibraryIndex.shared.series(config: sonarr) }
-            }
+        Task.detached(priority: .utility) {
+            if radarr.isConfigured { _ = await LibraryIndex.shared.movies(config: radarr) }
+            if sonarr.isConfigured { _ = await LibraryIndex.shared.series(config: sonarr) }
         }
 
         let tmdbEnabled = !tmdbApiKey.isEmpty

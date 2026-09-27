@@ -251,7 +251,7 @@ public final class SearchViewModel {
     }
 
     private func fetchPeople(scope: SearchScope) async -> (rows: [TMDBPerson], starring: StarringSection?) {
-        guard scope.searchesPeople, DemoMode.isActive || !tmdbApiKey.isEmpty else { return ([], nil) }
+        guard scope.searchesPeople, !tmdbApiKey.isEmpty else { return ([], nil) }
         let term = peoplePrefixTerm ?? query.trimmingCharacters(in: .whitespaces)
         guard term.count >= 2 else { return ([], nil) }
         let raw = DemoMode.isActive

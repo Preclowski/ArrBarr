@@ -10,22 +10,9 @@ struct QuizSettingsPane: View {
 
     init() {}
 
-    /// Same gate as `PopoverContentView.chatAvailable`.
-    private var assistantAvailable: Bool {
-        let store = ConfigStore.shared
-        guard store.aiEnabled else { return false }
-        if DemoMode.isActive { return true }
-        switch store.chatProvider {
-        case .foundationModels:
-            return true
-        case .openai:
-            return store.openai.isConfigured
-        }
-    }
-
     var body: some View {
         Form {
-            if !assistantAvailable {
+            if !ConfigStore.shared.aiConfigured {
                 Section {
                     Label {
                         Text("settings.quiz.needsAssistant", bundle: .module)
@@ -41,8 +28,8 @@ struct QuizSettingsPane: View {
                 standingSection
                 signalsSection
             }
-            .disabled(!assistantAvailable)
-            .opacity(assistantAvailable ? 1 : 0.5)
+            .disabled(!ConfigStore.shared.aiConfigured)
+            .opacity(ConfigStore.shared.aiConfigured ? 1 : 0.5)
         }
         .formStyle(.grouped)
         #if os(iOS)

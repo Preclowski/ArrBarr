@@ -130,18 +130,6 @@ public struct PopoverContentView: View {
             && item.entityId != nil
     }
 
-    private var chatAvailable: Bool {
-        guard configStore.aiEnabled else { return false }
-        // Demo mode uses DemoChatProvider, so the chat works without a key or
-        // Apple Intelligence — show the tab regardless of provider/OS.
-        if DemoMode.isActive { return true }
-        switch configStore.chatProvider {
-        case .foundationModels:
-            return true
-        case .openai:
-            return configStore.openai.isConfigured
-        }
-    }
 
     enum Tab: String, CaseIterable {
         case queue = "Queue"
@@ -216,7 +204,7 @@ public struct PopoverContentView: View {
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
             }
-            .onChange(of: chatAvailable) { _, available in
+            .onChange(of: configStore.aiConfigured) { _, available in
                 if !available && selectedTab == .chat {
                     selectedTab = .queue
                 }
@@ -459,7 +447,7 @@ public struct PopoverContentView: View {
             if discoverViewModel.isPresented {
                 DiscoverTabView(
                     viewModel: discoverViewModel,
-                    llmAvailable: chatAvailable,
+                    llmAvailable: configStore.aiConfigured,
                     radarrAvailable: radarrConfigured,
                     // The top-up round IS a chat turn, so the agent's own
                     // thinking flag is what the deck should wait on.
@@ -581,7 +569,7 @@ public struct PopoverContentView: View {
     private var visibleTabs: [Tab] {
         Tab.allCases.filter { tab in
             switch tab {
-            case .chat: return chatAvailable
+            case .chat: return configStore.aiConfigured
             default:    return true
             }
         }
@@ -599,7 +587,7 @@ public struct PopoverContentView: View {
     private func requestMoreQuizPicks() {
         // No LLM, or a turn already running → the round-trip can't land; skip
         // rather than queue a message that silently never resolves.
-        guard chatAvailable, !chatHolder.vm.isThinking else { return }
+        guard configStore.aiConfigured, !chatHolder.vm.isThinking else { return }
         // In-app language, not the process language — see AppLocalized. Otherwise
         // the sent message (and the model's whole reply) lags a live language
         // switch until relaunch.
