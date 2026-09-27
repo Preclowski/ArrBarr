@@ -26,8 +26,8 @@ struct AddRequestBodyTests {
             source: source)
     }
 
-    /// The add itself; a capability probe for the new instance may land around it.
-    private var post: HTTPRequest? { addTransport.requests.last { $0.method == "POST" } }
+    /// The add itself; a capability probe or the realtime hub's negotiate for the new instance may land around it.
+    private var post: HTTPRequest? { addTransport.requests.last { $0.method == "POST" && !$0.operation.name.hasPrefix("realtime.") } }
     private var posted: [String: Any] { post?.jsonBody ?? [:] }
     private var postedPath: String { post?.url.path ?? "" }
 

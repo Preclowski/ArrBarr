@@ -49,6 +49,11 @@ public final class ServiceGateway {
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
     /// Live streams belong to the stack that made them: a demo rebuild swaps the stack and so starts fresh ones.
     private let streams = OSAllocatedUnfairLock<LiveStreams>(initialState: LiveStreams())
+    /// What the queue view-model asked the live queues to do; replayed on the stack a demo rebuild brings.
+    private var liveQueues: (sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy)?
+    private var queueUpdateContinuations: [UUID: AsyncStream<QueueItem.Source>.Continuation] = [:]
+    /// Streams already pumping and registered, by identity, each with the task forwarding its values.
+    private var pumping: [ObjectIdentifier: Task<Void, Never>] = [:]
     private static let log = Logger(category: "Gateway")
 
     public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive, transport: (any Transport)? = nil) {
@@ -207,6 +212,7 @@ public final class ServiceGateway {
     /// Demo toggles swap the transport and the database; the profile itself is `ConfigStore`'s business.
     public func rebuild(demo: Bool) async {
         self.demo = demo
+        for stream in streams.withLock({ Array($0.queue.values) }) { await stream.stop() }
         await kit.stop()
         realtime = [:]
         let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo, transport: transport)
@@ -216,6 +222,47 @@ public final class ServiceGateway {
             relayBreakers()
             await syncRealtime()
         }
+        for forward in pumping.values { forward.cancel() }
+        pumping = [:]
+        if let liveQueues { await setLiveQueues(sources: liveQueues.sources, activity: liveQueues.activity, policy: liveQueues.policy) }
+    }
+
+    /// Run these arrs' queue streams on their own clock and pushes. Idempotent: called on every panel open and close.
+    public func setLiveQueues(sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy) async {
+        liveQueues = (sources, activity, policy)
+        let events = kit.events
+        await events.setForeground(activity == .foreground)
+        let dropped = streams.withLock { streams in streams.queue.filter { !sources.contains($0.key) }.map(\.value) }
+        for stream in dropped {
+            guard let forward = pumping.removeValue(forKey: ObjectIdentifier(stream)) else { continue }
+            forward.cancel()
+            await stream.stop()
+        }
+        for source in sources {
+            let stream = queueStream(source)
+            await stream.setPolicy(policy)
+            await stream.setActivity(activity)
+            let key = ObjectIdentifier(stream)
+            guard pumping[key] == nil else { continue }
+            pumping[key] = Task { @MainActor [weak self] in
+                for await _ in await stream.values() { self?.yieldQueueUpdate(source) }
+            }
+            await events.register(stream)
+            await stream.start()
+        }
+    }
+
+    /// Yields an arr whenever its queue stream publishes, across demo rebuilds; read the rows from `queueStream`.
+    public func queueUpdates() -> AsyncStream<QueueItem.Source> {
+        let (stream, continuation) = AsyncStream<QueueItem.Source>.makeStream(bufferingPolicy: .unbounded)
+        let id = UUID()
+        queueUpdateContinuations[id] = continuation
+        continuation.onTermination = { _ in Task { @MainActor [weak self] in self?.queueUpdateContinuations[id] = nil } }
+        return stream
+    }
+
+    private func yieldQueueUpdate(_ source: QueueItem.Source) {
+        for continuation in queueUpdateContinuations.values { continuation.yield(source) }
     }
 
     /// Yields whenever some host's breaker opens or closes, across demo rebuilds; read `hostHealth(of:)` on each tick.

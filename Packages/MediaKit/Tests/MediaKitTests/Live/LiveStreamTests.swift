@@ -15,7 +15,8 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
     func stream(_ kit: TestKit, instances: [InstanceID] = [TestKit.radarr], policy: LivePolicy = .queue,
                 fetch: @escaping LiveStream<Item>.Fetch) -> LiveStream<Item> {
         LiveStream<Item>(id: .queue, instances: instances, policy: policy, pipeline: kit.pipeline, database: kit.database,
-                         clock: kit.clock, telemetry: kit.telemetry, log: NoLog(), elementID: { $0.id }, fetch: fetch)
+                         clock: kit.clock, telemetry: kit.telemetry, log: NoLog(), elementID: { $0.id }, fetch: fetch,
+                         isActive: { items in items.contains { $0.status == "downloading" } })
     }
 
     @Test func aFailedInstanceKeepsItsOwnRowsWhileTheOthersUpdate() async throws {
@@ -87,6 +88,7 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         cancel.value = true
         await s.refreshNow()
         #expect(s.last()?.partial.isEmpty == true && s.last()?.elements.map(\.id) == ["a"])
+        #expect(s.last()?.revision == 1)
     }
 
     @Test func theSnapshotKeepsEveryInstancesRows() async throws {
@@ -129,6 +131,57 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         await s.notePush(TestKit.sonarr, at: kit.clock.now)
         try await Task.sleep(for: .milliseconds(30))
         #expect(calls.value == afterStart)
+        await s.stop()
+    }
+
+    @Test func theFirstTickWaitsWhenSomeoneJustFetched() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        await s.refreshNow()
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == 1)
+        kit.clock.advance(by: .seconds(31))
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == 2)
+        await s.stop()
+    }
+
+    @Test func inTheBackgroundAPushCoveredStreamSkipsEvenWhileSomethingDownloads() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [Item(id: "a", status: "downloading")] }
+        await s.setActivity(.background)
+        await s.start()
+        try await Task.sleep(for: .milliseconds(30))
+        await s.notePush(TestKit.radarr, at: kit.clock.now)
+        // The push is held to the end of the interval, then answered once.
+        kit.clock.advance(by: .seconds(121))
+        try await Task.sleep(for: .milliseconds(30))
+        let afterPush = calls.value
+        kit.clock.advance(by: .seconds(121))
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(afterPush == 2 && calls.value == afterPush)
+        await s.stop()
+    }
+
+    @Test func inTheBackgroundAPushCannotAddAFetchInsideTheInterval() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let calls = Counter()
+        let s = stream(kit) { _, _, _ in calls.increment(); return [] }
+        await s.setActivity(.background)
+        await s.refreshNow()
+        await s.start()
+        await s.notePush(TestKit.radarr, at: kit.clock.now)
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == 1)
+        kit.clock.advance(by: .seconds(121))
+        try await Task.sleep(for: .milliseconds(30))
+        #expect(calls.value == 2)
         await s.stop()
     }
 

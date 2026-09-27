@@ -79,8 +79,13 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 ## Wave 4 — QueueViewModel on LiveStream
 
-- [ ] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`;
-      `systemDidWake` → `events.wakeAll()` + `governor.noteWake`.
+- [x] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`;
+      `systemDidWake` → `events.wakeAll()` + `governor.noteWake`. (2026-09-27) One queue stream per arr, owned
+      by `ServiceGateway` and replayed across demo rebuilds; `QueueViewModel` commits each stream revision once
+      (`latest(source:)`), sets foreground/background on panel open/close, and keeps only the calendar and health
+      clocks. `LiveStream` gained per-instance keep-last-good, mid-cycle push/refresh handling, the background
+      push floor and fresh-tick skipping; `EventHub` drops unchanged-count queue pushes while hidden.
+      Measured: 45 requests in the first 60 s (queue 3 per arr, progress 4 per client), first load 387 ms.
 
 ## Wave 5 — demo
 

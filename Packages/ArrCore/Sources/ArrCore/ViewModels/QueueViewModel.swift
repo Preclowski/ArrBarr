@@ -58,7 +58,7 @@ public final class QueueViewModel {
     /// and notifications (also from the queue). Health records, the calendar and
     /// the connection dots render solely inside the panel, so fetching them
     /// while it is closed buys nothing that opening it wouldn't fetch anyway.
-    private var isPanelVisible: Bool { foregroundTimer != nil }
+    private var isPanelVisible = false
 
     /// The arrs the user has actually configured. Drives `isFullyOffline`.
     private var configuredArrs: Set<QueueItem.Source> {
@@ -97,8 +97,13 @@ public final class QueueViewModel {
     /// Actively probes the non-arr services (download clients + AI) the queue
     /// fetch never touches, throttled internally to once a minute.
     private let connectionMonitor = ConnectionHealthMonitor()
-    private var foregroundTimer: Timer?
-    private var backgroundTimer: Timer?
+    private var queueUpdatesTask: Task<Void, Never>?
+    /// The live stream revision each source's rows were committed from.
+    private var committedRevision: [QueueItem.Source: UInt64] = [:]
+    /// Set by the realtime bootstrap; before it (and in a view-model built without autostart) nothing starts a stream.
+    private var liveQueuesStarted = false
+    /// The launch refresh; the streams start after it so their first tick finds a fresh reading instead of a second fetch.
+    private var initialRefresh: Task<Void, Never>?
     private var intervalObservers: Set<AnyCancellable> = []
     private var configValidatedTask: Task<Void, Never>?
     private var artworkChangedTask: Task<Void, Never>?
@@ -278,6 +283,15 @@ public final class QueueViewModel {
         // failed sweeps a minute apart to flip a dot — a bad edit would stay
         // green for minutes. Debounced so per-keystroke config writes from
         // the Settings fields don't fire a probe per character.
+        // An arr added or removed starts or stops its queue stream.
+        for source in QueueItem.Source.allCases {
+            configStore.publisher(for: source.serviceKind)
+                .dropFirst()
+                .map(\.isConfigured)
+                .removeDuplicates()
+                .sink { [weak self] _ in Task { await self?.updateLiveQueues() } }
+                .store(in: &intervalObservers)
+        }
         for kind in MonitoredService.downloadClientKinds {
             configStore.publisher(for: kind)
                 .dropFirst()
@@ -333,9 +347,7 @@ public final class QueueViewModel {
         // instance leaves timers firing on `RunLoop.main` forever, each
         // retaining its closure (and re-arming the poll cadence) for the life
         // of the process.
-        foregroundTimer?.invalidate()
-        backgroundTimer?.invalidate()
-        realtimeDebounce.values.forEach { $0.invalidate() }
+        queueUpdatesTask?.cancel()
         healthDebounce?.invalidate()
         upcomingTimer?.invalidate()
         healthTimer?.invalidate()
@@ -350,22 +362,45 @@ public final class QueueViewModel {
         realtimeTask = Task { [weak self] in
             for await event in events {
                 guard let self, !Task.isCancelled else { return }
-                guard let instance = event.instance, let kind = ServiceKind(rawValue: instance.kind.rawValue),
-                      let source = QueueItem.Source(rawValue: kind.rawValue) else { continue }
-                switch event {
-                case .queueStatus(_, let counts):
-                    self.noteQueueStatus(counts, for: source)
-                case .queueChanged:
-                    self.scheduleRealtimeRefresh(source: source)
-                case .fileImported:
-                    self.scheduleRealtimeRefresh(source: source)
-                case .healthChanged:
-                    self.scheduleHealthRefresh()
-                default:
-                    break
-                }
+                // Queue pushes reach the queue streams through the hub; only an arr's health is refreshed from here.
+                guard case let .healthChanged(instance) = event, QueueItem.Source(rawValue: instance.kind.rawValue) != nil else { continue }
+                self.scheduleHealthRefresh()
             }
         }
+        let gateway = configStore.gateway
+        let updates = gateway.queueUpdates()
+        queueUpdatesTask?.cancel()
+        queueUpdatesTask = Task { [weak self] in
+            for await source in updates {
+                guard let self, !Task.isCancelled else { return }
+                await self.commitLatestQueue(source: source)
+            }
+        }
+        await initialRefresh?.value
+        liveQueuesStarted = true
+        await updateLiveQueues()
+    }
+
+    /// The queue streams poll on their own clock, skip while every arr's hub vouches for it, and refetch on pushes.
+    private func updateLiveQueues() async {
+        guard liveQueuesStarted else { return }
+        var policy = LivePolicy.queue
+        policy.foregroundInterval = .seconds(configStore.foregroundInterval)
+        policy.backgroundInterval = .seconds(configStore.backgroundInterval)
+        policy.pushSilence = .seconds(configStore.realtimeSilenceTimeout)
+        await configStore.gateway.setLiveQueues(sources: QueueItem.Source.allCases.filter { configuredArrs.contains($0) },
+                                                activity: isPanelVisible ? .foreground : .background, policy: policy)
+    }
+
+    /// A queue stream published: compose its rows unless this revision was already committed.
+    private func commitLatestQueue(source: QueueItem.Source) async {
+        guard configuredArrs.contains(source) else { return }
+        // Composing costs side-load reads; a revision already committed (by the fetch that asked for it) needs none.
+        if let revision = aggregator.latestRevision(source: source), let committed = committedRevision[source], revision <= committed { return }
+        let result = await aggregator.latest(source: source)
+        if Task.isCancelled { return }
+        commitQueue(result)
+        hasLoadedOnce = true
     }
 
     /// A host whose breaker opens shows down at once instead of after the next probe's strikes.
@@ -423,86 +458,6 @@ public final class QueueViewModel {
     @ObservationIgnored @MainActor private var upcomingRefreshTask: Task<Void, Never>?
     @ObservationIgnored @MainActor private var upcomingRefreshAgain = false
 
-    /// How long a burst of arr events is allowed to keep collapsing into one
-    /// refresh — Sonarr's "queue add, progress, file import" sequence becomes a
-    /// single fetch.
-    private static let realtimeBurstWindow: TimeInterval = 0.25
-
-    /// Coalesce realtime triggers into a refresh, never letting them raise the
-    /// *rate* of refreshes above `realtimeRefreshFloor()`.
-    ///
-    /// The burst window alone was not enough. It collapses one burst, but puts
-    /// no floor between bursts — and an arr with a busy queue emits bursts
-    /// continuously, so each one bought a full four-arr refresh. Measured on a
-    /// 77-item Lidarr queue: six refreshes a minute against a 30 s timer, four
-    /// of them inside five seconds. Every one of those pulled both calendars
-    /// and a multi-megabyte queue page.
-    ///
-    /// The invariant this restores: realtime changes *when* a refresh happens,
-    /// not *how many* there are.
-    /// Servarr's queue summary, kept per source so a `queue` push can be judged
-    /// against it. See `canSkipRefresh(for:)`.
-    @MainActor private var latestStatus: [QueueItem.Source: QueueCounts] = [:]
-    /// The summary that was true when we last committed this source's rows.
-    @MainActor private var statusAtLastFetch: [QueueItem.Source: QueueCounts] = [:]
-
-    @MainActor
-    private func noteQueueStatus(_ status: QueueCounts, for source: QueueItem.Source) {
-        latestStatus[source] = status
-        // …and act on it. Servarr broadcasts `queue` BEFORE `queue/status` —
-        // measured 5 s apart on a live hub — so when the sync arrived,
-        // `latestStatus` still held the summary from before the change and
-        // `canSkipRefresh` skipped on stale evidence. Recording the new
-        // summary without scheduling anything left nothing to correct that:
-        // with the hub healthy the background poll is skipped entirely, so the
-        // change waited for Servarr's next unconditional queue broadcast — one
-        // to two minutes for an import that had already finished.
-        //
-        // The skip stays: it is what makes an idle hub free. This is the other
-        // half of it — the one broadcast that ships its resource inline is
-        // evidence of a real change, so it schedules a refresh on its own.
-        guard statusAtLastFetch[source] != status else { return }
-        scheduleRealtimeRefresh(source: source)
-    }
-
-    /// Whether a `queue` push can be answered with nothing at all.
-    ///
-    /// Servarr re-broadcasts the queue on a fixed schedule whether or not
-    /// anything changed — `DownloadMonitoringService.Refresh()` publishes
-    /// unconditionally, and `QueueController` rebroadcasts with no diff check.
-    /// Most pushes therefore describe no change. `queue/status` is the one
-    /// broadcast that ships its resource inline, so an unchanged summary since
-    /// our last fetch is free evidence that a refetch would return what we
-    /// already hold.
-    ///
-    /// Only while the popover is closed. Row *progress* moves without moving
-    /// any counter, and a frozen progress bar is exactly the sort of quiet
-    /// wrongness that is worse than the bytes it saves. With nothing on screen
-    /// there is nothing to freeze, and the badge is derived from counts that by
-    /// definition haven't moved.
-    @MainActor
-    private func canSkipRefresh(for source: QueueItem.Source) -> Bool {
-        guard !isPanelVisible,
-              let latest = latestStatus[source],
-              let atLastFetch = statusAtLastFetch[source]
-        else { return false }
-        return latest == atLastFetch
-    }
-
-    @MainActor
-    private func scheduleRealtimeRefresh(source: QueueItem.Source) {
-        if canSkipRefresh(for: source) { return }
-        realtimeDebounce[source]?.invalidate()
-        let sinceLast = lastRefreshAt[source].map { Date().timeIntervalSince($0) }
-            ?? .greatestFiniteMagnitude
-        // Rescheduling on each event lands on the same absolute moment, so a
-        // continuous event stream converges on the floor instead of drifting.
-        let delay = max(Self.realtimeBurstWindow, realtimeRefreshFloor() - sinceLast)
-        realtimeDebounce[source] = Self.commonModeTimer(interval: delay, repeats: false) { [weak self] in
-            Task { await self?.refreshQueue(source: source) }
-        }
-    }
-
     /// Health changes are pushed, so the refresh is event-driven with the same
     /// burst collapsing. Not per-source-throttled beyond that: `fetchHealth()`
     /// is a small fan-out and health events are rare (Servarr raises
@@ -557,34 +512,15 @@ public final class QueueViewModel {
         }
     }
 
-    /// Minimum spacing between realtime-triggered refreshes.
-    ///
-    /// Popover open: the user is watching a progress bar, so an event should
-    /// land quickly — but 1 s is still five times finer than the default
-    /// `foregroundInterval`, so this can never make the visible cadence slower
-    /// than the timer already makes it.
-    ///
-    /// Popover closed: nothing is on screen. Realtime's only remaining job is
-    /// feeding notifications and the menu-bar badge, and `backgroundInterval`
-    /// is already the latency the user chose for exactly that. So events may
-    /// bring a refresh *forward* within the period, but can't add one.
-    @MainActor
-    private func realtimeRefreshFloor() -> TimeInterval {
-        if isPanelVisible { return 1 }
-        let background = configStore.backgroundInterval
-        return background > 0 ? background : 30
-    }
-
-    @MainActor private var realtimeDebounce: [QueueItem.Source: Timer] = [:]
-    /// Per-source, so one arr's floor can't suppress another arr's refresh.
-    @MainActor private(set) var lastRefreshAt: [QueueItem.Source: Date] = [:]
+    /// When each source's rows were measured by the arr.
+    @MainActor private(set) var measuredAt: [QueueItem.Source: Date] = [:]
 
     /// When this source's rows were last measured. Progress interpolation runs
     /// from it — see `QueueItem.interpolatedProgress(at:measuredAt:)`. Falls
     /// back to `.distantPast`, which reads as "no interpolation".
     @MainActor
     public func progressMeasuredAt(for source: QueueItem.Source) -> Date {
-        lastRefreshAt[source] ?? .distantPast
+        measuredAt[source] ?? .distantPast
     }
 
     /// Timer registered in `.common` run loop mode so it keeps firing while the
@@ -632,56 +568,17 @@ public final class QueueViewModel {
     public func startForegroundPolling() {
         // One full refresh on open — the panel is about to show the calendar and
         // the health rows, so they should be current the moment it appears.
-        // After that the tick only pulls queues; the other two keep their own
-        // clocks. See `refreshQueues()`.
-        Task { await self.refresh() }
-        foregroundTimer?.invalidate()
-        let interval = configStore.foregroundInterval
-        guard interval > 0 else { return }
-        foregroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
-            Task { [weak self] in
-                guard let self else { return }
-                if await self.canSkipForegroundTick() { return }
-                await self.refreshQueues()
-            }
+        // After that the queue streams tick on their own and refetch on pushes.
+        isPanelVisible = true
+        Task {
+            await self.updateLiveQueues()
+            await self.refresh()
         }
-    }
-
-    /// Whether the open panel's tick can be answered with nothing.
-    ///
-    /// Two conditions, both required. Realtime has to be covering every source,
-    /// because a push is then what tells us a row appeared, finished or failed
-    /// — the poll is not carrying that news. And nothing may be actively
-    /// downloading, because a downloading row is the only kind whose numbers
-    /// move without an event to announce them.
-    ///
-    /// That second half is what makes a large queue cheap: a hundred rows sat
-    /// in "queued" or "paused" cost twelve `/queue` fetches a minute plus a
-    /// round-trip to every download client, to redraw values that are
-    /// identical every time.
-    ///
-    /// Interpolated bars don't keep the tick alive — they are drawn from the
-    /// last reading and its rate, and a row that is genuinely downloading
-    /// fails this check anyway, so it keeps being refetched.
-    private func canSkipForegroundTick() async -> Bool {
-        guard await realtimeCoversEverySource() else { return false }
-        // The user just pressed something — pause, resume, "download now",
-        // delete — and is watching for it to take. An optimistic override is
-        // exactly that moment, expiry and all, so no new state is needed to
-        // spot it. Without this the row would be painted as downloading while
-        // the tick that would confirm it got skipped, and the override would
-        // quietly expire back to the stale status.
-        let now = Date()
-        if optimisticOverrides.values.contains(where: { $0.expiry >= now }) { return false }
-        let downloading = queues.values.contains { items in
-            items.contains { $0.status == .downloading }
-        }
-        return !downloading
     }
 
     public func stopForegroundPolling() {
-        foregroundTimer?.invalidate()
-        foregroundTimer = nil
+        isPanelVisible = false
+        Task { await self.updateLiveQueues() }
     }
 
     /// Called from AppDelegate's `NSWorkspace.didWakeNotification`
@@ -699,53 +596,8 @@ public final class QueueViewModel {
     }
 
 
-    /// True when every configured arr has pushed recently enough to vouch for
-    /// its own hub — the condition under which polling is worth suppressing.
-    ///
-    /// Silence is meaningful evidence here, not ambiguity: Servarr runs
-    /// `RefreshMonitoredDownloads` on a fixed schedule (1 minute by default) and
-    /// that task ends in an unconditional `TrackedDownloadRefreshedEvent`, which
-    /// `QueueService` turns into an unconditional `QueueUpdatedEvent`, which
-    /// `QueueController` broadcasts with no diff check. A healthy hub therefore
-    /// pushes on a timer even when the queue is idle. How much slack to allow is
-    /// `ConfigStore.realtimeSilenceTimeout`, hard-locked to 5 minutes: enough
-    /// slack for a server-side cycle running late under load, short enough that
-    /// a dead hub is noticed within one background tick or two.
-    ///
-    /// Per-source on purpose: one busy Lidarr must not vouch for
-    /// three silent Sonarrs, and a reverse proxy that strips the WebSocket
-    /// upgrade takes out exactly one arr.
-    private func realtimeCoversEverySource() async -> Bool {
-        let configured = QueueItem.Source.allCases.filter {
-            configStore.serviceConfig(for: $0).isConfigured
-        }
-        guard !configured.isEmpty else { return false }
-        let cutoff = Date().addingTimeInterval(-configStore.realtimeSilenceTimeout)
-        for source in configured {
-            guard let last = configStore.gateway.events.lastEventAt(source.instanceID), last > cutoff else { return false }
-        }
-        return true
-    }
-
     private func startBackgroundPolling() {
-        Task { await self.refresh() }
-        backgroundTimer?.invalidate()
-        let interval = configStore.backgroundInterval
-        guard interval > 0 else { return }
-        backgroundTimer = Self.commonModeTimer(interval: interval, repeats: true) { [weak self] in
-            Task { [weak self] in
-                guard let self else { return }
-                // Skip the tick when realtime is provably carrying every source.
-                // The timer keeps running rather than being invalidated: it is
-                // the thing that notices when a hub goes quiet, so it has to
-                // stay armed to be able to take over.
-                if await self.realtimeCoversEverySource() { return }
-                // Queues only, same as the foreground tick — this is the
-                // fallback for a dead hub, and a dead hub says nothing about
-                // the calendar or the health records.
-                await self.refreshQueues()
-            }
-        }
+        initialRefresh = Task { await self.refresh() }
     }
 
     /// Kick the media-server index if it has gone stale. Fire-and-forget: the
@@ -802,10 +654,6 @@ public final class QueueViewModel {
         // common case — the actual fetch happens roughly four times an hour —
         // and it runs detached so a slow media server can never delay the queue.
         refreshMediaServerIndex()
-        // Stamped for `scheduleRealtimeRefresh`'s rate floor. Every source counts
-        // as just-refreshed, because this path fetches all of them.
-        let now = Date()
-        for source in QueueItem.Source.allCases { lastRefreshAt[source] = now }
         if !hasLoadedOnce { isLoading = true }
         defer {
             isLoading = false
@@ -1210,6 +1058,12 @@ public final class QueueViewModel {
     /// from whatever this particular fetch returned.
     private func commitQueue(_ result: SourceQueueResult) {
         let source = result.source
+        // A stream revision reaches here twice, from the fetch that asked for it and from the stream's own update;
+        // committing both would count one failure twice towards the unreachable threshold.
+        if let revision = result.revision {
+            if let committed = committedRevision[source], revision <= committed { return }
+            committedRevision[source] = revision
+        }
         var newErrors = errors
         newErrors[source] = result.error
         //         // `refresh()`; same rule, one source at a time.
@@ -1223,11 +1077,7 @@ public final class QueueViewModel {
         queues = newQueues
         errors = newErrors
 
-        // Feeds `scheduleRealtimeRefresh`'s rate floor. Stamped on the commit,
-        // not on the fetch call, so both the per-source and all-sources paths
-        // advance it — a floor measured against a clock only one path winds is
-        // no floor at all.
-        lastRefreshAt[source] = Date()
+        if let at = result.measuredAt { measuredAt[source] = at }
 
         var stillUnreachable = lastUnreachable
         if result.unreachable { stillUnreachable.insert(source) } else { stillUnreachable.remove(source) }
@@ -1235,12 +1085,6 @@ public final class QueueViewModel {
         unreachableArrs = updateUnreachable(unreachable: stillUnreachable, only: source)
         if result.error == nil {
             lastSuccessfulRefresh = Date()
-            // Pin the summary this commit corresponds to, so the next push is
-            // compared against data we actually hold. Only on success: pinning
-            // after a failed fetch (where the previous rows were kept) would
-            // make every later push compare equal and skip, leaving the source
-            // frozen behind its error until something else moved the counters.
-            statusAtLastFetch[source] = latestStatus[source]
         }
         updateConnectionHealth(errors: newErrors, only: source)
         recomputeNeedsYou()

@@ -37,6 +37,8 @@ public struct LiveValue<Element: Codable & Sendable>: Sendable {
     public let isStale: Bool
     public let pending: [PendingEffect]
     public let isFromSnapshot: Bool
+    /// Bumped by every fetch; an overlay change republishes the same revision. 0 is the snapshot.
+    public let revision: UInt64
 }
 
 public struct LiveSlice<Element: Codable & Sendable>: Sendable {
@@ -77,6 +79,9 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     private var slices: [InstanceID: LiveSlice<Element>] = [:]
     private var failures: [InstanceID: any Error] = [:]
     private var fromSnapshot = false
+    private var revision: UInt64 = 0
+    /// When the last fetch finished, whoever asked for it; a tick inside the interval after it has nothing to add.
+    private var lastFetchAt: Date?
     private var refreshRequested = false
     private var wakeup: CheckedContinuation<Void, Never>?
     private var lastCheckpoint: Date?
@@ -179,15 +184,27 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
                 await waitForWakeup()
                 continue
             }
-            if refreshRequested || !canSkipTick() {
+            // Someone is already fetching (a refreshNow at launch or panel open): that fetch is this tick.
+            if let running {
+                await running.task.value
+                continue
+            }
+            let interval = activity == .foreground ? policy.foregroundInterval : policy.backgroundInterval
+            let age = lastFetchAt.map { clock.now.timeIntervalSince($0) }
+            let fresh = age.map { $0 < interval.seconds } ?? false
+            // In the background a push may bring the next fetch forward but not add one inside the interval:
+            // nothing is on screen, and the interval is the latency chosen for the badge and notifications.
+            let held = refreshRequested && fresh && activity != .foreground && interval != .zero
+            if (refreshRequested && !held) || (!refreshRequested && !fresh && !canSkipTick()) {
                 refreshRequested = false
                 await cycle()
             }
             // A push or scope change that landed mid-cycle is not left for the next interval.
-            if refreshRequested { continue }
-            let interval = activity == .foreground ? policy.foregroundInterval : policy.backgroundInterval
+            if refreshRequested && !held { continue }
             if interval == .zero {
                 await waitForWakeup()
+            } else if fresh, let age {
+                await sleepOrWake(.seconds(max(interval.seconds - age, 0.001)))
             } else {
                 await sleepOrWake(interval)
             }
@@ -210,12 +227,14 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
 
     private func wakeFromSleep() { wake() }
 
-    /// Today's `canSkipForegroundTick`: every instance covered by push, nothing active, no pending effect.
+    /// Every instance covered by push and no pending effect. On screen an active element also keeps the tick,
+    /// since its numbers move without an event; in the background nothing is drawn, so coverage alone decides.
     private func canSkipTick() -> Bool {
         let now = clock.now
         let covered = instances.allSatisfy { lastPush[$0].map { now.timeIntervalSince($0) < policy.pushSilence.seconds } ?? false }
         let elements = lastValue.withLock { $0?.elements } ?? []
-        return covered && !isActive(elements) && pending.isEmpty && !instances.isEmpty
+        let activeMatters = activity == .foreground && isActive(elements)
+        return covered && !activeMatters && pending.isEmpty && !instances.isEmpty
     }
 
     /// One fetch at a time; a caller arriving mid-fetch shares the next one, so it never reads a value older than its call.
@@ -262,6 +281,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
             for await outcome in group { outcomes.append(outcome) }
         }
         let now = clock.now
+        lastFetchAt = now
         var changed = instances.isEmpty
         var fresh: [InstanceID: [Element]] = [:]
         for (instance, rows, error) in outcomes {
@@ -277,6 +297,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         }
         guard changed else { return }
         fromSnapshot = false
+        revision += 1
         for (instance, rows) in fresh {
             for e in rows { lastSeen[Self.key(instance, elementID(e))] = (instance, e) }
         }
@@ -329,7 +350,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
             slices[instance].map { now.timeIntervalSince($0.measuredAt) >= policy.staleGrace.seconds } ?? false
         }
         let value = LiveValue(elements: elements, slices: outSlices, measuredAt: measuredAt, partial: partial, failures: failures,
-                              isStale: isStale, pending: live, isFromSnapshot: fromSnapshot)
+                              isStale: isStale, pending: live, isFromSnapshot: fromSnapshot, revision: revision)
         lastValue.withLock { $0 = value }
         for c in subscribers.values { c.yield(value) }
     }

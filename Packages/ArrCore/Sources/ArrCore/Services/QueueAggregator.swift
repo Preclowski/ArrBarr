@@ -7,8 +7,13 @@ nonisolated public struct SourceQueueResult: Equatable {
     public let items: [QueueItem]
     public let error: String?
     public let unreachable: Bool
-    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool) {
+    /// When the arr answered the rows; nil when nothing was measured (a failure, an unconfigured arr, a test fake).
+    public let measuredAt: Date?
+    /// The live stream revision behind this result, so the same fetch is never committed twice; nil commits always.
+    public let revision: UInt64?
+    public init(source: QueueItem.Source, items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date? = nil, revision: UInt64? = nil) {
         self.source = source; self.items = items; self.error = error; self.unreachable = unreachable
+        self.measuredAt = measuredAt; self.revision = revision
     }
 }
 
@@ -16,11 +21,20 @@ nonisolated public struct SourceQueueResult: Equatable {
 protocol QueueDataProviding: Sendable {
     func fetch() async -> AggregateResult
     func fetch(source: QueueItem.Source) async -> SourceQueueResult
+    /// What the source's live stream last published, composed without asking the arr.
+    func latest(source: QueueItem.Source) async -> SourceQueueResult
+    /// The revision `latest(source:)` would compose, read without composing; nil when there is no stream.
+    func latestRevision(source: QueueItem.Source) -> UInt64?
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
+}
+
+extension QueueDataProviding {
+    func latest(source: QueueItem.Source) async -> SourceQueueResult { await fetch(source: source) }
+    func latestRevision(source: QueueItem.Source) -> UInt64? { nil }
 }
 
 /// Queue, calendar, history and health for the four arrs plus the download-client progress overlay, all through MediaKit.
@@ -57,13 +71,14 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         let signpost = AppSignpost.queue
         let state = signpost.beginInterval("queue refresh")
         defer { signpost.endInterval("queue refresh", state) }
-        var results: [QueueItem.Source: (items: [QueueItem], error: String?, unreachable: Bool)] = [:]
-        await withTaskGroup(of: (QueueItem.Source, (items: [QueueItem], error: String?, unreachable: Bool)).self) { group in
+        var results: [QueueItem.Source: QueueOutcome] = [:]
+        await withTaskGroup(of: (QueueItem.Source, QueueOutcome).self) { group in
             for source in QueueItem.Source.allCases { group.addTask { (source, await self.safeQueue(source)) } }
             for await (source, result) in group { results[source] = result }
         }
-        let ids = Set(results.values.flatMap { $0.items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty } })
-        let tasks = await progressSnapshot(ids: ids)
+        var bySource: [QueueItem.Source: Set<String>] = [:]
+        for (source, r) in results { bySource[source] = Self.downloadIDs(r.items) }
+        let tasks = await progressSnapshot(ids: bySource, reuse: false)
         var unreachable: Set<QueueItem.Source> = []
         for (source, r) in results where r.unreachable { unreachable.insert(source) }
         func slice(_ s: QueueItem.Source) -> [QueueItem] { Self.overlay(results[s]?.items ?? [], with: tasks) }
@@ -71,47 +86,86 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             radarr: slice(.radarr), sonarr: slice(.sonarr), lidarr: slice(.lidarr), whisparr: slice(.whisparr),
             radarrError: results[.radarr]?.error, sonarrError: results[.sonarr]?.error,
             lidarrError: results[.lidarr]?.error, whisparrError: results[.whisparr]?.error,
-            unreachableSources: unreachable)
+            unreachableSources: unreachable,
+            measuredAt: results.compactMapValues(\.measuredAt), revision: results.compactMapValues(\.revision))
     }
 
     func fetch(source: QueueItem.Source) async -> SourceQueueResult {
-        let outcome = await safeQueue(source)
-        let ids = Set(outcome.items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty })
-        let tasks = await progressSnapshot(ids: ids)
-        return SourceQueueResult(source: source, items: Self.overlay(outcome.items, with: tasks), error: outcome.error, unreachable: outcome.unreachable)
+        await result(source, refresh: true)
     }
 
-    private func safeQueue(_ source: QueueItem.Source) async -> (items: [QueueItem], error: String?, unreachable: Bool) {
+    func latest(source: QueueItem.Source) async -> SourceQueueResult {
+        await result(source, refresh: false)
+    }
+
+    func latestRevision(source: QueueItem.Source) -> UInt64? {
+        gateway.queueStream(source).last()?.revision
+    }
+
+    private func result(_ source: QueueItem.Source, refresh: Bool) async -> SourceQueueResult {
+        let outcome = await safeQueue(source, refresh: refresh)
+        let tasks = await progressSnapshot(ids: [source: Self.downloadIDs(outcome.items)], reuse: !refresh)
+        return SourceQueueResult(source: source, items: Self.overlay(outcome.items, with: tasks), error: outcome.error,
+                                 unreachable: outcome.unreachable, measuredAt: outcome.measuredAt, revision: outcome.revision)
+    }
+
+    private typealias QueueOutcome = (items: [QueueItem], error: String?, unreachable: Bool, measuredAt: Date?, revision: UInt64?)
+
+    private func safeQueue(_ source: QueueItem.Source, refresh: Bool = true) async -> QueueOutcome {
         do {
-            return (try await queueItems(source), nil, false)
+            let read = try await queueItems(source, refresh: refresh)
+            return (read.items, nil, false, read.measuredAt, read.revision)
         } catch is CancellationError {
-            return ([], nil, false)
+            return ([], nil, false, nil, nil)
         } catch MediaKitError.notConfigured {
-            return ([], nil, false)
+            return ([], nil, false, nil, nil)
         } catch {
+            let revision = (error as? ArrQueueLoader.LiveFailure)?.revision
+            let error = (error as? ArrQueueLoader.LiveFailure)?.underlying ?? error
             let message = MediaKitErrorPresenter.message(for: error)
             Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
-            return ([], message, MediaKitErrorPresenter.isUnreachable(error))
+            return ([], message, MediaKitErrorPresenter.isUnreachable(error), nil, revision)
         }
     }
 
-    private func queueItems(_ source: QueueItem.Source) async throws -> [QueueItem] {
+    private func queueItems(_ source: QueueItem.Source, refresh: Bool) async throws -> ArrQueueLoader.Measured {
         let baseURL = configStore.config(for: source.serviceKind).baseURL
-        return try await ArrQueueLoader.items(source: source, gateway: gateway, baseURL: baseURL)
+        return try await ArrQueueLoader.measuredItems(source: source, gateway: gateway, baseURL: baseURL, refresh: refresh)
     }
 
     // MARK: - Download-client progress
 
     /// One live stream over the configured download clients; `staleGrace` keeps the bars steady across a blip.
-    private func progressSnapshot(ids: Set<String>) async -> [String: DownloadTask] {
-        guard !ids.isEmpty else { return [:] }
+    /// Every arr's download ids, so one progress fetch serves all of them.
+    private let progressIDs = OSAllocatedUnfairLock<[QueueItem.Source: Set<String>]>(initialState: [:])
+    /// The queue streams publish per arr within moments of each other; one reading serves the lot.
+    private static let progressReuseWindow: TimeInterval = 2
+
+    private static func downloadIDs(_ items: [QueueItem]) -> Set<String> {
+        Set(items.compactMap { $0.downloadId?.lowercased() }.filter { !$0.isEmpty })
+    }
+
+    /// `reuse` answers from a reading younger than `progressReuseWindow` that already covers these ids.
+    private func progressSnapshot(ids: [QueueItem.Source: Set<String>], reuse: Bool) async -> [String: DownloadTask] {
+        let union = progressIDs.withLock { known -> Set<String> in
+            known.merge(ids) { $1 }
+            return known.values.reduce(into: Set<String>()) { $0.formUnion($1) }
+        }
+        let wanted = ids.values.reduce(into: Set<String>()) { $0.formUnion($1) }
+        guard !wanted.isEmpty else { return [:] }
         let instances = await MainActor.run {
             MonitoredService.downloadClientKinds.filter { MonitoredService.arr($0).isConfigured(in: configStore) }.map(\.instanceID)
         }
         guard !instances.isEmpty else { return [:] }
         let stream = gateway.progressStream(instances: instances)
-        await stream.setScope(.ids(ids))
-        await stream.refreshNow(priority: .interactive)
+        let covered = stream.last().map { value in
+            Date().timeIntervalSince(value.measuredAt) < Self.progressReuseWindow
+                && wanted.isSubset(of: Set(value.elements.map { $0.id.lowercased() }))
+        } ?? false
+        if !(reuse && covered) {
+            await stream.setScope(.ids(union))
+            await stream.refreshNow(priority: .interactive)
+        }
         var out: [String: DownloadTask] = [:]
         for task in stream.last()?.elements ?? [] { out[task.id] = task }
         return out
@@ -291,21 +345,28 @@ nonisolated public struct AggregateResult: Equatable {
     public let lidarrError: String?
     public let whisparrError: String?
     public let unreachableSources: Set<QueueItem.Source>
+    public let measuredAt: [QueueItem.Source: Date]
+    public let revision: [QueueItem.Source: UInt64]
 
     func slice(for source: QueueItem.Source) -> SourceQueueResult {
-        switch source {
-        case .radarr: SourceQueueResult(source: source, items: radarr, error: radarrError, unreachable: unreachableSources.contains(source))
-        case .sonarr: SourceQueueResult(source: source, items: sonarr, error: sonarrError, unreachable: unreachableSources.contains(source))
-        case .lidarr: SourceQueueResult(source: source, items: lidarr, error: lidarrError, unreachable: unreachableSources.contains(source))
-        case .whisparr: SourceQueueResult(source: source, items: whisparr, error: whisparrError, unreachable: unreachableSources.contains(source))
+        let (items, error): ([QueueItem], String?) = switch source {
+        case .radarr: (radarr, radarrError)
+        case .sonarr: (sonarr, sonarrError)
+        case .lidarr: (lidarr, lidarrError)
+        case .whisparr: (whisparr, whisparrError)
         }
+        return SourceQueueResult(source: source, items: items, error: error, unreachable: unreachableSources.contains(source),
+                                 measuredAt: measuredAt[source], revision: revision[source])
     }
 
     init(radarr: [QueueItem], sonarr: [QueueItem], lidarr: [QueueItem], whisparr: [QueueItem] = [],
          radarrError: String? = nil, sonarrError: String? = nil, lidarrError: String? = nil, whisparrError: String? = nil,
-         unreachableSources: Set<QueueItem.Source> = []) {
+         unreachableSources: Set<QueueItem.Source> = [], measuredAt: [QueueItem.Source: Date] = [:],
+         revision: [QueueItem.Source: UInt64] = [:]) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
         self.radarrError = radarrError; self.sonarrError = sonarrError; self.lidarrError = lidarrError; self.whisparrError = whisparrError
         self.unreachableSources = unreachableSources
+        self.measuredAt = measuredAt
+        self.revision = revision
     }
 }

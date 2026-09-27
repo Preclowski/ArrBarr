@@ -3,12 +3,38 @@ import MediaKit
 
 /// Queue rows plus the side loads a row needs: entity details (title, poster, ids) and the existing file for the upgrade diff.
 enum ArrQueueLoader {
+    /// A live stream's failed fetch, with the revision it was published under.
+    struct LiveFailure: Error {
+        let underlying: any Error
+        let revision: UInt64
+    }
+
+    struct Measured {
+        let items: [QueueItem]
+        let measuredAt: Date?
+        /// The live stream revision these rows came from; nil for a direct store read.
+        let revision: UInt64?
+    }
+
     static func items(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String) async throws -> [QueueItem] {
+        do { return try await measuredItems(source: source, gateway: gateway, service: service, baseURL: baseURL, refresh: true).items }
+        catch let failure as LiveFailure { throw failure.underlying }
+    }
+
+    /// `refresh: false` composes what the live stream last published, without asking the arr.
+    static func measuredItems(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String,
+                              refresh: Bool) async throws -> Measured {
         await gateway.ready()
         let service = service ?? gateway.servarr(source)
         guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
         let store = gateway.store
-        let records = try await queueRecords(source: source, gateway: gateway, service: service)
+        let read = try await queueRecords(source: source, gateway: gateway, service: service, refresh: refresh)
+        let items = await compose(read.records, source: source, service: service, store: store, baseURL: baseURL)
+        return Measured(items: items, measuredAt: read.measuredAt, revision: read.revision)
+    }
+
+    private static func compose(_ records: [ArrQueueRecord], source: QueueItem.Source, service: ServarrService, store: ResourceStore,
+                                baseURL: String) async -> [QueueItem] {
         let entityIDs = Array(Set(records.compactMap { ArrCompositions.entityID(of: $0, source: source) }.filter { $0 > 0 }))
         async let metaTask = entityMeta(service: service, source: source, ids: entityIDs, store: store, baseURL: baseURL)
         async let filesTask = store.batch(service.files, keys: entityIDs, priority: .background)
@@ -35,15 +61,18 @@ enum ArrQueueLoader {
     }
 
     /// The saved instance reads through its live stream; a Settings draft (another ordinal) straight from the store.
-    private static func queueRecords(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService) async throws -> [ArrQueueRecord] {
+    private static func queueRecords(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService,
+                                     refresh: Bool) async throws -> (records: [ArrQueueRecord], measuredAt: Date?, revision: UInt64?) {
         guard service.instance == source.instanceID else {
-            return try await gateway.store.read(service.queue(), policy: .mustRevalidate).value.records
+            let fetched = try await gateway.store.read(service.queue(), policy: .mustRevalidate)
+            return (fetched.value.records, fetched.fetchedAt, nil)
         }
         let stream = gateway.queueStream(source)
-        await stream.refreshNow()
+        if refresh { await stream.refreshNow() }
         let value = stream.last()
-        if let error = value?.failures[service.instance] { throw error }
-        return value?.slices[service.instance]?.elements ?? []
+        if let value, let error = value.failures[service.instance] { throw LiveFailure(underlying: error, revision: value.revision) }
+        let slice = value?.slices[service.instance]
+        return (slice?.elements ?? [], slice?.measuredAt, value?.revision)
     }
 
     private static func entityMeta(service: ServarrService, source: QueueItem.Source, ids: [Int], store: ResourceStore, baseURL: String) async -> [Int: ArrCompositions.EntityMeta] {
