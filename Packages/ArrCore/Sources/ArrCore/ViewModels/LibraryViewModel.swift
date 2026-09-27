@@ -146,26 +146,29 @@ public final class LibraryViewModel {
         }
         // Paint the saved grid first; everything below happens behind a screen that already has covers.
         if entries[source] == nil {
-            let snapshotStarted = Date()
+            let paint = AppSignpost.library.beginInterval("snapshot paint")
             if let saved = await LibrarySnapshotStore.load(source, fingerprint: config.identityFingerprint) {
                 // Stored in title order, so this skips the localized sort.
                 commit(saved, byTitle: saved, for: source, version: nil)
-                Self.log.notice("\(source.rawValue, privacy: .public) library painted from snapshot: \(saved.count, privacy: .public) titles in \(Int(Date().timeIntervalSince(snapshotStarted) * 1000), privacy: .public) ms")
+                Self.log.notice("\(source.rawValue, privacy: .public) library painted from snapshot: \(saved.count, privacy: .public) titles")
             }
+            AppSignpost.library.endInterval("snapshot paint", paint)
         }
         guard !loading.contains(source) else { return }
-        let started = Date()
-        func elapsed() -> Int { Int(Date().timeIntervalSince(started) * 1000) }
+        let interval = AppSignpost.library.beginInterval("library load")
         loading.insert(source)
         loadFailed.remove(source)
-        defer { loading.remove(source) }
+        defer {
+            loading.remove(source)
+            AppSignpost.library.endInterval("library load", interval)
+        }
 
         // Failure degrades to no quality caption. The cache-first pass takes only what is cached, so the request
         // doesn't delay the first paint.
         let profiles = revalidate
             ? await SearchClient.profileNameMap(config: config, source: source)
             : await SearchClient.cachedProfileNameMap(config: config, source: source)
-        Self.log.notice("\(source.rawValue, privacy: .public) load: profiles in \(elapsed(), privacy: .public) ms (revalidate \(revalidate, privacy: .public))")
+        AppSignpost.library.emitEvent("profiles read")
         let baseURL = config.baseURL
         let projection: Projection
         let failed: Bool
@@ -197,7 +200,7 @@ public final class LibraryViewModel {
             projection = await Self.project { Self.unifyWhisparr(read.records, baseURL: baseURL, profiles: profiles) }
         }
 
-        Self.log.notice("\(source.rawValue, privacy: .public) load: \(projection.entries.count, privacy: .public) entries projected in \(elapsed(), privacy: .public) ms")
+        Self.log.notice("\(source.rawValue, privacy: .public) load: \(projection.entries.count, privacy: .public) entries projected (revalidate \(revalidate, privacy: .public))")
 
         // On failure the index returns a stale snapshot or nothing, so never commit: an empty `fresh` over a good grid
         // reads "you own nothing". Leaving `indexVersions` unwritten makes the next load retry.

@@ -64,11 +64,8 @@ struct QueueRowView: View {
     var selectionState: RowSelectionState = .hidden
     @EnvironmentObject var configStore: ConfigStore
     /// Set by surfaces with a permanent detail pane, which don't need the long-hover tooltip.
-    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
 
     /// Goes through ConfirmCenter because an inline `.overlay` clips the card to the row and truncates labels.
     private func requestDeleteConfirm() {
@@ -198,21 +195,7 @@ struct QueueRowView: View {
         }
         // Hover-only affordances are macOS-only; on iOS the tooltip popover would render as a sheet.
         #if os(macOS)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-            hoverTask?.cancel()
-            if hovering && !suppressRowTooltip {
-                hoverTask = Task { [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled && self.isHovering { showTooltip = true }
-                }
-            } else {
-                // The tooltip is read-only, so it can close on hover-out.
-                showTooltip = false
-            }
-        }
-        // `.applicationDefined` behaviour keeps the popover from being eaten by a stray first click.
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .hoverTooltip(hovering: $isHovering.animation(.easeInOut(duration: 0.15))) {
             QueueItemTooltip(
                 item: item,
                 apiKey: item.posterRequiresAuth ? apiKeyForSource : nil
@@ -268,7 +251,6 @@ struct QueueRowView: View {
     }
     #endif
 }
-
 
 // MARK: - Custom-format strip (queue rows)
 

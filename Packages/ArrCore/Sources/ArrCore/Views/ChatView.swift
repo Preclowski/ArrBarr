@@ -357,17 +357,9 @@ private struct MessageBubble: View {
     /// Trailing whitespace is trimmed first: `.inlineOnlyPreservingWhitespace`
     /// keeps it and it renders as an empty half-line in the bubble.
     static func attributed(_ raw: String) -> AttributedString {
-        inlineMarkdown(raw.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    static func inlineMarkdown(_ s: String) -> AttributedString {
-        let opts = AttributedString.MarkdownParsingOptions(
-            interpretedSyntax: .inlineOnlyPreservingWhitespace
-        )
-        if let attr = try? AttributedString(markdown: s, options: opts) {
-            return attr
-        }
-        return AttributedString(s)
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
     }
 
 }

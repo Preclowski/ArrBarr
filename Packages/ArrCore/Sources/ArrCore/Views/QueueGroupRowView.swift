@@ -12,11 +12,8 @@ struct QueueGroupRowView: View {
     var selectionState: RowSelectionState = .hidden
 
     @EnvironmentObject var configStore: ConfigStore
-    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
 
     private func requestDeleteConfirm() {
         ConfirmCenter.request(PendingConfirm(
@@ -154,19 +151,7 @@ struct QueueGroupRowView: View {
             }
         }
         #if os(macOS)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-            hoverTask?.cancel()
-            if hovering && !suppressRowTooltip {
-                hoverTask = Task { [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled && self.isHovering { showTooltip = true }
-                }
-            } else {
-                showTooltip = false
-            }
-        }
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .hoverTooltip(hovering: $isHovering.animation(.easeInOut(duration: 0.15))) {
             QueueGroupTooltip(
                 group: group,
                 apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil
@@ -195,17 +180,8 @@ struct QueueGroupRowView: View {
         String.localizedStringWithFormat(NSLocalizedString("unit.episodes", bundle: .module, comment: ""), group.memberCount)
     }
 
-    /// Weighted by size; falls back to a mean of member progress when no sizes are known.
-    private var aggregateProgress: Double {
-        let total = group.items.reduce(Int64(0)) { $0 + $1.sizeTotal }
-        let left  = group.items.reduce(Int64(0)) { $0 + $1.sizeLeft }
-        if total > 0 {
-            return max(0, min(1, 1.0 - Double(left) / Double(total)))
-        }
-        let count = Double(group.items.count)
-        guard count > 0 else { return 0 }
-        return group.items.reduce(0.0) { $0 + $1.progress } / count
-    }
+    /// Pack members share one download, so any member carries the whole pack's progress.
+    private var aggregateProgress: Double { group.representative.progress }
 
     // MARK: - Actions
 
@@ -236,7 +212,6 @@ struct QueueGroupRowView: View {
                             : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
     }
     #endif
-
 
 }
 
@@ -365,11 +340,10 @@ struct QueueGroupTooltip: View {
         // Every member shares one release, so quality and format chips would repeat the header.
         VStack(alignment: .leading, spacing: 4) {
             ForEach(group.items) { it in
-                TooltipQueueRow(item: it, showNewFileMeta: false)
+                TooltipQueueRow(item: it)
             }
         }
     }
-
 
     private var infoLines: [TooltipInfoLine] {
         var lines: [TooltipInfoLine] = []
@@ -407,12 +381,6 @@ struct QueueGroupTooltip: View {
 
 struct TooltipQueueRow: View {
     let item: QueueItem
-    var showNewFileMeta: Bool = true
-
-    init(item: QueueItem, showNewFileMeta: Bool = true) {
-        self.item = item
-        self.showNewFileMeta = showNewFileMeta
-    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -445,12 +413,6 @@ struct TooltipQueueRow: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
             )
-            if showNewFileMeta, !item.customFormats.isEmpty {
-                TooltipFlowLayout(spacing: 3) {
-                    ForEach(item.customFormats, id: \.self) { TagChip(text: $0) }
-                }
-                .padding(.top, 1)
-            }
         }
     }
 
@@ -467,10 +429,7 @@ struct TooltipQueueRow: View {
     }
 
     private var headline: String {
-        var bits: [String] = []
-        if let t = item.episodeTitle, !t.isEmpty { bits.append(t) }
-        if showNewFileMeta, let q = item.quality, !q.isEmpty { bits.append(q) }
-        return bits.joined(separator: " · ")
+        item.episodeTitle ?? ""
     }
 
 }

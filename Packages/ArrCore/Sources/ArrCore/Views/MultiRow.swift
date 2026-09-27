@@ -10,9 +10,6 @@ struct MultiRow: View {
     var onResume: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
-    @State private var isHovering = false
-    @State private var showHoverPopover = false
-    @State private var hoverTask: Task<Void, Never>?
     #if os(iOS)
     @State private var showDeleteConfirm = false
     #endif
@@ -106,19 +103,7 @@ struct MultiRow: View {
         #endif
         #if os(macOS)
         // Anchored .leading so the tooltip floats out on the right side of the row.
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            if hovering {
-                hoverTask = Task {
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled, isHovering { showHoverPopover = true }
-                }
-            } else {
-                showHoverPopover = false
-            }
-        }
-        .tooltipPopover(isPresented: $showHoverPopover, arrowEdge: .leading) {
+        .hoverTooltip(arrowEdge: .leading) {
             QueueItemTooltip(item: item)
         }
         #endif

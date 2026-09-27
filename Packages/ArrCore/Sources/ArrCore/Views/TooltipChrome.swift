@@ -2,10 +2,13 @@ import SwiftUI
 
 // MARK: - Shared tooltip chrome
 
-/// The one long-hover presenter (600 ms dwell). QueueRowView keeps its own copy:
-/// its `isHovering` also drives poster controls.
+/// The one long-hover presenter: shows `tooltip` after a dwell, closes on hover-out.
+/// `hovering` mirrors the pointer for rows whose own controls react to it.
 struct HoverTooltip<TooltipContent: View>: ViewModifier {
     var enabled: Bool = true
+    var arrowEdge: Edge = .trailing
+    var delay: Duration = .milliseconds(600)
+    var hovering: Binding<Bool>?
     @ViewBuilder let tooltip: () -> TooltipContent
     @Environment(\.suppressRowTooltip) private var suppressRowTooltip
     #if os(macOS)
@@ -17,19 +20,20 @@ struct HoverTooltip<TooltipContent: View>: ViewModifier {
     func body(content: Content) -> some View {
         #if os(macOS)
         content
-            .onHover { hovering in
-                isHovering = hovering
+            .onHover { now in
+                isHovering = now
+                hovering?.wrappedValue = now
                 hoverTask?.cancel()
-                if hovering && enabled && !suppressRowTooltip {
+                if now && enabled && !suppressRowTooltip {
                     hoverTask = Task {
-                        try? await Task.sleep(nanoseconds: 600_000_000)
+                        try? await Task.sleep(for: delay)
                         if !Task.isCancelled && isHovering { showTooltip = true }
                     }
                 } else {
                     showTooltip = false
                 }
             }
-            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+            .tooltipPopover(isPresented: $showTooltip, arrowEdge: arrowEdge) {
                 tooltip()
             }
         #else
@@ -39,8 +43,9 @@ struct HoverTooltip<TooltipContent: View>: ViewModifier {
 }
 
 extension View {
-    func hoverTooltip<T: View>(enabled: Bool = true, @ViewBuilder _ tooltip: @escaping () -> T) -> some View {
-        modifier(HoverTooltip(enabled: enabled, tooltip: tooltip))
+    func hoverTooltip<T: View>(enabled: Bool = true, arrowEdge: Edge = .trailing, delay: Duration = .milliseconds(600),
+                               hovering: Binding<Bool>? = nil, @ViewBuilder _ tooltip: @escaping () -> T) -> some View {
+        modifier(HoverTooltip(enabled: enabled, arrowEdge: arrowEdge, delay: delay, hovering: hovering, tooltip: tooltip))
     }
 }
 

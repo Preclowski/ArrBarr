@@ -23,10 +23,6 @@ struct EpisodeRow: View {
     @EnvironmentObject private var configStore: ConfigStore
     /// Long-hover tooltip: a downloading row shows `QueueItemTooltip`, any other
     /// row the episode (synopsis, air date, file) its one trailing slot can't fit.
-    @Environment(\.suppressRowTooltip) private var suppressRowTooltip
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
     /// Search fired from the context menu, shown in the trailing state slot
     /// because the menu is gone by the time it runs.
     @State private var searchFeedback: SearchFeedback = .idle
@@ -137,19 +133,7 @@ struct EpisodeRow: View {
         )
         // No hover actions: download controls belong to the queue.
         #if os(macOS)
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            if hovering && !suppressRowTooltip && hasTooltip {
-                hoverTask = Task { [self] in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled && self.isHovering { showTooltip = true }
-                }
-            } else {
-                showTooltip = false
-            }
-        }
-        .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+        .hoverTooltip(enabled: hasTooltip) {
             if let q = queueItem {
                 QueueItemTooltip(
                     item: q,

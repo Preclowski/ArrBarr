@@ -39,4 +39,5 @@ nonisolated enum AppSignpost {
     static let posters = OSSignposter(subsystem: AppLog.subsystem, category: "PosterStore")
     static let chat = OSSignposter(subsystem: AppLog.subsystem, category: "Chat")
     static let quiz = OSSignposter(subsystem: AppLog.subsystem, category: "Quiz")
+    static let library = OSSignposter(subsystem: AppLog.subsystem, category: "Library")
 }

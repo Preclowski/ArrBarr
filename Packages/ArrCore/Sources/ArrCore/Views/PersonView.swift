@@ -359,16 +359,12 @@ struct PersonView: View {
     }
 }
 
-
 /// No source badge (the tab says movie vs series) and no trailing accessory: ownership reads from the "In library" pill.
 private struct PersonFilmographyRow: View {
     let result: SearchResult
     let onTap: () -> Void
     @EnvironmentObject private var configStore: ConfigStore
     #if os(macOS)
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
     private var hasTooltip: Bool {
         (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
     }
@@ -399,19 +395,7 @@ private struct PersonFilmographyRow: View {
         }
         #if os(macOS)
         row
-            .onHover { hovering in
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering, hasTooltip {
-                    hoverTask = Task {
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        if !Task.isCancelled, isHovering { showTooltip = true }
-                    }
-                } else {
-                    showTooltip = false
-                }
-            }
-            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
+            .hoverTooltip(enabled: hasTooltip) {
                 SearchResultTooltip(result: result).environmentObject(configStore)
             }
         #else

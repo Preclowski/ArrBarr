@@ -343,8 +343,6 @@ private struct ReleaseRow: View {
     let onGrab: () -> Void
 
     @State private var hovering = false
-    @State private var showPopover = false
-    @State private var hoverTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -368,23 +366,10 @@ private struct ReleaseRow: View {
         }
         #if os(macOS)
         // Hover previews the same detail with no actions; grabbing stays a deliberate expand.
-        .onHover { isHovering in
-            hovering = isHovering
-            hoverTask?.cancel()
-            if isHovering, !isExpanded {
-                hoverTask = Task {
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    if !Task.isCancelled, hovering { showPopover = true }
-                }
-            } else {
-                showPopover = false
-            }
-        }
-        .popover(isPresented: $showPopover, arrowEdge: .trailing) {
+        .hoverTooltip(enabled: !isExpanded, delay: .milliseconds(400), hovering: $hovering) {
             ReleaseDetail(release: release, existing: existing, indexerName: indexerName, showsLink: false)
                 .padding(12)
                 .frame(width: 340)
-                .popoverBehavior(.applicationDefined)
         }
         #endif
     }

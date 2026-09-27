@@ -65,7 +65,8 @@ enum NotificationArtwork {
         startFetch(url, apiKey: apiKey)
         let deadline = Date().addingTimeInterval(waitBudget)
         while Date() < deadline {
-            try? await Task.sleep(nanoseconds: 150_000_000)
+            // `sleep` returns at once when cancelled, so without this the loop spins until the deadline.
+            guard (try? await Task.sleep(nanoseconds: 150_000_000)) != nil else { return nil }
             if let data = cachedPoster(url) { return data }
             // The fetch ended with nothing (e.g. a MediaCover 404); don't sit out the budget.
             if !inFlight.contains(url) { return nil }

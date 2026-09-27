@@ -100,9 +100,6 @@ private struct CastTile: View {
     @EnvironmentObject private var configStore: ConfigStore
 
     #if os(macOS)
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
     #endif
 
     private var tile: some View {
@@ -137,23 +134,10 @@ private struct CastTile: View {
             }
             .buttonStyle(.plain)
             #if os(macOS)
-            // The anchor owns only `showTooltip`: a fetch landing here would re-render it
-            // and blink the popover's `isPresented` binding.
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering {
-                    hoverTask = Task {
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        guard !Task.isCancelled, isHovering else { return }
-                        showTooltip = true
-                    }
-                } else {
-                    showTooltip = false
-                }
             }
-            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .top) {
+            .hoverTooltip(arrowEdge: .top) {
                 CastTooltip(person: person, tmdbKey: configStore.tmdbApiKey)
             }
             #else
