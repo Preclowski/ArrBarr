@@ -301,7 +301,11 @@ public final class ServiceGateway {
     }
 
     /// One SignalR source per configured arr; the hub turns its frames into store invalidations.
+    /// The widget reads the app's stored rows and refetches what is stale; it runs no hubs, probes or sweeps.
+    nonisolated static let isAppExtension = Bundle.main.bundlePath.hasSuffix(".appex")
+
     private func syncRealtime() async {
+        guard !Self.isAppExtension else { return }
         let wanted = Set(kit.registry.configured(.servarr))
         for id in realtime.keys where !wanted.contains(id) {
             await kit.events.detach(id)
@@ -410,6 +414,7 @@ public final class ServiceGateway {
             configuration.database = Self.isRunningTests ? .memory : databaseLocation()
             if Self.isRunningTests { configuration.readPolicyOverride = .mustRevalidate }
         }
+        configuration.role = isAppExtension ? .snapshotReader : .app
         configuration.telemetry = telemetry
         configuration.log = OSLogSink(subsystem: "pl.incred.ArrBarr")
         configuration.signposts = OSSignposter(subsystem: "pl.incred.ArrBarr", category: "MediaKit")

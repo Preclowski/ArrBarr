@@ -74,7 +74,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
       service down while its host's breaker is open (worse of recorded and governor). `lastEventAt`
       already drives the realtime-quiet check in `QueueViewModel`.
-- [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
+- [x] Widget: `MediaKit(role: .snapshotReader)` on the group container database. (2026-09-27) The widget already
+      read the shared group database through the cache-first facades; an app extension now runs the stack as
+      `.snapshotReader` (no capability probes, no sweep of the app's rows, 2 MB memory tier) and opens no hubs.
 - [x] `SpotlightIndexer` as a store consumer (reads through `LibraryIndex`).
 
 ## Wave 4 — QueueViewModel on LiveStream
