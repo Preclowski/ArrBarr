@@ -21,8 +21,8 @@ struct LibrarySizeDecodingTests {
 
     @Test("Sonarr series statistics decodes sizeOnDisk")
     func sonarrSize() throws {
-        let json = #"[{"id":1,"statistics":{"episodeCount":10,"sizeOnDisk":2048}}]"#.data(using: .utf8)!
-        let recs = try JSONDecoder().decode([SonarrLibraryRecord].self, from: json)
+        let json = #"[{"id":1,"title":"Big Buck Bunny","statistics":{"episodeCount":10,"sizeOnDisk":2048}}]"#.data(using: .utf8)!
+        let recs = try JSONDecoder().decode([ArrSeries].self, from: json)
         #expect(recs.first?.statistics?.sizeOnDisk == 2048)
     }
 

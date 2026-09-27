@@ -7,7 +7,7 @@ import MediaKit
 /// (search / bookmark / safari). Closes via the leading back chevron
 /// or Esc.
 public struct EpisodeDetailOverlay: View {
-    let episode: SonarrEpisodeDetail
+    let episode: ArrEpisode
     let seriesTitle: String
     let posterURL: URL?
     let posterRequiresAuth: Bool
@@ -156,7 +156,7 @@ public struct EpisodeDetailOverlay: View {
     }
 
     public init(
-        episode: SonarrEpisodeDetail,
+        episode: ArrEpisode,
         seriesTitle: String,
         posterURL: URL?,
         posterRequiresAuth: Bool,

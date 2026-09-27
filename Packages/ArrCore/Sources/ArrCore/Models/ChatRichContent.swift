@@ -9,7 +9,7 @@ nonisolated public enum ChatRichContent: Sendable, Equatable {
     case searchMovieResults([SearchResult])
     case searchArtistResults([SearchResult])
     case searchSceneResults([SearchResult])
-    case librarySeries([SonarrLibraryRecord])
+    case librarySeries([ArrSeries])
     case libraryMovies([ArrMovie])
     case libraryArtists([LidarrLibraryRecord])
     case libraryScenes([ArrMovie])

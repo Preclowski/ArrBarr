@@ -29,7 +29,7 @@ public actor SearchClient {
             let records = try await client.read { $0.lookupMovies(term: query) }
             return records.enumerated().compactMap { Self.unifyRadarr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .sonarr:
-            let records = try await client.read([SonarrLookupRecord].self) { $0.lookupSeries(term: query) }
+            let records = try await client.read { $0.lookupSeries(term: query) }
             return records.enumerated().compactMap { Self.unifySonarr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .whisparr:
             let records = try await client.read { $0.lookupMovies(term: query) }
@@ -167,7 +167,7 @@ public actor SearchClient {
             inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, imdbId: r.imdbId, sourceRank: sourceRank)
     }
 
-    nonisolated private static func unifySonarr(_ r: SonarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated private static func unifySonarr(_ r: ArrSeries, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let tvdbId = r.tvdbId else { return nil }
         let seasons = r.statistics?.seasonCount
         return SearchResult(

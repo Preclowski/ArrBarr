@@ -158,45 +158,6 @@ nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
 
 // MARK: - Search Lookup
 
-nonisolated public struct SonarrLookupRecord: Codable, Sendable {
-    /// Library record id for series the user already owns (0 / absent otherwise)
-    /// — drives the "in library" state on search cards.
-    let id: Int?
-    let tvdbId: Int?
-    /// See `ArrMovie.imdbId` — Sonarr's lookup carries it too, so
-    /// an `imdb:ttN` query can resolve a series as well as a movie.
-    var imdbId: String? = nil
-    /// TMDB series id, when SkyHook knows one. The verification gate in
-    /// `SeriesIdentityResolver` reads it: a `term=tmdb:N` lookup is only
-    /// trusted when the record that comes back actually carries that id
-    /// (older Sonarr treats the unknown prefix as literal search text and
-    /// answers with whatever the string fuzzy-matches).
-    var tmdbId: Int? = nil
-    let title: String
-    var alternateTitles: [ArrAlternateTitle]? = nil
-    let year: Int?
-    let overview: String?
-    let ratings: SonarrLookupRatings?
-    let images: [ArrImage]?
-    let statistics: SonarrLookupStats?
-    let genres: [String]?
-    let network: String?
-    let runtime: Int?
-    let status: String?
-}
-
-nonisolated public struct SonarrLookupRatings: Codable, Sendable, Equatable {
-    let value: Double?
-    /// TVDB vote count. Sonarr has always returned it; we used to drop it,
-    /// which meant `bayesianQuality` never shrank a series rating and a
-    /// 10.0-with-three-votes obscurity outranked a famous 8.6.
-    var votes: Int? = nil
-}
-
-nonisolated public struct SonarrLookupStats: Codable, Sendable {
-    let seasonCount: Int?
-}
-
 // MARK: - Lidarr library / lookup types
 
 nonisolated public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
@@ -206,7 +167,7 @@ nonisolated public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
     public let monitored: Bool?
     public let images: [ArrImage]?
     public let statistics: LidarrLibraryStatistics?
-    /// See `SonarrLibraryRecord.qualityProfileId`.
+    /// See `ArrSeries.qualityProfileId`.
     public var qualityProfileId: Int? = nil
     /// See `ArrMovie.added`. Artists have no release date of their
     /// own — that belongs to their albums — so this is the only date sort
@@ -234,7 +195,7 @@ nonisolated public struct LidarrLookupRecord: Codable, Sendable {
 }
 nonisolated public struct LidarrLookupRatings: Codable, Sendable, Equatable {
     public let value: Double?
-    /// See `SonarrLookupRatings.votes` — same dropped-signal fix.
+    /// See `ArrRatings.votes` — same dropped-signal fix.
     public var votes: Int? = nil
 }
 
@@ -282,64 +243,6 @@ nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identif
     public let name: String
 }
 
-
-nonisolated public struct SonarrLibraryRecord: Codable, Sendable, Equatable {
-    let id: Int?
-    let tvdbId: Int?
-    let title: String?
-    let year: Int?
-    let status: String?
-    let monitored: Bool?
-    let statistics: SonarrLibraryStatistics?
-    let images: [ArrImage]?
-    /// Per-season state. Populated by `/api/v3/series` when we ask for it
-    /// — the field has always been in the JSON, we just didn't decode it.
-    /// Lets `sonarr_get_series` answer "is S3 monitored?" without a
-    /// second round-trip to the series detail endpoint.
-    let seasons: [SonarrLibrarySeason]?
-    let overview: String?
-    /// See `ArrMovie.titleSlug` — same field, same reason.
-    let titleSlug: String?
-    /// Series have no single file quality — the Library tab shows the
-    /// assigned profile's name instead. (`var … = nil`: see ArrMovie.)
-    var qualityProfileId: Int? = nil
-    /// TVDB rating — feeds the Library tab's rating sort.
-    var ratings: SonarrLookupRatings? = nil
-    /// Library tooltip garnish — always on the wire, newly decoded.
-    var genres: [String]? = nil
-    /// TMDB's own series id. Sonarr v3+ ships it on `/api/v3/series` (same
-    /// field `SonarrSeries` already decodes); we simply never read it here.
-    /// It is what lets a TMDB-sourced row be matched against the library by
-    /// *id* — before this, TMDB series could only be joined on title + year,
-    /// which is how a same-titled show got mistaken for one you own.
-    var tmdbId: Int? = nil
-    /// Aliases from TVDB / TheXEM. Sonarr always inlines these on
-    /// `/api/v3/series` (see the payload note in `SonarrClient.fetchQueue`),
-    /// so unlike Radarr there's no fallback endpoint to reach for. They're
-    /// scene names first and translations second, so coverage of foreign
-    /// titles is thinner here than for movies.
-    var alternateTitles: [ArrAlternateTitle]? = nil
-    /// See `ArrMovie.added`.
-    var added: String? = nil
-    /// First episode's air date — a series' equivalent of a release date.
-    var firstAired: String? = nil
-}
-nonisolated public struct SonarrLibraryStatistics: Codable, Sendable, Equatable {
-    let episodeCount: Int?
-    let episodeFileCount: Int?
-    let seasonCount: Int?
-    let sizeOnDisk: Int64?
-}
-nonisolated public struct SonarrLibrarySeason: Codable, Sendable, Equatable {
-    let seasonNumber: Int
-    let monitored: Bool?
-    let statistics: SonarrLibrarySeasonStatistics?
-}
-nonisolated public struct SonarrLibrarySeasonStatistics: Codable, Sendable, Equatable {
-    let episodeCount: Int?
-    let episodeFileCount: Int?
-    let totalEpisodeCount: Int?
-}
 
 // MARK: - Whisparr
 

@@ -1,10 +1,11 @@
 import SwiftUI
+import MediaKit
 
 /// One season's summary row in the series detail — the whole row is a progress
 /// bar (status-tinted fill spanning have/total). Tapping it pushes the full
 /// `SeasonDetailView` (episodes + that season's search buttons).
 struct SeasonRow: View {
-    let season: SonarrSeasonInfo
+    let season: ArrSeason
     /// Every queue item belonging to THIS season — taken straight off the
     /// series' queue siblings by season number. It used to be derived by
     /// joining an episode-id map against the loaded episode array, which meant
@@ -24,7 +25,7 @@ struct SeasonRow: View {
     @State private var autoSearching = false
     @State private var autoDidSearch = false
 
-    private var stats: SonarrSeasonStats? { season.statistics }
+    private var stats: ArrStatistics? { season.statistics }
     private var have: Int { stats?.episodeFileCount ?? 0 }
     private var total: Int { stats?.totalEpisodeCount ?? stats?.episodeCount ?? 0 }
     private var pct: Double { total > 0 ? min(1.0, Double(have) / Double(total)) : 0 }

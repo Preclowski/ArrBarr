@@ -56,12 +56,12 @@ public struct EpisodeQuickDetail: View {
     /// every episode row in it — at ~85 body passes a second.
     var onBack: () -> Void
 
-    @State private var sonarrDetail: SonarrSeriesDetail?
+    @State private var sonarrDetail: ArrSeries?
     /// Series cast for the episode screen — see `EpisodeDetailOverlay.cast`.
     @State private var cast: [CastMember] = []
     /// The series' quality-profile name, for the episode hero's chip.
     @State private var profileName: String?
-    @State private var fullEpisode: SonarrEpisodeDetail?
+    @State private var fullEpisode: ArrEpisode?
     @State private var episodeFileMap: [Int: ArrFile] = [:]
     @State private var loadError: String?
     /// Series drill-down. Owned HERE (not at the root NavigationStack)
@@ -72,7 +72,7 @@ public struct EpisodeQuickDetail: View {
     @State private var seriesPush: SeriesPushRequest?
     /// All of the series' episodes (kept from `load`) so the hero's season link
     /// can push a fully-populated `SeasonDetailView`.
-    @State private var allEpisodes: [SonarrEpisodeDetail] = []
+    @State private var allEpisodes: [ArrEpisode] = []
     /// Season drill-down — pushed when the user taps the hero's "Season N" link.
     /// Nests under THIS view (like `seriesPush`) so back returns to the episode.
     @State private var seasonPush: SeasonDrill?
@@ -266,19 +266,8 @@ public struct EpisodeQuickDetail: View {
     /// Either the fetched-from-Sonarr episode (full data) or a stub
     /// built straight from queue metadata so the hero has something to
     /// render while the fetch is in flight.
-    private var displayEpisode: SonarrEpisodeDetail {
-        fullEpisode ?? SonarrEpisodeDetail(
-            id: 0,
-            seasonNumber: item.seasonNumber,
-            episodeNumber: item.episodeNumber,
-            title: nil,
-            overview: nil,
-            airDateUtc: nil,
-            hasFile: nil,
-            monitored: nil,
-            runtime: nil,
-            episodeFileId: nil
-        )
+    private var displayEpisode: ArrEpisode {
+        fullEpisode ?? ArrEpisode(placeholderSeason: item.seasonNumber, episode: item.episodeNumber)
     }
 
     /// episode-id → all active queue items for this series — feeds

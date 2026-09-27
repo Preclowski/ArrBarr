@@ -109,7 +109,7 @@ extension LocalToolBackend {
         return out
     }
 
-    nonisolated private static func formatSeriesDetails(_ d: SonarrSeriesDetail) -> String {
+    nonisolated private static func formatSeriesDetails(_ d: ArrSeries) -> String {
         var out = d.year.map { "\(d.title) (\($0))" } ?? d.title
         var facts: [String] = []
         if let n = d.network, !n.isEmpty { facts.append(n) }

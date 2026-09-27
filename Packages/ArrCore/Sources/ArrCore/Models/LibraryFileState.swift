@@ -54,15 +54,7 @@ nonisolated extension LibraryEntry.FileState {
     }
 }
 
-nonisolated extension SonarrLibraryRecord {
-    var episodeFileCounts: EpisodeFileCounts {
-        EpisodeFileCounts(seasons: (seasons ?? []).map {
-            (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
-        })
-    }
-}
-
-nonisolated extension SonarrSeriesDetail {
+nonisolated extension ArrSeries {
     var episodeFileCounts: EpisodeFileCounts {
         EpisodeFileCounts(seasons: (seasons ?? []).map {
             (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
@@ -89,7 +81,7 @@ nonisolated extension ArrMovie {
     }
 }
 
-nonisolated extension SonarrLibraryRecord {
+nonisolated extension ArrSeries {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: episodeFileCounts.isComplete) }
     }

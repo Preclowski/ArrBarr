@@ -12,30 +12,18 @@ import MediaKit
 /// Records with no ids yield an empty array, which the index treats as "no
 /// match" — the arr's own artwork stands.
 
-nonisolated public extension SonarrSeriesDetail {
-    var mediaServerKeys: [MediaServerExternalKey] {
-        var keys: [MediaServerExternalKey] = []
-        // TVDB first: Sonarr keys on it and every media server that scanned a
-        // TV library will have stored it, whereas tmdbId is populated less
-        // consistently across Sonarr versions.
-        if let tvdbId { keys.append(.tvdb(tvdbId)) }
-        if let tmdbId { keys.append(.tmdbSeries(tmdbId)) }
-        return keys
-    }
-}
-
 nonisolated public extension ArrMovie {
     var mediaServerKeys: [MediaServerExternalKey] {
         tmdbId.flatMap { $0 > 0 ? [.tmdbMovie($0)] : nil } ?? []
     }
 }
 
-nonisolated public extension SonarrLibraryRecord {
+nonisolated public extension ArrSeries {
     var mediaServerKeys: [MediaServerExternalKey] {
         var keys: [MediaServerExternalKey] = []
-        // TVDB first, tmdb as the second chance — same order and reasoning as
-        // `SonarrSeriesDetail`, now that the library record decodes tmdbId too.
-        if let tvdbId { keys.append(.tvdb(tvdbId)) }
+        // TVDB first: Sonarr keys on it and every media server that scanned a
+        // TV library stored it; tmdbId is populated less consistently.
+        if let tvdbId, tvdbId > 0 { keys.append(.tvdb(tvdbId)) }
         if let tmdbId, tmdbId > 0 { keys.append(.tmdbSeries(tmdbId)) }
         return keys
     }

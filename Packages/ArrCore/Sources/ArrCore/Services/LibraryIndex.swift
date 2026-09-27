@@ -63,7 +63,7 @@ nonisolated public struct LibraryIndex: Sendable {
         return read
     }
 
-    public func seriesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<SonarrLibraryRecord> {
+    public func seriesRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<ArrSeries> {
         let read = await Self.read(.sonarr, config) { try await SonarrClient(config: config).fetchAllSeriesFetched(revalidate: revalidate) }
         if !read.failed { LibraryStats.shared.setSeriesCount(read.records.count) }
         return read
@@ -81,7 +81,7 @@ nonisolated public struct LibraryIndex: Sendable {
         await moviesRead(config: config, revalidate: revalidate).records
     }
 
-    public func series(config: ServiceConfig, revalidate: Bool = true) async -> [SonarrLibraryRecord] {
+    public func series(config: ServiceConfig, revalidate: Bool = true) async -> [ArrSeries] {
         await seriesRead(config: config, revalidate: revalidate).records
     }
 

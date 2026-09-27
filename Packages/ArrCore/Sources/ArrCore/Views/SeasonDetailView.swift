@@ -32,8 +32,8 @@ struct SeasonDetailView: View {
     let drill: SeasonDrill
     /// Series detail for the hero header (poster / overview / metadata) — the
     /// season screen reuses the same `MediaHeaderCard` as the series view.
-    let sonarrDetail: SonarrSeriesDetail?
-    let episodes: [SonarrEpisodeDetail]
+    let sonarrDetail: ArrSeries?
+    let episodes: [ArrEpisode]
     let queueByEpisodeId: [Int: [QueueItem]]
     let fileByEpisodeFileId: [Int: ArrFile]
     let seriesPosterURL: URL?
@@ -50,7 +50,7 @@ struct SeasonDetailView: View {
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
 
-    @State private var selectedEpisode: SonarrEpisodeDetail?
+    @State private var selectedEpisode: ArrEpisode?
     @State private var enlargedPoster: URL?
     @State private var manualSearchTarget: SeasonReleaseSearch?
     @State private var autoSearching = false
@@ -285,7 +285,7 @@ struct SeasonDetailView: View {
 
     /// `Series · S02E04` — what the release list titles an episode search with,
     /// matching the episode screen's own nav title.
-    private func episodeSearchTitle(_ ep: SonarrEpisodeDetail) -> String {
+    private func episodeSearchTitle(_ ep: ArrEpisode) -> String {
         let code = String(format: "S%02dE%02d", drill.seasonNumber, ep.episodeNumber ?? 0)
         return "\(drill.seriesTitle) · \(code)"
     }
@@ -293,7 +293,7 @@ struct SeasonDetailView: View {
     /// One episode's automatic search, fired from its row's context menu. The
     /// row owns the spinner; failures are silent for the same reason the
     /// header's sweep is — the arr queues the search, it doesn't report on it.
-    private func searchEpisode(_ ep: SonarrEpisodeDetail) async {
+    private func searchEpisode(_ ep: ArrEpisode) async {
         try? await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
     }
 

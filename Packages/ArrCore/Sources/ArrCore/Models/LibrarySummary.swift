@@ -29,7 +29,7 @@ nonisolated public struct LibrarySummary: Sendable, Equatable, Identifiable {
         .init(source: .whisparr, count: recs.count,
               totalBytes: recs.reduce(0) { $0 + ($1.sizeOnDisk ?? 0) })
     }
-    public static func sonarr(from recs: [SonarrLibraryRecord]) -> LibrarySummary {
+    public static func sonarr(from recs: [ArrSeries]) -> LibrarySummary {
         .init(source: .sonarr, count: recs.count,
               totalBytes: recs.reduce(0) { $0 + ($1.statistics?.sizeOnDisk ?? 0) })
     }

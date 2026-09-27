@@ -120,14 +120,14 @@ extension LocalToolBackend {
                     .compactMap { $0 }.joined(separator: ", ")
                 let seasons = Self.seasonsSummary(for: rec, filter: seasonFilter)
                 return Self.libraryLine(
-                    title: rec.title ?? "(untitled)", year: rec.year,
+                    title: rec.title, year: rec.year,
                     genres: rec.filterGenres, rating: rec.filterRating,
                     state: seasons.isEmpty ? (rec.status ?? "") : seasons,
                     watched: isWatched(rec.mediaServerKeys),
                     ids: ids
                 )
             },
-            nearestLine: { "\($0.title ?? "(untitled)")\($0.year.map { y in " (\(y))" } ?? "")" }
+            nearestLine: { "\($0.title)\($0.year.map { y in " (\(y))" } ?? "")" }
         )
         return ToolCallOutput(text: text, rich: .librarySeries(shown))
     }
@@ -171,13 +171,13 @@ extension LocalToolBackend {
                 lines.append("• \(label) — in library as \(hit.title)\(hit.year.map { " (\($0))" } ?? ""), \(id)\(ref), \(file)\(watch)")
             } else if let hit = TitleMatch.best(query: item.title, year: item.year,
                                                 candidates: series,
-                                                title: { $0.title ?? "" }, year: { $0.year }) {
+                                                title: { $0.title }, year: { $0.year }) {
                 owned += 1
                 let id = hit.id.map { "seriesId=\($0)" } ?? "seriesId=?"
                 let ref = hit.tvdbId.map { ", tvdb:\($0)" } ?? ""
                 let seasons = Self.seasonsSummary(for: hit, filter: nil)
                 let watch = watchMark(isWatched(hit.mediaServerKeys))
-                lines.append("• \(label) — in library as \(hit.title ?? label), \(id)\(ref)\(seasons)\(watch)")
+                lines.append("• \(label) — in library as \(hit.title), \(id)\(ref)\(seasons)\(watch)")
             } else {
                 // No id of any kind for a title we don't own — check_titles
                 // matches against the library, it does not look anything up.

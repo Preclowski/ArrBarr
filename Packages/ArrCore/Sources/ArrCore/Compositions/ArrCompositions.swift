@@ -255,12 +255,7 @@ nonisolated enum ArrCompositions {
     }
 
     static func keys(movie: ArrMovie?) -> [MediaServerExternalKey] { movie?.mediaServerKeys ?? [] }
-    static func keys(series: ArrSeries?) -> [MediaServerExternalKey] {
-        var keys: [MediaServerExternalKey] = []
-        if let tvdb = series?.tvdbId { keys.append(.tvdb(tvdb)) }
-        if let tmdb = series?.tmdbId, tmdb > 0 { keys.append(.tmdbSeries(tmdb)) }
-        return keys
-    }
+    static func keys(series: ArrSeries?) -> [MediaServerExternalKey] { series?.mediaServerKeys ?? [] }
 
     static func snapshot(_ file: MediaKit.ArrFile) -> HistoryItem.FileSnapshot {
         HistoryItem.FileSnapshot(quality: file.quality?.name, score: file.customFormatScore, size: file.size,

@@ -139,7 +139,7 @@ public struct RichToolResultView: View {
                     let visible = Array(recs.prefix(visibleCount))
                     ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
-                            title: rec.title ?? "(untitled)",
+                            title: rec.title,
                             year: rec.year,
                             hasFile: nil,
                             images: rec.images,

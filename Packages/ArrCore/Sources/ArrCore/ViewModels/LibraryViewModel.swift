@@ -430,9 +430,10 @@ public final class LibraryViewModel {
         }
     }
 
-    nonisolated private static func unify(_ records: [SonarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unify(_ records: [ArrSeries], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
-            guard let id = r.id, let title = r.title else { return nil }
+            guard let id = r.id else { return nil }
+            let title = r.title
             let keys = r.mediaServerKeys
             let (poster, auth) = (r.images ?? []).posterURL(
                 baseURL: baseURL, mediaServerKeys: keys

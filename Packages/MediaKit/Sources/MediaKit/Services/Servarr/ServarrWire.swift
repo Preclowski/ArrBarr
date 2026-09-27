@@ -169,11 +169,12 @@ public struct ArrSeries: Codable, Equatable, Sendable, Hashable {
     public let images: [ArrImage]?
     public let ratings: ArrRatings?
     public let statistics: ArrStatistics?
-    public let seasons: [ArrSeason]?
+    /// `var` with the seasons' own `monitored`: a detail screen flips one before Sonarr confirms.
+    public var seasons: [ArrSeason]?
     public let alternateTitles: [ArrAlternateTitle]?
 }
 
-public struct ArrEpisode: Codable, Equatable, Sendable, Hashable {
+public struct ArrEpisode: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int
     public let seriesId: Int?
     public let seasonNumber: Int?
@@ -189,6 +190,13 @@ public struct ArrEpisode: Codable, Equatable, Sendable, Hashable {
     public let runtime: Int?
     public let finaleType: String?
     public let series: ArrSeries?
+
+    /// A stand-in from coordinates known before the record arrives (a queue row); every other field is unknown.
+    public init(placeholderSeason seasonNumber: Int?, episode episodeNumber: Int?) {
+        id = 0; seriesId = nil; self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber; title = nil
+        airDate = nil; airDateUtc = nil; overview = nil; hasFile = nil; monitored = nil; episodeFileId = nil
+        runtime = nil; finaleType = nil; series = nil
+    }
 }
 
 public struct ArrArtist: Codable, Equatable, Sendable, Hashable {

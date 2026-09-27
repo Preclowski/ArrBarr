@@ -2,7 +2,7 @@ import SwiftUI
 import MediaKit
 
 struct EpisodeRow: View {
-    let episode: SonarrEpisodeDetail
+    let episode: ArrEpisode
     /// ALL active queue items matched to this episode (usually 0 or 1;
     /// 2+ when the same episode was grabbed twice). Drives the
     /// "downloading" indicator. The row renders off the first item and
@@ -18,7 +18,7 @@ struct EpisodeRow: View {
     /// Tap the row body (not the state indicator) to drill into the
     /// episode detail surface. `nil` keeps the row passive (the
     /// legacy behaviour) for callers that don't want this drill-down.
-    var onTap: ((SonarrEpisodeDetail) -> Void)? = nil
+    var onTap: ((ArrEpisode) -> Void)? = nil
     /// The series' artwork, for the hover tooltip's poster slot. Episodes
     /// have no art of their own; the season surface already holds the
     /// series', so it passes it down rather than refetching.

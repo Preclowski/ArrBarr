@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 // MARK: - Sonarr
 
@@ -14,18 +15,18 @@ struct SonarrDetailPanel<Header: View>: View {
     var cast: [CastMember] = []
     /// Tapping a cast head opens the person view (host owns the push target).
     var onTapPerson: ((CastMember) -> Void)? = nil
-    @Binding var sonarrDetail: SonarrSeriesDetail?
+    @Binding var sonarrDetail: ArrSeries?
     /// Tap handler for a season row — DetailView pushes `SeasonDetailView`.
-    let onTapSeason: (SonarrSeasonInfo) -> Void
+    let onTapSeason: (ArrSeason) -> Void
     /// Flip one season's monitored flag straight from its row. The host owns
     /// the write (optimistic flip + Sonarr call + refetch).
-    var onSetSeasonMonitored: ((SonarrSeasonInfo, Bool) async -> Void)? = nil
+    var onSetSeasonMonitored: ((ArrSeason, Bool) async -> Void)? = nil
     /// Row context-menu search for one season. Both nil → the rows carry no
     /// menu (the host owns both the arr call and the release-list push).
-    var onAutomaticSeasonSearch: ((SonarrSeasonInfo) async -> Void)? = nil
-    var onManualSeasonSearch: ((SonarrSeasonInfo) -> Void)? = nil
+    var onAutomaticSeasonSearch: ((ArrSeason) async -> Void)? = nil
+    var onManualSeasonSearch: ((ArrSeason) -> Void)? = nil
     /// Earliest episode still to air; nil hides the section.
-    var nextEpisode: SonarrEpisodeDetail? = nil
+    var nextEpisode: ArrEpisode? = nil
     /// Series artwork for the next-episode row's tooltip (episodes have none).
     var posterURL: URL? = nil
     var posterRequiresAuth: Bool = false

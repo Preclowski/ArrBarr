@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // Arr-side tool implementations: per-arr search / list / calendar /
 // monitor / search-episodes. Lives in an extension so the core actor
@@ -682,7 +683,7 @@ extension LocalToolBackend {
     /// ✗ 0/0 upcoming") capped to keep tokens sane. With a filter it
     /// drops to a single targeted line. Empty when the record has no
     /// season data (shouldn't happen for live Sonarr, possible in demo).
-    nonisolated static func seasonsSummary(for rec: SonarrLibraryRecord, filter: Int?) -> String {
+    nonisolated static func seasonsSummary(for rec: ArrSeries, filter: Int?) -> String {
         let seasons = rec.seasons?.filter { $0.seasonNumber > 0 } ?? []
         guard !seasons.isEmpty else { return "" }
         if let target = filter {
@@ -697,7 +698,7 @@ extension LocalToolBackend {
         return " · seasons: \(shown)\(trailing)"
     }
 
-    nonisolated static func formatSeasonLine(_ s: SonarrLibrarySeason) -> String {
+    nonisolated static func formatSeasonLine(_ s: ArrSeason) -> String {
         let mon = (s.monitored ?? false) ? "✓" : "✗"
         let have = s.statistics?.episodeFileCount ?? 0
         let total = s.statistics?.totalEpisodeCount ?? s.statistics?.episodeCount ?? 0

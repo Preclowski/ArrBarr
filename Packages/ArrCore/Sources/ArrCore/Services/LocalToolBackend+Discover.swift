@@ -324,7 +324,8 @@ extension LocalToolBackend {
         let all = await LibraryIndex.shared.series(config: sonarr)
         let ranked = LibraryFilter.apply(all, query: query) { isWatched($0.mediaServerKeys) }
         return Self.poolThenDraw(ranked, pool: 60, deck: 20).compactMap { rec -> DiscoverItem? in
-            guard rec.id != nil, let title = rec.title else { return nil }
+            guard rec.id != nil else { return nil }
+            let title = rec.title
             let poster = (rec.images ?? []).posterURL(baseURL: sonarr.baseURL, mediaServerKeys: rec.mediaServerKeys).0
             let result = SearchResult(
                 externalId: rec.tvdbId ?? 0, foreignId: rec.tvdbId.map(String.init) ?? "",
@@ -594,7 +595,7 @@ extension LocalToolBackend {
                                 })
     }
 
-    nonisolated static func matchedSeries(_ pick: QuizDeckPipeline.Pick, client: SonarrClient) async -> SonarrLookupRecord? {
+    nonisolated static func matchedSeries(_ pick: QuizDeckPipeline.Pick, client: SonarrClient) async -> ArrSeries? {
         if let id = pick.tmdbId,
            let hit = ((try? await client.lookupSeries(term: "tmdb:\(id)")) ?? []).first(where: { $0.tmdbId == id }) {
             return hit

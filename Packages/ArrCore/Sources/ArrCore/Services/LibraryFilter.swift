@@ -97,8 +97,8 @@ nonisolated extension ArrMovie: LibraryFilterable {
     public var filterAdded: String? { added }
 }
 
-nonisolated extension SonarrLibraryRecord: LibraryFilterable {
-    public var filterTitle: String { title ?? "" }
+nonisolated extension ArrSeries: LibraryFilterable {
+    public var filterTitle: String { title }
     public var filterYear: Int? { year }
     public var filterGenres: [String] { genres ?? [] }
     public var filterRating: Double? { ratings?.value }

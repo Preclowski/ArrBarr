@@ -27,7 +27,7 @@ struct SearchDecodingTests {
           "statistics":{"seasonCount":5},
           "images":[]}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrSeries].self, from: json)
         #expect(records[0].tvdbId == 81189)
         #expect(records[0].statistics?.seasonCount == 5)
         #expect(records[0].title == "Breaking Bad")

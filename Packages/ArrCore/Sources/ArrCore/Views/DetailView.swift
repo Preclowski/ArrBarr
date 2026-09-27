@@ -50,10 +50,10 @@ public struct DetailView: View {
     /// `sonarrEpisodes`, which on a long-running series cost `queue × episodes`
     /// comparisons per pass (same fix as `EpisodeQuickDetail`'s copy).
     /// Earliest regular-season episode whose air date is still ahead.
-    private var nextEpisode: SonarrEpisodeDetail? {
+    private var nextEpisode: ArrEpisode? {
         let now = Date()
         return sonarrEpisodes
-            .compactMap { ep -> (SonarrEpisodeDetail, Date)? in
+            .compactMap { ep -> (ArrEpisode, Date)? in
                 guard (ep.seasonNumber ?? 0) > 0,
                       let air = ep.airDateUtc.flatMap(parseArrDate), air > now else { return nil }
                 return (ep, air)
@@ -138,8 +138,8 @@ public struct DetailView: View {
     /// `/moviefile?movieId={id}` afterwards to get the chip-bearing
     /// version for the ExistingFileBanner.
     @State private var radarrMovieFile: ArrFile?
-    @State private var sonarrDetail: SonarrSeriesDetail?
-    @State private var sonarrEpisodes: [SonarrEpisodeDetail] = []
+    @State private var sonarrDetail: ArrSeries?
+    @State private var sonarrEpisodes: [ArrEpisode] = []
     /// (season, episode) → episode id, rebuilt with `sonarrEpisodes`. Ids only,
     /// never episode payloads — `monitored` is flipped optimistically in
     /// `sonarrEpisodes` and a second copy would be one more thing to go stale.
@@ -1254,7 +1254,7 @@ public struct DetailView: View {
         ].compactMap { $0 }
     }
 
-    private func sonarrRatingChipsFor(_ detail: SonarrSeriesDetail?) -> [RatingChip] {
+    private func sonarrRatingChipsFor(_ detail: ArrSeries?) -> [RatingChip] {
         guard let r = detail?.ratings, let v = r.value else { return [] }
         // Sonarr's rating is TVDB-sourced — link to the TVDB series page
         // (the detail payload has no tvdbId here, so it goes via search).

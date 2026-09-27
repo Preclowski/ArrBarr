@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // TMDB-backed discovery tools (person search, person credits, discover-by-genre)
 // plus the TMDB → SearchResult adapters and the genre fallback lists.
@@ -246,7 +247,7 @@ extension LocalToolBackend {
     }
 
     /// `tmdbId → series.id` for the Sonarr library — what tags TMDB-sourced
-    /// series as owned. The id route is open now that `SonarrLibraryRecord`
+    /// series as owned. The id route is open now that `ArrSeries`
     /// decodes `tmdbId`; this replaced a normalized title + year join that
     /// could mistake a remake for the show the user actually has.
     func sonarrLibraryByTMDBId() async -> [Int: LibraryOwnership] {

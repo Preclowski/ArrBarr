@@ -244,7 +244,8 @@ public enum SpotlightIndexer {
         let read = await LibraryIndex.shared.seriesRead(config: config)
         guard !read.failed else { return [] }
         return await syncIndex(read.records, domain: domainSonarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
-            guard let id = rec.id, let title = rec.title else { return nil }
+            guard let id = rec.id else { return nil }
+            let title = rec.title
             let attr = CSSearchableItemAttributeSet(contentType: .audiovisualContent)
             attr.title = rec.year.map { "\(title) (\($0))" } ?? title
             attr.contentDescription = rec.overview

@@ -21,8 +21,8 @@ struct LibrarySummaryTests {
     @Test("Sonarr summary sums per-series statistics size")
     func sonarr() throws {
         let recs = [
-            try JSONDecoder().decode(SonarrLibraryRecord.self, from: #"{"id":1,"statistics":{"sizeOnDisk":1000}}"#.data(using: .utf8)!),
-            try JSONDecoder().decode(SonarrLibraryRecord.self, from: #"{"id":2,"statistics":{"sizeOnDisk":500}}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrSeries.self, from: #"{"id":1,"title":"Big Buck Bunny","statistics":{"sizeOnDisk":1000}}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrSeries.self, from: #"{"id":2,"title":"Big Buck Bunny","statistics":{"sizeOnDisk":500}}"#.data(using: .utf8)!),
         ]
         let s = LibrarySummary.sonarr(from: recs)
         #expect(s.count == 2)

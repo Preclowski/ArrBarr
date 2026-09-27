@@ -19,7 +19,7 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
 /// here is a value it holds; the provider only adds cache-first TMDB reads.
 struct WaitCardContext {
     var movie: ArrMovie? = nil
-    var series: SonarrSeriesDetail? = nil
+    var series: ArrSeries? = nil
     var album: LidarrAlbumDetail? = nil
     var seriesYear: Int? = nil
     var cast: [CastMember] = []
@@ -198,7 +198,7 @@ enum WaitStoryProvider {
         return perEpisode ? L("wait.story.episodeRuntime \(length)") : L("wait.story.runtime \(length)")
     }
 
-    private static func seriesTMDBId(_ s: SonarrSeriesDetail, client: TMDBClient) async -> Int? {
+    private static func seriesTMDBId(_ s: ArrSeries, client: TMDBClient) async -> Int? {
         if let id = s.tmdbId, id > 0 { return id }
         guard let tvdb = s.tvdbId, tvdb > 0 else { return nil }
         return try? await client.tvIdFromTVDB(tvdb)
