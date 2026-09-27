@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Settings → Status: a glanceable server dashboard, one page deep in Settings.
 /// Rolls up connection health for every configured service, arr `/health`
@@ -242,7 +243,7 @@ struct ServerStatusView: View {
         }
     }
 
-    private func warningRow(source: QueueItem.Source, record: ArrHealthRecord) -> some View {
+    private func warningRow(source: QueueItem.Source, record: ArrHealth) -> some View {
         let isError = record.type?.lowercased() == "error"
         return HStack(alignment: .top, spacing: 10) {
             Image(systemName: isError ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
@@ -318,7 +319,7 @@ struct ServerStatusView: View {
 
     /// Actionable `/health` records (warning + error) across every arr, each
     /// tagged with its source for the row label.
-    private static func warningItems() -> [(source: QueueItem.Source, record: ArrHealthRecord)] {
+    private static func warningItems() -> [(source: QueueItem.Source, record: ArrHealth)] {
         let health = QueueViewModel.shared.health
         return QueueItem.Source.allCases.flatMap { source in
             health.records(for: source)

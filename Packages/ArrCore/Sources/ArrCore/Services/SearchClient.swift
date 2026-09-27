@@ -74,9 +74,10 @@ public actor SearchClient {
         return Dictionary(profiles.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
     }
 
-    func fetchQualityProfiles() async throws -> [QualityProfile] { (try? await client.read([QualityProfile].self) { $0.qualityProfiles() }) ?? [] }
-    func fetchMetadataProfiles() async throws -> [MetadataProfile] { (try? await client.read([MetadataProfile].self) { $0.metadataProfiles() }) ?? [] }
-    func fetchRootFolders() async throws -> [RootFolder] { (try? await client.read([RootFolder].self) { $0.rootFolders() }) ?? [] }
+    func fetchQualityProfiles() async throws -> [ArrQualityProfile] { (try? await client.read { $0.qualityProfiles() }) ?? [] }
+    func fetchMetadataProfiles() async throws -> [ArrMetadataProfile] { (try? await client.read { $0.metadataProfiles() }) ?? [] }
+    /// The arr's root folder paths; the pickers need nothing else.
+    func fetchRootFolders() async throws -> [String] { ((try? await client.read { $0.rootFolders() }) ?? []).compactMap(\.path) }
 
     private func ensureRefCompatible(_ result: SearchResult) throws {
         let ref = result.mediaRef

@@ -175,12 +175,12 @@ extension LocalToolBackend {
         }
 
         // Each fetch is one HTTP — fan out in parallel.
-        var report: [(source: QueueItem.Source, records: [ArrHealthRecord], error: String?)] = []
-        await withTaskGroup(of: (QueueItem.Source, Result<[ArrHealthRecord], Error>).self) { group in
+        var report: [(source: QueueItem.Source, records: [ArrHealth], error: String?)] = []
+        await withTaskGroup(of: (QueueItem.Source, Result<[ArrHealth], Error>).self) { group in
             for (source, cfg) in configured {
                 group.addTask { [cfg] in
                     do {
-                        let records: [ArrHealthRecord]
+                        let records: [ArrHealth]
                         switch source {
                         case .sonarr:   records = try await SonarrClient(config: cfg).fetchHealth()
                         case .radarr:   records = try await RadarrClient(config: cfg).fetchHealth()

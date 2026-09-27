@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// What the detail header's pencil opens — the record being edited.
 public struct MediaEditRequest: Identifiable, Hashable {
@@ -28,9 +29,9 @@ struct MediaEditPanel: View {
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
 
-    @State private var qualityProfiles: [QualityProfile] = []
-    @State private var metadataProfiles: [MetadataProfile] = []
-    @State private var rootFolders: [RootFolder] = []
+    @State private var qualityProfiles: [ArrQualityProfile] = []
+    @State private var metadataProfiles: [ArrMetadataProfile] = []
+    @State private var rootFolders: [String] = []
     @State private var loading = true
     @State private var loadError: String?
     @State private var saving = false
@@ -205,10 +206,10 @@ struct MediaEditPanel: View {
         }
 
         Picker(selection: Binding(
-            get: { selectedRootFolder ?? rootFolders.first?.path ?? "" },
+            get: { selectedRootFolder ?? rootFolders.first ?? "" },
             set: { selectedRootFolder = $0 }
         )) {
-            ForEach(rootFolders, id: \.path) { Text(verbatim: $0.path).tag($0.path) }
+            ForEach(rootFolders, id: \.self) { Text(verbatim: $0).tag($0) }
         } label: {
             Text("search.rootFolder.button", bundle: .module)
         }
@@ -315,10 +316,10 @@ struct MediaEditPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: rootFolders.map { ($0.path, $0.path) })
+                       options: rootFolders.map { ($0, $0) })
         }
         .padding(.horizontal, 14)
     }
@@ -402,7 +403,7 @@ struct MediaEditPanel: View {
         if DemoMode.isActive {
             selectedProfileId = qualityProfiles.first?.id
             selectedMetadataProfileId = metadataProfiles.first?.id
-            selectedRootFolder = rootFolders.first?.path
+            selectedRootFolder = rootFolders.first
             originalRootFolder = selectedRootFolder
             return
         }
@@ -426,13 +427,13 @@ struct MediaEditPanel: View {
                 seasonFolder = raw
             }
             if let recordRoot = record["rootFolderPath"] as? String, !recordRoot.isEmpty {
-                if let match = rootFolders.first(where: { normalizedRoot($0.path) == normalizedRoot(recordRoot) }) {
-                    selectedRootFolder = match.path
+                if let match = rootFolders.first(where: { normalizedRoot($0) == normalizedRoot(recordRoot) }) {
+                    selectedRootFolder = match
                 } else {
                     // The record sits outside every configured root (folder
                     // was removed / renamed server-side) — keep its actual
                     // location selectable so an untouched save can't move it.
-                    rootFolders.insert(RootFolder(id: -1, path: recordRoot), at: 0)
+                    rootFolders.insert(recordRoot, at: 0)
                     selectedRootFolder = recordRoot
                 }
                 originalRootFolder = selectedRootFolder

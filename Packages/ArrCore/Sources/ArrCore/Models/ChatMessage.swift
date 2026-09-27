@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
     public enum Role: Equatable, Sendable { case user, assistant, tool }

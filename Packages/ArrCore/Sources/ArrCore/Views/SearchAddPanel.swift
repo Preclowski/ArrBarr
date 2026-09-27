@@ -186,7 +186,7 @@ public struct SearchAddPanel: View {
             async let options: Void = viewModel.loadOptions(source: result.source)
             _ = await (enrich, options)
             selectedProfileId = viewModel.qualityProfiles.first?.id
-            selectedRootFolder = viewModel.rootFolders.first?.path
+            selectedRootFolder = viewModel.rootFolders.first
             selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
         }
         .task(id: identityKey) {
@@ -398,10 +398,10 @@ public struct SearchAddPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+                       options: viewModel.rootFolders.map { ($0, $0) })
 
             // Monitor choice applies to a fresh ARTIST add. An album row
             // always monitors exactly that album (the artist is created
@@ -456,10 +456,10 @@ public struct SearchAddPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+                       options: viewModel.rootFolders.map { ($0, $0) })
 
             formPicker("search.monitor.button",
                        selection: $whisparrMonitor,
@@ -482,10 +482,10 @@ public struct SearchAddPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+                       options: viewModel.rootFolders.map { ($0, $0) })
 
             formPicker("search.monitor.button",
                        selection: $radarrMonitor,
@@ -512,10 +512,10 @@ public struct SearchAddPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: viewModel.rootFolders.map { ($0.path, $0.path) })
+                       options: viewModel.rootFolders.map { ($0, $0) })
 
             formPicker("search.seriesType.button",
                        selection: $seriesType,
@@ -552,7 +552,7 @@ public struct SearchAddPanel: View {
         Button {
             Task {
                 guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                      let folder = selectedRootFolder ?? viewModel.rootFolders.first?.path else { return }
+                      let folder = selectedRootFolder ?? viewModel.rootFolders.first else { return }
                 // Dispatch on the result's MediaRef rather than its
                 // `.source` enum — same outcome, but the ref kind
                 // makes the per-arr add-method choice the explicit

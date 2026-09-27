@@ -7,6 +7,7 @@ let package = Package(
     products: [.library(name: "ArrMCPServer", targets: ["ArrMCPServer"])],
     dependencies: [
         .package(path: "../ArrCore"),
+        .package(path: "../MediaKit"),
         .package(url: "https://github.com/modelcontextprotocol/swift-sdk.git", exact: "0.12.1"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.65.0"),
     ],
@@ -15,6 +16,7 @@ let package = Package(
             name: "ArrMCPServer",
             dependencies: [
                 .product(name: "ArrCore", package: "ArrCore"),
+                .product(name: "MediaKit", package: "MediaKit"),
                 .product(name: "MCP", package: "swift-sdk"),
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
@@ -24,7 +26,7 @@ let package = Package(
         ),
         .testTarget(
             name: "ArrMCPServerTests",
-            dependencies: ["ArrMCPServer"],
+            dependencies: ["ArrMCPServer", .product(name: "MediaKit", package: "MediaKit")],
             swiftSettings: [.swiftLanguageMode(.v5)]
         ),
     ]

@@ -2,83 +2,6 @@ import Foundation
 import MediaKit
 
 // MARK: - Shared Radarr/Sonarr v3 types
-/// Full custom-format payload from `/api/v3/customformat` — carries the
-/// matching `specifications` (the conditions that make a release match
-/// this format) on top of the bare id/name in `ArrCustomFormat`. Used by
-/// the chat `describe_format` tool to explain what a format actually does.
-nonisolated public struct ArrCustomFormatDetail: Codable, Equatable, Sendable {
-    public let id: Int
-    public let name: String
-    public let specifications: [Specification]?
-
-    nonisolated public struct Specification: Codable, Equatable, Sendable {
-        let name: String?
-        /// Raw implementation key, e.g. "ReleaseTitleSpecification".
-        let implementation: String?
-        /// Human label, e.g. "Release Title". Falls back to `implementation`.
-        let implementationName: String?
-        let negate: Bool?
-        let required: Bool?
-        let fields: [Field]?
-    }
-
-    nonisolated public struct Field: Codable, Equatable, Sendable {
-        let name: String?
-        /// Polymorphic — a regex string, an enum int, an array of ints, …
-        /// Kept as `JSONValue` so the describe tool can stringify whatever
-        /// the spec carries without a per-implementation schema.
-        let value: JSONValue?
-    }
-}
-
-/// Quality profile from `/api/v3/qualityprofile`. We only decode the bits
-/// the `describe_format` tool needs: the per-format score table so we can
-/// report "this format scores +50 in profile HD-1080p".
-nonisolated public struct ArrQualityProfile: Codable, Equatable, Sendable {
-    public let id: Int
-    public let name: String
-    public let formatItems: [FormatItem]?
-
-    nonisolated public struct FormatItem: Codable, Equatable, Sendable {
-        let format: Int
-        let name: String?
-        let score: Int
-    }
-}
-
-/// One entry from Radarr's `/api/v3/credit?movieId=` endpoint — Radarr DOES
-/// store cast/crew (sourced from TMDB on its side), so movie cast needs no
-/// app-side TMDB key. Sonarr has no equivalent endpoint, so series cast still
-/// comes from TMDB.
-nonisolated public struct ArrCredit: Codable, Equatable, Sendable {
-    let personName: String?
-    let personTmdbId: Int?
-    let character: String?
-    let order: Int?
-    /// "cast" or "crew".
-    let type: String?
-    /// Crew credits only — the department ("Directing", "Writing", …).
-    let department: String?
-    /// Crew credits only — the job ("Director", "Screenplay", …).
-    let job: String?
-    let images: [Image]?
-
-    nonisolated public struct Image: Codable, Equatable, Sendable {
-        let coverType: String?
-        /// Local Radarr proxy path (needs api key). Prefer `remoteUrl`.
-        let url: String?
-        /// Absolute TMDB image URL — usable without auth.
-        let remoteUrl: String?
-    }
-
-    /// Headshot URL for display — the TMDB `remoteUrl` (no auth) of the
-    /// headshot cover, falling back to any image's remoteUrl.
-    var headshotURL: URL? {
-        let pick = images?.first { ($0.coverType ?? "").lowercased() == "headshot" } ?? images?.first
-        return pick?.remoteUrl.flatMap(URL.init(string:))
-    }
-}
-
 // MARK: - Radarr
 
 
@@ -93,56 +16,7 @@ nonisolated public struct ArrCredit: Codable, Equatable, Sendable {
 
 // MARK: - Health
 
-nonisolated public struct ArrHealthRecord: Codable, Equatable, Sendable {
-    let source: String?
-    let type: String?
-    let message: String?
-    let wikiUrl: String?
-}
-
 // MARK: - Commands
-
-/// One entry from `GET /command` — the server's own view of what it is busy
-/// with. We only care about indexer searches: whether one is in flight for a
-/// given record is otherwise unknowable client-side, because `POST /command`
-/// is fire-and-forget here and `addOptions.searchForMovie` fires entirely
-/// server-side, where the app never sees a command id at all.
-nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
-    let name: String?
-    let status: String?
-    let body: Body?
-
-    /// The command's payload. Every arr spells its record ids differently
-    /// (Radarr `movieIds`, Lidarr `albumIds`, singular variants on some
-    /// versions), so all the plausible spellings are decoded and any hit
-    /// counts — cheaper and more version-proof than branching per product.
-    nonisolated struct Body: Codable, Equatable, Sendable {
-        let movieIds: [Int]?
-        let movieId: Int?
-        let albumIds: [Int]?
-        let albumId: Int?
-    }
-
-    /// `queued` and `started` both mean "not finished". Anything else
-    /// (completed / failed / aborted) is over.
-    var isRunning: Bool {
-        guard let status = status?.lowercased() else { return false }
-        return status == "queued" || status == "started"
-    }
-
-    /// Matched on the name *containing* "search" rather than an exact list —
-    /// the add-triggered search, the CTA search and their per-product names
-    /// (`MoviesSearch`, `AlbumSearch`, …) all share that substring, and a new
-    /// arr release coining another one shouldn't silently stop matching.
-    func isSearch(for entityId: Int) -> Bool {
-        guard isRunning, name?.lowercased().contains("search") == true else { return false }
-        guard let body else { return false }
-        return body.movieIds?.contains(entityId) == true
-            || body.movieId == entityId
-            || body.albumIds?.contains(entityId) == true
-            || body.albumId == entityId
-    }
-}
 
 // MARK: - Calendar
 
@@ -152,12 +26,6 @@ nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
 
 // MARK: - Lidarr library / lookup types
 
-nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
-    public let id: Int
-    public let name: String
-}
-
-
 // MARK: - Whisparr
 
 
@@ -165,6 +33,22 @@ nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identif
 
 
 // MARK: - ArrImage helpers
+
+nonisolated extension ArrCredit {
+    var headshotURL: URL? {
+        let pick = images?.first { ($0.coverType ?? "").lowercased() == "headshot" } ?? images?.first
+        return pick?.remoteUrl.flatMap(URL.init(string:))
+    }
+}
+
+nonisolated extension ArrCommand {
+    /// A search for this movie or album still queued or running.
+    func isSearch(for entityId: Int) -> Bool {
+        guard isRunning, name?.lowercased().contains("search") == true, let body else { return false }
+        return body.movieIds?.contains(entityId) == true || body.movieId == entityId
+            || body.albumIds?.contains(entityId) == true || body.albumId == entityId
+    }
+}
 
 nonisolated public extension Array where Element == ArrImage {
     /// Resolves a poster URL from an Arr images array.

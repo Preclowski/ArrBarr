@@ -1,5 +1,6 @@
 import ArrCore
 import MCP
+import MediaKit
 
 /// Maps ArrCore's `ChatToolCatalog` entries into MCP SDK `Tool` values, applying
 /// `MCPToolWhitelist` to set read-only / destructive hints and filtering the

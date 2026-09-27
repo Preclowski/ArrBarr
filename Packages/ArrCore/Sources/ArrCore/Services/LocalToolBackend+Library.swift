@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // The library-facing tools: the two list tools and `check_titles`.
 //

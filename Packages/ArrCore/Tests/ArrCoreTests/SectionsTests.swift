@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("ConfigStore.normalizeArrOrder")
@@ -164,7 +165,7 @@ struct ComputeNeedsYouTests {
     @MainActor
     func benignHealthIgnored() {
         let health = HealthResult(
-            radarr: [ArrHealthRecord(source: "IndexerStatusCheck", type: "warning",
+            radarr: [ArrHealth.fixture(source: "IndexerStatusCheck", type: "warning",
                                      message: "Indexer X is down", wikiUrl: nil)],
             sonarr: [],
             lidarr: []
@@ -177,7 +178,7 @@ struct ComputeNeedsYouTests {
     @MainActor
     func warningHealthSurfacedWhenEnabled() {
         let health = HealthResult(
-            radarr: [ArrHealthRecord(source: "IndexerStatusCheck", type: "warning",
+            radarr: [ArrHealth.fixture(source: "IndexerStatusCheck", type: "warning",
                                      message: "Indexer X is down", wikiUrl: nil)],
             sonarr: [],
             lidarr: []
@@ -193,7 +194,7 @@ struct ComputeNeedsYouTests {
     @MainActor
     func errorHealthSurfaced() {
         let health = HealthResult(
-            radarr: [ArrHealthRecord(source: "DownloadClientCheck", type: "error",
+            radarr: [ArrHealth.fixture(source: "DownloadClientCheck", type: "error",
                                      message: "Download clients unavailable", wikiUrl: nil)],
             sonarr: [],
             lidarr: []
@@ -252,8 +253,8 @@ struct ComputeNeedsYouTests {
     func noticeVsErrorSeverity() {
         let health = HealthResult(
             radarr: [
-                ArrHealthRecord(source: "UpdateCheck", type: "notice", message: "New update available", wikiUrl: nil),
-                ArrHealthRecord(source: "DownloadClientCheck", type: "error", message: "Client down", wikiUrl: nil),
+                ArrHealth.fixture(source: "UpdateCheck", type: "notice", message: "New update available", wikiUrl: nil),
+                ArrHealth.fixture(source: "DownloadClientCheck", type: "error", message: "Client down", wikiUrl: nil),
             ],
             sonarr: [],
             lidarr: []
@@ -272,9 +273,9 @@ struct ComputeNeedsYouTests {
         let health = HealthResult(
             radarr: [],
             sonarr: [
-                ArrHealthRecord(source: "DownloadClientCheck", type: "error",
+                ArrHealth.fixture(source: "DownloadClientCheck", type: "error",
                                 message: "Download clients unavailable", wikiUrl: nil),
-                ArrHealthRecord(source: "ImportListCheck", type: "error",
+                ArrHealth.fixture(source: "ImportListCheck", type: "error",
                                 message: "Lists unavailable", wikiUrl: nil),
             ],
             lidarr: []

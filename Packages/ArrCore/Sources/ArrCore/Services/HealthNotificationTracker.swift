@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Remembers which arr health problems have already been announced.
 ///
@@ -22,15 +23,15 @@ nonisolated struct HealthNotificationTracker: Codable, Equatable {
     /// Identity of one problem. Message is part of it because Servarr reuses a
     /// `type` across unrelated failures — two different broken indexers are both
     /// `warning`, and collapsing them would announce only the first.
-    static func key(_ record: ArrHealthRecord) -> String {
+    static func key(_ record: ArrHealth) -> String {
         "\(record.type ?? "")|\(record.message ?? "")"
     }
 
     /// Fold this source's current records in, returning the ones not yet
     /// announced. Records that have disappeared are dropped from the cache.
     mutating func newIssues(
-        for source: QueueItem.Source, records: [ArrHealthRecord]
-    ) -> [ArrHealthRecord] {
+        for source: QueueItem.Source, records: [ArrHealth]
+    ) -> [ArrHealth] {
         let raw = source.rawValue
         let currentKeys = Set(records.map(Self.key))
         let known = announced[raw] ?? []

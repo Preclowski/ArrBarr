@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 public enum ChatViewModelFactory {
     public static func makePlaceholder() -> ChatViewModel {

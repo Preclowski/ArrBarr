@@ -314,7 +314,7 @@ struct CheckTitlesArgumentTests {
 
     @Test("Both a bare string with a trailing year and a {title, year} object parse")
     func parsesBothForms() {
-        let args = ArrCore.JSONValue.object([
+        let args = JSONValue.object([
             "titles": .array([
                 .string("Dune 2021"),
                 .string("Chungking Express"),

@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import MediaKit
 
 @Observable
 public final class SearchViewModel {
@@ -116,9 +117,9 @@ public final class SearchViewModel {
     }
 
     // Add panel state
-    var qualityProfiles: [QualityProfile] = []
-    var metadataProfiles: [MetadataProfile] = []
-    var rootFolders: [RootFolder] = []
+    var qualityProfiles: [ArrQualityProfile] = []
+    var metadataProfiles: [ArrMetadataProfile] = []
+    var rootFolders: [String] = []
     var isLoadingOptions = false
     var addError: String?
     var isAdding = false
@@ -509,7 +510,7 @@ public final class SearchViewModel {
         async let folders = client.fetchRootFolders()
         let q = (try? await profiles) ?? []
         let f = (try? await folders) ?? []
-        let mp: [MetadataProfile] = source == .lidarr
+        let mp: [ArrMetadataProfile] = source == .lidarr
             ? ((try? await client.fetchMetadataProfiles()) ?? [])
             : []
         qualityProfiles = q

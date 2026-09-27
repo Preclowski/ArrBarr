@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// LLMProvider used when `DemoMode.isActive` is true. Real providers
 /// (OpenAI / FoundationModels) require credentials or on-device model

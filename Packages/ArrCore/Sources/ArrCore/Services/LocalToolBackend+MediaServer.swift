@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 // Media-server tool implementations (Plex / Jellyfin / Emby). Kept in their own
 // extension for the same reason the arr tools are: the core actor stays init +

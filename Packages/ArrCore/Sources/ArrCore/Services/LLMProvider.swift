@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 nonisolated public struct LLMTool: Sendable {
     public let name: String

@@ -1,6 +1,7 @@
 import ArrCore
 import MCP
 import Logging
+import MediaKit
 
 /// Wires a configured `LocalToolBackend` + tool catalog into an MCP `Server`.
 /// One router can build many servers (one per HTTP session). The caller (the

@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// Health is polled on a slow clock and a broken indexer stays broken, so the
@@ -8,8 +9,8 @@ import Foundation
 /// every fifteen minutes teaches its user to mute it.
 @Suite("Health notification tracker")
 struct HealthNotificationTrackerTests {
-    private func record(_ type: String, _ message: String) -> ArrHealthRecord {
-        ArrHealthRecord(source: nil, type: type, message: message, wikiUrl: nil)
+    private func record(_ type: String, _ message: String) -> ArrHealth {
+        ArrHealth.fixture(source: nil, type: type, message: message, wikiUrl: nil)
     }
 
     @Test("A new problem is announced once, then stays quiet")

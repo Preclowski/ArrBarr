@@ -1,5 +1,6 @@
 import Foundation
 import os
+import MediaKit
 
 // MARK: - Destructive-tool confirmation
 

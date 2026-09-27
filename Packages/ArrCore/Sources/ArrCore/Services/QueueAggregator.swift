@@ -198,13 +198,13 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     func fetchHealth() async -> HealthResult {
         await gateway.ready()
-        var records: [QueueItem.Source: [ArrHealthRecord]] = [:]
-        await withTaskGroup(of: (QueueItem.Source, [ArrHealthRecord]).self) { group in
+        var records: [QueueItem.Source: [ArrHealth]] = [:]
+        await withTaskGroup(of: (QueueItem.Source, [ArrHealth]).self) { group in
             for source in QueueItem.Source.allCases {
                 group.addTask {
                     guard self.gateway.isConfigured(source) else { return (source, []) }
                     let rows = (try? await self.gateway.store.read(self.gateway.servarr(source).health(), policy: .mustRevalidate).value) ?? []
-                    return (source, rows.map { ArrHealthRecord(source: $0.source, type: $0.type, message: $0.message, wikiUrl: $0.wikiUrl) })
+                    return (source, rows)
                 }
             }
             for await (source, rows) in group { records[source] = rows }
@@ -329,15 +329,15 @@ nonisolated public struct HistoryResult: Equatable {
 }
 
 nonisolated public struct HealthResult: Equatable {
-    public let radarr: [ArrHealthRecord]
-    public let sonarr: [ArrHealthRecord]
-    public let lidarr: [ArrHealthRecord]
-    public let whisparr: [ArrHealthRecord]
-    public init(radarr: [ArrHealthRecord], sonarr: [ArrHealthRecord], lidarr: [ArrHealthRecord], whisparr: [ArrHealthRecord] = []) {
+    public let radarr: [ArrHealth]
+    public let sonarr: [ArrHealth]
+    public let lidarr: [ArrHealth]
+    public let whisparr: [ArrHealth]
+    public init(radarr: [ArrHealth], sonarr: [ArrHealth], lidarr: [ArrHealth], whisparr: [ArrHealth] = []) {
         self.radarr = radarr; self.sonarr = sonarr; self.lidarr = lidarr; self.whisparr = whisparr
     }
     public static let empty = HealthResult(radarr: [], sonarr: [], lidarr: [], whisparr: [])
-    public func records(for source: QueueItem.Source) -> [ArrHealthRecord] {
+    public func records(for source: QueueItem.Source) -> [ArrHealth] {
         switch source {
         case .radarr: radarr
         case .sonarr: sonarr

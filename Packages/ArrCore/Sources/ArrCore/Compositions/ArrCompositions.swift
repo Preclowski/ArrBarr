@@ -246,7 +246,7 @@ nonisolated enum ArrCompositions {
     // MARK: - Helpers
 
     /// History `data` values arrive as strings or numbers depending on the arr version.
-    static func text(_ data: [String: MediaKit.JSONValue]?, _ key: String) -> String? {
+    static func text(_ data: [String: JSONValue]?, _ key: String) -> String? {
         switch data?[key] {
         case let .string(s)?: return s.isEmpty ? nil : s
         case let .number(n)?: return String(Int64(n))

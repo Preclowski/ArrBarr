@@ -19,7 +19,7 @@ nonisolated public struct RadarrClient: ArrAPIClient {
 
     func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
     func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
-    func fetchCredits(movieId: Int) async throws -> [ArrCore.ArrCredit] { try await read([ArrCore.ArrCredit].self) { $0.credits(movieID: movieId) } }
+    func fetchCredits(movieId: Int) async throws -> [ArrCredit] { try await read { $0.credits(movieID: movieId) } }
     func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
     func lookupMovies(term: String) async throws -> [ArrMovie] { try await read { $0.lookupMovies(term: term) } }
     /// `revalidate: false` serves whatever the on-disk store holds and says so

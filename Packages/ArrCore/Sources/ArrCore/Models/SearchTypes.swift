@@ -2,16 +2,6 @@ import Foundation
 
 // MARK: - Shared
 
-nonisolated public struct QualityProfile: Codable, Identifiable, Sendable {
-    public let id: Int
-    let name: String
-}
-
-nonisolated public struct RootFolder: Codable, Identifiable, Sendable {
-    public let id: Int
-    let path: String
-}
-
 // MARK: - Search result (unified)
 
 nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Sendable {

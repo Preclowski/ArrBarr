@@ -19,6 +19,7 @@ public enum FoundationModelsAvailability {
 // On older SDK hosts this file compiles as a stub that reports unavailability.
 #if canImport(FoundationModels)
 import FoundationModels
+import MediaKit
 
 public struct FoundationModelsProvider: LLMProvider {
 

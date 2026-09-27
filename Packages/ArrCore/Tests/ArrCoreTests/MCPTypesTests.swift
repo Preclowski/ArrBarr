@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("MCPTypes")

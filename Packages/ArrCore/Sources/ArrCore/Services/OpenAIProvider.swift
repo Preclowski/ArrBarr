@@ -1,5 +1,6 @@
 import Foundation
 import OSLog
+import MediaKit
 
 public struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig

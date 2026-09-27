@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Reads a `discover_in_quiz` argument string that is still being streamed:
 /// the top-level scalars seen so far plus every `items` element that has
