@@ -116,8 +116,7 @@ public struct ChatEmptyStateView: View {
 
     private func suggestionStack(_ count: Int) -> some View {
         let count = min(count, carousel.visible.count)
-        return
-        VStack(spacing: 10) {
+        return VStack(spacing: 10) {
             // Identity is the SLOT, not the suggestion: the rows are furniture
             // and stay put, and the change happens inside them (see
             // `SuggestionPromptRow`). Keyed by the suggestion instead, every

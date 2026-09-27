@@ -29,7 +29,6 @@ private struct MessageObserver<M: NotificationCenter.AsyncMessage>: ViewModifier
     }
 }
 
-@MainActor
 private final class Observation<M: NotificationCenter.AsyncMessage> where M.Subject == AppMessageBus {
     var perform: @MainActor (M) -> Void = { _ in }
     private var task: Task<Void, Never>?

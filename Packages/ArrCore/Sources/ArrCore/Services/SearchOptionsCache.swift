@@ -11,7 +11,6 @@ import Foundation
 /// within a reasonable interaction window. Keyed by source + a fingerprint
 /// of the service config, so changing the arr's URL or API key naturally
 /// invalidates the cached value.
-@MainActor
 public final class SearchOptionsCache {
     public static let shared = SearchOptionsCache()
 

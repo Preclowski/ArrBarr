@@ -119,6 +119,8 @@ public final class ChatViewModel {
         Self.log.notice(
             "turn started via \(String(describing: type(of: self.provider)), privacy: .public), \(self.tools.count, privacy: .public) tools offered"
         )
+        // Bound once: read inside the round's closure, the stored property is a main-actor access.
+        let observer = onToolCallStream
         do {
             var nextPrompt: String? = prompt
             // Hard cap on rounds to keep a misbehaving model from spinning forever.
@@ -127,7 +129,7 @@ public final class ChatViewModel {
                 roundsLeft -= 1
                 Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
                 let response = try await timedRound {
-                    try await ToolCallStreamContext.$observer.withValue(onToolCallStream) {
+                    try await ToolCallStreamContext.$observer.withValue(observer) {
                         try await provider.respond(prompt: p, tools: tools, history: messages)
                     }
                 }

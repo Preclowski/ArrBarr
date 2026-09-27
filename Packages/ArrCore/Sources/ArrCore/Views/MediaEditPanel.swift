@@ -363,15 +363,6 @@ struct MediaEditPanel: View {
 
     // MARK: - Data
 
-    private var config: ServiceConfig {
-        switch request.source {
-        case .radarr: return configStore.radarr
-        case .sonarr: return configStore.sonarr
-        case .lidarr: return configStore.lidarr
-        case .whisparr: return configStore.whisparr
-        }
-    }
-
     private var client: any ArrAPIClient {
         configStore.arrClient(for: request.source)
     }
@@ -397,7 +388,7 @@ struct MediaEditPanel: View {
             onReady?()
         }
 
-        let search = ServiceHandles.search(request.source, config: config)
+        let search = configStore.searchClient(for: request.source)
         async let q = (try? search.fetchQualityProfiles()) ?? []
         async let f = (try? search.fetchRootFolders()) ?? []
         qualityProfiles = await q

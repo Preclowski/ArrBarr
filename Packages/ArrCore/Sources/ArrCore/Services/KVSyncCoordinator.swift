@@ -14,7 +14,6 @@ extension NSUbiquitousKeyValueStore: KeyValueSyncing {}
 /// Mirrors the `SyncedKeys` allowlist between UserDefaults (local source of
 /// truth) and iCloud KVS. Compiled in all builds for testability; only started
 /// (`start()`) by the app under `#if APPSTORE`.
-@MainActor
 public final class KVSyncCoordinator: ObservableObject {
     private let defaults: UserDefaults
     private let kv: KeyValueSyncing
@@ -199,7 +198,6 @@ public final class KVSyncCoordinator: ObservableObject {
     }
 }
 
-@MainActor
 extension KVSyncCoordinator {
     private static var _shared: KVSyncCoordinator?
 

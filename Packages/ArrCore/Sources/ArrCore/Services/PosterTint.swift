@@ -22,7 +22,6 @@ import UIKit
 /// The bottom third is what's sampled, not the whole image: that's the region
 /// the panel actually covers, and a poster's sky or title treatment up top is
 /// frequently nothing like the colour at its feet.
-@MainActor
 public enum PosterTint {
     /// Keyed by absolute URL. Posters are immutable at a given URL and the
     /// deck revisits cards (peek → top), so this is a small dictionary that

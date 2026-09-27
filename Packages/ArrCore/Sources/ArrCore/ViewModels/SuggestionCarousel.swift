@@ -6,7 +6,6 @@ import Foundation
 /// rules worth stating — which slot changes next, what may replace it, what
 /// happens when the pool is smaller than the window — and a view that renders
 /// nothing under `swift test` is no place to keep them.
-@MainActor
 @Observable
 public final class SuggestionCarousel {
     /// Every suggestion the welcome screen can offer. Deliberately longer than

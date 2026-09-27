@@ -119,13 +119,8 @@ public struct AddDownloadView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
             } else {
-                Text(
-                    String(
-                        format: String(localized: "%d files", bundle: .module),
-                        drops.count
-                    )
-                )
-                .font(.callout)
+                Text("addDownload.fileCount \(drops.count)", bundle: .module)
+                    .font(.callout)
             }
             Spacer(minLength: 0)
         }
@@ -236,10 +231,7 @@ public struct AddDownloadView: View {
         guard failed == 0 else {
             failure = drops.count == 1
                 ? (lastError ?? String(localized: "The download client refused the file.", bundle: .module))
-                : String(
-                    format: String(localized: "%1$d of %2$d could not be added: %3$@", bundle: .module),
-                    failed, drops.count, lastError ?? ""
-                )
+                : String(localized: "addDownload.partialFailure \(failed) \(drops.count) \(lastError ?? "")", bundle: .module)
             return
         }
         onFinished()

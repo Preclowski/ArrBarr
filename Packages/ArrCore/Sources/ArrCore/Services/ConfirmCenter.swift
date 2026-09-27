@@ -40,7 +40,6 @@ public struct PendingConfirm: Sendable, Identifiable {
 /// the confirmation never appeared. Held here, the request survives that; and
 /// when no surface is left to draw the card, macOS answers with a native alert
 /// instead of swallowing the action.
-@MainActor
 public final class ConfirmCenter: ObservableObject {
     public static let shared = ConfirmCenter()
 

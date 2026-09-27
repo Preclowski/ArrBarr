@@ -37,7 +37,6 @@ nonisolated public struct SwipeSignal: Codable, Sendable, Equatable {
 /// discussion): a skip suppresses the title for 14 days; a repeat skip means
 /// it wasn't a mood, so it stretches to 90; only an explicit veto is forever.
 /// Kept titles are recorded as positive signal and never suppress anything.
-@MainActor
 public final class SwipeSignalStore {
 
     public static let shared = SwipeSignalStore()

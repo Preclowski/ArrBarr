@@ -29,7 +29,6 @@ import UIKit
 /// only `waitBudget` for that in-flight fetch to land. Whatever arrives late
 /// still ends up on disk, so the next grab for the same title is instant; the
 /// banner it missed simply carries the mark.
-@MainActor
 enum NotificationArtwork {
     /// How long a banner may wait on artwork that hasn't arrived yet.
     ///

@@ -5,7 +5,8 @@ import os
 /// The one `@Observable` type in MediaKit: lock-guarded counters with hand-written access tracking.
 @Observable
 public final class StoreRevision: @unchecked Sendable {
-    private let lock = OSAllocatedUnfairLock<(all: UInt64, tags: [InvalidationTag: UInt64])>(initialState: (0, [:]))
+    /// `wipes` counts purges: a purge drops rows under every tag, so every tag's tick moves with it.
+    private let lock = OSAllocatedUnfairLock<(all: UInt64, wipes: UInt64, tags: [InvalidationTag: UInt64])>(initialState: (0, 0, [:]))
 
     public init() {}
 
@@ -18,7 +19,7 @@ public final class StoreRevision: @unchecked Sendable {
 
     public func tick(for tag: InvalidationTag) -> UInt64 {
         access(keyPath: \.all)
-        return lock.withLock { $0.tags[tag] ?? 0 }
+        return lock.withLock { ($0.tags[tag] ?? 0) &+ $0.wipes }
     }
 
     /// Every bump means "re-read now", never a delta.
@@ -27,6 +28,15 @@ public final class StoreRevision: @unchecked Sendable {
             lock.withLock { state in
                 state.all += 1
                 for tag in tags { state.tags[tag, default: 0] += 1 }
+            }
+        }
+    }
+
+    func bumpEverything() {
+        withMutation(keyPath: \.all) {
+            lock.withLock { state in
+                state.all += 1
+                state.wipes += 1
             }
         }
     }

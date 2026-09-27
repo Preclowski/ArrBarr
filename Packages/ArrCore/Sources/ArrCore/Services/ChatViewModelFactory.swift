@@ -1,6 +1,5 @@
 import Foundation
 
-@MainActor
 public enum ChatViewModelFactory {
     public static func makePlaceholder() -> ChatViewModel {
         ChatViewModel(

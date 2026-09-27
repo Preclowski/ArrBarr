@@ -7,7 +7,6 @@ import Foundation
 /// TMDB key configured this simply returns nothing and the metadata row drops
 /// the segment — the same graceful degradation the cast strip already has.
 
-@MainActor
 enum CountryProvider {
 
     // MARK: - Public API

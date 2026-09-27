@@ -234,13 +234,13 @@ public actor ResourceStore {
     public func purge(_ freshness: FreshnessClass) async {
         memory.remove { $0.freshness == freshness }
         try? await database?.delete(freshness: freshness)
-        revision.bump([])
+        revision.bumpEverything()
     }
 
     public func purgeAll() async {
         memory.removeAll()
         try? await database?.delete(freshness: nil)
-        revision.bump([])
+        revision.bumpEverything()
     }
 
     public func statistics() async -> StoreStatistics {
@@ -255,7 +255,7 @@ public actor ResourceStore {
         let payload = try WireCodec.encoder.encode(value)
         let fingerprint = pipeline.registry.fingerprint(resource.key.instance) ?? Fingerprint(rawValue: "")
         let at = fetchedAt ?? clock.now
-        commit(CommittedRow(payload: payload, fetchedAt: at, staleAt: at.addingTimeInterval(resource.freshness.retention.seconds), tags: resource.tags),
+        commit(CommittedRow(payload: payload, fetchedAt: at, staleAt: at.addingTimeInterval(resource.validFor.seconds), tags: resource.tags),
                for: resource, fingerprint: fingerprint)
         await database?.flush()
     }
@@ -305,7 +305,7 @@ public actor ResourceStore {
                 let payload = try await Self.encodeOffActor(value)
                 let now = clock.now
                 if let harvest = resource.harvest { await self.identity?.record(harvest(value)) }
-                return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.freshness.retention.seconds), tags: resource.tags)
+                return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.validFor.seconds), tags: resource.tags)
             }
             inFlight[slot] = InFlight(task: task, waiters: [waiter])
         }

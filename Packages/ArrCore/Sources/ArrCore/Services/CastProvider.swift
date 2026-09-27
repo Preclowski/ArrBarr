@@ -24,7 +24,6 @@ struct TitleCredits: Equatable, Sendable {
 /// from TMDB — by the series' `tmdbId`, or resolved from its `tvdbId` via
 /// `/find` when Sonarr didn't ship a tmdbId (the fix for series that showed no
 /// cast at all).
-@MainActor
 enum CastProvider {
 
     // MARK: - Public API

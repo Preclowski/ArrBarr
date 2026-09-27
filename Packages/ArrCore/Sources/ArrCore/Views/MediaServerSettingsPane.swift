@@ -356,9 +356,9 @@ struct MediaServerSettingsPane: View {
 
     private func runTest() {
         testState = .running
-        let config = configStore.mediaServer
+        let client = configStore.mediaServerClient
         Task {
-            guard let client = ServiceHandles.mediaServer(config: config) else {
+            guard let client else {
                 testState = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }
@@ -400,9 +400,9 @@ struct MediaServerSettingsPane: View {
 
     private func run(_ action: LibraryAction, on library: MediaServerLibrary) {
         libraryStates[library.id] = .running
-        let config = configStore.mediaServer
+        let client = configStore.mediaServerClient
         Task {
-            guard let client = ServiceHandles.mediaServer(config: config) else {
+            guard let client else {
                 libraryStates[library.id] = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }

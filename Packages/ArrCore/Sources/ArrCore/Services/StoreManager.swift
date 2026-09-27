@@ -21,7 +21,6 @@ public protocol PurchaseBackend: AnyObject {
 /// Defaults to UNLOCKED (`isPro == true`) when no backend is injected, so
 /// Debug builds and the GitHub/OSS distribution are fully functional with no
 /// payment code present.
-@MainActor
 public final class StoreManager: ObservableObject {
     public static let shared = StoreManager()
 

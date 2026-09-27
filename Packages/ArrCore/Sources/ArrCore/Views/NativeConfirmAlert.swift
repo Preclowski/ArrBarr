@@ -9,7 +9,6 @@ import Foundation
 /// An `NSAlert` rather than reopening a window: it is focus-stable (the reason
 /// the panel cannot host this), it is what a Mac user expects behind a
 /// destructive menu item, and it costs no window of our own.
-@MainActor
 enum NativeConfirmAlert {
     static func present(_ pending: PendingConfirm, locale: Locale) {
         let alert = NSAlert()

@@ -10,7 +10,6 @@ import Observation
 /// every view observing the store — the whole queue and library included — to
 /// update a label nobody was looking at.
 @Observable
-@MainActor
 public final class MCPServerStatusModel {
     public static let shared = MCPServerStatusModel()
 

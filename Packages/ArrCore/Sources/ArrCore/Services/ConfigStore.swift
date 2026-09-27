@@ -36,7 +36,6 @@ public enum LaunchAtLogin {
     }
 }
 
-@MainActor
 public final class ConfigStore: ObservableObject {
     @MainActor public static let shared = ConfigStore()
 

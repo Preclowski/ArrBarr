@@ -842,27 +842,13 @@ public final class QueueViewModel {
     /// unreachable / misconfigured — and so may be pinned `.down` for the whole
     /// queue — versus a reachable client that simply rejected this one request.
     ///
-    /// Only genuine client-level failures qualify:
-    ///   - `.transport` — the request never reached the client (connection
-    ///     refused, timed out, no route): truly unreachable.
-    ///   - `.status(401/403)` — the client answered but rejected our
-    ///     credentials: a persistent misconfiguration every action will hit.
-    ///
-    /// Everything else means the client answered and rejected *this* item — a
-    /// 404/409 for a download it already completed and removed, SAB/NZBGet's
-    /// `{status:false}` (their own `…Error.actionFailed`, not an `HTTPError`),
-    /// an undecodable body — or the failure is item-local (no download id,
-    /// unknown protocol). None of those say the client went away, so they must
-    /// NOT strip the pause/resume affordance from every other row.
+    /// Only client-level failures qualify: the request never arrived (unreachable, breaker open) or the client
+    /// refused our credentials. A rejection of *this* item (a 404 for a download it already removed, a usenet
+    /// client's `{status:false}`, an undecodable body) must not strip pause/resume from every other row.
     private func actionFailureProvesClientDown(_ error: Error) -> Bool {
-        guard let http = error as? HTTPError else { return false }
-        switch http {
-        case .transport:
-            return true
-        case .status(let code, _):
-            return code == 401 || code == 403
-        default:
-            return false
+        switch error as? MediaKitError {
+        case .unreachable, .breakerOpen, .unauthorized: true
+        default: false
         }
     }
 

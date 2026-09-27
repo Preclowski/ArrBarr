@@ -27,7 +27,6 @@ import os
 /// is lazy, on tap), and TMDB is only consulted for titles the user does *not*
 /// own. The reads underneath are the resource store's, so a second tap on the
 /// same title costs no TMDB request.
-@MainActor
 enum SeriesIdentityResolver {
     /// Every resolution is logged with both ids and the title it landed on.
     /// "Is this the same show?" is not answerable by looking at a poster —

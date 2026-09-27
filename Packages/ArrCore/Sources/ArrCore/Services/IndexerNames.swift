@@ -14,7 +14,6 @@ import os
 /// Without Prowlarr (or when an indexer wasn't synced from it) the *arr's own
 /// label stands, minus a trailing "(Prowlarr)" — the one suffix we can strip
 /// without guessing.
-@MainActor
 final class IndexerNames {
     static let shared = IndexerNames()
 

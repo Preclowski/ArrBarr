@@ -8,7 +8,6 @@ import Foundation
 /// one — no TMDB key involved. Everything else goes to TMDB `/videos`: series
 /// always (Sonarr ships no trailer field at all), and movies whose Radarr
 /// record has an empty trailer id.
-@MainActor
 enum TrailerProvider {
 
     // MARK: - Public API

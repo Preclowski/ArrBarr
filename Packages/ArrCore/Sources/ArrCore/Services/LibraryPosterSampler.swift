@@ -8,7 +8,6 @@ import Foundation
 /// The result is memoised process-wide: the first empty-state appearance does
 /// one library fetch, every later one reads the cached sample. A single
 /// in-flight task is shared so two near-simultaneous callers don't double-fetch.
-@MainActor
 public enum LibraryPosterSampler {
     private static var cache: [URL] = []
     private static var inFlight: Task<[URL], Never>?

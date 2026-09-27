@@ -21,6 +21,21 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         #expect(kit.transport.count == 2)
     }
 
+    @Test func aVolatileRowIsServedInsideItsTTL() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        kit.transport.answer("fetchReleases", json: "[]")
+        let r: Resource<[Row]> = kit.resource("fetchReleases", path: "/api/v3/release", freshness: .volatile)
+        _ = try await kit.store.read(r)
+        kit.clock.advance(by: .seconds(2))
+        let second = try await kit.store.read(r)
+        #expect(second.origin == .memory && kit.transport.count == 1)
+        kit.clock.advance(by: .seconds(4))
+        kit.transport.answer("fetchReleases", json: "[]")
+        _ = try await kit.store.read(r)
+        #expect(kit.transport.count == 2)
+    }
+
     @Test func maxAgeTightensTheClassTTL() async throws {
         let kit = try await TestKit()
         kit.transport.answer("fetchLibrary", json: "[]")

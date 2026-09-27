@@ -502,7 +502,7 @@ struct QueueViewModelActionHealthTests {
         // The download already finished and left the client: it answers, but
         // with a 404 for this hash. Historically this flipped the whole client
         // red and blanked hover pause/resume on every row.
-        fake.actionError = HTTPError.status(404, body: "not found")
+        fake.actionError = MediaKitError.rejected(InstanceID(.qbittorrent), status: 404, serverMessage: "not found")
 
         await sut.resume(torrentItem("a"))
 
@@ -525,7 +525,7 @@ struct QueueViewModelActionHealthTests {
     @Test("A transport failure DOES pin the client down")
     func transportFailureMarksClientDown() async {
         let (sut, fake) = await makeReadySUT()
-        fake.actionError = HTTPError.transport(URLError(.cannotConnectToHost))
+        fake.actionError = MediaKitError.unreachable(Host(URL(string: "http://qbittorrent.lan:8080")!), .refused)
 
         await sut.resume(torrentItem("a"))
 
@@ -536,7 +536,7 @@ struct QueueViewModelActionHealthTests {
     @Test("An auth failure DOES pin the client down")
     func authFailureMarksClientDown() async {
         let (sut, fake) = await makeReadySUT()
-        fake.actionError = HTTPError.status(403, body: nil)
+        fake.actionError = MediaKitError.unauthorized(InstanceID(.qbittorrent), status: 403, serverMessage: nil)
 
         await sut.resume(torrentItem("a"))
 

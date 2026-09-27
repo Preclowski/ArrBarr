@@ -133,7 +133,9 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             if error is CancellationError { return ([], nil, false, nil, nil) }
             if case MediaKitError.notConfigured = error { return ([], nil, false, nil, revision) }
             let message = MediaKitErrorPresenter.message(for: error)
-            Self.logger.error("queue fetch failed: \(message, privacy: .public) | \(String(reflecting: error), privacy: .private)")
+            // The message carries the host and the server's own text; only the case is public.
+            let kind = (error as? MediaKitError)?.caseName ?? String(describing: type(of: error))
+            Self.logger.error("queue fetch failed: \(kind, privacy: .public) | \(message, privacy: .private)")
             return ([], message, MediaKitErrorPresenter.isUnreachable(error), nil, revision)
         }
     }

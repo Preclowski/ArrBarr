@@ -14,7 +14,6 @@ import SwiftUI
 /// A request carries a fresh `id`, so hosts fire on the id changing — opening
 /// the same title twice is two requests, and a host that mounts later does not
 /// replay an old one.
-@MainActor
 public final class DetailRouter: ObservableObject {
     public static let shared = DetailRouter()
 
@@ -59,7 +58,6 @@ private struct DetailRequestObserver: ViewModifier {
 /// happened — a quiz card is usually NOT in the library, so that button took
 /// the add-panel branch, which was still on the bus that loses messages. The
 /// in-library branch had already been moved and worked.
-@MainActor
 public final class SearchAddRouter: ObservableObject {
     public static let shared = SearchAddRouter()
 

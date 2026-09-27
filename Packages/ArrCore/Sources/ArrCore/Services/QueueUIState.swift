@@ -17,7 +17,6 @@ import Observation
 /// into that suite — so the keys, the suite and `reloadFromDefaults()` are
 /// load-bearing, not implementation detail.
 @Observable
-@MainActor
 public final class QueueUIState {
     public static let shared = QueueUIState()
 

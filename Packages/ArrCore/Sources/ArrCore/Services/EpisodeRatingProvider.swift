@@ -6,7 +6,6 @@ import Foundation
 /// screen, and neither Sonarr nor TVDB ship a per-episode one — TMDB is the
 /// only source. The series' tmdb id is resolved from its tvdb id when Sonarr
 /// didn't ship one.
-@MainActor
 enum EpisodeRatingProvider {
     struct Rating: Equatable, Sendable {
         let value: Double

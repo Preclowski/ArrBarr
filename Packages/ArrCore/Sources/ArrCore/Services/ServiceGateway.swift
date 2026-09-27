@@ -23,7 +23,6 @@ nonisolated extension MediaServerKind {
 }
 
 /// The one place ArrCore reaches MediaKit. Owned by `ConfigStore`; rebuilt for demo mode, reconciled on every config change.
-@MainActor
 public final class ServiceGateway {
     /// The process-wide gateway, for the arr client values that are built anywhere and hold no reference.
     public nonisolated(unsafe) static var current: ServiceGateway?
@@ -260,7 +259,7 @@ public final class ServiceGateway {
         let (stream, continuation) = AsyncStream<QueueItem.Source>.makeStream(bufferingPolicy: .unbounded)
         let id = UUID()
         queueUpdateContinuations[id] = continuation
-        continuation.onTermination = { _ in Task { @MainActor [weak self] in self?.queueUpdateContinuations[id] = nil } }
+        continuation.onTermination = { [weak self] _ in Task { @MainActor in self?.queueUpdateContinuations[id] = nil } }
         return stream
     }
 
@@ -273,7 +272,7 @@ public final class ServiceGateway {
         let (stream, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
         let id = UUID()
         breakerContinuations[id] = continuation
-        continuation.onTermination = { _ in Task { @MainActor [weak self] in self?.breakerContinuations[id] = nil } }
+        continuation.onTermination = { [weak self] _ in Task { @MainActor in self?.breakerContinuations[id] = nil } }
         return stream
     }
 
@@ -565,7 +564,7 @@ private struct ConfigCredentialProvider: CredentialProvider {
     }
 }
 
-private struct LiveStreams {
+nonisolated private struct LiveStreams {
     var kit: ObjectIdentifier?
     var queue: [QueueItem.Source: LiveStream<ArrQueueRecord>] = [:]
     var progress: (instances: [InstanceID], stream: LiveStream<DownloadTask>)?

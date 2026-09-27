@@ -31,6 +31,9 @@ public struct Resource<Value: Codable & Sendable>: Sendable {
     }
 
     public var effectiveTTL: Duration { ttl ?? freshness.defaultTTL }
+    /// Until a command or event marks it, a row stays valid for its retention — and never less than its TTL, or a
+    /// `.volatile` row (retention zero) would be invalidated the moment it is written.
+    var validFor: Duration { max(freshness.retention, effectiveTTL) }
 }
 
 extension Resource {

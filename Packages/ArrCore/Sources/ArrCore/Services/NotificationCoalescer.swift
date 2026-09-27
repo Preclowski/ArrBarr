@@ -25,7 +25,6 @@ struct ScheduledTimer {
 /// means racing the run loop: a machine under load can drift a "second episode
 /// arrives before the first one's deadline" setup right past the deadline and
 /// fail a test that has nothing wrong with it.
-@MainActor
 protocol CoalescerScheduler {
     /// Now, for the `seriesGroupingCap` bookkeeping. Must share a timeline with
     /// `schedule` — a cap measured on a different clock than the timers would
@@ -42,7 +41,6 @@ protocol CoalescerScheduler {
 ///
 /// Added in `.common` run loop mode so they still fire while the menu-bar panel
 /// is tracking events — a plain `.default` timer pauses during scroll/interaction.
-@MainActor
 struct RunLoopCoalescerScheduler: CoalescerScheduler {
     /// `nonisolated` so it can be spelled as a default argument, which Swift
     /// evaluates outside the actor. Safe — there's no stored state to isolate.
@@ -78,7 +76,6 @@ struct RunLoopCoalescerScheduler: CoalescerScheduler {
 ///
 /// Either way there's no fixed 60 s floor — the old trailing-only design made
 /// *every* notification, even a lone movie grab, wait a full minute.
-@MainActor
 public final class NotificationCoalescer {
     /// Original category — used for multi-item batches and as a back-compat
     /// fallback. Has just the "Open in browser" action because one tap can't

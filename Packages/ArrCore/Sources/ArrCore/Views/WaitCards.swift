@@ -71,9 +71,8 @@ enum WaitStoryProvider {
     /// Stories from TMDB, shuffled so a long wait on the same title reads
     /// differently each time.
     static func remoteStories(_ ctx: WaitCardContext, configStore: ConfigStore) async -> [WaitStory] {
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty, !ctx.title.isEmpty else { return [] }
-        let client = TMDBClient(apiKey: key)
+        guard !configStore.tmdbApiKey.isEmpty, !ctx.title.isEmpty else { return [] }
+        let client = configStore.tmdbClient
         var stories: [WaitStory] = []
         let title = ctx.title
 

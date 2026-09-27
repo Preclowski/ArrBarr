@@ -10,7 +10,6 @@ import os
 /// call, so a tooltip hover and a view push don't double-fetch. Results are
 /// held in a small session-lifetime LRU — headshots ride `PosterStore`, so
 /// nothing here touches disk.
-@MainActor
 public final class PersonStore {
     public static let shared = PersonStore()
     private init() {}

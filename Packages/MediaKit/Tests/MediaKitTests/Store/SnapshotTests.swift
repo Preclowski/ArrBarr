@@ -21,4 +21,18 @@ import Testing
         #expect(builds.value == 2)
         snapshot.stop()
     }
+
+    @Test func aPurgeRebuilds() async throws {
+        let kit = try await TestKit()
+        let builds = Counter()
+        let snapshot = Snapshot(tags: [.collection(.library, TestKit.radarr)], initial: 0, store: kit.store) { _ in
+            builds.increment()
+            return builds.value
+        }
+        await snapshot.start()
+        await kit.store.purgeAll()
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(builds.value == 2)
+        snapshot.stop()
+    }
 }

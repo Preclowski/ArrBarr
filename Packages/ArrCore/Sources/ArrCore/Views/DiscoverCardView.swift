@@ -72,7 +72,7 @@ public struct DiscoverCardView: View {
                 tmdbId: tmdbId,
                 configStore: configStore).directors
             if result.imdbId == nil, let tmdbId, tmdbId > 0, !configStore.tmdbApiKey.isEmpty {
-                resolvedIMDbId = try? await TMDBClient(apiKey: configStore.tmdbApiKey).movieIMDbId(movieId: tmdbId)
+                resolvedIMDbId = try? await configStore.tmdbClient.movieIMDbId(movieId: tmdbId)
             }
         case .show:
             directors = await CastProvider.seriesCredits(
