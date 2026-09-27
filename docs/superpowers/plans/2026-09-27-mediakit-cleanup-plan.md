@@ -93,29 +93,36 @@ Same for `seriesDetails`, `album(id:)`, `movies()/series()/artists()`, lookups, 
 
 Decided 2026-09-27: delete the composition engine; keep Discovery for a separate UI change
 (`docs/superpowers/follow-ups.md`); optimistic effects move into MediaKit. Open items keep a recommendation in brackets.
-- [ ] `CompositionEngine`/`CompositionContext`/`Provenance` — unused; queue is composed by hand. Delete.
-- [ ] `IdentityStore` reads/`MediaIdentity` — crosswalk written, never read [after B, use it for
+- [x] `CompositionEngine`/`CompositionContext`/`Provenance` — unused; queue is composed by hand. Delete.
+- [x] `IdentityStore` reads/`MediaIdentity` — crosswalk written, never read [after B, use it for
       `SeriesIdentityResolver` and media-server keys, or delete reads].
 - [x] `Discovery` (Bonjour/beacon) — parsers only, no UI. Kept; the UI is a follow-up (`docs/superpowers/follow-ups.md`).
-- [ ] Optimistic effects — `Command.optimistic` stored and never read; `LiveStream.apply/clear` unused while
+- [x] Optimistic effects — `Command.optimistic` stored and never read; `LiveStream.apply/clear` unused while
       `QueueViewModel` keeps its own overrides + `hold(until:)`. Move the overrides into `PendingEffect` carried by
       the command, applied by the stream; delete the VM copy and `hold(until:)`.
-- [ ] Progress stream — never started, 2 s policy never runs, snapshot written never loaded [make it a plain
+- [x] Progress stream — never started, 2 s policy never runs, snapshot written never loaded [make it a plain
       on-demand read, or start it for the open panel].
-- [ ] `liveSessions`, `.widgetRefresher`, `EventHub.setCadence`, `DataEvent.connectivity`, unhandled `.woke`,
+- [x] `liveSessions`, `.widgetRefresher`, `EventHub.setCadence`, `DataEvent.connectivity`, unhandled `.woke`,
       `ConfigurationChanged`/`ConnectivityChanged` unobserved, `InstanceDescriptor.limits`, `ResourceStore.start/
       seed/purge(_:)/sweepEvery/lastSweep`, `meta` table, unused telemetry API, `Signposts.make`,
       `ServarrService.supportsMovieVocabulary`, `.whisparrV2`, `TMDBService.artwork`, `ServarrService.artwork`,
       `ServiceGateway.engine/tmdb/mediaServer`, `rebuild(demo:)` (no callers), `refreshNow(priority:)` ignoring it,
       `setInstances` (no callers) — wire where a feature needs it, delete the rest.
-- [ ] Demo `FixtureTransport` rules (`DemoRule`, `queueStatus`) unreachable: gateway passes no rules [wire
+- [x] Demo `FixtureTransport` rules (`DemoRule`, `queueStatus`) unreachable: gateway passes no rules [wire
       pause/resume in demo, or delete].
-- [ ] `MediaKitRecording.RecordingTransport` has no runner [add the re-record command CLAUDE.md promises, or
+- [x] `MediaKitRecording.RecordingTransport` has no runner [add the re-record command CLAUDE.md promises, or
       delete and fix CLAUDE.md].
-- [ ] Duplicates inside MediaKit: probe plans vs `testConnection` resources (same URL, two cache keys);
+- [x] Duplicates inside MediaKit: probe plans vs `testConnection` resources (same URL, two cache keys);
       `track` hard-codes `/api/v1|v3` vs `ServarrProfile.apiBase`; tag-tick `Observations` loop ×3; media-server
       auth placement ×2; sweep scheduling ×3; foreground flag in `EventHub` and `LiveStream`; batch error
       fallback differs; `CapabilityProbe.restore` only ordinal 0.
+- Outcome: composition engine and the unreferenced API deleted; the crosswalk is read (series tmdb→tvdb, one hop
+  through the record); effects are declared by commands and applied by `ServiceGateway.run` to the live streams
+  (VM overrides and `hold(until:)` gone); progress is an on-demand read with no checkpoint; demo pause/resume
+  stick by download id (`DemoRule` gone); `mediakit-record` is the re-record runner; tick sums and the command
+  tracker's API base are shared. Left as is, on purpose: drafts (ordinal > 0) re-probe instead of restoring,
+  `EventHub` foreground vs `LiveStream` activity are two different knobs set from one place, the capability probe
+  talks to the pipeline (no cache key to collide with).
 
 ## Phase E — caches outside MediaKit
 

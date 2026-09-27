@@ -6,7 +6,6 @@ public struct LiveStreamID: Hashable, Sendable, Codable, RawRepresentable {
     public init(rawValue: String) { self.rawValue = rawValue }
     public static let queue = LiveStreamID(rawValue: "queue")
     public static let progress = LiveStreamID(rawValue: "progress")
-    public static let sessions = LiveStreamID(rawValue: "sessions")
 }
 
 public enum LiveScope: Sendable, Equatable { case all, ids(Set<String>) }
@@ -21,8 +20,6 @@ public struct LivePolicy: Sendable, Equatable {
     public init() {}
 
     public static let queue = LivePolicy()
-    public static let progress: LivePolicy = { var p = LivePolicy(); p.foregroundInterval = .seconds(2); p.backgroundInterval = .seconds(0); return p }()
-    public static let sessions = LivePolicy()
 }
 
 public struct LiveValue<Element: Codable & Sendable>: Sendable {

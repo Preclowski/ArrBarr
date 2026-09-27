@@ -101,7 +101,7 @@ public actor ResourceStore {
             let task = Task {
                 var last: (fetchedAt: Date, isStale: Bool)?
                 let tags = resource.tags
-                let observations = Observations { [revision] in tags.reduce(UInt64(0)) { $0 &+ revision.tick(for: $1) } }
+                let observations = Observations { [revision] in revision.tick(for: tags) }
                 if let first = try? await self.read(resource, policy: .staleWhileRevalidate, maxAge: maxAge, priority: priority) {
                     last = (first.fetchedAt, first.isStale)
                     continuation.yield(first)
@@ -177,7 +177,7 @@ public actor ResourceStore {
         commandTrackers[commandID]?.cancel()
         commandTrackers[commandID] = Task { [clock, pipeline] in
             let deadline = clock.now.addingTimeInterval(timeout.seconds)
-            let api = instance.kind == .lidarr ? "/api/v1" : "/api/v3"
+            let api = ServarrProfile.profile(for: instance.kind)?.apiBase ?? "/api/v3"
             while clock.now < deadline, !Task.isCancelled {
                 try? await clock.sleep(for: .seconds(3))
                 let plan = RequestPlan(instance: instance, operation: "commandStatus", pathTemplate: "\(api)/command/{id}",

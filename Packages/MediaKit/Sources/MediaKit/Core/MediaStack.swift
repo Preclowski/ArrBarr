@@ -135,7 +135,8 @@ public final class MediaStack: Sendable {
 
     public func liveProgress(instances: [InstanceID]) -> LiveStream<DownloadTask> {
         let kit = self
-        return LiveStream(id: .progress, instances: instances, policy: .progress, pipeline: pipeline, database: database, clock: configuration.clock,
+        // Read on demand, never pumped: no interval to run, and no checkpoint anyone would load.
+        return LiveStream(id: .progress, instances: instances, policy: LivePolicy(), pipeline: pipeline, database: nil, clock: configuration.clock,
                           telemetry: configuration.telemetry, log: configuration.log, elementID: \.id, fetch: { instance, scope, pipeline in
             guard let service = kit.download(instance) else { return [] }
             let ids: Set<String> = if case let .ids(set) = scope { set } else { [] }

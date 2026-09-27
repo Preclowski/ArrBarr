@@ -22,6 +22,9 @@ public final class StoreRevision: @unchecked Sendable {
         return lock.withLock { ($0.tags[tag] ?? 0) &+ $0.wipes }
     }
 
+    /// One number that moves whenever any of `tags` does: what an `Observations` loop watches.
+    public func tick(for tags: some Sequence<InvalidationTag>) -> UInt64 { tags.reduce(0) { $0 &+ tick(for: $1) } }
+
     /// Every bump means "re-read now", never a delta.
     func bump(_ tags: Set<InvalidationTag>) {
         withMutation(keyPath: \.all) {

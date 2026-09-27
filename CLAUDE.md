@@ -81,8 +81,9 @@ Settings draft — never construct a client. Reads go through `ResourceStore`
 policies (`cacheFirst`, `staleWhileRevalidate`, `mustRevalidate`); writes are
 `Command`s that declare invalidation tags. Realtime is `EventHub` over
 `SignalRSource`. Fixtures are packed one JSON per kind by `Tools/fixtures/pack_fixtures.py`;
-re-record only through `MediaKitRecording` (reads only, allow-list) and run
-`Tools/fixtures/anonymize_fixtures.py --check` before committing. Package tests:
+re-record only with `(cd Packages/MediaKit && swift run mediakit-record <instances.json> <scratch-dir>)`
+(`MediaKitRecording`: reads only, allow-list), keep the raw recording in the scratchpad, and run
+`Tools/fixtures/anonymize_fixtures.py --check` before packing and committing. Package tests:
 `(cd Packages/MediaKit && swift test)`. ArrCore compiles with
 `.defaultIsolation(MainActor.self)`: wire models, helpers and facades are `nonisolated`.
 

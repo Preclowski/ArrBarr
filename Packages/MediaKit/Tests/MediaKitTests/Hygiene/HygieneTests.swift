@@ -48,6 +48,19 @@ import Testing
         #expect(command.status == 201 && String(decoding: command.body, as: UTF8.self).contains("queued"))
     }
 
+    @Test func aDemoPauseSticksOnTheArrRowTrackingTheDownload() async throws {
+        let transport = FixtureTransport(clock: TestClock())
+        func queue() async throws -> [JSONValue] {
+            let r = try await transport.send(HTTPRequest(method: "GET", url: URL(string: "http://demo/api/v3/queue")!, operation: "radarr.fetchQueue", pathTemplate: "/api/v3/queue"))
+            return try JSONDecoder().decode(JSONValue.self, from: r.body)["records"]?.arrayValue ?? []
+        }
+        let row = try #require(try await queue().first { $0["downloadId"]?.stringValue?.isEmpty == false })
+        let hash = try #require(row["downloadId"]?.stringValue)
+        _ = try await transport.send(HTTPRequest(method: "POST", url: URL(string: "http://demo/api/v2/torrents/pause")!, body: .form(["hashes": hash.lowercased()]),
+                                                 operation: "qbittorrent.pause", pathTemplate: "/api/v2/torrents/pause"))
+        #expect(try await queue().first { $0["downloadId"] == row["downloadId"] }?["status"]?.stringValue == "paused")
+    }
+
     @Test func allowListRefusesWritesAndReleases() {
         let list = AllowListProbe.section5
         func req(_ m: String, _ path: String, rpc: String? = nil, kind: InstanceKind) -> Bool {

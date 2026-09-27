@@ -14,6 +14,7 @@ let package = Package(
     products: [
         .library(name: "MediaKit", targets: ["MediaKit"]),
         .library(name: "MediaKitRecording", targets: ["MediaKitRecording"]),
+        .executable(name: "mediakit-record", targets: ["mediakit-record"]),
     ],
     targets: [
         .target(
@@ -26,6 +27,12 @@ let package = Package(
             name: "MediaKitRecording",
             dependencies: ["MediaKit"],
             path: "Sources/MediaKitRecording",
+            swiftSettings: strict
+        ),
+        .executableTarget(
+            name: "mediakit-record",
+            dependencies: ["MediaKit", "MediaKitRecording"],
+            path: "Sources/mediakit-record",
             swiftSettings: strict
         ),
         .testTarget(

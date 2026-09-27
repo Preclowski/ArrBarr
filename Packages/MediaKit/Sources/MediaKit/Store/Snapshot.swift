@@ -25,7 +25,7 @@ public final class Snapshot<Value: Sendable>: Sendable {
     public func start() async {
         let tags = self.tags
         let revision = store.revision
-        let ticks: @Sendable () -> UInt64 = { tags.reduce(UInt64(0)) { $0 &+ revision.tick(for: $1) } }
+        let ticks: @Sendable () -> UInt64 = { revision.tick(for: tags) }
         let initial = ticks()
         await refresh()
         let settle = self.settle
