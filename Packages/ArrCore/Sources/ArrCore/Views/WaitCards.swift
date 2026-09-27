@@ -20,7 +20,7 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
 struct WaitCardContext {
     var movie: ArrMovie? = nil
     var series: ArrSeries? = nil
-    var album: LidarrAlbumDetail? = nil
+    var album: ArrAlbum? = nil
     var seriesYear: Int? = nil
     var cast: [CastMember] = []
     var directors: [CastMember] = []

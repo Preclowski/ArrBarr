@@ -87,7 +87,7 @@ nonisolated extension ArrSeries {
     }
 }
 
-nonisolated extension LidarrLibraryRecord {
+nonisolated extension ArrArtist {
     var ownership: LibraryOwnership? {
         id.map { id in
             let total = statistics?.trackCount ?? 0

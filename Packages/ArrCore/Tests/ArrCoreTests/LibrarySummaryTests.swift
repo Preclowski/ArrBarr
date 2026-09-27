@@ -32,7 +32,7 @@ struct LibrarySummaryTests {
     @Test("Lidarr summary sums per-artist statistics size")
     func lidarr() throws {
         let recs = [
-            try JSONDecoder().decode(LidarrLibraryRecord.self, from: #"{"artistName":"A","statistics":{"sizeOnDisk":700}}"#.data(using: .utf8)!),
+            try JSONDecoder().decode(ArrArtist.self, from: #"{"artistName":"A","statistics":{"sizeOnDisk":700}}"#.data(using: .utf8)!),
         ]
         let s = LibrarySummary.lidarr(from: recs)
         #expect(s.count == 1)

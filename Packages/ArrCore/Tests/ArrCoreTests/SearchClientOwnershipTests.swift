@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// Lidarr and Whisparr ownership used to come from two hand-rolled fetches
@@ -35,7 +36,7 @@ struct SearchClientOwnershipTests {
 
         // The row side computes the very same key.
         let row = SearchClient.unifyLidarr(
-            LidarrLookupRecord.testRecord(foreignArtistId: "mbid-radiohead", artistName: "Radiohead"),
+            ArrArtist.testRecord(foreignArtistId: "mbid-radiohead", artistName: "Radiohead"),
             baseURL: cfg.baseURL)
         #expect(row?.externalId == key)
     }
@@ -57,11 +58,11 @@ struct SearchClientOwnershipTests {
     }
 }
 
-private extension LidarrLookupRecord {
+private extension ArrArtist {
     /// The decoder is the only initialiser on the wire type, so the test
     /// builds one through it.
-    static func testRecord(foreignArtistId: String, artistName: String) -> LidarrLookupRecord {
+    static func testRecord(foreignArtistId: String, artistName: String) -> ArrArtist {
         let json = #"{"foreignArtistId":"\#(foreignArtistId)","artistName":"\#(artistName)"}"#
-        return try! JSONDecoder().decode(LidarrLookupRecord.self, from: Data(json.utf8))
+        return try! JSONDecoder().decode(ArrArtist.self, from: Data(json.utf8))
     }
 }

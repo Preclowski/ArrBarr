@@ -461,7 +461,7 @@ public final class LibraryViewModel {
         }
     }
 
-    nonisolated private static func unify(_ records: [LidarrLibraryRecord], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
+    nonisolated private static func unify(_ records: [ArrArtist], baseURL: String, profiles: [Int: String]) -> [LibraryEntry] {
         records.compactMap { r in
             guard let id = r.id, let name = r.artistName else { return nil }
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)

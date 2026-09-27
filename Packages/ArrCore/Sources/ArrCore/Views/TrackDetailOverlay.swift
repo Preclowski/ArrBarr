@@ -7,17 +7,17 @@ import MediaKit
 /// custom-formats banner (or a quiet "missing" line). Pushed from the
 /// album view's track list; back pops to the album.
 struct TrackDetailOverlay: View {
-    let track: LidarrTrackDetail
+    let track: ArrTrack
     /// The joined `/trackfile` record — nil when the track has no file
     /// (or the file list hasn't loaded), which renders the missing state.
     let file: ArrFile?
     let albumTitle: String?
     /// Album's artist — rendered as a drill-in link when `onOpenArtist` is
     /// wired (mirrors the album hero's artist line).
-    let artist: LidarrArtist?
+    let artist: ArrArtist?
     let posterURL: URL?
     var posterAPIKey: String? = nil
-    var onOpenArtist: ((LidarrArtist) -> Void)? = nil
+    var onOpenArtist: ((ArrArtist) -> Void)? = nil
     let onClose: () -> Void
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
@@ -95,11 +95,11 @@ struct TrackDetailOverlay: View {
                 if file != nil {
                     LibraryStateBadge(isDownloaded: true)
                 }
-                if let artist {
+                if let artist, let artistName = artist.artistName {
                     if let onOpenArtist {
                         Button { onOpenArtist(artist) } label: {
                             HStack(spacing: 3) {
-                                Text(artist.artistName)
+                                Text(artistName)
                                     .scaledFont(size: 12, weight: .medium)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
@@ -110,7 +110,7 @@ struct TrackDetailOverlay: View {
                         .buttonStyle(.plain)
                         .help(Text("detail.showArtist.button", bundle: .module))
                     } else {
-                        Text(artist.artistName)
+                        Text(artistName)
                             .scaledFont(size: 12, weight: .medium)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)

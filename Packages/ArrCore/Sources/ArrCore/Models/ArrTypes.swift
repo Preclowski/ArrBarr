@@ -91,14 +91,6 @@ nonisolated public struct ArrCredit: Codable, Equatable, Sendable {
 // MARK: - Lidarr
 
 
-nonisolated public struct LidarrArtist: Codable, Sendable {
-    let id: Int
-    let artistName: String
-    let foreignArtistId: String?
-    let images: [ArrImage]?
-}
-
-
 // MARK: - Health
 
 nonisolated public struct ArrHealthRecord: Codable, Equatable, Sendable {
@@ -159,84 +151,6 @@ nonisolated public struct ArrCommand: Codable, Equatable, Sendable {
 // MARK: - Search Lookup
 
 // MARK: - Lidarr library / lookup types
-
-nonisolated public struct LidarrLibraryRecord: Codable, Sendable, Equatable {
-    public let id: Int?
-    public let foreignArtistId: String?
-    public let artistName: String?
-    public let monitored: Bool?
-    public let images: [ArrImage]?
-    public let statistics: LidarrLibraryStatistics?
-    /// See `ArrSeries.qualityProfileId`.
-    public var qualityProfileId: Int? = nil
-    /// See `ArrMovie.added`. Artists have no release date of their
-    /// own — that belongs to their albums — so this is the only date sort
-    /// Lidarr can offer.
-    public var added: String? = nil
-    /// Artist rating from Lidarr's metadata provider. Always on the wire; the
-    /// Library tab's rating sort is the first thing to read it.
-    public var ratings: LidarrLookupRatings? = nil
-}
-nonisolated public struct LidarrLibraryStatistics: Codable, Sendable, Equatable {
-    public let albumCount: Int?
-    public let trackCount: Int?
-    public let trackFileCount: Int?
-    public let sizeOnDisk: Int64?
-}
-
-nonisolated public struct LidarrLookupRecord: Codable, Sendable {
-    public let foreignArtistId: String?
-    public let artistName: String
-    public let disambiguation: String?
-    public let overview: String?
-    public let images: [ArrImage]?
-    public let ratings: LidarrLookupRatings?
-    public let genres: [String]?
-}
-nonisolated public struct LidarrLookupRatings: Codable, Sendable, Equatable {
-    public let value: Double?
-    /// See `ArrRatings.votes` — same dropped-signal fix.
-    public var votes: Int? = nil
-}
-
-/// One entry of `/api/v1/search` — Lidarr's mixed text search (what its own
-/// UI queries). Each entry wraps EITHER an artist OR an album resource;
-/// `/artist/lookup` and `/album/lookup` only do text search for prefixed /
-/// foreign-id terms, which is why the app searches through this endpoint.
-nonisolated public struct LidarrSearchRecord: Codable, Sendable {
-    public let foreignId: String?
-    public let artist: LidarrLookupRecord?
-    public let album: LidarrAlbumLookupRecord?
-}
-
-/// Album resource as returned inside `/search` entries (and by
-/// `/album/lookup` for foreign-id terms). `id` is non-zero when the album
-/// is already in the library (same convention as the other arr lookups);
-/// the embedded `artist` carries what the add flow needs to create the
-/// artist alongside the album.
-nonisolated public struct LidarrAlbumLookupRecord: Codable, Sendable {
-    public let id: Int?
-    public let foreignAlbumId: String?
-    public let title: String
-    public let disambiguation: String?
-    public let overview: String?
-    public let albumType: String?
-    public let releaseDate: String?
-    public let genres: [String]?
-    public let images: [ArrImage]?
-    public let ratings: LidarrLookupRatings?
-    public let artist: LidarrAlbumLookupArtist?
-}
-
-/// Artist as embedded in `/search` album entries. NOT `LidarrArtist` — that
-/// type requires `id`, and the search payload omits it for artists that
-/// aren't in the library (which is most of them), so reusing it made the
-/// whole `/search` array fail to decode and music search came back empty.
-nonisolated public struct LidarrAlbumLookupArtist: Codable, Sendable {
-    public let id: Int?
-    public let artistName: String?
-    public let foreignArtistId: String?
-}
 
 nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identifiable {
     public let id: Int

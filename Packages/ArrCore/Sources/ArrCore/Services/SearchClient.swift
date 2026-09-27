@@ -36,11 +36,11 @@ public actor SearchClient {
             return records.enumerated().compactMap { Self.unifyWhisparr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
         case .lidarr:
             if input.isRef {
-                let records = try await client.read([LidarrLookupRecord].self) { $0.lookupArtists(term: query) }
+                let records = try await client.read { $0.lookupArtists(term: query) }
                 return records.enumerated().compactMap { Self.unifyLidarr($0.element, baseURL: baseURL, sourceRank: $0.offset) }
             }
-            async let searchTask = client.read([LidarrSearchRecord].self) { $0.lidarrSearch(term: query) }
-            async let artistTask = client.read([LidarrLookupRecord].self) { $0.lookupArtists(term: query) }
+            async let searchTask = client.read { $0.lidarrSearch(term: query) }
+            async let artistTask = client.read { $0.lookupArtists(term: query) }
             let searchRecords = try await searchTask
             let artistRecords = (try? await artistTask) ?? []
             let albums = searchRecords.enumerated().compactMap { offset, rec in rec.album.flatMap { Self.unifyLidarrAlbum($0, baseURL: baseURL, sourceRank: offset) } }
@@ -191,7 +191,7 @@ public actor SearchClient {
             source: .whisparr, sourceRank: sourceRank)
     }
 
-    nonisolated static func unifyLidarrAlbum(_ r: LidarrAlbumLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+    nonisolated static func unifyLidarrAlbum(_ r: ArrAlbum, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
         guard let foreign = r.foreignAlbumId, !foreign.isEmpty else { return nil }
         let year = r.releaseDate.flatMap { parseArrDate($0) }.map { Calendar.current.component(.year, from: $0) }
         let subtitle = [r.artist?.artistName, r.albumType].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
@@ -202,10 +202,10 @@ public actor SearchClient {
             source: .lidarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, sourceRank: sourceRank, isLidarrAlbum: true)
     }
 
-    nonisolated static func unifyLidarr(_ r: LidarrLookupRecord, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
-        guard let foreign = r.foreignArtistId, !foreign.isEmpty else { return nil }
+    nonisolated static func unifyLidarr(_ r: ArrArtist, baseURL: String, sourceRank: Int = 0) -> SearchResult? {
+        guard let foreign = r.foreignArtistId, !foreign.isEmpty, let name = r.artistName, !name.isEmpty else { return nil }
         return SearchResult(
-            externalId: ArrLibraryMaps.foreignHashKey(foreign), foreignId: foreign, title: r.artistName, subtitle: r.disambiguation, year: nil,
+            externalId: ArrLibraryMaps.foreignHashKey(foreign), foreignId: foreign, title: name, subtitle: r.disambiguation, year: nil,
             rating: r.ratings?.value, votes: r.ratings?.votes, imdb: nil, rottenTomatoes: nil, metacritic: nil, overview: r.overview, runtime: nil,
             genres: r.genres ?? [], network: nil, certification: nil, posterURL: poster(r.images, baseURL: baseURL, coverTypes: ["poster", "cover"]),
             source: .lidarr, sourceRank: sourceRank)

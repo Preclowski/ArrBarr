@@ -69,7 +69,7 @@ nonisolated public struct LibraryIndex: Sendable {
         return read
     }
 
-    public func artistsRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<LidarrLibraryRecord> {
+    public func artistsRead(config: ServiceConfig, revalidate: Bool = true) async -> Read<ArrArtist> {
         await Self.read(.lidarr, config) { try await LidarrClient(config: config).fetchAllArtistsFetched(revalidate: revalidate) }
     }
 
@@ -85,7 +85,7 @@ nonisolated public struct LibraryIndex: Sendable {
         await seriesRead(config: config, revalidate: revalidate).records
     }
 
-    public func artists(config: ServiceConfig, revalidate: Bool = true) async -> [LidarrLibraryRecord] {
+    public func artists(config: ServiceConfig, revalidate: Bool = true) async -> [ArrArtist] {
         await artistsRead(config: config, revalidate: revalidate).records
     }
 

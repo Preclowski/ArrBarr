@@ -29,7 +29,7 @@ struct LibrarySizeDecodingTests {
     @Test("Lidarr artist statistics decodes sizeOnDisk")
     func lidarrSize() throws {
         let json = #"[{"artistName":"X","statistics":{"albumCount":3,"sizeOnDisk":4096}}]"#.data(using: .utf8)!
-        let recs = try JSONDecoder().decode([LidarrLibraryRecord].self, from: json)
+        let recs = try JSONDecoder().decode([ArrArtist].self, from: json)
         #expect(recs.first?.statistics?.sizeOnDisk == 4096)
     }
 

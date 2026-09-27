@@ -55,7 +55,7 @@ struct SearchDecodingTests {
           "artist":{"artistName":"The Hound Of Love","foreignArtistId":"36bbaf5a",
             "genres":[],"ratings":{"value":0}}}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([LidarrSearchRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrSearchRecord].self, from: json)
         #expect(records.count == 3)
         #expect(records[0].album?.id == 5446)
         #expect(records[0].album?.artist?.id == 82)

@@ -1,7 +1,8 @@
 import SwiftUI
+import MediaKit
 
 struct TrackRow: View {
-    let track: LidarrTrackDetail
+    let track: ArrTrack
     /// Tap → per-track detail (file quality / size) — the audio counterpart
     /// of tapping an episode row.
     var onTap: (() -> Void)? = nil

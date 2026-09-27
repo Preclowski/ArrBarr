@@ -78,6 +78,7 @@ public struct ArrStatistics: Codable, Equatable, Sendable, Hashable {
     public let albumCount: Int?
     public let trackCount: Int?
     public let trackFileCount: Int?
+    public let totalTrackCount: Int?
     public let sizeOnDisk: Int64?
     public let percentOfEpisodes: Double?
 }
@@ -222,7 +223,7 @@ public struct ArrArtist: Codable, Equatable, Sendable, Hashable {
     public let statistics: ArrStatistics?
 }
 
-public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
+public struct ArrAlbum: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int?
     public let foreignAlbumId: String?
     public let artistId: Int?
@@ -234,6 +235,8 @@ public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
     /// `var`: a detail screen flips it optimistically before the arr confirms.
     public var monitored: Bool?
     public let anyReleaseOk: Bool?
+    public let qualityProfileId: Int?
+    public let duration: Int?
     public let genres: [String]?
     public let images: [ArrImage]?
     public let ratings: ArrRatings?
@@ -241,7 +244,7 @@ public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
     public let artist: ArrArtist?
 }
 
-public struct ArrTrack: Codable, Equatable, Sendable, Hashable {
+public struct ArrTrack: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int
     public let albumId: Int?
     public let trackNumber: String?

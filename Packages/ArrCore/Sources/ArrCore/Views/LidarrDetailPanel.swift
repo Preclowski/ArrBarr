@@ -4,8 +4,8 @@ import MediaKit
 struct LidarrDetailPanel: View {
     let item: QueueItem
     @EnvironmentObject var configStore: ConfigStore
-    let lidarrAlbum: LidarrAlbumDetail?
-    let lidarrTracks: [LidarrTrackDetail]
+    let lidarrAlbum: ArrAlbum?
+    let lidarrTracks: [ArrTrack]
     /// `/trackfile` records for this album — joined per-track by
     /// `trackFileId` in the pushed track detail.
     var lidarrTrackFiles: [ArrFile] = []
@@ -31,11 +31,11 @@ struct LidarrDetailPanel: View {
     var posterCornerAction: AnyView? = nil
     /// Tap on the artist line under the album title — pushes the artist
     /// view (album list). nil leaves the line as plain text.
-    var onOpenArtist: ((LidarrArtist) -> Void)? = nil
+    var onOpenArtist: ((ArrArtist) -> Void)? = nil
 
     /// Tapped track — pushes the per-track detail (file quality / size),
     /// the audio counterpart of the episode detail.
-    @State private var selectedTrack: LidarrTrackDetail?
+    @State private var selectedTrack: ArrTrack?
 
     var body: some View {
         content
@@ -122,7 +122,7 @@ struct LidarrDetailPanel: View {
 
     /// Tracks on disk vs tracks on the release — same Downloaded / x/y /
     /// Missing vocabulary the movie and series heroes and the Library tab use.
-    private func albumFileState(_ stats: LidarrAlbumStats) -> LibraryEntry.FileState {
+    private func albumFileState(_ stats: ArrStatistics) -> LibraryEntry.FileState {
         let have = stats.trackFileCount ?? 0
         let total = stats.totalTrackCount ?? 0
         if total > 0, have >= total { return .complete }
@@ -163,7 +163,7 @@ struct LidarrDetailPanel: View {
                         locale: configStore.currentLocale
                     )
                 }
-                if let artist = album?.artist {
+                if let artist = album?.artist, let artistName = artist.artistName {
                     // Artist as subtitle — 12pt medium .secondary.
                     // Subordinate to the 15pt album title above but
                     // bumped from regular weight so it stays
@@ -176,7 +176,7 @@ struct LidarrDetailPanel: View {
                     if let onOpenArtist {
                         Button { onOpenArtist(artist) } label: {
                             HStack(spacing: 3) {
-                                Text(artist.artistName)
+                                Text(artistName)
                                     .scaledFont(size: 12, weight: .medium)
                                     .foregroundStyle(.secondary)
                                     .lineLimit(2)
@@ -187,7 +187,7 @@ struct LidarrDetailPanel: View {
                         .buttonStyle(.plain)
                         .help(Text("detail.showArtist.button", bundle: .module))
                     } else {
-                        Text(artist.artistName)
+                        Text(artistName)
                             .scaledFont(size: 12, weight: .medium)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)

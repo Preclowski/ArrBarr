@@ -456,7 +456,7 @@ extension LocalToolBackend {
             return ToolCallOutput(text: "Lidarr is not configured.")
         }
         let typeFilter = Self.stringArg(args, key: "albumType").lowercased()
-        let albums: [LidarrAlbumListRecord]
+        let albums: [ArrAlbum]
         do {
             albums = try await LidarrClient(config: lidarr).fetchArtistAlbums(artistId: artistId)
         } catch {
@@ -480,7 +480,7 @@ extension LocalToolBackend {
             let mon = (rec.monitored ?? false) ? "✓" : "✗"
             let have = rec.statistics?.trackFileCount ?? 0
             let total = rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0
-            return "• albumId=\(rec.id) · \(rec.title)\(yearPart)\(typePart) · \(mon) \(have)/\(total) tracks"
+            return "• albumId=\(rec.id.map(String.init) ?? "?") · \(rec.title)\(yearPart)\(typePart) · \(mon) \(have)/\(total) tracks"
         }
         // Name the artist, don't just echo the id back. An id-only header
         // ("Artist 1 has 36 albums") is unverifiable: if the id was wrong, the
@@ -496,16 +496,16 @@ extension LocalToolBackend {
         // Same cards the rest of the chat gets, for the one library the chat
         // could only answer in prose. Covers come from Lidarr, so the shown
         // slice is what the rail renders — no second fetch.
-        let cards = shown.map { rec in
-            ChatAlbum(
-                id: rec.id,
+        let cards = shown.compactMap { rec in
+            rec.id.map { id in ChatAlbum(
+                id: id,
                 title: rec.title,
                 year: Self.yearFromReleaseDate(rec.releaseDate),
                 monitored: rec.monitored ?? false,
                 trackFileCount: rec.statistics?.trackFileCount ?? 0,
                 trackCount: rec.statistics?.totalTrackCount ?? rec.statistics?.trackCount ?? 0,
                 images: rec.images ?? []
-            )
+            ) }
         }
         return ToolCallOutput(text: out, rich: .albums(artist: name, albums: Array(cards)))
     }

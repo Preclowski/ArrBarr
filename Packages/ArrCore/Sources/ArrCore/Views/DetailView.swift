@@ -150,8 +150,8 @@ public struct DetailView: View {
     /// the air date — the score is the actionable info once an episode is
     /// on disk.
     @State private var sonarrEpisodeFiles: [Int: ArrFile] = [:]
-    @State private var lidarrAlbum: LidarrAlbumDetail?
-    @State private var lidarrTracks: [LidarrTrackDetail] = []
+    @State private var lidarrAlbum: ArrAlbum?
+    @State private var lidarrTracks: [ArrTrack] = []
     @State private var lidarrTrackFiles: [ArrFile] = []
     /// Cast strip. Movies pull from Radarr's `/credit` (no key needed);
     /// series from TMDB (Sonarr has no cast endpoint) and only when a TMDB
@@ -1116,9 +1116,10 @@ public struct DetailView: View {
                     onDeleteItem: { q in Task { await viewModel.delete(q) } },
                     posterCornerAction: monitorPosterToggle,
                     onOpenArtist: { artist in
+                        guard let artistId = artist.id, let name = artist.artistName else { return }
                         artistDrill = DetailRequest.syntheticArtistItem(
-                            artistId: artist.id,
-                            name: artist.artistName,
+                            artistId: artistId,
+                            name: name,
                             posterURL: arrPosterURL(images: artist.images, for: item, in: configStore),
                             posterRequiresAuth: item.posterRequiresAuth
                         )

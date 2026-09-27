@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Artist-level surface for Lidarr. Search results, the post-add navigation
 /// and the chat library cards all carry an ARTIST id (Lidarr's addable entity
@@ -14,8 +15,8 @@ struct LidarrArtistView: View {
 
     @EnvironmentObject private var configStore: ConfigStore
 
-    @State private var artist: LidarrArtistDetail?
-    @State private var albums: [LidarrAlbumListRecord] = []
+    @State private var artist: ArrArtist?
+    @State private var albums: [ArrAlbum] = []
     @State private var loading = true
     @State private var loadError: String?
     @State private var enlargedPoster: URL?
@@ -288,7 +289,7 @@ struct LidarrArtistView: View {
     /// then EPs / singles, everything else (Broadcast, Other, …) after.
     /// Types are server-side enum values ("Album", "EP", "Single"), shown
     /// verbatim as section headers.
-    private var albumTypeGroups: [(type: String, albums: [LidarrAlbumListRecord])] {
+    private var albumTypeGroups: [(type: String, albums: [ArrAlbum])] {
         let grouped = Dictionary(grouping: albums) { $0.albumType ?? "Other" }
         let preferred = ["Album", "EP", "Single"]
         let rest = grouped.keys
@@ -341,7 +342,7 @@ struct LidarrArtistView: View {
     /// below) plus the queue view's collapse affordance (rotating chevron,
     /// whole row tappable, count in the tertiary gutter).
     private func sectionHeader(
-        for group: (type: String, albums: [LidarrAlbumListRecord]), isFirst: Bool
+        for group: (type: String, albums: [ArrAlbum]), isFirst: Bool
     ) -> some View {
         let collapsed = collapsedTypes.contains(group.type)
         return HStack(spacing: 6) {
@@ -384,7 +385,7 @@ struct LidarrArtistView: View {
     /// One album row — the shared `PosterMetadataRow` chrome (same component
     /// as search results and Upcoming rows), so spacing, hover and the
     /// drill-in chevron can't drift from the rest of the app.
-    private func albumRow(_ album: LidarrAlbumListRecord) -> some View {
+    private func albumRow(_ album: ArrAlbum) -> some View {
         let (cover, coverAuth) = album.images?.posterURL(
             baseURL: configStore.lidarr.baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
         let trackCount = album.statistics?.totalTrackCount ?? album.statistics?.trackCount ?? 0
@@ -410,9 +411,10 @@ struct LidarrArtistView: View {
             title: album.title,
             metadataSegments: segments,
             onTap: {
+                guard let id = album.id else { return }
                 albumDetail = DetailRequest.syntheticItem(
                     source: .lidarr,
-                    entityId: album.id,
+                    entityId: id,
                     title: album.title,
                     posterURL: cover,
                     posterRequiresAuth: coverAuth
@@ -432,7 +434,7 @@ struct LidarrArtistView: View {
         }
     }
 
-    private func albumYear(_ album: LidarrAlbumListRecord) -> String? {
+    private func albumYear(_ album: ArrAlbum) -> String? {
         guard let dateStr = album.releaseDate, let date = parseArrDate(dateStr) else { return nil }
         return CachedDateFormatters.format("yyyy").string(from: date)
     }

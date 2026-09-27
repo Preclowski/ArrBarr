@@ -50,7 +50,7 @@ struct MonitoredDecodingTests {
         let json = """
         {"id": 301, "title": "Test Album", "monitored": true}
         """
-        let album = try JSONDecoder().decode(LidarrAlbumDetail.self, from: Data(json.utf8))
+        let album = try JSONDecoder().decode(ArrAlbum.self, from: Data(json.utf8))
         #expect(album.monitored == true)
     }
 
@@ -64,7 +64,7 @@ struct MonitoredDecodingTests {
         let series = try JSONDecoder().decode(
             ArrSeries.self, from: Data(#"{"id": 2, "title": "S"}"#.utf8))
         let album = try JSONDecoder().decode(
-            LidarrAlbumDetail.self, from: Data(#"{"id": 3, "title": "A"}"#.utf8))
+            ArrAlbum.self, from: Data(#"{"id": 3, "title": "A"}"#.utf8))
         let episode = try JSONDecoder().decode(
             ArrEpisode.self, from: Data(#"{"id": 4}"#.utf8))
         #expect(movie.monitored == nil)

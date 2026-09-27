@@ -2,7 +2,7 @@ import Foundation
 import MediaKit
 
 /// One album as the chat renders it. A slim view-shape rather than the raw
-/// `LidarrAlbumListRecord`: the rich payload needs `Equatable` (the whole
+/// `ArrAlbum`: the rich payload needs `Equatable` (the whole
 /// message stream diffs on it) and only wants the handful of fields a card
 /// shows — everything else is one tap away in the album detail.
 nonisolated public struct ChatAlbum: Sendable, Equatable, Identifiable {
