@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// What ArrBarr's settings and tools ask of a media server (the index reads
 /// through `MediaServerFacade` directly). Six calls, all of them either reads or

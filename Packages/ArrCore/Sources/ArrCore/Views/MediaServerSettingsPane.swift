@@ -1,3 +1,4 @@
+import MediaKit
 import SwiftUI
 
 /// Settings → Media server.
@@ -230,9 +231,9 @@ struct MediaServerSettingsPane: View {
             }
         } label: {
             Label {
-                Text(verbatim: library.name)
+                Text(verbatim: library.displayName)
             } icon: {
-                Image(systemName: library.kind.symbol)
+                Image(systemName: library.symbol)
                     .foregroundStyle(.secondary)
             }
         }

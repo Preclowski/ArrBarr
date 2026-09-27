@@ -47,29 +47,6 @@ nonisolated public struct MediaServerEntry: Sendable, Equatable {
     }
 }
 
-/// An in-progress playback on the server.
-nonisolated public struct MediaServerSession: Sendable, Equatable {
-    public let title: String
-    /// "Movie" / series+episode line, already assembled for display.
-    public let subtitle: String?
-    public let user: String?
-    public let device: String?
-    /// Whether the server is transcoding rather than direct-playing.
-    public let isTranscoding: Bool
-    /// 0…1, nil when the server didn't report a position.
-    public let progress: Double?
-
-    public init(title: String, subtitle: String?, user: String?, device: String?,
-                isTranscoding: Bool, progress: Double?) {
-        self.title = title
-        self.subtitle = subtitle
-        self.user = user
-        self.device = device
-        self.isTranscoding = isTranscoding
-        self.progress = progress
-    }
-}
-
 /// One finished play, newest first when returned in a list.
 nonisolated public struct MediaServerWatch: Sendable, Equatable {
     public let title: String
@@ -93,38 +70,6 @@ nonisolated public struct MediaServerWatch: Sendable, Equatable {
         self.seriesItemId = seriesItemId
         self.season = season
         self.episode = episode
-    }
-}
-
-/// One library on the server — a "section" on Plex, a "virtual folder" on
-/// Jellyfin / Emby. The unit maintenance runs on: a rescan or a purge is
-/// asked of one library, never of the whole server, so a 40 000-track music
-/// section isn't rescanned because a movie just finished importing.
-nonisolated public struct MediaServerLibrary: Identifiable, Equatable, Sendable {
-    public enum Kind: Sendable {
-        case movies, series, music, other
-
-        /// The glyph a Settings row wears for this library.
-        public var symbol: String {
-            switch self {
-            case .movies: return "film"
-            case .series: return "tv"
-            case .music: return "music.note"
-            case .other: return "folder"
-            }
-        }
-    }
-
-    /// The server's own key for the library — Plex's section key, Jellyfin's
-    /// folder item id. Opaque; only ever handed back to the same server.
-    public let id: String
-    public let name: String
-    public let kind: Kind
-
-    public init(id: String, name: String, kind: Kind) {
-        self.id = id
-        self.name = name
-        self.kind = kind
     }
 }
 
@@ -160,4 +105,25 @@ nonisolated public enum MediaServerError: LocalizedError {
             return String(localized: "Couldn't work out which user to read play state for.", bundle: .module)
         }
     }
+}
+
+nonisolated public extension MediaServerLibrary {
+    /// The server's title, or its key when it has none.
+    var displayName: String { title.isEmpty ? key : title }
+    /// The glyph a Settings row wears for this library.
+    var symbol: String {
+        switch kind {
+        case .movie: "film"
+        case .series: "tv"
+        case .artist, .album, .track: "music.note"
+        default: "folder"
+        }
+    }
+}
+
+nonisolated public extension MediaServerSession {
+    /// The show for an episode, the film otherwise.
+    var headline: String { parentTitle ?? title }
+    /// The episode's own title under its show; nil for a film.
+    var episodeLine: String? { parentTitle == nil ? nil : title }
 }

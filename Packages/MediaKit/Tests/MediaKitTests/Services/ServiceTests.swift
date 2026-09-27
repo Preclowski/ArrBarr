@@ -84,7 +84,7 @@ import Testing
         #expect(libraries.count > 0)
         let index = try await step("index") { try await kit.store.read(plex.libraryIndex(section: libraries[0].key)).value }
         #expect(index.count > 0 && index.contains { !$0.ids.isEmpty })
-        let sessions = try await step("sessions") { try plex.decodeSessions(try await kit.pipeline.send(plex.sessionsPlan())) }
+        let sessions = try await step("sessions") { try await kit.store.read(plex.sessions()).value }
         #expect(sessions.count >= 0)
         let history = try await step("history") { try await kit.store.read(plex.watchHistory()).value }
         #expect(history.count > 0)

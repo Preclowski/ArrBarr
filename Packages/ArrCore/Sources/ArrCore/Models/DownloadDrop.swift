@@ -93,7 +93,7 @@ nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
 /// import work. The category is the whole point: drop a file into the client
 /// under `tv-sonarr` and Sonarr picks it up on its next scan; drop it in with no
 /// category and it sits there orphaned.
-nonisolated public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
+nonisolated public struct ArrDropClient: Identifiable, Sendable, Hashable {
     public let id: Int
     public let name: String
     /// The arr's implementation name — "QBittorrent", "Sabnzbd", … Mapped to our
@@ -124,7 +124,7 @@ nonisolated public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
 nonisolated public struct DownloadDestination: Identifiable, Sendable, Hashable {
     public var id: String { "\(arr.rawValue)-\(client.id)" }
     public let arr: ServiceKind
-    public let client: ArrDownloadClient
+    public let client: ArrDropClient
     /// The locally configured client we send through — same box the arr points
     /// at, but with the credentials the user gave *us*.
     public let serviceKind: ServiceKind

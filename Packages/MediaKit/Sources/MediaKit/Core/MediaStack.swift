@@ -150,7 +150,7 @@ public final class MediaStack: Sendable {
         return LiveStream(id: .sessions, instances: [instance], policy: .sessions, pipeline: pipeline, database: database, clock: configuration.clock,
                           telemetry: configuration.telemetry, log: configuration.log, elementID: \.itemID, fetch: { instance, _, pipeline in
             guard let service = kit.mediaServer(instance) else { return [] }
-            return try service.decodeSessions(try await pipeline.send(service.sessionsPlan()))
+            return try service.decodeSessions(try await pipeline.send(service.sessionsPlan()).body)
         })
     }
 

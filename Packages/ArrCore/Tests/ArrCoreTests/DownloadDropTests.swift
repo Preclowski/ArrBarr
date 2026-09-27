@@ -83,8 +83,8 @@ struct DownloadDropSuite {
 
         @Test("Arr implementations map onto the clients we can actually reach")
         func implementationMapping() {
-            func client(_ implementation: String) -> ArrDownloadClient {
-                ArrDownloadClient(id: 1, name: "c", implementation: implementation, kind: .torrent, category: nil)
+            func client(_ implementation: String) -> ArrDropClient {
+                ArrDropClient(id: 1, name: "c", implementation: implementation, kind: .torrent, category: nil)
             }
             #expect(client("QBittorrent").serviceKind == .qbittorrent)
             #expect(client("qbittorrent").serviceKind == .qbittorrent)
@@ -107,7 +107,7 @@ struct DownloadDropSuite {
 
     @Suite("Arr download clients")
     struct ArrDownloadClientTests {
-        private func clients(_ json: String) async throws -> [ArrDownloadClient] {
+        private func clients(_ json: String) async throws -> [ArrDropClient] {
             dropReply.json = json
             defer { dropReply.json = nil }
             let client = StubArrClient(config: config())

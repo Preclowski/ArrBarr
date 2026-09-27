@@ -80,11 +80,17 @@ public struct MediaServerService: Sendable {
     /// The live pump; never a store row.
     public func sessionsPlan() -> RequestPlan { plan("nowPlaying", path: isPlex ? "/status/sessions" : "/Sessions", priority: .background) }
 
-    public func decodeSessions(_ response: HTTPResponse) throws -> [MediaServerSession] {
+    /// What is playing now: volatile, so a burst of reads within seconds shares one request.
+    public func sessions() -> Resource<[MediaServerSession]> {
+        let service = self
+        return Resource(plan: sessionsPlan(), tags: [tag(.sessions)], freshness: .volatile) { try service.decodeSessions($0) }
+    }
+
+    public func decodeSessions(_ body: Data) throws -> [MediaServerSession] {
         let op = OperationID(instance.kind, "nowPlaying")
         do {
             if isPlex {
-                return (try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: response.body).MediaContainer.Metadata ?? []).compactMap { m in
+                return (try WireCodec.decoder.decode(PlexContainer<PlexMetadata>.self, from: body).MediaContainer.Metadata ?? []).compactMap { m in
                     guard let key = m.ratingKey else { return nil }
                     let progress = (m.viewOffset.map(Double.init) ?? 0) / max(Double(m.duration ?? 0), 1)
                     let transcoding = m.TranscodeSession?["videoDecision"]?.stringValue == "transcode" || m.TranscodeSession?["audioDecision"]?.stringValue == "transcode"
@@ -93,7 +99,7 @@ public struct MediaServerService: Sendable {
                                               device: m.Player?["title"]?.stringValue ?? m.Player?["product"]?.stringValue, isTranscoding: transcoding)
                 }
             }
-            return try WireCodec.decoder.decode([JellyfinSession].self, from: response.body).compactMap { s in
+            return try WireCodec.decoder.decode([JellyfinSession].self, from: body).compactMap { s in
                 guard let item = s.NowPlayingItem else { return nil }
                 let progress = Double(s.PlayState?.PositionTicks ?? 0) / max(Double(item.RunTimeTicks ?? 0), 1)
                 let transcoding = s.TranscodingInfo.map { $0.IsVideoDirect != true || $0.IsAudioDirect != true } ?? false

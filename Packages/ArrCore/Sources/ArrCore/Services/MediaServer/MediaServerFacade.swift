@@ -56,16 +56,9 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         return (entries, fetchedAt)
     }
 
-    func libraries() async throws -> [ArrCore.MediaServerLibrary] {
+    func libraries() async throws -> [MediaServerLibrary] {
         let (gateway, service) = try await context()
-        return try await gateway.store.read(service.libraries()).value.map { library in
-            let kind: ArrCore.MediaServerLibrary.Kind = switch library.kind {
-            case .movie: .movies
-            case .series: .series
-            default: .other
-            }
-            return ArrCore.MediaServerLibrary(id: library.key, name: library.title.isEmpty ? library.key : library.title, kind: kind)
-        }
+        return try await gateway.store.read(service.libraries()).value
     }
 
     func scanLibrary(id: String) async throws {
@@ -79,13 +72,9 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         _ = try await gateway.store.run(service.emptyTrash(section: libraryId))
     }
 
-    func nowPlaying() async throws -> [ArrCore.MediaServerSession] {
+    func nowPlaying() async throws -> [MediaServerSession] {
         let (gateway, service) = try await context()
-        let sessions = try service.decodeSessions(try await gateway.kit.pipeline.send(service.sessionsPlan()))
-        return sessions.map { s in
-            ArrCore.MediaServerSession(title: s.parentTitle ?? s.title, subtitle: s.parentTitle == nil ? nil : s.title, user: s.user,
-                                       device: s.device, isTranscoding: s.isTranscoding, progress: s.progress)
-        }
+        return try await gateway.store.read(service.sessions()).value
     }
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch] {

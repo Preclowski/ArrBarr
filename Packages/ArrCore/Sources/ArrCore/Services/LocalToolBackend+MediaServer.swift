@@ -75,8 +75,8 @@ extension LocalToolBackend {
         }
 
         let lines = sessions.map { session -> String in
-            var line = session.title
-            if let subtitle = session.subtitle { line += " — \(subtitle)" }
+            var line = session.headline
+            if let episode = session.episodeLine { line += " — \(episode)" }
             if let user = session.user { line += ", \(user)" }
             if let device = session.device { line += " on \(device)" }
             line += session.isTranscoding ? ", transcoding" : ", direct play"

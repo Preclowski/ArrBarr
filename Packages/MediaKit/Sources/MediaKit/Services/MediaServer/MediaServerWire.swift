@@ -18,7 +18,8 @@ public struct MediaServerIndexEntry: Sendable, Hashable, Codable {
     }
 }
 
-public struct MediaServerLibrary: Sendable, Hashable, Codable {
+public struct MediaServerLibrary: Sendable, Hashable, Codable, Identifiable {
+    public var id: String { key }
     public let key: String
     public let title: String
     public let kind: MediaKind?

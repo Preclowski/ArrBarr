@@ -41,7 +41,7 @@ public actor DownloadDropService {
                 dropLog.debug("\(arr.rawValue, privacy: .public): not configured")
                 continue
             }
-            let clients: [ArrDownloadClient]
+            let clients: [ArrDropClient]
             do {
                 clients = try await Self.downloadClients(arr: arr, config: config)
             } catch {
@@ -120,7 +120,7 @@ public actor DownloadDropService {
         }
     }
 
-    nonisolated private static func downloadClients(arr: ServiceKind, config: ServiceConfig) async throws -> [ArrDownloadClient] {
+    nonisolated private static func downloadClients(arr: ServiceKind, config: ServiceConfig) async throws -> [ArrDropClient] {
         switch arr {
         case .sonarr:   return try await SonarrClient(config: config).fetchDownloadClients()
         case .radarr:   return try await RadarrClient(config: config).fetchDownloadClients()
