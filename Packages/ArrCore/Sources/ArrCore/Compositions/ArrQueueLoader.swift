@@ -8,7 +8,7 @@ enum ArrQueueLoader {
         let service = service ?? gateway.servarr(source)
         guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
         let store = gateway.store
-        let records = try await store.read(service.queue(), policy: .mustRevalidate).value.records
+        let records = try await queueRecords(source: source, gateway: gateway, service: service)
         let entityIDs = Array(Set(records.compactMap { ArrCompositions.entityID(of: $0, source: source) }.filter { $0 > 0 }))
         async let metaTask = entityMeta(service: service, source: source, ids: entityIDs, store: store, baseURL: baseURL)
         async let filesTask = store.batch(service.files, keys: entityIDs, priority: .background)
@@ -32,6 +32,18 @@ enum ArrQueueLoader {
             let seasonPoster = (r.downloadId.flatMap { packs[$0] }).flatMap { MediaServerIndex.shared.seasonPosterURL(for: keys(r), season: $0) }
             return ArrCompositions.queueItem(r, source: source, baseURL: baseURL, files: files, meta: meta, seasonPoster: seasonPoster)
         }
+    }
+
+    /// The saved instance reads through its live stream; a Settings draft (another ordinal) straight from the store.
+    private static func queueRecords(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService) async throws -> [ArrQueueRecord] {
+        guard service.instance == source.instanceID else {
+            return try await gateway.store.read(service.queue(), policy: .mustRevalidate).value.records
+        }
+        let stream = gateway.queueStream(source)
+        await stream.refreshNow()
+        let value = stream.last()
+        if let error = value?.failures[service.instance] { throw error }
+        return value?.slices[service.instance]?.elements ?? []
     }
 
     private static func entityMeta(service: ServarrService, source: QueueItem.Source, ids: [Int], store: ResourceStore, baseURL: String) async -> [Int: ArrCompositions.EntityMeta] {

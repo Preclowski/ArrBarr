@@ -47,6 +47,8 @@ public final class ServiceGateway {
     private let adHocServers = OSAllocatedUnfairLock<[MediaServerConfig]>(initialState: [])
     private let adHocTMDBKeys = OSAllocatedUnfairLock<[String]>(initialState: [])
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
+    /// Live streams belong to the stack that made them: a demo rebuild swaps the stack and so starts fresh ones.
+    private let streams = OSAllocatedUnfairLock<LiveStreams>(initialState: LiveStreams())
     private static let log = Logger(category: "Gateway")
 
     public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive, transport: (any Transport)? = nil) {
@@ -295,6 +297,30 @@ public final class ServiceGateway {
     }
 
     public nonisolated func servarr(_ source: QueueItem.Source) -> ServarrService { kit.servarr(source.instanceID)! }
+
+    /// One queue stream per arr, on its saved instance.
+    public nonisolated func queueStream(_ source: QueueItem.Source) -> LiveStream<ArrQueueRecord> {
+        let kit = self.kit
+        return streams.withLock { streams in
+            streams.adopt(kit)
+            if let stream = streams.queue[source] { return stream }
+            let stream = kit.liveQueue(instances: [source.instanceID])
+            streams.queue[source] = stream
+            return stream
+        }
+    }
+
+    /// The download-client progress stream over exactly these instances.
+    public nonisolated func progressStream(instances: [InstanceID]) -> LiveStream<DownloadTask> {
+        let kit = self.kit
+        return streams.withLock { streams in
+            streams.adopt(kit)
+            if let progress = streams.progress, progress.instances == instances { return progress.stream }
+            let stream = kit.liveProgress(instances: instances)
+            streams.progress = (instances, stream)
+            return stream
+        }
+    }
     public nonisolated func download(_ kind: ServiceKind) -> (any DownloadService)? { kit.download(kind.instanceID) }
     public var mediaServer: MediaServerService? {
         guard configStore.mediaServer.isConfigured else { return nil }
@@ -481,5 +507,16 @@ private struct ConfigCredentialProvider: CredentialProvider {
                 : "draft"
             return Credentials(baseURL: url, material: demo ? .apiKey("demo") : material, generation: generation)
         }
+    }
+}
+
+private struct LiveStreams {
+    var kit: ObjectIdentifier?
+    var queue: [QueueItem.Source: LiveStream<ArrQueueRecord>] = [:]
+    var progress: (instances: [InstanceID], stream: LiveStream<DownloadTask>)?
+
+    mutating func adopt(_ stack: MediaStack) {
+        guard kit != ObjectIdentifier(stack) else { return }
+        self = LiveStreams(kit: ObjectIdentifier(stack))
     }
 }

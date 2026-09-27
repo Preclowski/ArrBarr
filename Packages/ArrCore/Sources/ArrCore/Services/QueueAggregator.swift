@@ -43,9 +43,6 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
 
     private let configStore: ConfigStore
     private let gateway: ServiceGateway
-    private let progressLock = NSLock()
-    private var progress: LiveStream<DownloadTask>?
-    private var progressInstances: [InstanceID] = []
     private static let logger = Logger(category: "QueueFetch")
 
     @MainActor
@@ -112,20 +109,12 @@ public final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             MonitoredService.downloadClientKinds.filter { MonitoredService.arr($0).isConfigured(in: configStore) }.map(\.instanceID)
         }
         guard !instances.isEmpty else { return [:] }
-        let stream = await liveProgress(instances: instances)
+        let stream = gateway.progressStream(instances: instances)
         await stream.setScope(.ids(ids))
         await stream.refreshNow(priority: .interactive)
         var out: [String: DownloadTask] = [:]
         for task in stream.last()?.elements ?? [] { out[task.id] = task }
         return out
-    }
-
-    private func liveProgress(instances: [InstanceID]) async -> LiveStream<DownloadTask> {
-        let existing: LiveStream<DownloadTask>? = progressLock.withLock { progressInstances == instances ? progress : nil }
-        if let existing { return existing }
-        let stream = gateway.kit.liveProgress(instances: instances)
-        progressLock.withLock { progress = stream; progressInstances = instances }
-        return stream
     }
 
     nonisolated static func overlay(_ items: [QueueItem], with tasks: [String: DownloadTask]) -> [QueueItem] {
