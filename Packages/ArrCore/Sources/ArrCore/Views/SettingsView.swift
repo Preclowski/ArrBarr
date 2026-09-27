@@ -1240,7 +1240,7 @@ public struct SettingsView: View {
     }
 
     /// The Upcoming banner: one switch, since its window is hard-locked to
-    /// 7 days (see `ConfigStore.tonightHoursOptions`).
+    /// 7 days.
     private var upcomingSection: some View {
         Section {
             Toggle(isOn: $configStore.showTonight) {

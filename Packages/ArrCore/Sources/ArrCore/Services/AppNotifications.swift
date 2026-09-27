@@ -27,10 +27,9 @@ nonisolated public enum AppMessages {
     /// The `discover_in_quiz` tool or the resume card: open the quiz with these picks (`append` extends a live deck).
     public struct OpenDiscoverQuiz: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
-        public let mood: String
         public let items: [DiscoverItem]
         public let append: Bool
-        public init(mood: String, items: [DiscoverItem], append: Bool) { self.mood = mood; self.items = items; self.append = append }
+        public init(items: [DiscoverItem], append: Bool) { self.items = items; self.append = append }
     }
     /// A person card in chat or an `arrbarr://person/…` link: push `PersonView`.
     public struct OpenPerson: NotificationCenter.AsyncMessage {

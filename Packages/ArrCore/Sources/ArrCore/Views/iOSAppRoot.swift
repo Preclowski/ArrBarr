@@ -166,7 +166,7 @@ public struct iOSAppRoot: View {
                     chatHolder.vm.cancelTurn()
                     discoverViewModel.endLoading()
                 },
-                onRequestMore: { _, _, _ in requestMoreQuizPicks() }
+                onRequestMore: requestMoreQuizPicks
             )
             .environmentObject(configStore)
             .sheet(item: $quizAddResult) { result in

@@ -758,3 +758,10 @@ struct QueueViewModelCalendarInvalidationTests {
         #expect(fake.upcomingCallCount == before + 1)
     }
 }
+
+private extension ConnectionHealthState {
+    var isDown: Bool {
+        if case .down = self { return true }
+        return false
+    }
+}

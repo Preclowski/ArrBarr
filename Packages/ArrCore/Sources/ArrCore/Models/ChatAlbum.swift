@@ -10,8 +10,6 @@ nonisolated public struct ChatAlbum: Sendable, Equatable, Identifiable {
     public let id: Int
     public let title: String
     public let year: Int?
-    /// "Album" / "Single" / "EP" / "Live" / … as Lidarr reports it.
-    public let albumType: String?
     public let monitored: Bool
     public let trackFileCount: Int
     public let trackCount: Int
@@ -19,12 +17,11 @@ nonisolated public struct ChatAlbum: Sendable, Equatable, Identifiable {
     /// the library cards use, so authenticated covers work the same way).
     public let images: [ArrImage]
 
-    public init(id: Int, title: String, year: Int?, albumType: String?,
+    public init(id: Int, title: String, year: Int?,
                 monitored: Bool, trackFileCount: Int, trackCount: Int, images: [ArrImage]) {
         self.id = id
         self.title = title
         self.year = year
-        self.albumType = albumType
         self.monitored = monitored
         self.trackFileCount = trackFileCount
         self.trackCount = trackCount

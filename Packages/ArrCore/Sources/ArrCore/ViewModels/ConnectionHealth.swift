@@ -42,20 +42,13 @@ public final class ConnectionHealth {
     public func record(_ service: MonitoredService, success: Bool, detail: String?, message: String?) {
         if success {
             consecutiveFailures[service] = 0
-            snapshots[service] = ServiceHealthSnapshot(state: .ok(detail: detail), lastChecked: Date())
+            snapshots[service] = ServiceHealthSnapshot(state: .ok(detail: detail))
             return
         }
         let strikes = (consecutiveFailures[service] ?? 0) + 1
         consecutiveFailures[service] = strikes
         if strikes >= Self.downThreshold {
-            snapshots[service] = ServiceHealthSnapshot(
-                state: .down(message: message ?? Self.defaultDownMessage),
-                lastChecked: Date()
-            )
-        } else {
-            // Keep the prior visible state; just stamp the check time.
-            let prior = snapshots[service]?.state ?? .unknown
-            snapshots[service] = ServiceHealthSnapshot(state: prior, lastChecked: Date())
+            snapshots[service] = ServiceHealthSnapshot(state: .down(message: message ?? Self.defaultDownMessage))
         }
     }
 
@@ -63,7 +56,7 @@ public final class ConnectionHealth {
     /// successful manual "Test Connection".
     public func forceOK(_ service: MonitoredService, detail: String?) {
         consecutiveFailures[service] = 0
-        snapshots[service] = ServiceHealthSnapshot(state: .ok(detail: detail), lastChecked: Date())
+        snapshots[service] = ServiceHealthSnapshot(state: .ok(detail: detail))
     }
 
     /// Pin a service `.down` immediately, bypassing the debounce. Used by a
@@ -71,10 +64,7 @@ public final class ConnectionHealth {
     /// proof the client is unreachable / misconfigured).
     public func forceDown(_ service: MonitoredService, message: String) {
         consecutiveFailures[service] = Self.downThreshold
-        snapshots[service] = ServiceHealthSnapshot(
-            state: .down(message: message.isEmpty ? Self.defaultDownMessage : message),
-            lastChecked: Date()
-        )
+        snapshots[service] = ServiceHealthSnapshot(state: .down(message: message.isEmpty ? Self.defaultDownMessage : message))
     }
 
     /// A service that's no longer configured → drop back to grey and clear

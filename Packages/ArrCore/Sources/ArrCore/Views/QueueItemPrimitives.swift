@@ -20,26 +20,9 @@ import SwiftUI
 /// the file isn't new to the library.
 public struct MediaBadgeCluster: View {
     let isUpgrade: Bool
-    var size: Size
 
-    public enum Size {
-        /// Compact row cells — 8pt font, 4pt horizontal padding,
-        /// tinted capsule background. Default for queue rows.
-        case compact
-        /// Tooltip header / detail title — 9-10pt font, 5-6pt padding,
-        /// tinted capsule.
-        case medium
-        /// Quietest variant — uppercase tracked label, no background.
-        /// For surfaces that already carry a lot of colour (e.g. the
-        /// season episode list, where the row already paints the
-        /// status tint across the background) and would read as noisy
-        /// with another tinted capsule on top.
-        case subtle
-    }
-
-    public init(isUpgrade: Bool, size: Size = .compact) {
+    public init(isUpgrade: Bool) {
         self.isUpgrade = isUpgrade
-        self.size = size
     }
 
     public var body: some View {
@@ -62,11 +45,9 @@ public struct MediaBadgeCluster: View {
 /// so it reads as metadata, not as a status indicator.
 public struct DownloadClientLabel: View {
     let name: String
-    var size: CGFloat
 
-    public init(name: String, size: CGFloat = 9) {
+    public init(name: String) {
         self.name = name
-        self.size = size
     }
 
     public var body: some View {
@@ -365,222 +346,6 @@ private struct BannerClampedHeightKey: PreferenceKey {
 private struct BannerFullHeightKey: PreferenceKey {
     static let defaultValue: CGFloat = 0
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-
-/// "Replacing <existing spec>" line — Apple Software Update pattern.
-/// Per-dimension suppression: only renders tokens that *differ* from
-/// the incoming file. Identical quality/size/score collapse to
-/// silence; if everything's identical, the whole line falls back to
-/// a single muted "Same spec, retagged" / "Re-downloading identical
-/// release" message. The principle: equality is silence.
-public struct ExistingFileDiffRow: View {
-    let existingQuality: String?
-    let existingSize: Int64?
-    let existingScore: Int?
-    /// Incoming file's score — used to compute the delta and to
-    /// decide whether existing score is worth showing.
-    let newScore: Int
-    /// Optional incoming-side dimensions for equality comparison.
-    /// When nil, suppression isn't applied — caller is treating the
-    /// row as a plain "OLD info" line without comparing to NEW.
-    let newQuality: String?
-    let newSize: Int64?
-    /// True when tag sets differ between new and existing — flips
-    /// the "all-identical" fallback from "re-downloading identical"
-    /// to "same spec, retagged".
-    let tagsDiffer: Bool
-
-    public init(existingQuality: String?,
-                existingSize: Int64?,
-                existingScore: Int?,
-                newScore: Int,
-                newQuality: String? = nil,
-                newSize: Int64? = nil,
-                tagsDiffer: Bool = false) {
-        self.existingQuality = existingQuality
-        self.existingSize = existingSize
-        self.existingScore = existingScore
-        self.newScore = newScore
-        self.newQuality = newQuality
-        self.newSize = newSize
-        self.tagsDiffer = tagsDiffer
-    }
-
-    public var body: some View {
-        HStack(spacing: 4) {
-            // Left-aligned now — sits directly under the NEW spec
-            // line in the card, reading as a vertical NEW→OLD column.
-            // `arrow.turn.down.right` reads as "branching down from
-            // the line above" → the OLD info is the source the NEW
-            // line came from.
-            Image(systemName: "arrow.turn.down.right")
-                .scaledFont(size: 9, weight: .semibold)
-                .foregroundStyle(.tertiary)
-                // Pure typographic scaffolding — announcing the glyph would
-                // just prefix the row with "arrow turn down right".
-                .accessibilityHidden(true)
-            content
-            Spacer(minLength: 0)
-        }
-    }
-
-    @ViewBuilder
-    private var content: some View {
-        let showQuality = shouldShow(existingQuality, newQuality)
-        let showSize = shouldShowSize
-        let showScore = shouldShowScore
-        if !showQuality && !showSize && !showScore {
-            // Everything matches — fall back to one muted phrase
-            // instead of repeating identical values on both sides.
-            Text(tagsDiffer
-                    ? String(localized: "queue.sameSpecRetagged.button", bundle: .module)
-                    : String(localized: "queue.reDownloadingIdenticalRelease.label", bundle: .module))
-                .scaledFont(size: 11)
-                .foregroundStyle(.secondary)
-        } else {
-            HStack(spacing: 4) {
-                if showQuality, let q = existingQuality, !q.isEmpty {
-                    Text(q)
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-                if showSize, let size = existingSize, size > 0 {
-                    if showQuality { SeparatorDot() }
-                    Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-                        .scaledFont(size: 11)
-                        .foregroundStyle(.secondary)
-                }
-                if showScore {
-                    if showQuality || showSize { SeparatorDot() }
-                    if let s = existingScore, s != 0 {
-                        ScoreLabel(score: s, size: 11)
-                    }
-                    if let existing = existingScore, existing != newScore {
-                        // A comparison surface, so the delta is allowed here —
-                        // and it is coloured by DIRECTION, not by its own sign.
-                        let delta = newScore - existing
-                        Text(verbatim: "(\(ScoreLabel.deltaText(delta)))")
-                            .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
-                            .foregroundStyle(ScoreLabel.deltaColor(delta))
-                    }
-                }
-            }
-        }
-    }
-
-    private func shouldShow(_ existing: String?, _ new: String?) -> Bool {
-        guard let existing, !existing.isEmpty else { return false }
-        guard let new else { return true }   // no comparator → assume divergent
-        return existing != new
-    }
-
-    /// 5% tolerance — torrent re-encodes often differ by <1% in size
-    /// while being meaningfully different files. Same-quality re-grabs
-    /// (the case this rule targets) cluster much tighter than 5%.
-    private var shouldShowSize: Bool {
-        guard let existing = existingSize, existing > 0 else { return false }
-        guard let new = newSize, new > 0 else { return true }
-        let ratio = Double(abs(existing - new)) / Double(max(existing, new))
-        return ratio > 0.05
-    }
-
-    private var shouldShowScore: Bool {
-        guard let existing = existingScore else { return false }
-        return existing != newScore
-    }
-}
-
-// MARK: -
-
-/// Chip-diff between new and existing custom-format sets. Renders
-/// added chips with a green `+` prefix, removed chips with a red `−`.
-/// Renders the removed-formats row of a CF diff: items the existing
-/// file has that the new release drops. The *added* side is encoded
-/// directly into the upstream `CustomFormatChips` strip — green chips
-/// in the new-spec row read as added without duplicating each tag
-/// across a separate "+" line (the previous design painted the same
-/// chip twice, which was the source of "if DV Boost was added why is
-/// it also in the white list?" confusion).
-///
-/// Renders nothing when nothing was removed.
-public struct CustomFormatDiff: View {
-    let newFormats: [String]
-    let existingFormats: [String]
-
-    public init(newFormats: [String], existingFormats: [String]) {
-        self.newFormats = newFormats
-        self.existingFormats = existingFormats
-    }
-
-    public var body: some View {
-        let newSet = Set(newFormats)
-        let removed = existingFormats.filter { !newSet.contains($0) }
-
-        if !removed.isEmpty {
-            HStack(spacing: 4) {
-                // The minus sign IS the semantics here — spell it out so the
-                // chips that follow aren't mistaken for formats being added.
-                Text(verbatim: "−")
-                    .scaledFont(size: 10, weight: .semibold)
-                    .foregroundStyle(.red)
-                    .accessibilityLabel(Text("Removed custom formats", bundle: .module))
-                TooltipFlowLayout(spacing: 3) {
-                    ForEach(removed, id: \.self) { TagChip(text: $0, color: .red) }
-                }
-            }
-        }
-    }
-}
-
-// MARK: -
-
-/// Fast hover tooltip — fires after ~350 ms hover, renders via
-/// `.popover` so the label floats free of parent clipping (our
-/// earlier `.overlay`-based draft got eaten by the gradient backdrop
-/// on row hover-overlays). Heavier chrome than a raw label but
-/// guaranteed visible.
-public struct ActionHoverTip: ViewModifier {
-    let text: LocalizedStringKey
-    @State private var show = false
-    @State private var hoverTask: Task<Void, Never>?
-    @State private var isHovering = false
-
-    public func body(content: Content) -> some View {
-        #if os(macOS)
-        content
-            .onHover { hovering in
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering {
-                    hoverTask = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 350_000_000)
-                        if !Task.isCancelled, isHovering { show = true }
-                    }
-                } else {
-                    show = false
-                }
-            }
-            .popover(isPresented: $show, arrowEdge: .bottom) {
-                Text(text, bundle: .module)
-                    .scaledFont(size: 11, weight: .medium)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .fixedSize()
-                    .popoverBehavior(.applicationDefined)
-            }
-        #else
-        content
-        #endif
-    }
-}
-
-public extension View {
-    /// Quick hover tooltip — fires faster than the native `.help()`
-    /// (~350 ms vs ~1 s) and is guaranteed visible (NSPopover, not
-    /// a clipped overlay).
-    func actionHoverTip(_ text: LocalizedStringKey) -> some View {
-        modifier(ActionHoverTip(text: text))
-    }
 }
 
 // MARK: -

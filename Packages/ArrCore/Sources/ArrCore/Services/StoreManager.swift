@@ -46,6 +46,7 @@ public final class StoreManager: ObservableObject {
     public init(forTesting: Bool = false) {}
 
     /// Inject the concrete backend (called once at app launch under #if APPSTORE).
+    // periphery:ignore
     public func use(_ backend: PurchaseBackend) {
         self.backend = backend
         backend.onEntitlementChange = { [weak self] entitled in

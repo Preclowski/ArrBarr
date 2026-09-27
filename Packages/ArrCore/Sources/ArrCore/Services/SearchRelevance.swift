@@ -207,12 +207,6 @@ nonisolated enum SearchRelevance {
         return m
     }
 
-    /// Combined sort key — higher is better. Tier-band integer
-    /// dominates; the modifiers break ties inside a band.
-    static func rank(_ result: SearchResult, normalizedQuery q: String) -> Double {
-        Double(score(result, normalizedQuery: q)) + modifiers(result, queryYear: nil)
-    }
-
     /// Ref-aware rank. For `.text` inputs, falls through to the
     /// string-based scoring above. For `.ref(_:)` inputs, the result
     /// either matches the ref (max score) or doesn't (zero) — there's
@@ -289,12 +283,5 @@ nonisolated enum SearchRelevance {
                 .sorted { $0.key > $1.key }
                 .map(\.result)
         }
-    }
-
-    /// String-input convenience kept for legacy call sites — wraps the
-    /// query in `.text` and delegates. New code should prefer the
-    /// `input:` variant so refs are recognised end-to-end.
-    static func sortedByRelevance(_ results: [SearchResult], query: String) -> [SearchResult] {
-        sortedByRelevance(results, input: .text(query))
     }
 }

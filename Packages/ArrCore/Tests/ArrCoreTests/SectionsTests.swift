@@ -185,9 +185,8 @@ struct ComputeNeedsYouTests {
         let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: true)
         #expect(result.count == 1)
         #expect(result.first?.source == .radarr)
-        // Title IS the message (no app-name repeat); severity drives the icon.
+        // Title IS the message (no app-name repeat).
         #expect(result.first?.title == "Indexer X is down")
-        #expect(result.first?.severity == .warning)
     }
 
     @Test("Error-level health records ARE surfaced even when showWarnings is off")
@@ -204,7 +203,6 @@ struct ComputeNeedsYouTests {
         #expect(result.first?.item == nil)
         #expect(result.first?.source == .radarr)
         #expect(result.first?.title == "Download clients unavailable")
-        #expect(result.first?.severity == .error)
     }
 
     @Test("A per-arr fetch error is surfaced as an arr issue so an empty queue is explained")
@@ -220,7 +218,6 @@ struct ComputeNeedsYouTests {
         #expect(result.first?.item == nil)
         #expect(result.first?.source == .radarr)
         #expect(result.first?.title == "HTTP 500")
-        #expect(result.first?.severity == .error)
     }
 
     @Test("An unreachable source's fetch error is NOT surfaced — it's the calm offline case")
@@ -250,7 +247,7 @@ struct ComputeNeedsYouTests {
         #expect(result.first?.title == "HTTP 401")
     }
 
-    @Test("Notice vs error carry different severities (icon), not different labels")
+    @Test("Notice and error records are separate entries, not different labels")
     @MainActor
     func noticeVsErrorSeverity() {
         let health = HealthResult(
@@ -262,10 +259,8 @@ struct ComputeNeedsYouTests {
             lidarr: []
         )
         let result = QueueViewModel.computeNeedsYou(queues: [:], errors: [:], health: health, showWarnings: true)
-        let problem = result.first { $0.title == "Client down" }
-        let notice = result.first { $0.title == "New update available" }
-        #expect(problem?.severity == .error)
-        #expect(notice?.severity == .notice)
+        #expect(result.contains { $0.title == "Client down" })
+        #expect(result.contains { $0.title == "New update available" })
         // No app-name repeated as a title, no severity grouping → both are
         // their own Radarr-tagged entries.
         #expect(result.count == 2)
@@ -319,7 +314,7 @@ struct ComputeNeedsYouTests {
         #expect(result.count == 2)
         let warning = result.first { $0.id == "needsyou.warn" }
         let failed = result.first { $0.id == "needsyou.fail" }
-        #expect(warning?.subtitle == "queue.manualImportRequired.button")
+        #expect(warning?.subtitle == String(localized: "queue.manualImportRequired.button", bundle: .module))
         #expect(failed?.subtitle == QueueItem.Status.failed.displayName)
     }
 

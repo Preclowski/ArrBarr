@@ -26,7 +26,6 @@ nonisolated public enum WelcomeContent {
 
     struct WelcomePage: Identifiable, Equatable {
         let id: String
-        let symbol: String
         let titleKey: String
         let bodyKey: String
         /// Optional secondary action button that appears under the body.
@@ -55,14 +54,12 @@ nonisolated public enum WelcomeContent {
 
         init(
             id: String,
-            symbol: String,
             titleKey: String,
             bodyKey: String,
             cta: CTA? = nil,
             illustrationPosition: IllustrationPosition = .above
         ) {
             self.id = id
-            self.symbol = symbol
             self.titleKey = titleKey
             self.bodyKey = bodyKey
             self.cta = cta
@@ -75,14 +72,12 @@ nonisolated public enum WelcomeContent {
     static let firstRunPages: [WelcomePage] = [
         WelcomePage(
             id: "menubar",
-            symbol: "menubar.dock.rectangle",
             titleKey: "Lives in your menu bar",
             bodyKey: "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.",
             illustrationPosition: .below
         ),
         WelcomePage(
             id: "connect",
-            symbol: "server.rack",
             titleKey: "Connect Radarr, Sonarr & Lidarr",
             bodyKey: "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
             cta: WelcomePage.CTA(
@@ -93,21 +88,18 @@ nonisolated public enum WelcomeContent {
         ),
         WelcomePage(
             id: "tonight",
-            symbol: "moon.stars.fill",
             titleKey: "Tonight, Needs you, and notifications",
             bodyKey: "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.",
             illustrationPosition: .below
         ),
         WelcomePage(
             id: "customize",
-            symbol: "slider.horizontal.3",
             titleKey: "Make it yours",
             bodyKey: "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.",
             illustrationPosition: .below
         ),
         WelcomePage(
             id: "star",
-            symbol: "star.fill",
             titleKey: "Enjoying ArrBarr?",
             bodyKey: "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!",
             cta: WelcomePage.CTA(
@@ -126,7 +118,6 @@ nonisolated public enum WelcomeContent {
         "0.9.0": [
             WelcomePage(
                 id: "welcome",
-                symbol: "sparkles",
                 titleKey: "Welcome screen",
                 bodyKey: "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General."
             ),
@@ -134,19 +125,16 @@ nonisolated public enum WelcomeContent {
         "0.10.0": [
             WelcomePage(
                 id: "ai-chat",
-                symbol: "bubble.left.and.text.bubble.right",
                 titleKey: "Chat with your arrs",
                 bodyKey: "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI."
             ),
             WelcomePage(
                 id: "add-shortcut",
-                symbol: "plus.circle",
                 titleKey: "Quicker way to add",
                 bodyKey: "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon."
             ),
             WelcomePage(
                 id: "lidarr",
-                symbol: "music.note",
                 titleKey: "Lidarr support",
                 bodyKey: "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie."
             ),

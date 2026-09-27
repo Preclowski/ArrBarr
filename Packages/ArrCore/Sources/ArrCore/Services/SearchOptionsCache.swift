@@ -15,8 +15,8 @@ import Foundation
 public final class SearchOptionsCache {
     public static let shared = SearchOptionsCache()
 
-    // Nonisolated: `Entry.isFresh` and the slot helper both read it from
-    // outside the actor, and it is an immutable constant either way.
+    // Nonisolated: the slot helper reads it from outside the actor, and it
+    // is an immutable constant either way.
     public nonisolated static let ttl: TimeInterval = 15 * 60
 
     public struct Entry {
@@ -31,10 +31,6 @@ public final class SearchOptionsCache {
             self.folders = folders
             self.metadataProfiles = metadataProfiles
             self.cachedAt = cachedAt
-        }
-
-        public var isFresh: Bool {
-            Date().timeIntervalSince(cachedAt) < SearchOptionsCache.ttl
         }
     }
 

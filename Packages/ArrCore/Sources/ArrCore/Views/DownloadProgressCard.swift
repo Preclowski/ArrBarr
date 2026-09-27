@@ -76,7 +76,6 @@ public struct DownloadProgressCard: View {
         self.existingOverride = existingOverride
     }
 
-    private var progress: Double { progressOverride ?? item.progress }
     private var tint: Color { item.status.tint }
     private var effectiveExistingQuality: String? {
         existingOverride?.quality ?? item.existingQuality

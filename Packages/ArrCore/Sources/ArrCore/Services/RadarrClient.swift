@@ -16,10 +16,6 @@ nonisolated public struct RadarrClient: ArrAPIClient {
         let c = try await context()
         return try await ArrQueueLoader.upcoming(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL)
     }
-    func fetchHistory(page: Int, pageSize: Int, entityId: Int? = nil) async throws -> HistoryPage {
-        let c = try await context()
-        return try await ArrQueueLoader.history(source: source, gateway: c.gateway, service: c.service, baseURL: config.baseURL, page: page, pageSize: pageSize, entityId: entityId)
-    }
 
     func fetchMovieDetails(id: Int) async throws -> RadarrMovieDetail { try await read(RadarrMovieDetail.self) { $0.movie(id: id) } }
     func fetchMovieFile(movieId: Int) async throws -> ArrCore.ArrFile? { try await read([ArrCore.ArrFile].self) { $0.movieFiles([movieId]) }.first }

@@ -120,11 +120,6 @@ public final class SwipeSignalStore {
         return a == b
     }
 
-    public func isSuppressed(_ key: String, now: Date = Date()) -> Bool {
-        guard let signal = signals.first(where: { $0.key == key }) else { return false }
-        return isSuppressed(signal, now: now)
-    }
-
     /// Everything remembered, newest first — the future signals pane reads this.
     public var all: [SwipeSignal] { signals.reversed() }
 

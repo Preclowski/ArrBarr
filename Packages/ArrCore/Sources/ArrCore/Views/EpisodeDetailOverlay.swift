@@ -8,11 +8,6 @@ import SwiftUI
 public struct EpisodeDetailOverlay: View {
     let episode: SonarrEpisodeDetail
     let seriesTitle: String
-    /// Page title shown in the header — typically the tab the user
-    /// came from ("Kolejka", "Nadchodzące", "Czat", …). Matches
-    /// `DetailView`'s breadcrumb pattern so the user always knows
-    /// where back will take them.
-    let originLabel: LocalizedStringKey
     let posterURL: URL?
     let posterRequiresAuth: Bool
     let apiKey: String?
@@ -162,7 +157,6 @@ public struct EpisodeDetailOverlay: View {
     public init(
         episode: SonarrEpisodeDetail,
         seriesTitle: String,
-        originLabel: LocalizedStringKey = "Details",
         posterURL: URL?,
         posterRequiresAuth: Bool,
         apiKey: String?,
@@ -190,7 +184,6 @@ public struct EpisodeDetailOverlay: View {
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
-        self.originLabel = originLabel
         self.posterURL = posterURL
         self.posterRequiresAuth = posterRequiresAuth
         self.apiKey = apiKey

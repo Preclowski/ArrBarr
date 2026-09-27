@@ -358,7 +358,7 @@ private struct HistoryItemTooltip: View {
             blurred: configStore.shouldBlurPoster(for: item.source),
             fallbackSymbol: item.source.symbol,
             // Corner grammar: [context: client][status: the event].
-            contextChip: item.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) },
+            contextChip: item.downloadClient.map { AnyView(DownloadClientLabel(name: $0)) },
             statusChip: AnyView(StateChip(
                 text: AppLocalized.string(item.eventType.labelKey, locale: configStore.currentLocale),
                 color: item.eventType.tint

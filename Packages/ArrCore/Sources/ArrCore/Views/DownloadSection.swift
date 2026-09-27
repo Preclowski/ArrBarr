@@ -14,7 +14,6 @@ struct DownloadSection: View {
     var showCustomFormats: Bool = false
     var showListingBadges: Bool = false
     var listCollapsible: Bool = false
-    var listExpandedDefault: Bool = true
     /// Per-item drill-down for the multi-row variant — fires when the
     /// user taps an episode row in a season-pack download list.
     var onTapItem: ((QueueItem) -> Void)? = nil
@@ -50,7 +49,6 @@ struct DownloadSection: View {
         self.showCustomFormats = showCustomFormats
         self.showListingBadges = showListingBadges
         self.listCollapsible = listCollapsible
-        self.listExpandedDefault = listExpandedDefault
         self.onTapItem = onTapItem
         self.onPauseItem = onPauseItem
         self.onResumeItem = onResumeItem
@@ -140,64 +138,6 @@ struct DownloadSection: View {
     @ViewBuilder
     private func listingBadges(_ item: QueueItem) -> some View {
         ListingBadgesView(item: item)
-    }
-
-    @ViewBuilder
-    private func upgradeDiff(_ item: QueueItem) -> some View {
-        // VStack of two HStack rows — earlier `Grid + GridRow`
-        // implementation flattened the nested `qualityCells` HStack
-        // into per-Text columns, which made every quality / size /
-        // score / tag stack vertically across the two rows. VStack
-        // keeps each side of the NEW/OLD diff as a single horizontal
-        // run.
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                DiffTag(text: "NEW", style: .new)
-                qualityCells(
-                    quality: item.quality,
-                    size: item.sizeTotal,
-                    score: item.customFormatScore,
-                    tags: item.customFormats,
-                    baseline: item.existingCustomFormatScore
-                )
-            }
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                DiffTag(text: "OLD", style: .old)
-                qualityCells(
-                    quality: item.existingQuality,
-                    size: item.existingSize ?? 0,
-                    score: item.existingCustomFormatScore ?? 0,
-                    tags: item.existingCustomFormats
-                )
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func qualityCells(quality: String?, size: Int64, score: Int, tags: [String],
-                              baseline: Int? = nil) -> some View {
-        // Tag chips dropped from the per-row inline — they wrap
-        // unpredictably and at >4 tags overflow the diff row.
-        // CustomFormatChips + CustomFormatDiff strip rendered below
-        // the diff already shows the tag delta in a wrapping flow
-        // layout. Diff row stays compact: quality · size · score.
-        HStack(spacing: 4) {
-            if let q = quality, !q.isEmpty {
-                Text(q)
-            } else {
-                Text(verbatim: "—").foregroundStyle(.tertiary)
-            }
-            if size > 0 {
-                SeparatorDot()
-                Text(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
-            }
-            if score != 0 {
-                SeparatorDot()
-                ScoreLabel(score: score, baseline: baseline, size: 11)
-            }
-        }
-        .scaledFont(size: 11)
-        .foregroundStyle(.secondary)
     }
 
     // MARK: Multi-item

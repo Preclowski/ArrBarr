@@ -5,14 +5,12 @@ import SwiftUI
 /// that pushes one is the episode hero's series-title tap.
 public struct SeriesPushRequest: Hashable {
     public let queueItemId: String
-    public let source: QueueItem.Source
     /// Carried verbatim so the destination can render DetailView without
     /// having to refetch the QueueItem from the view model.
     public let item: QueueItem
 
     public init(item: QueueItem) {
         self.queueItemId = item.id
-        self.source = item.source
         self.item = item
     }
 
@@ -46,9 +44,6 @@ public struct EpisodeQuickDetail: View {
     let item: QueueItem
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
-    /// Breadcrumb label threaded into the series DetailView this view
-    /// pushes (so its toolbar back-target reads the same tab name).
-    var originLabel: LocalizedStringKey = "Details"
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
     /// Pops this episode push — the pusher clears the binding that presented
@@ -93,12 +88,10 @@ public struct EpisodeQuickDetail: View {
     public init(
         item: QueueItem,
         viewModel: QueueViewModel,
-        originLabel: LocalizedStringKey = "Details",
         onBack: @escaping () -> Void
     ) {
         self.item = item
         self.viewModel = viewModel
-        self.originLabel = originLabel
         self.onBack = onBack
     }
 
@@ -168,7 +161,6 @@ public struct EpisodeQuickDetail: View {
             DetailView(
                 item: req.item,
                 onBack: { seriesPush = nil },
-                originLabel: originLabel,
                 viewModel: viewModel
             )
         }

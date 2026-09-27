@@ -74,9 +74,9 @@ enum ArrQueueLoader {
         return records.compactMap { ArrCompositions.upcoming($0, source: source, baseURL: baseURL) }
     }
 
-    static func history(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String, page: Int, pageSize: Int, entityId: Int?) async throws -> HistoryPage {
+    static func history(source: QueueItem.Source, gateway: ServiceGateway, baseURL: String, page: Int, pageSize: Int, entityId: Int?) async throws -> HistoryPage {
         await gateway.ready()
-        let service = service ?? gateway.servarr(source)
+        let service = gateway.servarr(source)
         guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
         let resource = entityId.map { service.historyFor(entityID: $0, pageSize: pageSize) } ?? service.history(page: page, pageSize: pageSize)
         let result = try await gateway.store.read(resource, policy: page == 1 ? .staleWhileRevalidate : .cacheFirst).value

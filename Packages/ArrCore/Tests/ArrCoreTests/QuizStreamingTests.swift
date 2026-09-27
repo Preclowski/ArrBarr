@@ -56,12 +56,12 @@ struct QuizStreamingTests {
             genres: [], network: nil, certification: nil,
             posterURL: nil, source: .radarr, inLibraryArrId: owned ? id : nil
         )
-        return DiscoverItem(result: r, action: .addToRadarr)
+        return DiscoverItem(result: r)
     }
 
     @Test("pipeline keeps pick order across feeds and filters what the deck must not get")
     func pipeline() async {
-        let setup = QuizDeckPipeline.Setup(kind: "movie", libraryMode: "new", append: false, mood: "m",
+        let setup = QuizDeckPipeline.Setup(kind: "movie", libraryMode: "new", append: false,
                                            shown: [], suppressed: ["tmdb:4"], delivers: false)
         let pipeline = QuizDeckPipeline(setup: setup, width: 2) { [self] pick in
             guard let id = pick.tmdbId else { return nil }

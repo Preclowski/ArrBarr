@@ -73,7 +73,7 @@ struct SearchViewModelCancellationTests {
 
         let vm = SearchViewModel()
         vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
-        defer { vm.reset() }
+        defer { vm.query = "" }
 
         try await startSearch(vm, "matrix")
         // The next keystroke supersedes it. `onQueryChange` cancels the
@@ -102,7 +102,7 @@ struct SearchViewModelCancellationTests {
 
         let vm = SearchViewModel()
         vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
-        defer { vm.reset() }
+        defer { vm.query = "" }
 
         try await startSearch(vm, "matrix")
         try await Task.sleep(for: .milliseconds(200))
@@ -110,24 +110,5 @@ struct SearchViewModelCancellationTests {
         #expect(vm.errorMessage != nil)
         // And it must not be the cancellation text that used to leak through.
         #expect(vm.errorMessage?.contains("CancellationError") != true)
-    }
-
-    /// `reset()` is the explicit "leave the search" path and cancels the task
-    /// too — that cancellation must be as quiet as a keystroke's.
-    @Test("Resetting the search view does not raise an error either")
-    func resetIsSilent() async throws {
-        SearchCancelStub.state.behaviour = .hang
-        URLProtocol.registerClass(SearchCancelStub.self)
-        defer { URLProtocol.unregisterClass(SearchCancelStub.self) }
-
-        let vm = SearchViewModel()
-        vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
-
-        try await startSearch(vm, "matrix")
-        vm.reset()
-        try await Task.sleep(for: .milliseconds(400))
-
-        #expect(vm.errorMessage == nil)
-        #expect(!vm.isSearching)
     }
 }

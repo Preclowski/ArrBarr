@@ -53,13 +53,6 @@ enum TrailerProvider {
         }
     }
 
-    /// The watch page for a resolved video id. Handed to the OS rather than
-    /// played in-app: pulling the stream out of YouTube would break its terms,
-    /// and an embedded IFrame player is a bigger build than the chip needs.
-    static func watchURL(key: String) -> URL? {
-        URL(string: "https://www.youtube.com/watch?v=\(key)")
-    }
-
     // MARK: - Fetch
 
     private static func fetch(configStore: ConfigStore,

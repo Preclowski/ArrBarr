@@ -2,48 +2,6 @@
   "sourceLanguage": "en",
   "version": "1.1",
   "strings": {
-    "%1$dd %2$@": {
-      "comment": "ETA longer than a day, e.g. \"1d 05:30\". %1$d is the whole-day count immediately followed by the localized day-unit abbreviation; %2$@ is hh:mm.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dT %2$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dj %2$@"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$dd %2$@"
-          }
-        }
-      }
-    },
     "%@ has no trash to empty.": {
       "extractionState": "manual",
       "localizations": {
@@ -1244,47 +1202,6 @@
       },
       "comment": "Paywall headline"
     },
-    "Considering…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Considering…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozważam…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Überlege…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Considerando…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "J'examine…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aan het overwegen…"
-          }
-        }
-      }
-    },
     "Copy message": {
       "extractionState": "manual",
       "localizations": {
@@ -2025,47 +1942,6 @@
         }
       }
     },
-    "Evaluating…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evaluating…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Oceniam…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Werte aus…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Evaluando…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Évaluation…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aan het evalueren…"
-          }
-        }
-      }
-    },
     "Every result is filtered out.": {
       "extractionState": "manual",
       "localizations": {
@@ -2309,47 +2185,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Persoon op naam zoeken"
-          }
-        }
-      }
-    },
-    "Finding ideas…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Finding ideas…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukam pomysłów…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suche Ideen…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscando ideas…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recherche d'idées…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ideeën zoeken…"
           }
         }
       }
@@ -3136,48 +2971,6 @@
         }
       },
       "comment": "Error message"
-    },
-    "Media servers are a Control feature": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Media servers are a Control feature"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serwery mediów są częścią Control"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Medienserver sind eine Control-Funktion"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los servidores multimedia son una función de Control"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les serveurs multimédias font partie de Control"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mediaservers zijn een Control-functie"
-          }
-        }
-      },
-      "comment": "Paywall contextual line"
     },
     "Monitor & grab an album": {
       "extractionState": "manual",
@@ -4748,48 +4541,6 @@
                 }
               }
             }
-          }
-        }
-      }
-    },
-    "Removed custom formats": {
-      "comment": "Accessibility label for the minus sign in front of custom-format chips an upgrade drops",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Removed custom formats"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usunięte formaty niestandardowe"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Entfernte benutzerdefinierte Formate"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formatos personalizados eliminados"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formats personnalisés supprimés"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verwijderde aangepaste formats"
           }
         }
       }
@@ -6520,47 +6271,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Website"
-          }
-        }
-      }
-    },
-    "Weighing options…": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Weighing options…"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ważę opcje…"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wäge Optionen ab…"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sopesando opciones…"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "J'évalue les options…"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Opties afwegen…"
           }
         }
       }
@@ -21068,48 +20778,6 @@
       },
       "comment": "Button in discover"
     },
-    "discover.moreAiSuggestions.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "More AI suggestions"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Więcej propozycji AI"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mehr KI-Vorschläge"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Más sugerencias de IA"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Plus de suggestions IA"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Meer AI-suggesties"
-          }
-        }
-      },
-      "comment": "Button in discover"
-    },
     "discover.moreDetails.button": {
       "extractionState": "manual",
       "localizations": {
@@ -30434,48 +30102,6 @@
       },
       "comment": "Button in queue"
     },
-    "queue.reDownloadingIdenticalRelease.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-downloading identical release"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ponowne pobieranie identycznego wydania"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Identisches Release wird erneut heruntergeladen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Volviendo a descargar la versión idéntica"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Re-téléchargement d'une version identique"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Identieke release opnieuw downloaden"
-          }
-        }
-      },
-      "comment": "Label in queue"
-    },
     "queue.removeDownload.tooltip": {
       "extractionState": "manual",
       "localizations": {
@@ -30723,48 +30349,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Download hervatten"
-          }
-        }
-      },
-      "comment": "Button in queue"
-    },
-    "queue.sameSpecRetagged.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Same spec, retagged"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ta sama specyfikacja, inne tagi"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gleiche Spezifikation, neues Tag"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Misma especificación, retiquetado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Même spec, réétiquetté"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zelfde specificatie, opnieuw getagd"
           }
         }
       },
@@ -31893,48 +31477,6 @@
           }
         }
       }
-    },
-    "queue.serviceProblem.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Service problem"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problem usługi"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dienst-Problem"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problema del servicio"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Problème de service"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Serviceprobleem"
-          }
-        }
-      },
-      "comment": "Button in queue"
     },
     "queue.showHistory.button": {
       "extractionState": "manual",

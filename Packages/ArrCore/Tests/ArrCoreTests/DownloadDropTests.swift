@@ -35,67 +35,14 @@ private final class DropMockURLProtocol: URLProtocol, @unchecked Sendable {
     override func stopLoading() {}
 }
 
-private func dropSession() -> URLSession {
-    let config = URLSessionConfiguration.ephemeral
-    config.protocolClasses = [DropMockURLProtocol.self]
-    return URLSession(configuration: config)
-}
-
 private func reply(_ request: URLRequest, _ text: String, statusCode: Int = 200) -> (Data, HTTPURLResponse) {
     let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
     return (Data(text.utf8), response)
 }
 
-/// URLSession moves a request's `httpBody` into `httpBodyStream` by the time a
-/// `URLProtocol` sees it, so every body assertion in this file has to drain the
-/// stream rather than read `httpBody` (which is always nil here).
-private func body(of request: URLRequest) -> String {
-    guard let stream = request.httpBodyStream else {
-        return request.httpBody.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-    }
-    stream.open()
-    defer { stream.close() }
-    var data = Data()
-    let size = 4096
-    let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: size)
-    defer { buffer.deallocate() }
-    while stream.hasBytesAvailable {
-        let read = stream.read(buffer, maxLength: size)
-        if read <= 0 { break }
-        data.append(buffer, count: read)
-    }
-    return String(data: data, encoding: .utf8) ?? ""
-}
-
 private func config(_ url: String = "http://dl-drop.test:8080", user: String = "u", pass: String = "p") -> ServiceConfig {
     ServiceConfig(enabled: true, baseURL: url, apiKey: "key", username: user, password: pass)
 }
-
-private let torrentDrop = DownloadDrop(
-    content: .file(Data("d8:announce".utf8), filename: "Show.S01E01.torrent"),
-    kind: .torrent,
-    displayName: "Show.S01E01.torrent"
-)
-
-/// A minimal but structurally valid single-file torrent, for the tests that
-/// need a derivable info-hash (`torrentDrop` above is deliberately truncated).
-private let validTorrentDrop = DownloadDrop(
-    content: .file(
-        Data("d8:announce13:http://tr/ann4:infod6:lengthi1e4:name1:a12:piece lengthi16384e6:pieces20:aaaaaaaaaaaaaaaaaaaaee".utf8),
-        filename: "Show.S01E01.torrent"
-    ),
-    kind: .torrent,
-    displayName: "Show.S01E01.torrent"
-)
-
-/// SHA-1 of `validTorrentDrop`'s info dictionary, independently computed.
-private let validTorrentInfoHash = "4de9b0e9855b349178fb7a42f37dc0f2fac3018d"
-
-private let nzbDrop = DownloadDrop(
-    content: .file(Data("<nzb/>".utf8), filename: "Show.S01E01.nzb"),
-    kind: .usenet,
-    displayName: "Show.S01E01.nzb"
-)
 
 /// One serialized outer suite on purpose: every suite below drives the SAME
 /// `DropMockURLProtocol.handler` slot, and swift-testing runs suites in
@@ -255,49 +202,6 @@ struct DownloadDropSuite {
               "fields":[{"name":"tvCategory","value":""}]}]
             """)
             #expect(result[0].category == nil)
-        }
-    }
-
-    // MARK: - Adding to clients
-
-
-    @Suite("Torrent info-hash")
-    struct TorrentInfoHashTests {
-        @Test("The v1 info-hash of a .torrent file is the SHA-1 of its info dictionary")
-        func fileInfoHash() {
-            #expect(validTorrentDrop.torrentInfoHash == validTorrentInfoHash)
-        }
-
-        @Test("Malformed bencode yields no hash rather than a wrong one")
-        func malformedFileHasNoHash() {
-            #expect(torrentDrop.torrentInfoHash == nil)
-        }
-
-        @Test("A hex btih magnet parses, lowercased")
-        func magnetHexHash() {
-            let drop = DownloadDrop(
-                content: .magnet("magnet:?xt=urn:btih:0123456789ABCDEF0123456789ABCDEF01234567&dn=x"),
-                kind: .torrent, displayName: "x"
-            )
-            #expect(drop.torrentInfoHash == "0123456789abcdef0123456789abcdef01234567")
-        }
-
-        @Test("A base32 btih magnet decodes to the same hex")
-        func magnetBase32Hash() {
-            let drop = DownloadDrop(
-                content: .magnet("magnet:?xt=urn:btih:AERUKZ4JVPG66AJDIVTYTK6N54ASGRLH"),
-                kind: .torrent, displayName: "x"
-            )
-            #expect(drop.torrentInfoHash == "0123456789abcdef0123456789abcdef01234567")
-        }
-
-        @Test("A magnet without a btih carries no hash")
-        func magnetWithoutHash() {
-            let drop = DownloadDrop(
-                content: .magnet("magnet:?dn=just-a-name"),
-                kind: .torrent, displayName: "x"
-            )
-            #expect(drop.torrentInfoHash == nil)
         }
     }
 }

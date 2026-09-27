@@ -119,12 +119,8 @@ public struct ConfirmActionCard: View {
 /// in season/episode rows pass "Search" / "Remove" to mirror the verb in
 /// their alert message.
 public struct InlineConfirmCard: View {
-    /// Optional headline above the message. nil keeps the legacy
-    /// "single line message + buttons" chat-tool-gate shape.
-    let title: LocalizedStringKey?
     let message: Text
     let confirmLabelKey: LocalizedStringKey
-    let cancelLabelKey: LocalizedStringKey
     let destructive: Bool
     let onConfirm: () -> Void
     let onCancel: () -> Void
@@ -138,30 +134,8 @@ public struct InlineConfirmCard: View {
         onConfirm: @escaping () -> Void,
         onCancel: @escaping () -> Void
     ) {
-        self.title = nil
         self.message = Text(verbatim: message)
         self.confirmLabelKey = confirmLabelKey
-        self.cancelLabelKey = "Cancel"
-        self.destructive = destructive
-        self.onConfirm = onConfirm
-        self.onCancel = onCancel
-    }
-
-    /// Localized title + message — used by `ConfirmCenter`-driven
-    /// flows (queue trash, settings reset, etc).
-    public init(
-        title: LocalizedStringKey,
-        message: LocalizedStringKey,
-        confirmLabelKey: LocalizedStringKey = "Confirm",
-        cancelLabelKey: LocalizedStringKey = "Cancel",
-        destructive: Bool = true,
-        onConfirm: @escaping () -> Void,
-        onCancel: @escaping () -> Void
-    ) {
-        self.title = title
-        self.message = Text(message, bundle: .module)
-        self.confirmLabelKey = confirmLabelKey
-        self.cancelLabelKey = cancelLabelKey
         self.destructive = destructive
         self.onConfirm = onConfirm
         self.onCancel = onCancel
@@ -174,11 +148,6 @@ public struct InlineConfirmCard: View {
                 .foregroundStyle(.orange)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 6) {
-                if let title {
-                    Text(title, bundle: .module)
-                        .scaledFont(size: 13, weight: .semibold)
-                        .foregroundStyle(.primary)
-                }
                 message
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)
@@ -189,7 +158,7 @@ public struct InlineConfirmCard: View {
                     // (`.contentShape` on the padded label + `.plain` style) — the
                     // native button styles left only the text tappable here.
                     Button(role: .cancel, action: onCancel) {
-                        Text(cancelLabelKey, bundle: .module)
+                        Text("Cancel", bundle: .module)
                             .scaledFont(size: 12, weight: .medium)
                             .foregroundStyle(.primary)
                             .padding(.horizontal, 14)

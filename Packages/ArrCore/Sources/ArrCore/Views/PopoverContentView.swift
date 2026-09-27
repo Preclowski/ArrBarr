@@ -480,9 +480,7 @@ public struct PopoverContentView: View {
                         chatHolder.vm.cancelTurn()
                         discoverViewModel.endLoading()
                     },
-                    onRequestMore: { mood, kept, skipped in
-                        requestMoreQuizPicks(mood: mood, kept: kept, skipped: skipped)
-                    }
+                    onRequestMore: requestMoreQuizPicks
                 )
                 // Parked (but kept mounted) when SearchAddPanel or DetailView
                 // opens on top — otherwise the picks list bleeds through under
@@ -521,14 +519,12 @@ public struct PopoverContentView: View {
                 EpisodeQuickDetail(
                     item: item,
                     viewModel: viewModel,
-                    originLabel: LocalizedStringKey(selectedTab.rawValue),
                     onBack: { self.detailItem = nil }
                 )
             } else {
                 DetailView(
                     item: item,
                     onBack: { self.detailItem = nil },
-                    originLabel: LocalizedStringKey(selectedTab.rawValue),
                     viewModel: viewModel
                 )
             }
@@ -608,7 +604,7 @@ public struct PopoverContentView: View {
     /// these" context without us stuffing every title into the visible message.
     /// Without this wiring the button fell back to `onRequestMore`'s no-op
     /// default and did nothing.
-    private func requestMoreQuizPicks(mood: String, kept: [DiscoverItem], skipped: [DiscoverItem]) {
+    private func requestMoreQuizPicks() {
         // No LLM, or a turn already running → the round-trip can't land; skip
         // rather than queue a message that silently never resolves.
         guard chatAvailable, !chatHolder.vm.isThinking else { return }

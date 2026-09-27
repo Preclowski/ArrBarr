@@ -211,41 +211,9 @@ public enum SpotlightIndexer {
         return URL(string: cfg.baseURL)?.appendingPathComponent(path)
     }
 
-    /// Hand the library this pass already downloaded to `TitleMetadataStore`.
-    ///
-    /// Free in bytes: the pass fetches all of `/movie` and `/series` anyway, and
-    /// every field the store wants is already in that payload. Doing it here is
-    /// what keeps the queue's cold layer warm — without it, a fresh install pays
-    /// one `/movie/{id}` per queued title, because neither Radarr's nor Sonarr's
-    /// list endpoint takes an id filter (only `tmdbId` / `tvdbId`).
-    private static func seedMetadata(
-        _ values: [TitleMetadataStore.Key: TitleMetadataStore.Metadata]
-    ) async {
-        guard !values.isEmpty else { return }
-        await TitleMetadataStore.shared.store(values)
-    }
-
     private static func reindexRadarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
         guard let movies = try? await RadarrClient(config: config).fetchAllMovies() else { return [] }
-        var seed: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
-        for rec in movies {
-            guard let id = rec.id, let title = rec.title else { continue }
-            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
-            seed[TitleMetadataStore.Key(source: .radarr, baseURL: config.baseURL, kind: .movie, id: id)] =
-                TitleMetadataStore.Metadata(
-                    title: title, year: rec.year, slug: rec.titleSlug,
-                    posterURL: poster, posterRequiresAuth: needsAuth,
-                    // Carried even though Spotlight itself never reads them:
-                    // this seed OVERWRITES whatever the queue path wrote, and
-                    // dropping the ids here left every record in the store
-                    // unmatchable — queue rows on the arr's artwork while
-                    // detail views, which resolve live, showed the media
-                    // server's. See `Metadata.mediaServerKeys`.
-                    mediaServerKeys: rec.mediaServerKeys.map(\.rawKey)
-                )
-        }
-        await seedMetadata(seed)
         return await syncIndex(movies, domain: domainRadarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .movie)
@@ -268,19 +236,6 @@ public enum SpotlightIndexer {
     private static func reindexSonarr(_ config: ServiceConfig, fallbackIcon: Data?) async -> [IndexedRecord] {
         guard config.isConfigured else { return [] }
         guard let series = try? await SonarrClient(config: config).fetchAllSeries() else { return [] }
-        var seed: [TitleMetadataStore.Key: TitleMetadataStore.Metadata] = [:]
-        for rec in series {
-            guard let id = rec.id, let title = rec.title else { continue }
-            let (poster, needsAuth) = (rec.images ?? []).posterURL(baseURL: config.baseURL)
-            seed[TitleMetadataStore.Key(source: .sonarr, baseURL: config.baseURL, kind: .series, id: id)] =
-                TitleMetadataStore.Metadata(
-                    title: title, year: rec.year, slug: rec.titleSlug,
-                    posterURL: poster, posterRequiresAuth: needsAuth,
-                    // Same reason as the Radarr seed above.
-                    mediaServerKeys: rec.mediaServerKeys.map(\.rawKey)
-                )
-        }
-        await seedMetadata(seed)
         return await syncIndex(series, domain: domainSonarr, fallbackIcon: fallbackIcon) { rec -> IndexedRecord? in
             guard let id = rec.id, let title = rec.title else { return nil }
             let attr = CSSearchableItemAttributeSet(contentType: .audiovisualContent)

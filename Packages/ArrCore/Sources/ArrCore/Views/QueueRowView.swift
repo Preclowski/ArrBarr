@@ -297,8 +297,7 @@ public struct QueueRowView: View {
         .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             QueueItemTooltip(
                 item: item,
-                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil,
-                locale: configStore.currentLocale
+                apiKey: item.posterRequiresAuth ? apiKeyForSource : nil
             )
         }
         #endif
@@ -415,7 +414,6 @@ struct QueueRowFormatStrip: View {
 public struct QueueItemTooltip: View {
     let item: QueueItem
     var apiKey: String? = nil
-    var locale: Locale = Locale(identifier: "en")
     @EnvironmentObject var configStore: ConfigStore
 
     public var body: some View {
@@ -431,8 +429,8 @@ public struct QueueItemTooltip: View {
             blurred: configStore.shouldBlurPoster(for: item.source),
             fallbackSymbol: item.source.symbol,
             // Corner grammar: [context: client][status: Upgrade/New].
-            contextChip: item.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) },
-            statusChip: AnyView(MediaBadgeCluster(isUpgrade: item.isUpgrade, size: .medium))
+            contextChip: item.downloadClient.map { AnyView(DownloadClientLabel(name: $0)) },
+            statusChip: AnyView(MediaBadgeCluster(isUpgrade: item.isUpgrade))
         ) {
             tooltipContent
         }
@@ -486,17 +484,6 @@ public struct QueueItemTooltip: View {
     private var sizeString: String {
         ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
     }
-}
-
-func downloadClientColor(_ name: String) -> Color {
-    let n = name.lowercased()
-    if n.contains("sab") { return .orange }
-    if n.contains("nzbget") { return .green }
-    if n.contains("qbit") { return .blue }
-    if n.contains("transmission") { return .red }
-    if n.contains("rtorrent") || n.contains("rutorrent") { return .teal }
-    if n.contains("deluge") { return .purple }
-    return .gray
 }
 
 // `customFormatChipStrip` + `TagChip` + `TooltipFlowLayout` are

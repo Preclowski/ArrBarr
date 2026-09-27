@@ -158,12 +158,6 @@ extension ArrAPIClient {
 
     func grabRelease(guid: String, indexerId: Int) async throws { try await run { $0.grabRelease(guid: guid, indexerID: indexerId) } }
 
-    func deleteQueueItem(id: Int, removeFromClient: Bool = true, blocklist: Bool = false) async throws {
-        try await run { $0.deleteQueueItem(id: id, removeFromClient: removeFromClient, blocklist: blocklist, now: Date()) }
-    }
-
-    func grabQueueItem(id: Int) async throws { try await run { $0.grabQueueItem(id: id) } }
-
     func postCommand(_ body: [String: Any]) async throws {
         guard let name = body["name"] as? String else { return }
         var extra = try JSONDecoder().decode([String: KitJSON].self, from: JSONSerialization.data(withJSONObject: body))

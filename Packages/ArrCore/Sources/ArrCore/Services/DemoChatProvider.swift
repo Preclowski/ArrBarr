@@ -109,8 +109,6 @@ public struct DemoChatProvider: LLMProvider {
         let items = pool.map { result in
             DiscoverItem(
                 result: result,
-                action: (kind == .series) ? .addToSonarr : .addToRadarr,
-                originLabel: .llm,
                 kind: (kind == .series) ? .show : .movie,
                 reason: quizReasonKeys[result.title].map {
                     NSLocalizedString($0, bundle: .module, comment: "")
@@ -120,7 +118,7 @@ public struct DemoChatProvider: LLMProvider {
         let mood = NSLocalizedString(
             kind == .series ? "demo.quizMood.series" : "demo.quizMood.movies",
             bundle: .module, comment: "")
-        AppMessages.post(AppMessages.OpenDiscoverQuiz(mood: mood, items: items, append: false))
+        AppMessages.post(AppMessages.OpenDiscoverQuiz(items: items, append: false))
         let text = NSLocalizedString("demo.quizOpened", bundle: .module, comment: "")
         let posters = items.prefix(3).compactMap { $0.result.posterURL }
         return LLMResponse(

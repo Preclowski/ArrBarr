@@ -37,7 +37,7 @@ Packages/ArrCore/           # the real codebase (Swift 6 tools, lang mode v5)
                    #   (RadarrClient…, DownloadClients, TMDBClient,
                    #   MediaServerFacade), QueueAggregator, ConfigStore,
                    #   SecretStore, KVSyncCoordinator, SyncedKeys, LLM providers,
-                   #   ToolBackend + LocalToolBackend, DemoMocks, WidgetDataStore, …
+                   #   LocalToolBackend, DemoMocks, WidgetDataStore, …
     Compositions/  # ArrCompositions / ArrQueueLoader: MediaKit records → QueueItem,
                    #   UpcomingItem, HistoryItem
     ViewModels/    # QueueViewModel, ChatViewModel, DiscoverViewModel, SearchViewModel
@@ -142,7 +142,7 @@ fastest via SwiftPM:
   whitelist) is started/stopped from `AppDelegate.wireMCPServer` based on
   `ConfigStore`. swift-log (server + NIO) is bridged into `os.Logger` via
   `OSLogForwardingHandler` — bootstrap once, before the first `Logger`.
-- **Tools / AI**: `ToolBackend` protocol; `LocalToolBackend` implements the arr
+- **Tools / AI**: `LocalToolBackend` implements the arr
   tool catalog used by *both* the in-app chat and the MCP server
   (`ToolCatalogBridge`). Chat runs through `ChatProvider` — `.foundationModels`
   (Apple Intelligence) or `.openai` (OpenAI-compatible API).

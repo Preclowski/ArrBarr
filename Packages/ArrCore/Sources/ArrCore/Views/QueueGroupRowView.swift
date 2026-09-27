@@ -208,8 +208,7 @@ public struct QueueGroupRowView: View {
         .tooltipPopover(isPresented: $showTooltip, arrowEdge: .trailing) {
             QueueGroupTooltip(
                 group: group,
-                apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil,
-                locale: configStore.currentLocale
+                apiKey: rep.posterRequiresAuth ? configStore.sonarr.apiKey : nil
             )
         }
         #endif
@@ -310,7 +309,6 @@ public struct QueueGroupRowView: View {
 public struct QueueGroupTooltip: View {
     let group: QueueGroup
     var apiKey: String? = nil
-    var locale: Locale = Locale(identifier: "en")
     /// Action cluster pinned at the bottom of the tooltip — see
     @EnvironmentObject var configStore: ConfigStore
 
@@ -325,13 +323,13 @@ public struct QueueGroupTooltip: View {
             apiKey: apiKey,
             blurred: configStore.shouldBlurPoster(for: rep.source),
             fallbackSymbol: "tv",
-            contextChip: rep.downloadClient.map { AnyView(DownloadClientLabel(name: $0, size: 10)) },
+            contextChip: rep.downloadClient.map { AnyView(DownloadClientLabel(name: $0)) },
             // Same corner grammar as the single-item tooltip: the Upgrade
             // badge lives in the header, not as an indigo banner over the
             // diff. Only when the whole pack is one uniform upgrade — a
             // mixed pack keeps its per-episode treatment below.
             statusChip: uniformExistingFile != nil
-                ? AnyView(MediaBadgeCluster(isUpgrade: true, size: .medium))
+                ? AnyView(MediaBadgeCluster(isUpgrade: true))
                 : nil
         ) {
             tooltipContent

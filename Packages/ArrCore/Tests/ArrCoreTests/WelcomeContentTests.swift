@@ -5,7 +5,7 @@ import Foundation
 @Suite("WelcomeContent decision logic")
 struct WelcomeContentDecisionTests {
     private let item = WelcomeContent.WelcomePage(
-        id: "x", symbol: "star", titleKey: "T", bodyKey: "B"
+        id: "x", titleKey: "T", bodyKey: "B"
     )
 
     @Test("First-run users see firstRun variant")

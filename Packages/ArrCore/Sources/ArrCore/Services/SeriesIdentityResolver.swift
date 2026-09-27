@@ -180,6 +180,7 @@ enum SeriesIdentityResolver {
 
     #if DEBUG
     /// Tests share one process; identity caches must not leak between them.
+    // periphery:ignore
     static func resetForTesting() {
         records.removeAll()
         tvdbIds.removeAll()

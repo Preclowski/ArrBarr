@@ -57,12 +57,12 @@ struct LocalToolBackendFixtureTests {
     }
 
     @Test("The catalogue is the 28 tools")
-    func catalogueIsComplete() async throws {
-        let (gateway, backend) = await Self.demo()
-        let names = try await ServiceGateway.$override.withValue(gateway) { Set(try await backend.listTools().map(\.name)) }
+    func catalogueIsComplete() {
+        let names = Set(ChatToolCatalog.tools(includeSonarr: true, includeRadarr: true, includeLidarr: true,
+                                              includeWhisparr: true, includeTMDBMovies: true, includeTMDBSeries: true,
+                                              includeMediaServer: true).map(\.name))
         #expect(names == Set(Self.calls.map(\.name)))
         #expect(names.count == 28)
-        await gateway.kit.stop()
     }
 
     @Test("Every tool answers from fixtures", arguments: calls)

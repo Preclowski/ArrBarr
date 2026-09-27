@@ -1,13 +1,6 @@
 import Foundation
 
 // MARK: - Shared Radarr/Sonarr v3 types
-nonisolated public struct ArrQueuePage<Record: Codable & Sendable>: Codable, Sendable {
-    let page: Int
-    let pageSize: Int
-    let totalRecords: Int
-    let records: [Record]
-}
-
 nonisolated public struct ArrCustomFormat: Codable, Equatable, Sendable {
     // `id` is optional because some arr endpoints (notably Radarr's
     // movie detail when CFs are referenced rather than embedded) ship
@@ -108,44 +101,6 @@ nonisolated public struct ArrImage: Codable, Equatable, Sendable {
     let remoteUrl: String?
 }
 
-/// Sonarr / Radarr / Lidarr / Whisparr all return queue warnings in
-/// the same shape: an array of objects, each with a one-line `title`
-/// summary (e.g. "Title mismatch") and a deeper `messages` list. We
-/// flatten both into a single user-facing string per entry when the
-/// status is `warning` / `failed`. No tracker-prefix or i18n parsing —
-/// the arr ships these in the user's configured server locale.
-nonisolated public struct ArrStatusMessage: Codable, Sendable, Equatable {
-    public let title: String?
-    public let messages: [String]?
-}
-
-nonisolated public extension Optional where Wrapped == [ArrStatusMessage] {
-    /// Flatten the arr's nested status payload into one user-facing
-    /// line per actual message. We unfold each (title, [messages])
-    /// entry: when there are messages we join them with " — title:",
-    /// when there aren't we just take the title verbatim. Both forms
-    /// show up in the wild — Sonarr emits title-only entries for
-    /// "Title mismatch" and full message lists for "No files found".
-    /// Whitespace-only / empty strings dropped so the caller can just
-    /// check `isEmpty`.
-    func flattenToLines() -> [String] {
-        guard let self else { return [] }
-        var out: [String] = []
-        for entry in self {
-            let title = entry.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let messages = (entry.messages ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-                .filter { !$0.isEmpty }
-            if messages.isEmpty {
-                if let t = title, !t.isEmpty { out.append(t) }
-            } else {
-                let prefix = (title?.isEmpty == false) ? "\(title!): " : ""
-                for m in messages { out.append(prefix + m) }
-            }
-        }
-        return out
-    }
-}
-
 // MARK: - Radarr
 
 
@@ -205,16 +160,6 @@ nonisolated public struct LidarrTrackFile: Codable, Sendable {
     /// banner shows just the last component.
     let path: String?
 }
-
-
-// MARK: - History
-
-// Every history record carries a schema-less `data` bag whose keys depend on
-// the event: `indexer`, `downloadClientName`, `size` on a grab; `reason` on a
-// deletion ("Upgrade" when an import replaced the file). Read it through
-// `historyString(_:)`.
-
-
 
 
 // MARK: - Health
@@ -457,11 +402,6 @@ nonisolated public struct MetadataProfile: Codable, Sendable, Equatable, Identif
 nonisolated public struct ArrAlternateTitle: Codable, Sendable, Equatable {
     public let title: String?
     public var movieId: Int? = nil
-
-    public init(title: String?, movieId: Int? = nil) {
-        self.title = title
-        self.movieId = movieId
-    }
 }
 
 // Used to fetch existing library ids and list library contents
@@ -471,9 +411,7 @@ nonisolated public struct RadarrLibraryRecord: Codable, Sendable, Equatable {
     let title: String?
     let year: Int?
     let hasFile: Bool?
-    /// Deep-link slug for the arr web UI. Always been on the wire; decoding it
-    /// costs nothing and lets the Spotlight pass seed `TitleMetadataStore`
-    /// completely, so the queue never has to fetch a movie just for its slug.
+    /// Deep-link slug for the arr web UI.
     let titleSlug: String?
     let monitored: Bool?
     let images: [ArrImage]?
