@@ -260,7 +260,7 @@ public final class ConfigStore: ObservableObject {
     private var defaults: UserDefaults
     var defaultsForGateway: UserDefaults { defaults }
     /// The MediaKit assembly for this profile; created on first use, rebuilt when demo mode toggles.
-    @MainActor public private(set) lazy var gateway = ServiceGateway(configStore: self)
+    @MainActor public internal(set) lazy var gateway = ServiceGateway(configStore: self)
     /// Follows the backing store — see `useStore`. A `let` here is what let
     /// demo mode write into the real profile's secrets.
     private var secrets: SecretStore

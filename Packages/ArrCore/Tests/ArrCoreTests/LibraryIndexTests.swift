@@ -2,8 +2,7 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-/// Stubs one host so suites running in parallel keep their own traffic, and
-/// counts `/movie` hits so "did it refetch?" is an assertion rather than a
+/// Counts `/movie` hits so "did it refetch?" is an assertion rather than a
 /// guess. Each test uses its own port: `LibraryIndex` keys every slot on the
 /// config fingerprint, so a distinct base URL is a distinct cache.
 private final class LibraryIndexStubState: @unchecked Sendable {
@@ -42,55 +41,30 @@ private final class LibraryIndexStubState: @unchecked Sendable {
     }
 }
 
-private final class LibraryIndexStub: URLProtocol, @unchecked Sendable {
-    static let state = LibraryIndexStubState()
-    static let host = "libraryindex.test"
+private let libraryIndexState = LibraryIndexStubState()
 
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == host
-    }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let url = request.url ?? URL(string: "about:blank")!
-        if url.path.contains("/movie") { Self.state.countMovie(port: url.port) }
-        // `startLoading` runs off the main thread, so blocking here is fine.
-        let delay = Self.state.delay
-        if delay > 0 { Thread.sleep(forTimeInterval: delay) }
-        if Self.state.failing {
-            let response = HTTPURLResponse(url: url, statusCode: 500,
-                                           httpVersion: "HTTP/1.1", headerFields: [:])!
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: Data("boom".utf8))
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
-        // `tmdbId` is the port: it makes a record traceable to the server it
-        // came from, which is the whole point of the changed-config test.
-        let body = Data(#"[{"id":1,"tmdbId":\#(url.port ?? 0),"title":"The Matrix","hasFile":true}]"#.utf8)
-        let response = HTTPURLResponse(url: url, statusCode: 200,
-                                       httpVersion: "HTTP/1.1", headerFields: [:])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: body)
-        client?.urlProtocolDidFinishLoading(self)
-    }
-
-    override func stopLoading() {}
+private let libraryIndexTransport = ScriptedTransport { request in
+    let url = request.url
+    if url.path.contains("/movie") { libraryIndexState.countMovie(port: url.port) }
+    let delay = libraryIndexState.delay
+    if delay > 0 { try await Task.sleep(for: .seconds(delay)) }
+    if libraryIndexState.failing { return .init(status: 500, "boom") }
+    // `tmdbId` is the port: it makes a record traceable to the server it
+    // came from, which is the whole point of the changed-config test.
+    return .init(#"[{"id":1,"tmdbId":\#(url.port ?? 0),"title":"The Matrix","hasFile":true}]"#)
 }
 
-@Suite("LibraryIndex", .serialized)
+@Suite("LibraryIndex", .serialized, .gateway(libraryIndexTransport))
 struct LibraryIndexTests {
 
     private func config(port: Int) -> ServiceConfig {
-        ServiceConfig(enabled: true, baseURL: "http://\(LibraryIndexStub.host):\(port)",
+        ServiceConfig(enabled: true, baseURL: "http://libraryindex.test:\(port)",
                       apiKey: "test-key", username: "", password: "")
     }
 
     @Test("A fresh commit bumps the source's version; a cache hit does not")
     func versionBumpsOnCommit() async throws {
-        LibraryIndexStub.state.reset()
-        URLProtocol.registerClass(LibraryIndexStub.self)
-        defer { URLProtocol.unregisterClass(LibraryIndexStub.self) }
+        libraryIndexState.reset()
 
         let index = LibraryIndex()
         let cfg = config(port: 17101)
@@ -103,14 +77,12 @@ struct LibraryIndexTests {
         // Second read is served from the slot — no request, no bump.
         _ = await index.movies(config: cfg)
         #expect(await index.version(for: .radarr) == 1)
-        #expect(LibraryIndexStub.state.movieHits == 1)
+        #expect(libraryIndexState.movieHits == 1)
     }
 
     @Test("Invalidate bumps the version and forces the next read to refetch")
     func invalidateBumpsAndRefetches() async throws {
-        LibraryIndexStub.state.reset()
-        URLProtocol.registerClass(LibraryIndexStub.self)
-        defer { URLProtocol.unregisterClass(LibraryIndexStub.self) }
+        libraryIndexState.reset()
 
         let index = LibraryIndex()
         let cfg = config(port: 17102)
@@ -119,15 +91,13 @@ struct LibraryIndexTests {
         #expect(await index.version(for: .radarr) == 2)
 
         _ = await index.movies(config: cfg)
-        #expect(LibraryIndexStub.state.movieHits == 2)
+        #expect(libraryIndexState.movieHits == 2)
         #expect(await index.version(for: .radarr) == 3)
     }
 
     @Test("A failed refetch keeps the stale snapshot and does not bump")
     func failedRefetchKeepsStale() async throws {
-        LibraryIndexStub.state.reset()
-        URLProtocol.registerClass(LibraryIndexStub.self)
-        defer { URLProtocol.unregisterClass(LibraryIndexStub.self) }
+        libraryIndexState.reset()
 
         let index = LibraryIndex()
         let cfg = config(port: 17103)
@@ -136,7 +106,7 @@ struct LibraryIndexTests {
 
         await index.invalidate(.radarr)
         let afterInvalidate = await index.version(for: .radarr)
-        LibraryIndexStub.state.failing = true
+        libraryIndexState.failing = true
 
         // A momentarily unreachable arr must not read as "your library is
         // empty" — that is "you own nothing" everywhere downstream.
@@ -149,13 +119,9 @@ struct LibraryIndexTests {
 
     @Test("Two concurrent cold reads are one fetch and one version bump")
     func concurrentColdReadsCommitOnce() async throws {
-        LibraryIndexStub.state.reset()
-        LibraryIndexStub.state.delay = 0.2
-        URLProtocol.registerClass(LibraryIndexStub.self)
-        defer {
-            URLProtocol.unregisterClass(LibraryIndexStub.self)
-            LibraryIndexStub.state.delay = 0
-        }
+        libraryIndexState.reset()
+        libraryIndexState.delay = 0.2
+        defer { libraryIndexState.delay = 0 }
 
         let index = LibraryIndex()
         let cfg = config(port: 17104)
@@ -168,19 +134,15 @@ struct LibraryIndexTests {
 
         #expect(a.count == 1)
         #expect(b.count == 1)
-        #expect(LibraryIndexStub.state.movieHits == 1)
+        #expect(libraryIndexState.movieHits == 1)
         #expect(await index.version(for: .radarr) == 1)
     }
 
     @Test("A fetch in flight for another config is not joined")
     func inFlightIsNotJoinedAcrossConfigs() async throws {
-        LibraryIndexStub.state.reset()
-        LibraryIndexStub.state.delay = 0.2
-        URLProtocol.registerClass(LibraryIndexStub.self)
-        defer {
-            URLProtocol.unregisterClass(LibraryIndexStub.self)
-            LibraryIndexStub.state.delay = 0
-        }
+        libraryIndexState.reset()
+        libraryIndexState.delay = 0.2
+        defer { libraryIndexState.delay = 0 }
 
         let index = LibraryIndex()
         let a = config(port: 17105)
@@ -198,9 +160,9 @@ struct LibraryIndexTests {
 
         #expect(recordsA.first?.tmdbId == 17105)
         #expect(recordsB.first?.tmdbId == 17106)
-        #expect(LibraryIndexStub.state.movieHits(port: 17105) == 1)
-        #expect(LibraryIndexStub.state.movieHits(port: 17106) == 1)
-        #expect(LibraryIndexStub.state.movieHits == 2)
+        #expect(libraryIndexState.movieHits(port: 17105) == 1)
+        #expect(libraryIndexState.movieHits(port: 17106) == 1)
+        #expect(libraryIndexState.movieHits == 2)
     }
 
     @Test("All four sources have a version and all four invalidate")

@@ -37,6 +37,8 @@ public final class ServiceGateway {
     private var realtime: [InstanceID: SignalRSource] = [:]
     /// Demo answers from bundled fixtures; held here so a gateway built for a test can be a demo one without the global flag.
     private var demo: Bool
+    /// Tests answer through their own transport instead of a URLSession.
+    private let transport: (any Transport)?
     /// Configs handed to a client that differ from the saved profile (Settings drafts, tests). Each distinct config
     /// is its own instance (ordinal 1...), so a draft never displaces the saved instance's cache or credentials.
     private let adHoc = OSAllocatedUnfairLock<[ServiceKind: [ServiceConfig]]>(initialState: [:])
@@ -44,10 +46,11 @@ public final class ServiceGateway {
     private let adHocTMDBKeys = OSAllocatedUnfairLock<[String]>(initialState: [])
     private nonisolated(unsafe) static var testGateway: ServiceGateway?
 
-    public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive) {
+    public init(configStore: ConfigStore, demo: Bool = DemoMode.isActive, transport: (any Transport)? = nil) {
         self.configStore = configStore
         self.demo = demo
-        kitLock = OSAllocatedUnfairLock(initialState: Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo))
+        self.transport = transport
+        kitLock = OSAllocatedUnfairLock(initialState: Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo, transport: transport))
         if Self.current == nil { Self.current = self }
         observe()
         startTask = Task { await self.start() }
@@ -195,7 +198,7 @@ public final class ServiceGateway {
         self.demo = demo
         await kit.stop()
         realtime = [:]
-        let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo)
+        let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo, transport: transport)
         kitLock.withLock { $0 = fresh }
         if started {
             await kit.start(instances: descriptors())
@@ -252,14 +255,18 @@ public final class ServiceGateway {
 
     // MARK: - Assembly
 
-    private static func makeKit(configStore: ConfigStore, telemetry: TelemetryRecorder, demo: Bool) -> MediaStack {
+    private static func makeKit(configStore: ConfigStore, telemetry: TelemetryRecorder, demo: Bool, transport: (any Transport)?) -> MediaStack {
         let credentials = ConfigCredentialProvider(configStore: configStore, demo: demo)
         var configuration: MediaStack.Configuration
         if demo {
             configuration = MediaStack.Configuration(transport: FixtureTransport(), sockets: nil, credentials: credentials)
             configuration.database = .memory
+        } else if let transport {
+            configuration = MediaStack.Configuration(transport: transport, sockets: nil, credentials: credentials)
+            configuration.database = .memory
+            configuration.readPolicyOverride = .mustRevalidate
         } else {
-            // A test process answers through URLProtocol stubs registered on the shared session, as the old clients did.
+            // Tests reach a service only through an injected transport; `.shared` keeps the rest off the app's cookie jar.
             let plain = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: false))
             let cookies = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: true))
             let transport = CookieSplittingTransport(plain: plain, cookies: cookies)

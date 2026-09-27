@@ -6,47 +6,27 @@ import Foundation
 /// inside `SearchClient`. They now read the shared `LibraryIndex` through
 /// `ArrLibraryMaps` — and the key has to stay byte-identical to the one the
 /// lookup rows carry, or every owned artist silently reads as addable.
-private final class OwnershipStub: URLProtocol, @unchecked Sendable {
-    static let host = "ownership.test"
-
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == host
+private let ownershipTransport = ScriptedTransport { request in
+    let path = request.url.path
+    if path.contains("/artist") {
+        return .init(#"[{"id":11,"foreignArtistId":"mbid-radiohead","artistName":"Radiohead","monitored":true,"statistics":{"trackCount":10,"trackFileCount":10}}]"#)
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let url = request.url ?? URL(string: "about:blank")!
-        let body: String
-        if url.path.contains("/artist") {
-            body = #"[{"id":11,"foreignArtistId":"mbid-radiohead","artistName":"Radiohead","monitored":true,"statistics":{"trackCount":10,"trackFileCount":10}}]"#
-        } else if url.path.contains("/movie") {
-            body = #"[{"id":22,"foreignId":"scene-abc","tmdbId":0,"title":"Scene","hasFile":true}]"#
-        } else {
-            body = "[]"
-        }
-        let response = HTTPURLResponse(url: url, statusCode: 200,
-                                       httpVersion: "HTTP/1.1", headerFields: [:])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(body.utf8))
-        client?.urlProtocolDidFinishLoading(self)
+    if path.contains("/movie") {
+        return .init(#"[{"id":22,"foreignId":"scene-abc","tmdbId":0,"title":"Scene","hasFile":true}]"#)
     }
-
-    override func stopLoading() {}
+    return .init("[]")
 }
 
-@Suite("Search ownership maps", .serialized)
+@Suite("Search ownership maps", .serialized, .gateway(ownershipTransport))
 struct SearchClientOwnershipTests {
 
     private func config(port: Int) -> ServiceConfig {
-        ServiceConfig(enabled: true, baseURL: "http://\(OwnershipStub.host):\(port)",
+        ServiceConfig(enabled: true, baseURL: "http://ownership.test:\(port)",
                       apiKey: "test-key", username: "", password: "")
     }
 
     @Test("Lidarr ownership is keyed by the same foreign hash the lookup rows carry")
     func lidarrOwnershipKey() async throws {
-        URLProtocol.registerClass(OwnershipStub.self)
-        defer { URLProtocol.unregisterClass(OwnershipStub.self) }
-
         let cfg = config(port: 17201)
         let map = await ArrLibraryMaps.lidarrByForeignArtistHash(config: cfg)
         let key = ArrLibraryMaps.foreignHashKey("mbid-radiohead")
@@ -62,9 +42,6 @@ struct SearchClientOwnershipTests {
 
     @Test("Whisparr ownership prefers tmdbId and falls back to the foreign hash")
     func whisparrOwnershipKey() async throws {
-        URLProtocol.registerClass(OwnershipStub.self)
-        defer { URLProtocol.unregisterClass(OwnershipStub.self) }
-
         let cfg = config(port: 17202)
         let map = await ArrLibraryMaps.whisparrByForeignId(config: cfg)
         // tmdbId is 0 on this record, so the foreign hash is the key.

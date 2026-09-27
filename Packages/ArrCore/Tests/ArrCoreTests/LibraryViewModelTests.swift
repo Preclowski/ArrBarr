@@ -26,131 +26,97 @@ private final class LibraryVMStubState: @unchecked Sendable {
     }
 }
 
-private final class LibraryVMStub: URLProtocol, @unchecked Sendable {
-    static let state = LibraryVMStubState()
-    static let host = "libraryvm.test"
+private let libraryVMState = LibraryVMStubState()
 
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == host
+private let libraryVMTransport = ScriptedTransport { request in
+    let url = request.url
+    guard url.host == "libraryvm.test" else { throw URLError(.cannotConnectToHost) }
+    if url.path.hasSuffix("/movie") { libraryVMState.countMovie() }
+    if libraryVMState.isFailing(port: url.port) { return .init(status: 500, "{}") }
+    if url.path.hasSuffix("/movie") {
+        return .init(#"[{"id":1,"tmdbId":603,"title":"The Matrix","year":1999,"hasFile":true,"monitored":true}]"#)
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let url = request.url ?? URL(string: "about:blank")!
-        if Self.state.isFailing(port: url.port) {
-            if url.path.hasSuffix("/movie") { Self.state.countMovie() }
-            let response = HTTPURLResponse(url: url, statusCode: 500,
-                                           httpVersion: "HTTP/1.1", headerFields: [:])!
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: Data("{}".utf8))
-            client?.urlProtocolDidFinishLoading(self)
-            return
-        }
-        let body: String
-        if url.path.hasSuffix("/movie") {
-            Self.state.countMovie()
-            body = #"[{"id":1,"tmdbId":603,"title":"The Matrix","year":1999,"hasFile":true,"monitored":true}]"#
-        } else {
-            // qualityprofile, alttitle, anything else the load touches.
-            body = "[]"
-        }
-        let response = HTTPURLResponse(url: url, statusCode: 200,
-                                       httpVersion: "HTTP/1.1", headerFields: [:])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(body.utf8))
-        client?.urlProtocolDidFinishLoading(self)
-    }
-
-    override func stopLoading() {}
+    // qualityprofile, alttitle, anything else the load touches.
+    return .init("[]")
 }
 
-@Suite("LibraryViewModel", .serialized)
+@Suite("LibraryViewModel", .serialized, .gateway(libraryVMTransport))
 @MainActor
 struct LibraryViewModelTests {
 
     private func config(port: Int) -> ServiceConfig {
-        ServiceConfig(enabled: true, baseURL: "http://\(LibraryVMStub.host):\(port)",
+        ServiceConfig(enabled: true, baseURL: "http://libraryvm.test:\(port)",
                       apiKey: "test-key", username: "", password: "")
     }
 
     @Test("A second load with an unchanged index version does not refetch")
     func stableVersionSkipsReload() async {
-        LibraryVMStub.state.reset()
-        URLProtocol.registerClass(LibraryVMStub.self)
-        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+        libraryVMState.reset()
 
         let vm = LibraryViewModel()
         let cfg = config(port: 17301)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
         #expect(vm.entries[.radarr]?.count == 1)
-        #expect(LibraryVMStub.state.movieHits == 1)
+        #expect(libraryVMState.movieHits == 1)
 
         await vm.loadIfNeeded(source: .radarr, config: cfg)
-        #expect(LibraryVMStub.state.movieHits == 1)
+        #expect(libraryVMState.movieHits == 1)
     }
 
     @Test("Invalidating the index makes the next load re-unify")
     func versionChangeTriggersReload() async {
-        LibraryVMStub.state.reset()
-        URLProtocol.registerClass(LibraryVMStub.self)
-        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+        libraryVMState.reset()
 
         let vm = LibraryViewModel()
         let cfg = config(port: 17302)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
         await LibraryIndex.shared.invalidate(.radarr)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
-        #expect(LibraryVMStub.state.movieHits == 2)
+        #expect(libraryVMState.movieHits == 2)
         #expect(vm.entries[.radarr]?.count == 1)
     }
 
     @Test("force invalidates the index first, so ⌘R really refetches")
     func forceInvalidatesFirst() async {
-        LibraryVMStub.state.reset()
-        URLProtocol.registerClass(LibraryVMStub.self)
-        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+        libraryVMState.reset()
 
         let vm = LibraryViewModel()
         let cfg = config(port: 17303)
         await vm.loadIfNeeded(source: .radarr, config: cfg)
         await vm.loadIfNeeded(source: .radarr, config: cfg, force: true)
-        #expect(LibraryVMStub.state.movieHits == 2)
+        #expect(libraryVMState.movieHits == 2)
     }
 
     @Test("A failed refetch keeps the grid up and retries on the next load")
     func failedRefetchKeepsEntriesAndRetries() async {
-        LibraryVMStub.state.reset()
-        URLProtocol.registerClass(LibraryVMStub.self)
-        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+        libraryVMState.reset()
 
         let vm = LibraryViewModel()
         await vm.loadIfNeeded(source: .radarr, config: config(port: 17304))
         #expect(vm.entries[.radarr]?.count == 1)
-        #expect(LibraryVMStub.state.movieHits == 1)
+        #expect(libraryVMState.movieHits == 1)
 
         // A different arr that is down: the index has no snapshot for it, so
         // the failed fetch comes back EMPTY rather than stale. Committing that
         // is what used to blank a grid that was fine a second ago.
         let broken = config(port: 17305)
-        LibraryVMStub.state.fail(port: 17305)
+        libraryVMState.fail(port: 17305)
         await vm.loadIfNeeded(source: .radarr, config: broken, force: true)
         #expect(vm.entries[.radarr]?.count == 1)
         // Something IS on screen, so this is not the tab's error state.
         #expect(!vm.loadFailed.contains(.radarr))
 
         // …and the failed load must not count as done: the next one retries.
-        LibraryVMStub.state.heal(port: 17305)
-        let hitsBefore = LibraryVMStub.state.movieHits
+        libraryVMState.heal(port: 17305)
+        let hitsBefore = libraryVMState.movieHits
         await vm.loadIfNeeded(source: .radarr, config: broken)
-        #expect(LibraryVMStub.state.movieHits == hitsBefore + 1)
+        #expect(libraryVMState.movieHits == hitsBefore + 1)
         #expect(vm.entries[.radarr]?.count == 1)
     }
 
     @Test("A later session paints the saved grid before the arr answers")
     func snapshotPaintsBeforeTheFetch() async {
-        LibraryVMStub.state.reset()
-        URLProtocol.registerClass(LibraryVMStub.self)
-        defer { URLProtocol.unregisterClass(LibraryVMStub.self) }
+        libraryVMState.reset()
 
         let cfg = config(port: 17321)
         await LibraryViewModel().loadIfNeeded(source: .radarr, config: cfg)
@@ -167,7 +133,7 @@ struct LibraryViewModelTests {
         // A new session against an arr that is now DOWN: nothing can be
         // fetched, and the grid must still come up off the saved projection
         // rather than showing the error state.
-        LibraryVMStub.state.fail(port: 17321)
+        libraryVMState.fail(port: 17321)
         await LibraryIndex.shared.invalidate(.radarr)
         let next = LibraryViewModel()
         await next.loadIfNeeded(source: .radarr, config: cfg)
@@ -177,7 +143,7 @@ struct LibraryViewModelTests {
 
     @Test("An unreachable arr with nothing cached sets loadFailed")
     func unreachableSetsLoadFailed() async {
-        // No stub registered for this host at all, so every request errors.
+        // The transport refuses this host, so every request errors.
         let vm = LibraryViewModel()
         let cfg = ServiceConfig(enabled: true, baseURL: "http://127.0.0.1:1/",
                                 apiKey: "k", username: "", password: "")

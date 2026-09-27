@@ -4,52 +4,29 @@ import Foundation
 
 // MARK: - Fake transport
 
-/// Same fake-transport shape as the other client suites — its own class so the
-/// single static handler slot can't be clobbered by a sibling suite.
-private final class DropMockURLProtocol: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var handler: ((URLRequest) throws -> (Data, HTTPURLResponse))?
-
-    // Scoped to this suite's hosts. Answering every request — suites run in
-    // parallel — serves other suites their neighbour's fixture, and the victim
-    // sees impossible values (zero requests for a call it definitely made).
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == "dl-drop.test"
+private final class DropReply: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _json: String?
+    var json: String? {
+        get { lock.withLock { _json } }
+        set { lock.withLock { _json = newValue } }
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        guard let handler = Self.handler else {
-            client?.urlProtocol(self, didFailWithError: URLError(.unknown))
-            return
-        }
-        do {
-            let (data, response) = try handler(request)
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: data)
-            client?.urlProtocolDidFinishLoading(self)
-        } catch {
-            client?.urlProtocol(self, didFailWithError: error)
-        }
-    }
-
-    override func stopLoading() {}
 }
 
-private func reply(_ request: URLRequest, _ text: String, statusCode: Int = 200) -> (Data, HTTPURLResponse) {
-    let response = HTTPURLResponse(url: request.url!, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
-    return (Data(text.utf8), response)
+private let dropReply = DropReply()
+
+private let dropTransport = ScriptedTransport { request in
+    guard request.url.host == "dl-drop.test", let json = dropReply.json else { throw URLError(.unknown) }
+    return .init(json)
 }
 
 private func config(_ url: String = "http://dl-drop.test:8080", user: String = "u", pass: String = "p") -> ServiceConfig {
     ServiceConfig(enabled: true, baseURL: url, apiKey: "key", username: user, password: pass)
 }
 
-/// One serialized outer suite on purpose: every suite below drives the SAME
-/// `DropMockURLProtocol.handler` slot, and swift-testing runs suites in
-/// parallel by default — so without this they hand each other's fixtures out
-/// and fail in whichever order they happen to interleave. `.serialized`
-/// applies to descendants, so the nested suites inherit it.
-@Suite("Download drops", .serialized)
+/// Serialized because every suite below drives the same `dropReply` slot;
+/// `.serialized` applies to descendants, so the nested suites inherit it.
+@Suite("Download drops", .serialized, .gateway(dropTransport))
 struct DownloadDropSuite {
     // MARK: - Payload parsing
 
@@ -121,7 +98,7 @@ struct DownloadDropSuite {
 
     // MARK: - Arr download-client resolution
 
-    /// Minimal `ArrAPIClient` so the shared extension is exercised with the drop stub answering.
+    /// Minimal `ArrAPIClient` so the shared extension is exercised with the drop transport answering.
     private struct StubArrClient: ArrAPIClient {
         let config: ServiceConfig
         let source: QueueItem.Source = .sonarr
@@ -131,9 +108,8 @@ struct DownloadDropSuite {
     @Suite("Arr download clients")
     struct ArrDownloadClientTests {
         private func clients(_ json: String) async throws -> [ArrDownloadClient] {
-            DropMockURLProtocol.handler = { request in reply(request, json) }
-            URLProtocol.registerClass(DropMockURLProtocol.self)
-            defer { URLProtocol.unregisterClass(DropMockURLProtocol.self) }
+            dropReply.json = json
+            defer { dropReply.json = nil }
             let client = StubArrClient(config: config())
             return try await client.fetchDownloadClients()
         }
