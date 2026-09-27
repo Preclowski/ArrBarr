@@ -6,7 +6,7 @@ import SwiftUI
 // (The chat / MCP tools search after monitoring; that's a chat idiom.)
 
 /// Only drives help / VoiceOver copy.
-public enum MonitorEntity: Sendable {
+enum MonitorEntity: Sendable {
     case movie, series, season, episode, artist, album
 
     /// A glyph button announces its verb: "Stop monitoring this season", not "Monitored".

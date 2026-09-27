@@ -1,7 +1,7 @@
 import Foundation
 
 /// A run of chat text, either shown plainly or hidden behind a spoiler.
-public enum ChatSpoilerSegment: Equatable, Sendable {
+enum ChatSpoilerSegment: Equatable, Sendable {
     case text(String)
     case spoiler(String)
 }

@@ -688,7 +688,7 @@ public struct PopoverContentView: View {
 // MARK: - Tab pill background
 
 private struct TabPillBackground: View {
-    public var body: some View {
+    var body: some View {
         // Inside the outer glass capsule, and glass-on-glass would vanish.
         Capsule()
             .fill(Color.primary.opacity(0.14))
@@ -698,22 +698,22 @@ private struct TabPillBackground: View {
 
 // MARK: - Shared button styles
 
-public struct GlassButtonStyle: ViewModifier {
-    public func body(content: Content) -> some View {
+struct GlassButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
         // Capsule to match GlassProminentButtonStyle next to it.
         content.buttonStyle(.glass).buttonBorderShape(.capsule)
     }
 }
 
 /// Tinted glass that keeps showing what's behind it — for CTAs over artwork that shouldn't shout.
-public struct GlassTintedButtonStyle: ViewModifier {
-    public func body(content: Content) -> some View {
+struct GlassTintedButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
         content.buttonStyle(.glass).buttonBorderShape(.capsule)
     }
 }
 
-public struct GlassProminentButtonStyle: ViewModifier {
-    public func body(content: Content) -> some View {
+struct GlassProminentButtonStyle: ViewModifier {
+    func body(content: Content) -> some View {
         // Explicit white labels: glassProminent's default vibrancy makes text translucent. An inner
         // foregroundStyle (the red trash) still wins.
         content

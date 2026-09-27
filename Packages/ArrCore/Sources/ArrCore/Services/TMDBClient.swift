@@ -1,21 +1,21 @@
 import Foundation
 import MediaKit
 
-nonisolated public enum TMDBDepartment {
-    public static let acting = "Acting"
-    public static let directing = "Directing"
+nonisolated enum TMDBDepartment {
+    static let acting = "Acting"
+    static let directing = "Directing"
     /// The crew `job` meaning "directed it"; the Directing department also holds
     /// assistant directors and script supervisors, so match jobs, not the department.
-    public static let directorJob = "Director"
-    public static let coDirectorJob = "Co-Director"
+    static let directorJob = "Director"
+    static let coDirectorJob = "Co-Director"
 }
 
 // MARK: - Genre maps
 // TMDB's genre ids are stable for decades; embedding them saves a round-trip
 // and lets the LLM pick a genre by name.
 
-nonisolated public enum TMDBGenres {
-    public static let movie: [String: Int] = [
+nonisolated enum TMDBGenres {
+    static let movie: [String: Int] = [
         "action": 28, "adventure": 12, "animation": 16, "comedy": 35,
         "crime": 80, "documentary": 99, "drama": 18, "family": 10751,
         "fantasy": 14, "history": 36, "horror": 27, "music": 10402,
@@ -23,7 +23,7 @@ nonisolated public enum TMDBGenres {
         "sci-fi": 878, "tv movie": 10770, "thriller": 53, "war": 10752,
         "western": 37,
     ]
-    public static let tv: [String: Int] = [
+    static let tv: [String: Int] = [
         "action & adventure": 10759, "action": 10759, "adventure": 10759,
         "animation": 16, "comedy": 35, "crime": 80, "documentary": 99,
         "drama": 18, "family": 10751, "kids": 10762, "mystery": 9648,
@@ -34,25 +34,25 @@ nonisolated public enum TMDBGenres {
     ]
 
     /// Case-insensitive; nil for unknown tokens — skip the filter rather than 0-out it.
-    public static func movieId(for token: String) -> Int? {
+    static func movieId(for token: String) -> Int? {
         movie[token.lowercased()]
     }
-    public static func tvId(for token: String) -> Int? {
+    static func tvId(for token: String) -> Int? {
         tv[token.lowercased()]
     }
 
     /// Aliases share an id ("sci-fi" and "science fiction" = 878); the first matching name wins.
-    public static func movieName(for id: Int) -> String? {
+    static func movieName(for id: Int) -> String? {
         movie.first { $0.value == id }?.key.capitalized
     }
-    public static func tvName(for id: Int) -> String? {
+    static func tvName(for id: Int) -> String? {
         tv.first { $0.value == id }?.key.capitalized
     }
 
-    public static func movieNames(for ids: [Int]) -> [String] {
+    static func movieNames(for ids: [Int]) -> [String] {
         ids.compactMap(movieName(for:))
     }
-    public static func tvNames(for ids: [Int]) -> [String] {
+    static func tvNames(for ids: [Int]) -> [String] {
         ids.compactMap(tvName(for:))
     }
 }

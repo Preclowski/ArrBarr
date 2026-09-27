@@ -57,9 +57,9 @@ nonisolated extension ArrSeries {
 // MARK: - Ownership
 
 /// `isDownloaded` is about the disk, not the monitored flag: an unmonitored film with a file is downloaded.
-nonisolated public struct LibraryOwnership: Equatable, Sendable {
-    public let arrId: Int
-    public let isDownloaded: Bool
+nonisolated struct LibraryOwnership: Equatable, Sendable {
+    let arrId: Int
+    let isDownloaded: Bool
 }
 
 nonisolated extension ArrMovie {

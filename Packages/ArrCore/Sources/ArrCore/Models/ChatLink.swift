@@ -2,14 +2,14 @@ import Foundation
 
 /// An in-app link the assistant can write: `[Sicario](arrbarr://media/tmdb:68718)`,
 /// `[Adam Sandler](arrbarr://person/19292)`. Strict parsing: an invented scheme never becomes a link.
-nonisolated public enum ChatLink: Equatable, Sendable {
+nonisolated enum ChatLink: Equatable, Sendable {
     case media(MediaRef)
     /// `name` comes from the link text, so `PersonView` can show it while TMDB details load.
     case person(id: Int, name: String)
 
-    public static let scheme = "arrbarr"
+    static let scheme = "arrbarr"
 
-    public init?(url: URL) {
+    init?(url: URL) {
         guard url.scheme == Self.scheme else { return nil }
         // "arrbarr://media/tmdb:68718" → host "media", one path component.
         let value = url.pathComponents.filter { $0 != "/" }.first ?? ""
@@ -35,7 +35,7 @@ nonisolated public enum ChatLink: Equatable, Sendable {
         }
     }
 
-    public var url: URL? {
+    var url: URL? {
         switch self {
         case .media(let ref):
             return URL(string: "\(Self.scheme)://media/\(ref.urlString)")

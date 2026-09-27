@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-nonisolated public protocol TMDBPersonCredit {
+nonisolated protocol TMDBPersonCredit {
     var id: Int { get }
     var department: String? { get }
     var popularity: Double? { get }

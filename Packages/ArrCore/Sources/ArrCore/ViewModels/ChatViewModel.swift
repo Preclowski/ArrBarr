@@ -4,11 +4,11 @@ import os
 import MediaKit
 
 @Observable
-public final class ChatViewModel {
-    public private(set) var messages: [ChatMessage] = []
-    public private(set) var isThinking: Bool = false
-    public private(set) var pendingConfirm: ToolCall?
-    public private(set) var lastError: String?
+final class ChatViewModel {
+    private(set) var messages: [ChatMessage] = []
+    private(set) var isThinking: Bool = false
+    private(set) var pendingConfirm: ToolCall?
+    private(set) var lastError: String?
 
     private let provider: LLMProvider
     private let tools: [LLMTool]
@@ -22,9 +22,9 @@ public final class ChatViewModel {
     /// Never logs prompts, replies or tool arguments — they are the user's words. Records turn, provider and outcome.
     private static let log = Logger(category: "Chat")
 
-    public var providerIsAvailable: Bool { provider.isAvailable }
+    var providerIsAvailable: Bool { provider.isAvailable }
 
-    public init(provider: LLMProvider,
+    init(provider: LLMProvider,
                 tools: [LLMTool],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
                 onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
@@ -36,7 +36,7 @@ public final class ChatViewModel {
         self.invokeTool = invokeTool
     }
 
-    public func send(_ text: String) async {
+    func send(_ text: String) async {
         guard pendingResume == nil else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -49,25 +49,25 @@ public final class ChatViewModel {
     }
 
     /// Ignored while a confirm card is up; that gate resolves through its own buttons.
-    public func cancelTurn() {
+    func cancelTurn() {
         guard pendingResume == nil else { return }
         turnTask?.cancel()
     }
 
     /// Refuses while a confirm gate is pending so the CheckedContinuation isn't leaked.
-    public func clear() {
+    func clear() {
         guard pendingResume == nil else { return }
         messages = []
         lastError = nil
     }
 
-    public func confirmPending() {
+    func confirmPending() {
         guard let call = pendingConfirm else { return }
         pendingResume?.resume(returning: call.arguments)
         pendingResume = nil
     }
 
-    public func cancelPending() {
+    func cancelPending() {
         guard pendingConfirm != nil else { return }
         pendingResume?.resume(returning: nil)
         pendingResume = nil
@@ -75,7 +75,7 @@ public final class ChatViewModel {
 
     /// Suspends until the user confirms or cancels; nil = cancel. Used by the OpenAI loop and, via
     /// `confirmDestructive`, by Foundation Models tools. Re-entrant calls return nil (one gate at a time).
-    public func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
+    func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
         guard pendingResume == nil else { return nil }
         pendingConfirm = call
         isThinking = false

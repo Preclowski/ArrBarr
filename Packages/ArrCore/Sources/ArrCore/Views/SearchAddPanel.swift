@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct SearchAddPanel: View {
+struct SearchAddPanel: View {
     /// Mutable so a chat result built from a TMDB summary (no IMDb / RT / runtime) can be
     /// swapped for an enriched copy.
     @State private var result: SearchResult
@@ -13,7 +13,7 @@ public struct SearchAddPanel: View {
     /// which would re-run the cast/trailer tasks and repaint the wrong series.
     private let identityKey: String
 
-    public init(result: SearchResult, viewModel: SearchViewModel,
+    init(result: SearchResult, viewModel: SearchViewModel,
                 onBack: @escaping () -> Void) {
         _result = State(initialValue: result)
         self.viewModel = viewModel
@@ -54,7 +54,7 @@ public struct SearchAddPanel: View {
     /// Pushed locally so back returns here.
     @State private var personRef: PersonRef?
 
-    public var body: some View {
+    var body: some View {
         ZStack {
             mainContent
                 // Parked with all four mechanisms, as in PopoverContentView: hidden layers still hold

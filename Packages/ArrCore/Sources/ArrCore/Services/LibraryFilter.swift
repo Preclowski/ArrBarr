@@ -3,18 +3,18 @@ import MediaKit
 
 /// Facets are spelled like `tmdb_discover_*` so the model has one vocabulary. No exclude-genre filter:
 /// tags can't answer "romantic but not a drama", so genres travel in every row and the model judges.
-nonisolated public struct LibraryQuery: Sendable, Equatable {
-    public var title: String
-    public var genre: String
-    public var startYear: Int?
-    public var endYear: Int?
-    public var unwatchedOnly: Bool
+nonisolated struct LibraryQuery: Sendable, Equatable {
+    var title: String
+    var genre: String
+    var startYear: Int?
+    var endYear: Int?
+    var unwatchedOnly: Bool
     /// nil keeps title-match order, else rating-desc.
-    public var sort: LibrarySort?
+    var sort: LibrarySort?
     /// The tool still applies its own hard cap on top; this makes "top 10" return 10 rows.
-    public var limit: Int?
+    var limit: Int?
 
-    public init(title: String = "", genre: String = "",
+    init(title: String = "", genre: String = "",
                 startYear: Int? = nil, endYear: Int? = nil,
                 unwatchedOnly: Bool = false,
                 sort: LibrarySort? = nil, limit: Int? = nil) {
@@ -29,7 +29,7 @@ nonisolated public struct LibraryQuery: Sendable, Equatable {
 
     /// Whole-library calls get a sample, not the first N alphabetical titles. A sort or limit makes it a
     /// ranking question, which must stay deterministic.
-    public var isUnfiltered: Bool {
+    var isUnfiltered: Bool {
         title.isEmpty && genre.isEmpty && startYear == nil && endYear == nil
             && !unwatchedOnly && sort == nil && limit == nil
     }
@@ -63,7 +63,7 @@ nonisolated public struct LibrarySort: Sendable, Equatable {
     }
 }
 
-nonisolated public protocol LibraryFilterable {
+nonisolated protocol LibraryFilterable {
     var filterTitle: String { get }
     var filterYear: Int? { get }
     var filterGenres: [String] { get }

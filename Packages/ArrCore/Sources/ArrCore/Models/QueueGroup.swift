@@ -82,11 +82,11 @@ nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
     var isInterpolatingProgress: Bool { allItems.contains { $0.isInterpolatingProgress } }
 }
 
-nonisolated public enum QueueDisplayRow: Identifiable {
+nonisolated enum QueueDisplayRow: Identifiable {
     case entry(QueueRowEntry)
     case titleGroup(QueueTitleGroup)
 
-    public var id: String {
+    var id: String {
         switch self {
         case .entry(let e): return e.id
         case .titleGroup(let g): return "title.\(g.id)"

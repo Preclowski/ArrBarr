@@ -3,7 +3,7 @@ import MediaKit
 import os
 
 /// A live stream revision tied to the stream that published it: a replaced stream counts from zero again.
-nonisolated public struct QueueRevision: Equatable, Sendable {
+nonisolated struct QueueRevision: Equatable, Sendable {
     let stream: ObjectIdentifier
     let number: UInt64
     /// The stream's optimistic-overlay count: a republish of the same fetch with a new effect on it.

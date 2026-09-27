@@ -1,6 +1,6 @@
 import SwiftUI
 
-public struct DiscoverTabView: View {
+struct DiscoverTabView: View {
     var viewModel: DiscoverViewModel
     let llmAvailable: Bool
     let radarrAvailable: Bool
@@ -38,7 +38,7 @@ public struct DiscoverTabView: View {
     /// so a live `queue.first` can point one card too far for a frame and flash it.
     @State private var pinnedIncomingBackdrop: URL?
 
-    public init(viewModel: DiscoverViewModel,
+    init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
                 radarrAvailable: Bool,
                 moreInFlight: Bool = false,
@@ -56,7 +56,7 @@ public struct DiscoverTabView: View {
         self.onRequestMore = onRequestMore
     }
 
-    public var body: some View {
+    var body: some View {
         if let phase = viewModel.loadPhase {
             QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt, onCancel: onCancelLoading)
         } else {

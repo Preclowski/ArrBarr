@@ -3,14 +3,14 @@ import os
 import MediaKit
 
 /// Detail for a queue item or lookup — replaces the popover content while shown.
-public struct DetailView: View {
+struct DetailView: View {
     private static let searchLog = Logger(category: "Detail")
     let item: QueueItem
     let onBack: () -> Void
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
-    public init(
+    init(
         item: QueueItem,
         onBack: @escaping () -> Void,
         viewModel: QueueViewModel
@@ -235,7 +235,7 @@ public struct DetailView: View {
         await load(showSpinner: false)
     }
 
-    public var body: some View {
+    var body: some View {
         // This view's Lidarr path treats `entityId` as an ALBUM id; an artist id here would
         // fetch an unrelated album.
         if item.isLidarrArtistLookup {

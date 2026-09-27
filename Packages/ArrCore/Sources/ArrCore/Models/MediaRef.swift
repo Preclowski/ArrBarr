@@ -104,19 +104,19 @@ nonisolated public extension SearchResult {
 // MARK: - Search input
 
 /// `.text` is keyword lookup ranked by relevance; `.ref` is an exact-id lookup that bypasses scoring.
-nonisolated public enum SearchInput: Equatable, Sendable {
+nonisolated enum SearchInput: Equatable, Sendable {
     case text(String)
     case ref(MediaRef)
 
     /// Radarr/Sonarr resolve `tmdb:N`/`tvdb:N`/`imdb:ttN` to a single record; `.text` passes through verbatim.
-    public var arrTerm: String {
+    var arrTerm: String {
         switch self {
         case .text(let q):  return q
         case .ref(let ref): return ref.lookupTerm
         }
     }
 
-    public var isRef: Bool {
+    var isRef: Bool {
         if case .ref = self { return true }
         return false
     }

@@ -9,12 +9,12 @@ private var platformControlBackground: Color {
 }
 
 /// Hero card on the chat empty state.
-public struct QuizFeatureCard: View {
+struct QuizFeatureCard: View {
     /// `discover_in_quiz` takes one `kind`; picking here stops the model firing two sessions for "movies and shows".
-    public enum Kind { case movies, series }
+    enum Kind { case movies, series }
 
     /// The button fires `.newToMe`; the other decks hang off the chevron.
-    public enum Variant: CaseIterable, Hashable, Sendable {
+    enum Variant: CaseIterable, Hashable, Sendable {
         /// Titles the library doesn't have (`library_mode: "new"`).
         case newToMe
         case inLibrary
@@ -22,7 +22,7 @@ public struct QuizFeatureCard: View {
         case hiddenGems
 
         /// Only `rightNow` depends on kind: "In cinemas" vs "Airing now".
-        public func labelKey(for kind: Kind) -> LocalizedStringKey {
+        func labelKey(for kind: Kind) -> LocalizedStringKey {
             switch self {
             case .newToMe:    return "quiz.variant.newToMe.button"
             case .inLibrary:  return "quiz.variant.inLibrary.button"
@@ -34,7 +34,7 @@ public struct QuizFeatureCard: View {
         }
 
         /// Resolved by the host in the in-app language (see `AppLocalized`).
-        public func promptKey(for kind: Kind) -> String {
+        func promptKey(for kind: Kind) -> String {
             let media = kind == .movies ? "movies" : "series"
             switch self {
             case .newToMe:    return "chat.quizPrompt.\(media)"
@@ -54,20 +54,20 @@ public struct QuizFeatureCard: View {
         }
     }
 
-    public let onStart: (Kind, Variant) -> Void
+    let onStart: (Kind, Variant) -> Void
     /// `rightNow` needs TMDB's live listings.
-    public let variants: [Variant]
+    let variants: [Variant]
     /// Empty falls back to placeholder tiles so the layout is stable before posters load.
-    public let posterURLs: [URL]
+    let posterURLs: [URL]
 
-    public init(posterURLs: [URL] = [], variants: [Variant] = Variant.allCases,
+    init(posterURLs: [URL] = [], variants: [Variant] = Variant.allCases,
                 onStart: @escaping (Kind, Variant) -> Void) {
         self.posterURLs = posterURLs
         self.variants = variants
         self.onStart = onStart
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 16) {
                 deck
