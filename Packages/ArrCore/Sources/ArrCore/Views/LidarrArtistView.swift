@@ -10,7 +10,6 @@ struct LidarrArtistView: View {
     /// `entityId` is the Lidarr artist id.
     let item: QueueItem
     let onBack: () -> Void
-    var originLabel: LocalizedStringKey = "Details"
     var viewModel: QueueViewModel
 
     @EnvironmentObject private var configStore: ConfigStore
@@ -227,7 +226,6 @@ struct LidarrArtistView: View {
             DetailView(
                 item: album,
                 onBack: { albumDetail = nil },
-                originLabel: originLabel,
                 viewModel: viewModel
             )
         }

@@ -519,14 +519,12 @@ public struct PopoverContentView: View {
                 EpisodeQuickDetail(
                     item: item,
                     viewModel: viewModel,
-                    originLabel: LocalizedStringKey(selectedTab.rawValue),
                     onBack: { self.detailItem = nil }
                 )
             } else {
                 DetailView(
                     item: item,
                     onBack: { self.detailItem = nil },
-                    originLabel: LocalizedStringKey(selectedTab.rawValue),
                     viewModel: viewModel
                 )
             }

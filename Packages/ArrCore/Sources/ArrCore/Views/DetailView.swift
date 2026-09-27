@@ -6,24 +6,16 @@ import SwiftUI
 public struct DetailView: View {
     let item: QueueItem
     let onBack: () -> Void
-    /// Page title shown in the header — typically the name of the tab
-    /// the user came from ("Kolejka", "Nadchodzące", "Czat", "Dodaj").
-    /// Defaults to a generic "Details" if the caller doesn't pass one.
-    /// Using a context label (where they came from) rather than the
-    /// item title avoids title duplication with the hero card below.
-    var originLabel: LocalizedStringKey = "Details"
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
 
     public init(
         item: QueueItem,
         onBack: @escaping () -> Void,
-        originLabel: LocalizedStringKey = "Details",
         viewModel: QueueViewModel
     ) {
         self.item = item
         self.onBack = onBack
-        self.originLabel = originLabel
         self.viewModel = viewModel
     }
 
@@ -348,7 +340,6 @@ public struct DetailView: View {
             LidarrArtistView(
                 item: item,
                 onBack: onBack,
-                originLabel: originLabel,
                 viewModel: viewModel
             )
         } else {
@@ -496,7 +487,6 @@ public struct DetailView: View {
             LidarrArtistView(
                 item: artistItem,
                 onBack: { artistDrill = nil },
-                originLabel: originLabel,
                 viewModel: viewModel
             )
         }
