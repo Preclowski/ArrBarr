@@ -13,6 +13,8 @@ Releases before 0.10.0 are described on the
 
 ### Added
 
+- Shelf tab (macOS): the library as cover flow, morph, warp, tunnel or globe,
+  filtered by genre, year and unwatched.
 - Prowlarr as a service: its own Settings page, a status dot, and indexer names
   on release rows.
 - Hide a queue row from its context menu; "Show hidden" brings it back.
@@ -21,7 +23,6 @@ Releases before 0.10.0 are described on the
 - Per-title history in the detail "..." menu.
 - History loads further back as you scroll.
 - History compares an upgrade with the file it replaced.
-- Notifications carry the title's poster.
 - Release list: one sort-and-filter menu, rejected releases hidden until asked
   for, rejection reasons in plain words.
 - "Open in <indexer>" on a release row.
