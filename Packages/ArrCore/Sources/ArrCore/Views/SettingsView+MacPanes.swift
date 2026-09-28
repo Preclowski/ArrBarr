@@ -125,9 +125,7 @@ extension SettingsView {
 
     private var siriPane: some View {
         Form {
-            if #available(macOS 13.0, *) {
-                SiriShortcutsSettingsContent()
-            }
+            SiriShortcutsSettingsContent()
         }
         .formStyle(.grouped)
     }

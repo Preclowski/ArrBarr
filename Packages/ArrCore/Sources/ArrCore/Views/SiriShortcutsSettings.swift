@@ -2,7 +2,6 @@ import SwiftUI
 import AppIntents
 
 /// Read-only actions, so no per-command toggles.
-@available(iOS 16.0, macOS 13.0, *)
 struct SiriShortcutsSettingsContent: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var configStore: ConfigStore

@@ -6,7 +6,6 @@ import Foundation
 // Spoken summaries over LocalToolBackend: the raw tool text is dense LLM output
 // that reads as a wall of characters in Siri.
 
-@available(macOS 13.0, iOS 16.0, *)
 enum ArrIntentSupport {
     @MainActor
     static func makeBackend() -> LocalToolBackend {
@@ -106,7 +105,6 @@ enum ArrIntentSupport {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct ShowDownloadQueueIntent: AppIntent {
     public static var title: LocalizedStringResource = "Show download queue"
     public static var description = IntentDescription(
@@ -120,7 +118,6 @@ public struct ShowDownloadQueueIntent: AppIntent {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct ShowUpcomingIntent: AppIntent {
     public static var title: LocalizedStringResource = "Show upcoming releases"
     public static var description = IntentDescription(
@@ -138,7 +135,6 @@ public struct ShowUpcomingIntent: AppIntent {
 //
 // Not in AppShortcutsProvider, so state-changing actions stay off "Hey Siri".
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct PauseAllDownloadsIntent: AppIntent {
     public static var title: LocalizedStringResource = "Pause all downloads"
     public static var description = IntentDescription("Pauses every active download (where a download client is configured).")
@@ -158,7 +154,6 @@ public struct PauseAllDownloadsIntent: AppIntent {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct ResumeAllDownloadsIntent: AppIntent {
     public static var title: LocalizedStringResource = "Resume all downloads"
     public static var description = IntentDescription("Resumes every paused download (where a download client is configured).")
@@ -178,7 +173,6 @@ public struct ResumeAllDownloadsIntent: AppIntent {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct SearchToAddIntent: AppIntent {
     public static var title: LocalizedStringResource = "Search to add"
     public static var description = IntentDescription("Search Sonarr/Radarr and open ArrBarr at the results to add something.")
@@ -202,7 +196,6 @@ public struct SearchToAddIntent: AppIntent {
     }
 }
 
-@available(macOS 13.0, iOS 16.0, *)
 public struct CheckArrHealthIntent: AppIntent {
     public static var title: LocalizedStringResource = "Check service health"
     public static var description = IntentDescription(

@@ -22,9 +22,7 @@ extension SettingsView {
     @ViewBuilder
     private var iosSiriForm: some View {
         Form {
-            if #available(iOS 16.0, *) {
-                SiriShortcutsSettingsContent()
-            }
+            SiriShortcutsSettingsContent()
         }
         .navigationTitle(Text("settings.siriShortcuts.button", bundle: .module))
         .navigationBarTitleDisplayMode(.inline)

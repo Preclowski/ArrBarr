@@ -74,12 +74,8 @@ public enum SpotlightIndexer {
         let sonarr = configStore.sonarr
         let mediaServer: MediaServerConfig? = StoreManager.shared.isPro ? configStore.mediaServer : nil
         // ImageRenderer requires the main actor.
-        var radarrIcon: Data?
-        var sonarrIcon: Data?
-        if #available(iOS 16.0, macOS 13.0, *) {
-            radarrIcon = SourceThumbnail.data(for: .radarr)
-            sonarrIcon = SourceThumbnail.data(for: .sonarr)
-        }
+        let radarrIcon = SourceThumbnail.data(for: .radarr)
+        let sonarrIcon = SourceThumbnail.data(for: .sonarr)
         indexingTask = Task.detached(priority: .utility) {
             // Unstructured `Task` ignores cancellation, so the flag is reset on every exit.
             defer { Task { @MainActor in isReindexing = false } }
@@ -325,7 +321,6 @@ public enum SpotlightIndexer {
     }
 }
 
-@available(iOS 16.0, macOS 13.0, *)
 enum SourceThumbnail {
     @MainActor private static var cache: [QueueItem.Source: Data] = [:]
 
