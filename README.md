@@ -107,7 +107,7 @@ Applications.
 <details>
 <summary>Build from source</summary>
 
-Requires Xcode 26.4.1 or later (CI pins 26.4.1) and macOS 26.
+Requires Xcode 27 (the version CI pins) and macOS 26.
 
 ```bash
 open ArrBarr.xcodeproj   # ⌘B to build, ⌘R to run

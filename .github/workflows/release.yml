@@ -25,7 +25,7 @@ env:
   # pick whatever the runner image happened to ship, so a GitHub image refresh
   # silently changed the compiler that built a signed release. Bump this
   # deliberately, together with the Xcode the project is developed against.
-  XCODE_VERSION: "26.4.1"
+  XCODE_VERSION: "27.0"
 
 jobs:
   # ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ jobs:
   # two SwiftPM packages and run far faster there.
   # ---------------------------------------------------------------------------
   test:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
 
@@ -49,6 +49,8 @@ jobs:
           fi
           sudo xcode-select -s "$APP"
           xcodebuild -version
+          # Shelf's shaders need the Metal toolchain, a separate download since Xcode 26.
+          xcodebuild -downloadComponent MetalToolchain
 
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4
@@ -123,7 +125,7 @@ jobs:
   # permission-bit round-trip can damage the signed .app inside it).
   # ---------------------------------------------------------------------------
   build:
-    runs-on: macos-26
+    runs-on: xcode-27
     steps:
       - uses: actions/checkout@v4
 
@@ -137,6 +139,8 @@ jobs:
           fi
           sudo xcode-select -s "$APP"
           xcodebuild -version
+          # Shelf's shaders need the Metal toolchain, a separate download since Xcode 26.
+          xcodebuild -downloadComponent MetalToolchain
 
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4

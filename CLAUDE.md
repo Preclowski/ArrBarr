@@ -111,7 +111,7 @@ Other schemes: `ArrBarriOS`, `ArrBarrWidgets`, `ArrCore`, `ArrMCPServer`,
 `Paywall Test`. Build configs: **Debug**, **Release** (OSS/GitHub) and
 **Release-AppStore** (sets the `APPSTORE` compilation flag → StoreKit paywall
 compiled in). The CI workflow (`.github/workflows/release.yml`) builds the
-`ArrBarr` scheme on `macos-26` and ships a DMG + Homebrew cask on release.
+`ArrBarr` scheme with Xcode 27 on the `xcode-27` runner and ships a DMG + Homebrew cask on release.
 
 ## Tests
 

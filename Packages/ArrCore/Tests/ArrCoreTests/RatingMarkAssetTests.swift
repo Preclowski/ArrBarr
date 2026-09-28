@@ -3,7 +3,7 @@ import AppKit
 @testable import ArrCore
 
 /// A misspelled `Image("rating-imbd")` builds cleanly and draws nothing. Xcode 27's SwiftPM
-/// compiles the catalog into Assets.car, CI's Xcode 26 copies it verbatim; either shape counts.
+/// compiles the catalog into Assets.car, older ones copy it verbatim; either shape counts.
 @Suite struct RatingMarkAssetTests {
     @Test func ratingMarksAreAllPresent() {
         let copiedCatalog = Bundle.module.url(forResource: "ServiceIcons", withExtension: "xcassets")
