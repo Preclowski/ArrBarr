@@ -136,6 +136,16 @@ extension PopoverContentView {
                 } label: {
                     // Invisible semibold copy fixes the width, or the regular→semibold switch resizes the tab
                     // out of band from the selection spring and the indicator's width snaps.
+                    ZStack {
+                    // Zero-width height reference for both label variants, so swapping the title for the ⌘
+                    // hint doesn't resize the bar (and the Shelf under it) on every ⌘ press.
+                    ZStack {
+                        Text(verbatim: "Ag").scaledFont(size: 12, weight: .semibold)
+                        Image(systemName: tab.symbol).scaledFont(size: 13, weight: .medium)
+                    }
+                    .fixedSize()
+                    .hidden()
+                    .frame(width: 0)
                     HStack(spacing: 3) {
                         // Explicit `.transition(.opacity)`: otherwise the inserted Text slides in from the left
                         // inside the animated relayout instead of crossfading.
@@ -167,6 +177,8 @@ extension PopoverContentView {
                         if let hint = commandHint(for: tab) {
                             Text(hint)
                                 .scaledFont(size: 9, weight: .semibold)
+                                .lineLimit(1)
+                                .fixedSize()
                                 .monospacedDigit()
                                 .foregroundStyle(.secondary)
                                 .padding(.leading, 4)
@@ -174,8 +186,10 @@ extension PopoverContentView {
                                 .accessibilityHidden(true)
                         }
                     }
-                    // No `fixedSize` either — same overflow as the label above.
-                    .padding(.horizontal, 18)
+                    }
+                    // No `fixedSize` either — same overflow as the label above. Narrower while ⌘ is held:
+                    // five icon+hint pills don't fit at 18 and the hints wrapped, growing the bar.
+                    .padding(.horizontal, commandHeld ? 6 : 18)
                     // Padding, not a fixed height, so the bar grows with the user's text size.
                     .padding(.vertical, 9)
                     .contentShape(Rectangle())

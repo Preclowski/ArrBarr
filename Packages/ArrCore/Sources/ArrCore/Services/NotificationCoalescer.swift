@@ -124,9 +124,6 @@ public final class NotificationCoalescer {
 
     func enqueue(_ item: QueueItem) {
         let source = item.source
-        // Prefetch now: for an episodic arr that's a whole window before `post`
-        // asks for the artwork.
-        NotificationArtwork.prefetch(item, apiKey: posterAPIKey(for: item))
 
         guard let delay = groupingDelay(for: source) else {
             if burstTimers[source] == nil {
@@ -337,8 +334,6 @@ public final class NotificationCoalescer {
         UNUserNotificationCenter.current().add(req)
     }
 
-    /// Async only because the artwork may still be downloading;
-    /// `NotificationArtwork.attachment` bounds that wait.
     private func post(source: QueueItem.Source, items: [QueueItem]) {
         Task { @MainActor [weak self] in
             guard let self else { return }
@@ -349,10 +344,10 @@ public final class NotificationCoalescer {
             let identifier: String
             if items.count == 1 {
                 let item = items[0]
-                content = await self.makeSingleItemContent(item: item, baseURL: baseURL)
+                content = self.makeSingleItemContent(item: item, baseURL: baseURL)
                 identifier = "arrbarr.\(source.rawValue).\(item.id)"
             } else {
-                content = await self.makeMultiItemContent(
+                content = self.makeMultiItemContent(
                     source: source, items: items, baseURL: baseURL)
                 identifier = "arrbarr.\(source.rawValue).\(UUID().uuidString)"
             }
@@ -361,13 +356,6 @@ public final class NotificationCoalescer {
                 identifier: identifier, content: content, trigger: nil)
             _ = await Self.log.attempt("posting a notification", level: .error) { try await UNUserNotificationCenter.current().add(req) }
         }
-    }
-
-    /// Only for artwork the arr itself serves: a key on a TMDB/TheTVDB URL would
-    /// change the cache key for a poster the app already holds.
-    private func posterAPIKey(for item: QueueItem) -> String? {
-        guard item.posterRequiresAuth else { return nil }
-        return configStore.config(for: item.source).apiKey
     }
 
     /// `""` → system default, `silentSoundName` → no sound. macOS resolves bare
@@ -385,7 +373,7 @@ public final class NotificationCoalescer {
 
     private func makeSingleItemContent(
         item: QueueItem, baseURL: String
-    ) async -> UNMutableNotificationContent {
+    ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         content.title = item.title
         content.subtitle = Self.subtitleText(for: item)
@@ -396,8 +384,7 @@ public final class NotificationCoalescer {
             : Self.downloadingCategoryIdentifier
         content.threadIdentifier = "arrbarr.\(item.source.rawValue)"
         content.relevanceScore = Self.relevance(for: item.status)
-        if let art = await NotificationArtwork.attachment(
-            for: item, apiKey: posterAPIKey(for: item)) {
+        if let art = NotificationArtwork.attachment(for: item.source) {
             content.attachments = [art]
         }
 
@@ -413,7 +400,7 @@ public final class NotificationCoalescer {
     /// middle line; only a mixed batch uses the count as the headline.
     private func makeMultiItemContent(
         source: QueueItem.Source, items: [QueueItem], baseURL: String
-    ) async -> UNMutableNotificationContent {
+    ) -> UNMutableNotificationContent {
         let content = UNMutableNotificationContent()
         let sharedTitle = Set(items.map(\.title)).count == 1 ? items[0].title : nil
 
@@ -432,11 +419,9 @@ public final class NotificationCoalescer {
         content.categoryIdentifier = Self.categoryIdentifier
         content.threadIdentifier = "arrbarr.\(source.rawValue)"
         content.relevanceScore = Self.relevance(for: .downloading)
-        let art = sharedTitle == nil
-            ? NotificationArtwork.attachment(for: source)
-            : await NotificationArtwork.attachment(
-                for: items[0], apiKey: posterAPIKey(for: items[0]))
-        if let art { content.attachments = [art] }
+        if let art = NotificationArtwork.attachment(for: source) {
+            content.attachments = [art]
+        }
         if !baseURL.isEmpty {
             content.userInfo[Self.userInfoBaseURLKey] = baseURL
         }

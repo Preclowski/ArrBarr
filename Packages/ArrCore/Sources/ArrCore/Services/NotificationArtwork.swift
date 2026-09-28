@@ -9,87 +9,16 @@ import AppKit
 import UIKit
 #endif
 
-/// Queue notification thumbnail: the title's poster, else the arr's mark on its brand colour.
-/// `prefetch` starts the fetch early; `attachment` waits at most `waitBudget`, and late posters still land on disk.
+/// Queue notification thumbnail: the arr's mark on its brand colour. No posters: the banner
+/// crops them to a square.
 enum NotificationArtwork {
-    /// Under the 5 s episodic hold, so it only delays leading-edge arrs (Radarr, Lidarr),
-    /// where a few seconds beats a mark on every first-time title.
-    private static let waitBudget: TimeInterval = 4
     /// Covers the banner thumbnail at @2x; drawn once per service per launch.
     private static let tileSize = 256
 
     /// Bytes are reused, files are not: `UNUserNotificationCenter` moves an attachment's file into its own store.
     private static var tileCache: [QueueItem.Source: Data] = [:]
 
-    private static var inFlight: Set<URL> = []
-
-    /// For an episodic arr this runs a full grouping window before the banner is due. Idempotent.
-    static func prefetch(_ item: QueueItem, apiKey: String?) {
-        guard let url = item.posterURL else { return }
-        startFetch(url, apiKey: apiKey)
-    }
-
-    static func attachment(for item: QueueItem, apiKey: String?) async -> UNNotificationAttachment? {
-        if let url = item.posterURL {
-            var data = cachedPoster(url)
-            if data == nil { data = await awaitPoster(url, apiKey: apiKey) }
-            if let data, let attachment = posterAttachment(data) { return attachment }
-        }
-        return markAttachment(for: item.source)
-    }
-
-    private static func startFetch(_ url: URL, apiKey: String?) {
-        guard cachedPoster(url) == nil, !inFlight.contains(url) else { return }
-        inFlight.insert(url)
-        Task { @MainActor in
-            _ = await PosterStore.shared.fetchStoring(url, tier: .icon, apiKey: apiKey)
-            inFlight.remove(url)
-        }
-    }
-
     static func attachment(for source: QueueItem.Source) -> UNNotificationAttachment? {
-        markAttachment(for: source)
-    }
-
-    // MARK: - Poster
-
-    /// `.icon` first: the library index keeps it warm, so it exists for titles never opened.
-    private static func cachedPoster(_ url: URL) -> Data? {
-        PosterStore.storedData(for: url, tier: .icon)
-            ?? PosterStore.storedData(for: url, tier: .card)
-    }
-
-    /// Polls the cache instead of awaiting the fetch, so giving up on the wait doesn't cancel
-    /// the download and the next grab for the title has its poster.
-    private static func awaitPoster(_ url: URL, apiKey: String?) async -> Data? {
-        startFetch(url, apiKey: apiKey)
-        let deadline = Date().addingTimeInterval(waitBudget)
-        while Date() < deadline {
-            // `sleep` returns at once when cancelled, so without this the loop spins until the deadline.
-            guard (try? await Task.sleep(nanoseconds: 150_000_000)) != nil else { return nil }
-            if let data = cachedPoster(url) { return data }
-            // The fetch ended with nothing (e.g. a MediaCover 404); don't sit out the budget.
-            if !inFlight.contains(url) { return nil }
-        }
-        return nil
-    }
-
-    private static func posterAttachment(_ data: Data) -> UNNotificationAttachment? {
-        guard let file = writeTemp(data, ext: "jpg") else { return nil }
-        // Centred crop of the 2:3 poster for the square thumbnail: Apple doesn't document the
-        // rect's origin corner, and a centred window is the same under either reading.
-        let crop = CGRect(x: 0, y: 1.0 / 6.0, width: 1, height: 2.0 / 3.0)
-        let options: [String: Any] = [
-            UNNotificationAttachmentOptionsThumbnailClippingRectKey:
-                CGRectCreateDictionaryRepresentation(crop),
-        ]
-        return try? UNNotificationAttachment(
-            identifier: "", url: file, options: options)
-    }
-
-    // MARK: - Service mark
-
-    private static func markAttachment(for source: QueueItem.Source) -> UNNotificationAttachment? {
         let data: Data
         if let cached = tileCache[source] {
             data = cached
@@ -101,6 +30,8 @@ enum NotificationArtwork {
         guard let file = writeTemp(data, ext: "png") else { return nil }
         return try? UNNotificationAttachment(identifier: "", url: file, options: nil)
     }
+
+    // MARK: - Service mark
 
     /// The template marks are used as a mask so the ink can follow the background:
     /// white is unreadable on two of the brand colours.

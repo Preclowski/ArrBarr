@@ -22,6 +22,8 @@ extension PopoverContentView {
                     Group {
                         if selectedTab == .chat {
                             ChatTabContent(chatHolder: chatHolder)
+                        } else if selectedTab == .shelf {
+                            ShelfView(isObscured: tabContentParked)
                         } else {
                             SearchHost(
                                 searchVM: searchViewModel,
@@ -41,7 +43,7 @@ extension PopoverContentView {
                                     )
                                 case .library:
                                     LibraryTabContent(viewModel: libraryViewModel)
-                                case .upcoming, .chat:
+                                case .upcoming, .chat, .shelf:
                                     UpcomingTabContent(viewModel: viewModel)
                                 }
                             }
