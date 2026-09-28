@@ -4,30 +4,18 @@ import AppKit
 #endif
 
 // MARK: - Media header card
-//
-// Pulled out of MediaDetailComponents.swift — this single chrome
-// component is used by every detail surface (movie / series / album
-// detail, search-add panel). Owning its own file means the visual
-// language can evolve without thumbing through a 1700-line file.
 
 public struct RatingChip {
-    /// Short on-pill text ("RT", "MC") — only rendered when the source has
-    /// no brand mark. See `siteName` for the spelled-out name.
+    /// Short on-pill text ("RT", "MC"), shown only when the source has no brand mark.
     let label: String
     let value: String
     let color: Color
-    /// When set, the pill becomes a link to the rating's home page
-    /// (IMDb title, TMDB record, RT/Metacritic search, …).
     let url: URL?
-    /// Asset name of the service's brand icon (in `ServiceIcons.xcassets`) —
-    /// shown in place of the text `label` when present.
+    /// Asset in `ServiceIcons.xcassets`, shown in place of `label`.
     let iconName: String?
-    /// How many people voted for `value`. Hover-only detail — an 8.6 off
-    /// twelve votes and one off two million read identically on the pill,
-    /// so the count rides in the tooltip rather than widening the chip.
+    /// Tooltip-only: an 8.6 off twelve votes and one off two million read identically on the pill.
     let votes: Int?
-    /// The source spelled out for the tooltip ("Rotten Tomatoes") — a brand
-    /// name, never localized. Nil for the sourceless `plain` pill.
+    /// A brand name, never localized. Nil for the `plain` pill.
     let siteName: String?
 
     public init(label: String, value: String, color: Color, url: URL? = nil,
@@ -42,17 +30,8 @@ public struct RatingChip {
     }
 }
 
-/// The ONE place each rating source's label, colour, brand icon, value
-/// format and deep-link rule live. Call sites (detail heroes, search/add
-/// panel, tooltips, discover cards) build chips exclusively through these,
-/// so a chip for the same source can't render differently between views.
-///
-/// `linkTitle == nil` → unlinked pill (the tooltip convention: hover chrome,
-/// not a click target). Passing a title links to the site's record when an
-/// id is known, its search otherwise.
-///
-/// Every factory returns `nil` for a zero/absent score — 0.0 is "not rated
-/// yet", not a rating, and hiding it HERE means no surface can disagree.
+/// The one place each rating source's label, colour, icon, format and link rule live.
+/// Every factory returns nil for a zero score: 0.0 means "not rated yet".
 public extension RatingChip {
     static func imdb(_ value: Double, linkTitle: String? = nil, imdbId: String? = nil,
                      votes: Int? = nil) -> RatingChip? {
@@ -94,8 +73,7 @@ public extension RatingChip {
                           votes: votes, siteName: "Metacritic")
     }
 
-    /// Sourceless score (Lidarr artists/albums, Sonarr seasons) — a plain
-    /// yellow "Rating" pill with no brand mark or link.
+    /// Sourceless score (Lidarr, Sonarr seasons): no brand mark, no link.
     static func plain(_ value: Double, votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
         return RatingChip(label: "Rating", value: String(format: "%.1f", value), color: .yellow,
@@ -103,60 +81,46 @@ public extension RatingChip {
     }
 }
 
-/// Builders for the pages a rating chip can deep-link to. Direct record
-/// links when an id is known; the site's search otherwise — RT and
-/// Metacritic ids never reach the arr payloads at all.
-public enum RatingSiteLink {
+/// RT and Metacritic ids never reach the arr payloads, so those always link to search.
+enum RatingSiteLink {
     private static func q(_ s: String) -> String {
         s.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? s
     }
-    public static func imdb(id: String?, title: String) -> URL? {
+    static func imdb(id: String?, title: String) -> URL? {
         if let id, !id.isEmpty { return URL(string: "https://www.imdb.com/title/\(id)/") }
         return URL(string: "https://www.imdb.com/find/?q=\(q(title))")
     }
-    public static func tmdbMovie(id: Int?, title: String) -> URL? {
+    static func tmdbMovie(id: Int?, title: String) -> URL? {
         if let id, id > 0 { return URL(string: "https://www.themoviedb.org/movie/\(id)") }
         return URL(string: "https://www.themoviedb.org/search?query=\(q(title))")
     }
-    public static func tvdbSeries(id: Int?, title: String) -> URL? {
+    static func tvdbSeries(id: Int?, title: String) -> URL? {
         if let id, id > 0 { return URL(string: "https://thetvdb.com/dereferrer/series/\(id)") }
         return URL(string: "https://thetvdb.com/search?query=\(q(title))")
     }
-    public static func rottenTomatoes(title: String) -> URL? {
+    static func rottenTomatoes(title: String) -> URL? {
         URL(string: "https://www.rottentomatoes.com/search?search=\(q(title))")
     }
-    public static func metacritic(title: String) -> URL? {
+    static func metacritic(title: String) -> URL? {
         URL(string: "https://www.metacritic.com/search/\(q(title))/")
     }
 }
 
-/// Shared header card used by the queue detail view, the search add
-/// panel, and any other "what is this thing?" surface. Right column
-/// scales by what's provided — every field is optional, callers pass
-/// only the data their source can supply.
-public struct MediaHeaderCard: View {
+/// Shared header card for detail views, the search add panel and tooltips; every field is optional.
+struct MediaHeaderCard: View {
     let title: String
     var subtitle: String?
     var year: Int?
     var runtime: Int?
     var network: String?
     var certification: String?
-    /// Extra metadata segments appended to the runtime · network · rating row.
-    /// The episode header's air date rides here — it has no other slot, and a
-    /// second hand-rolled metadata line is exactly the drift this card exists
-    /// to prevent.
+    /// Appended to the runtime · network · rating row (e.g. the episode air date).
     var extraMetadata: [String] = []
-    /// Country of production, as ISO 3166-1 alpha-2 codes — rendered as
-    /// locale-localized names in the metadata row. Codes rather than names so
-    /// the row follows a live language switch (see `AppLocalized`).
+    /// ISO 3166-1 alpha-2 codes, localized at render so the row follows a live language switch.
     var countries: [String]
     var genres: [String]
     var ratings: [RatingChip]
-    /// Synopsis text. When present it renders in the right column
-    /// beside the poster (tooltip layout) instead of below the whole
-    /// card, so the description starts next to the artwork rather than
-    /// under it. Wraps in an `ExpandableOverview` (4-line clamp + Show
-    /// more) so a long synopsis still flows below the poster.
+    /// Renders beside the poster, clamped by `ExpandableOverview`.
     var overview: String?
     let posterURL: URL?
     var posterRequiresAuth: Bool
@@ -165,56 +129,29 @@ public struct MediaHeaderCard: View {
     var posterAspect: CGFloat
     var blurred: Bool
     var trailing: AnyView?
-    /// Small tag rendered inline next to the title — e.g. an
-    /// "Upgrade" pill. Used to float standalone beneath the rating
-    /// chips before; pinned to the title now so it has a clear
-    /// referent.
     var titleBadge: AnyView?
-    /// Optional poster-tap handler — when present, the poster is
-    /// wrapped in a button that fires this closure with its URL,
-    /// letting the host raise a lightbox.
     var onPosterTap: ((URL?) -> Void)?
-    /// Pinned to the poster's bottom-right corner, over the artwork — the
-    /// trailer badge's home. On the poster rather than in a row of its own so
-    /// the affordance sits on the thing it plays.
+    /// Pinned to the poster's bottom-right corner (the trailer badge).
     var posterBadge: AnyView?
-    /// Pinned to the poster's TOP-right corner, over the artwork — the
-    /// monitored bookmark's home on the detail surfaces. Opposite corner from
-    /// `posterBadge` so the two never collide.
+    /// Pinned to the poster's top-right corner (the monitored bookmark), opposite `posterBadge`.
     var posterCornerAction: AnyView?
-    /// Rendered in the right column ABOVE the title. The episode header's
-    /// series / season drill-in links live here — context that belongs beside
-    /// the poster, not under the card.
+    /// Rendered above the title (the episode header's series/season links).
     var aboveTitle: AnyView?
-    /// Watched wedge on the hero artwork — see `posterMarks`.
     var watched: Bool = false
-    /// Hides the title + year line. DetailView sets this when the
-    /// NavigationStack toolbar carries `Title (Year)` so the hero card
-    /// doesn't duplicate it. Tooltips / popovers keep the in-card title
-    /// (no nav chrome there to host it).
+    /// Off when the NavigationStack toolbar already shows `Title (Year)`.
     var showTitle: Bool = true
-    /// While true, the right column shows skeleton placeholders for the
-    /// metadata that's still loading (the runtime/cert row + overview)
-    /// instead of sitting empty until the detail fetch lands. Defaults off,
-    /// so callers that always pass complete data are unaffected.
+    /// Shows skeletons for the runtime row and overview while the detail fetch is in flight.
     var metadataLoading: Bool = false
-    /// The directing credit for the hero's "Directed by" line — a movie's
-    /// director(s), a series' creator(s). A line rather than a headshot strip:
-    /// this is a fact about the title, so it belongs with the other facts
-    /// beside the poster, not in a second row of faces under the cast.
+    /// A movie's director(s) or a series' creator(s).
     var directedBy: [CastMember] = []
-    /// Wording for that line — "Directed by" for a film, "Created by" for a
-    /// series (which has no single director).
     var directedByKey: LocalizedStringKey = "detail.directedBy.label"
-    /// Tapping a credited name opens their page (filmography). nil = the names
-    /// render as plain text.
+    /// nil renders the names as plain text.
     var onTapPerson: ((CastMember) -> Void)?
 
-    /// Drives the country names' language. Read from the environment (not
-    /// `Locale.current`) so a live language switch re-renders the row.
+    /// From the environment, not `Locale.current`, so a live language switch re-renders the row.
     @Environment(\.locale) private var locale
 
-    public init(
+    init(
         title: String,
         subtitle: String? = nil,
         year: Int? = nil,
@@ -276,7 +213,7 @@ public struct MediaHeaderCard: View {
         self.onTapPerson = onTapPerson
     }
 
-    public var body: some View {
+    var body: some View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
@@ -287,10 +224,7 @@ public struct MediaHeaderCard: View {
                 }
                 if showTitle {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        // An empty title while the record is still loading gets
-                        // the same skeleton treatment as the rows below it,
-                        // instead of a blank line that jumps when the name
-                        // lands.
+                        // Skeleton instead of a blank line that jumps when the name lands.
                         if title.isEmpty && metadataLoading {
                             SkeletonBar(width: 180, height: 15)
                         } else {
@@ -303,9 +237,6 @@ public struct MediaHeaderCard: View {
                         }
                     }
                 } else if let titleBadge {
-                    // Badge still has a home — pulled out of the title row
-                    // and floated above the metadata so it doesn't get
-                    // lost when the title moves to the nav bar.
                     titleBadge
                 }
                 if let subtitle, !subtitle.isEmpty {
@@ -316,25 +247,16 @@ public struct MediaHeaderCard: View {
                 if !genres.isEmpty {
                     GenreChips(genres: genres)
                 } else if metadataLoading {
-                    // Chip-shaped, because the row it stands in for is chips.
                     SkeletonBar(width: 120, height: 13, cornerRadius: Tokens.Radius.chip)
                 }
-                // Row 1 — metadata: runtime · network · certification · country.
                 if hasMetadataRow {
                     metadataRow
                 } else if metadataLoading {
                     SkeletonBar(width: 150, height: 11)
                 }
-                // Row 2 — ratings (IMDb / TMDB / RT / MC for movies, the
-                // single Rating pill for series), on their OWN row UNDER
-                // the metadata so movie + series headers read identically.
                 if !ratings.isEmpty {
-                    // Horizontal scroll instead of wrapping: in the narrow
-                    // detail column four rating pills (IMDb/TMDB/RT/MC) would
-                    // otherwise break onto a second line. The ScrollView clips
-                    // to the right column (NO scrollClipDisabled) so scrolled
-                    // pills hide at the column edge instead of bleeding left
-                    // over the poster.
+                    // Scrolls rather than wraps so four pills fit the narrow column; no scrollClipDisabled,
+                    // so scrolled pills clip at the column edge instead of bleeding over the poster.
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(ratings, id: \.label) { RatingPill(chip: $0) }
@@ -346,15 +268,9 @@ public struct MediaHeaderCard: View {
                         SkeletonBar(width: 46, height: 15, cornerRadius: Tokens.Radius.chip)
                     }
                 }
-                // Row 3 — the directing credit, under the ratings and above
-                // the synopsis: it reads as a byline for the description that
-                // follows.
                 if !directedBy.isEmpty {
                     directedByLine
                 }
-                // Synopsis sits beside the poster (tooltip layout) so the
-                // description starts next to the artwork; a long one wraps
-                // down below the poster on its own.
                 if let overview, !overview.isEmpty {
                     ExpandableOverview(text: overview)
                         .padding(.top, 2)
@@ -400,22 +316,13 @@ public struct MediaHeaderCard: View {
         )
     }
 
-    /// "Directed by Denis Villeneuve" — the label plus one tappable name per
-    /// credited director. Two names is the practical ceiling in this column
-    /// (the Wachowskis, the Coens); a bigger directing committee is a series
-    /// anyway, and those show creators instead.
     @ViewBuilder
     private var directedByLine: some View {
         DirectedByLine(people: directedBy, labelKey: directedByKey, onTapPerson: onTapPerson)
     }
 
-    /// Metadata row under the genres: runtime · network · certification ·
-    /// country (dot-joined plain text). Ratings get their own row below this.
-    ///
-    /// Wraps as a line, never inside a segment: in a plain `HStack` the narrow
-    /// right column squeezed every `Text`, so a long country name broke over
-    /// three lines in place. Each segment is `fixedSize` and carries the dot
-    /// that follows it, so a wrapped line never opens with a separator.
+    /// Each segment is `fixedSize` and carries its trailing dot: a plain HStack squeezed long
+    /// country names over several lines, and a wrapped line must not open with a separator.
     @ViewBuilder
     private var metadataRow: some View {
         let countryNames = CountryProvider.displayNames(countries, locale: locale)
@@ -439,23 +346,15 @@ public struct MediaHeaderCard: View {
 }
 
 // MARK: - Poster lightbox
-//
-// Shared full-popover poster preview. Used by every detail surface
-// that wants tap-to-enlarge on its poster — `DetailView`,
-// `SearchAddPanel`, etc. Lifted out of `DetailView` so the chrome
-// (frosted scrim, GeometryReader-fit poster, Apple-style xmark
-// dismiss, tap-anywhere-to-close) lives in exactly one place.
 
-public struct PosterLightbox: View {
+struct PosterLightbox: View {
     let url: URL
     var apiKey: String?
-    /// Width / height ratio of the underlying art. Movie / series
-    /// posters are 2:3 (≈0.667), album art is 1:1 (1.0). Hardcoding
-    /// 2:3 made Lidarr lightboxes render too tall.
+    /// Width / height of the art: 2:3 for posters, 1:1 for album art.
     var aspectRatio: CGFloat
     let onDismiss: () -> Void
 
-    public init(
+    init(
         url: URL,
         apiKey: String? = nil,
         aspectRatio: CGFloat = 2.0 / 3.0,
@@ -467,35 +366,22 @@ public struct PosterLightbox: View {
         self.onDismiss = onDismiss
     }
 
-    /// Live zoom (1 = fit). Updated continuously during the pinch via
-    /// `.onChanged` (more reliable than `@GestureState` here), clamped 1…5.
-    /// `baseZoom`/`baseOffset` hold the committed value between gestures so
-    /// successive pinches/drags compound instead of snapping back.
+    /// Updated in `.onChanged` (more reliable than `@GestureState` here); `baseZoom`/`baseOffset`
+    /// hold the committed value so successive gestures compound.
     @State private var zoom: CGFloat = 1
     @State private var baseZoom: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var baseOffset: CGSize = .zero
 
     #if os(macOS)
-    /// macOS has no pinch here: the menu-bar surface is a non-activating
-    /// `NSPanel` and trackpad `.magnify` events never reach it — not the
-    /// SwiftUI gesture, not even a local `NSEvent` monitor. (The same view
-    /// pinches fine in the detached window, which is a real `NSWindow`.) So
-    /// the Mac gets an explicit slider instead, which also serves Macs with
-    /// a mouse. It fades out when the pointer leaves or goes idle so it
-    /// never sits on top of the artwork it exists to reveal — and so does the
-    /// close button, on the same timer: two pieces of chrome fading on
-    /// separate schedules would read as a glitch.
+    /// The menu-bar NSPanel never receives trackpad `.magnify` events, so macOS gets a slider.
+    /// It shares the close button's fade timer so the two pieces of chrome fade together.
     @State private var showsControls = false
     @State private var idleHide: Task<Void, Never>?
-    /// True for the whole drag. A held mouse button stops delivering hover,
-    /// so without this the idle countdown expires *while* you are scrubbing
-    /// and the control fades out from under the pointer.
+    /// A held mouse button stops delivering hover, so the idle timer would otherwise fade the bar mid-drag.
     @State private var isScrubbing = false
 
-    /// Result of the last save, shown briefly then cleared. Not tied to
-    /// `showsControls`: a confirmation that fades on the chrome's timer would
-    /// vanish the moment the pointer left, which is exactly when you look.
+    /// Not tied to `showsControls`: it would vanish when the pointer leaves, exactly when you look.
     @State private var saveOutcome: PosterSaveOutcome?
 
     private enum PosterSaveOutcome { case saved, failed }
@@ -509,12 +395,8 @@ public struct PosterLightbox: View {
         }
     }
 
-    /// Writes the `.full` copy — the one on screen — into ~/Downloads.
-    ///
-    /// Reads it out of `PosterStore` rather than re-fetching: the lightbox has
-    /// already pulled that exact tier, so the common case touches no network
-    /// at all. Requires `com.apple.security.files.downloads.read-write`; the
-    /// sandbox denies the write without it.
+    /// Reads the `.full` tier from `PosterStore` instead of re-fetching.
+    /// Needs the `files.downloads.read-write` entitlement or the sandbox denies the write.
     private static func writePosterToDownloads(url: URL, apiKey: String?) async -> PosterSaveOutcome {
         var data = PosterStore.storedData(for: url, tier: .full)
         if data == nil {
@@ -526,9 +408,7 @@ public struct PosterLightbox: View {
         let fm = FileManager.default
         guard let dir = try? fm.url(for: .downloadsDirectory, in: .userDomainMask,
                                     appropriateFor: nil, create: false) else { return .failed }
-        // *arr artwork is served as .../MediaCover/12/poster.jpg, so the last
-        // component is all we get for a name. Never overwrite: a second save
-        // of a different title would otherwise clobber the first.
+        // *arr artwork is `.../MediaCover/12/poster.jpg`, so the name is thin; never overwrite a previous save.
         let stem = url.deletingPathExtension().lastPathComponent
         let base = stem.isEmpty ? "poster" : stem
         let ext = url.pathExtension.isEmpty ? "jpg" : url.pathExtension
@@ -542,23 +422,14 @@ public struct PosterLightbox: View {
         return .saved
     }
 
-    /// Local scroll monitor, alive only while the lightbox is on screen.
     @State private var scrollMonitor: Any?
 
-    /// Scroll (trackpad two-finger, or a mouse wheel) zooms the poster.
-    ///
-    /// A local `NSEvent` monitor rather than a gesture or an `NSView` overlay:
-    /// SwiftUI has no scroll-wheel gesture, an overlaid `NSView` would have to
-    /// sit above the artwork and would eat the tap-to-dismiss, and a monitor
-    /// costs nothing when the lightbox is closed because it is torn down with
-    /// it. (`.magnify` is the event the menu-bar panel never delivers —
-    /// scrolling it does, which is why this works where pinch does not.)
+    /// A local NSEvent monitor: SwiftUI has no scroll-wheel gesture and an overlaid NSView would
+    /// eat tap-to-dismiss. The menu-bar panel delivers scroll even though it never delivers `.magnify`.
     private func startScrollZoom() {
         guard scrollMonitor == nil else { return }
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { event in
-            // Precise deltas are trackpad points (dozens per flick); a wheel
-            // sends a handful of coarse clicks. Same feel needs very different
-            // gain.
+            // Precise (trackpad) deltas are dozens of points per flick; a wheel sends a few coarse clicks.
             let gain = event.hasPreciseScrollingDeltas ? 0.006 : 0.06
             let factor = 1 + event.scrollingDeltaY * gain
             guard factor > 0 else { return nil }
@@ -575,7 +446,6 @@ public struct PosterLightbox: View {
         scrollMonitor = nil
     }
 
-    /// Show the bar and restart the idle countdown.
     private func revealControls() {
         idleHide?.cancel()
         withAnimation(.smooth(duration: 0.18)) { showsControls = true }
@@ -587,13 +457,11 @@ public struct PosterLightbox: View {
     }
     #endif
 
-    /// Applies one step of a zoom, from whichever input drives it.
     private func setZoom(_ value: CGFloat) {
         zoom = min(max(value, 1), 5)
     }
 
-    /// End of a zoom: commit it, and recentre if we landed back at fit —
-    /// otherwise a pan made while zoomed leaves the fitted poster off-screen.
+    /// Recentre when back at fit, or a pan made while zoomed leaves the poster off-screen.
     private func commitZoom() {
         baseZoom = zoom
         if zoom <= 1.01 {
@@ -601,49 +469,35 @@ public struct PosterLightbox: View {
         }
     }
 
-    public var body: some View {
+    var body: some View {
         ZStack(alignment: .topTrailing) {
-            // Frosted-glass scrim — `.regularMaterial` blurs the
-            // popover chrome underneath without going solid black.
+            // `.regularMaterial` blurs the popover without going solid black.
             Rectangle()
                 .fill(.regularMaterial)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { onDismiss() }
 
-            // Poster grows to the window edges. No insets: the macOS popover is
-            // 400×600 and a 2:3 poster is exactly that ratio, so dropping the
-            // margins fills the window pixel-perfect with nothing cropped.
+            // No insets: the macOS popover is 400×600, exactly a 2:3 poster.
             GeometryReader { geo in
                 let posterW = min(geo.size.width, geo.size.height * aspectRatio)
                 let posterH = posterW / aspectRatio
-                // Still *fit*, not fill — Lidarr art is square (aspectRatio 1),
-                // and covering a 2:3 window with it would eat a third of the
-                // cover. Square art letterboxes and keeps its card treatment;
-                // only artwork that genuinely reaches both edges goes full-bleed.
+                // Fit, not fill: covering a 2:3 window with square Lidarr art would crop a third of the cover.
                 let fullBleed = posterW >= geo.size.width - 0.5 && posterH >= geo.size.height - 0.5
                 RemotePoster(
                     url: url,
                     apiKey: apiKey,
-                    // The lightbox zooms to 5×, so it is the one place that wants
-                    // the source at full resolution — held in memory for the
-                    // sheet's lifetime, never written to disk.
+                    // The only place that zooms to 5×, so it loads full resolution (memory only, never disk).
                     tier: .full,
                     size: CGSize(width: posterW, height: posterH),
-                    // Rounded corners over a full-bleed image would just carve
-                    // notches out of the artwork with nothing behind them.
                     cornerRadius: fullBleed ? 0 : Tokens.Radius.panel,
                     fallbackSymbol: "photo"
                 )
                 .frame(width: posterW, height: posterH)
                 .scaleEffect(zoom)
                 .offset(offset)
-                // Likewise the lift shadow: it needs a surface to fall on.
                 .shadow(color: .black.opacity(fullBleed ? 0 : 0.5), radius: 20, y: 8)
-                // Pinch to zoom, drag to pan once zoomed. iOS only — see the
-                // `showsControls` note above for why the Mac gets a slider
-                // (and, since the panel does deliver scroll, a scroll-to-zoom
-                // monitor) instead.
+                // iOS only; macOS gets the slider and scroll-to-zoom (see `showsControls`).
                 #if os(iOS)
                 .gesture(
                     MagnifyGesture()
@@ -663,7 +517,6 @@ public struct PosterLightbox: View {
                         .onEnded { _ in baseOffset = offset }
                 )
                 .contentShape(Rectangle())
-                // Tap: zoom back out when zoomed, otherwise dismiss.
                 .onTapGesture {
                     if zoom > 1 {
                         withAnimation(.smooth(duration: 0.2)) {
@@ -674,8 +527,6 @@ public struct PosterLightbox: View {
                     }
                 }
                 #if os(macOS)
-                // On the artwork only, not the whole lightbox: over a square
-                // cover's letterbox bands there is no image to act on.
                 .contextMenu {
                     Button(action: savePosterToDownloads) {
                         Label {
@@ -688,35 +539,14 @@ public struct PosterLightbox: View {
                 #endif
                 .position(x: geo.size.width / 2, y: geo.size.height / 2)
             }
-            // Only the artwork bleeds past the safe area — without this the
-            // GeometryReader is inset by it and the poster stops short of the
-            // notch and home indicator, i.e. "full screen" minus two strips.
-            // Scoped to the poster on purpose: the close button below has to
-            // stay *inside* the safe area, and it can only do that if the stack
-            // around it still respects one.
+            // Scoped to the poster: the close button below must stay inside the safe area.
             .ignoresSafeArea()
 
-            // The xmark used to be dropped here, on the grounds that the scrim
-            // and the native back chevron were both visible behind the poster.
-            // Full-bleed took away both — the artwork now covers the popover to
-            // the last pixel — so with no visible affordance the only ways out
-            // (tap anywhere, Esc) are invisible ones you have to already know.
-            // Hence a real button, which also carries the Esc shortcut that the
-            // zero-sized placeholder used to hold.
-            // Shared with the trailer overlay — see `LightboxCloseButton`,
-            // which also carries the shadow the glass pill needs over
-            // unpredictable artwork, and the Esc shortcut.
-            // Top-leading, where every pushed view puts its back chevron — the
-            // way out of an overlay sits in the same corner as the way out of
-            // a screen.
+            // Full-bleed art hides every other exit, so an explicit close button (with the Esc shortcut).
             LightboxCloseButton(labelKey: "detail.closePoster.button", action: onDismiss)
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             #if os(macOS)
-            // Fades on the same timer as the zoom slider. Deliberately still
-            // hit-testable while invisible: clicking where it sits dismisses
-            // either way (tap-anywhere already does), and taking hit-testing
-            // away risks taking the Esc shortcut with it. iOS keeps it up
-            // permanently — there is no pointer there to bring it back.
+            // Stays hit-testable while invisible so the Esc shortcut keeps working. iOS has no pointer to bring it back, so it stays up.
             .opacity(showsControls ? 1 : 0)
             #endif
 
@@ -725,8 +555,7 @@ public struct PosterLightbox: View {
                 if saveOutcome != nil { saveNote }
                 zoomBar
                     .opacity(showsControls ? 1 : 0)
-                    // Not just invisible — an idle bar must not eat clicks
-                    // meant for the tap-to-dismiss underneath it.
+                    // An idle bar must not eat clicks meant for tap-to-dismiss.
                     .allowsHitTesting(showsControls)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
@@ -738,15 +567,11 @@ public struct PosterLightbox: View {
         .onDisappear { stopScrollZoom() }
         #endif
         #if os(macOS)
-        // Reveal on any pointer movement over the lightbox, then let it time
-        // out. `.onContinuousHover` rather than `.onHover` so a pointer that
-        // stops and starts again inside the window brings it back.
+        // `.onContinuousHover` so a pointer that stops and starts again inside the window brings it back.
         .onContinuousHover { phase in
             switch phase {
             case .active: revealControls()
-            // Not while scrubbing: a drag that wanders off the window edge
-            // still owns the pointer, and yanking the control mid-drag is the
-            // same bug as letting the idle timer do it.
+            // A drag that leaves the window still owns the pointer; don't yank the control mid-drag.
             case .ended where !isScrubbing:
                 idleHide?.cancel()
                 withAnimation(.smooth(duration: 0.3)) { showsControls = false }
@@ -754,8 +579,6 @@ public struct PosterLightbox: View {
             @unknown default: break
             }
         }
-        // Show it once on open so it is discoverable at all — the countdown
-        // takes it away again on its own.
         .onAppear { revealControls() }
         .onDisappear { idleHide?.cancel() }
         #endif
@@ -772,8 +595,6 @@ public struct PosterLightbox: View {
         }
         .scaledFont(size: 11, weight: .medium)
         .foregroundStyle(.white)
-        // Same treatment as the slider: legibility from a shadow rather than
-        // from a slab laid over the artwork.
         .shadow(color: .black.opacity(0.65), radius: 4, y: 1)
         .transition(.opacity)
     }
@@ -781,10 +602,7 @@ public struct PosterLightbox: View {
     private static let zoomBarWidth: CGFloat = 180
     private static let zoomKnob: CGFloat = 12
 
-    /// Hand-drawn rather than a `Slider`, for the same reason the progress
-    /// bars are: the stock control paints its filled half in the accent
-    /// colour, which vanishes over light artwork, and there is no way to
-    /// recolour just that half. White-on-dark-capsule reads over any poster.
+    /// Hand-drawn: `Slider` paints its filled half in the accent colour, which vanishes over light artwork.
     private var zoomBar: some View {
         let span = Self.zoomBarWidth - Self.zoomKnob
         let fraction = (zoom - 1) / 4
@@ -802,8 +620,7 @@ public struct PosterLightbox: View {
         }
         .frame(width: Self.zoomBarWidth, height: Self.zoomKnob)
         .shadow(color: .black.opacity(0.55), radius: 4, y: 1)
-        // Padding first, then the hit shape: a 12pt-tall grab target is a
-        // dart game. The padding stays invisible — no fill goes on it.
+        // Padding before the hit shape: a 12pt-tall grab target is too small.
         .padding(.vertical, 8)
         .contentShape(Rectangle())
         .gesture(
@@ -836,14 +653,11 @@ public struct PosterLightbox: View {
     #endif
 }
 
-/// Coloured capsule for a rating value (IMDb, RT, MC, …).
 struct RatingPill: View {
     let chip: RatingChip
-    /// Drives both the vote-count wording and its digit grouping, and tracks
-    /// a live in-app language switch (see `AppLocalized`).
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         if let url = chip.url {
             Button { PlatformURLOpener.open(url) } label: {
                 pill.contentShape(Rectangle())
@@ -862,17 +676,13 @@ struct RatingPill: View {
         }
     }
 
-    /// "1 234 567 votes" — nil when the source shipped no count (or zero,
-    /// which *arr sends for unrated titles).
+    /// nil when the source sent no count or zero (*arr's value for unrated titles).
     private var votesLine: String? {
         guard let votes = chip.votes, votes > 0 else { return nil }
         return String(format: AppLocalized.string("rating.votes.format", locale: locale),
                       votes.formatted(.number.locale(locale)))
     }
 
-    /// Source name, then the vote count under it. The name — not the link's
-    /// host — because the brand mark on the pill is the thing being spelled
-    /// out; where a click lands is obvious from it.
     private var helpText: String {
         [chip.siteName, votesLine].compactMap { $0 }.joined(separator: "\n")
     }
@@ -880,8 +690,7 @@ struct RatingPill: View {
     private var pill: some View {
         HStack(spacing: 3) {
             if let iconName = chip.iconName {
-                // Brand mark (full colour, appearance-adaptive) in place of the
-                // text label. Non-template so IMDb yellow / RT red etc. show.
+                // Non-template so the brand colours show.
                 Image(iconName, bundle: .module)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
@@ -903,9 +712,7 @@ struct RatingPill: View {
 // MARK: - Poster lightbox presentation
 
 public extension View {
-    /// Present `PosterLightbox` truly full-screen. iOS uses `.fullScreenCover`
-    /// so it covers the nav bar + tab bar (no header, no back button — dismiss
-    /// by tapping the poster). macOS overlays it inside the popover.
+    /// iOS uses `.fullScreenCover` to cover the nav and tab bars; macOS overlays inside the popover.
     @ViewBuilder
     func posterLightbox(url: Binding<URL?>, apiKey: String?, aspectRatio: CGFloat) -> some View {
         #if os(iOS)

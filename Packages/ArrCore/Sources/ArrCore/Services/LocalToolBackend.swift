@@ -1,44 +1,26 @@
 import Foundation
 import os
+import MediaKit
 
 // MARK: - Destructive-tool confirmation
 
-/// How the caller's user answered the confirmation prompt for a gated tool.
 public enum ToolConfirmationOutcome: Sendable {
-    /// Approved — run with these arguments. Handing the arguments back (rather
-    /// than a bare `true`) leaves room for a confirm UI that lets the user edit
-    /// them before the call goes out; none does today.
+    /// Carries the arguments back so a confirm UI could let the user edit them.
     case approved(JSONValue)
-    /// The user said no.
     case declined
-    /// Nobody could be asked. Distinct from `.declined` because the caller may
-    /// want to explain itself differently — an MCP client that never advertised
-    /// elicitation isn't a user refusing, it's a client that cannot ask.
+    /// Nobody could be asked (e.g. an MCP client without elicitation), which is not a refusal.
     case unavailable
 }
 
-/// Asks whoever is driving a tool call to confirm a destructive one.
 public typealias ToolConfirmationHandler = @Sendable (ToolCall) async -> ToolConfirmationOutcome
 
-/// Ambient confirmation channel for the current task.
-///
-/// The gate lives in `LocalToolBackend.callTool`, but the call sites reach it
-/// through closures whose signatures they don't own (`ChatViewModelFactory`
-/// hands both chat providers a plain `(name, args)` passthrough), so the
-/// handler travels as a task-local rather than a parameter. Every call site
-/// binds it immediately around its own call, so the value never has to survive
-/// a framework we don't control.
-///
-/// Unbound — the default — means "no user is reachable", and the gate then
-/// refuses every destructive tool. That is the fail-closed direction: a call
-/// site that forgets to bind a handler loses the ability to mutate, it does not
-/// silently gain the ability to mutate unconfirmed.
+/// Task-local because call sites reach the gate through closures they don't own.
+/// Unbound means no user is reachable, so destructive tools are refused (fail-closed).
 public enum ToolConfirmationContext {
     @TaskLocal nonisolated public static var handler: ToolConfirmationHandler?
 }
 
-/// In-process tool backend. Uses ArrCore's existing Sonarr/Radarr clients.
-/// Exposes the same 6 tools as mcp-arr, but with zero external dependencies.
+/// In-process tool catalog shared by the in-app chat, the MCP server and App Intents.
 public actor LocalToolBackend {
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
@@ -46,39 +28,29 @@ public actor LocalToolBackend {
     let whisparr: ServiceConfig
     let aiKnowsAboutWhisparr: Bool
     let tmdbApiKey: String
-    /// Download-client connection configs, used by the `health` tool to
-    /// report reachability of qBittorrent/Transmission/etc. Empty configs
-    /// are skipped. Not needed by any other tool, so it defaults to none.
+    nonisolated var radarrClient: RadarrClient { RadarrClient(config: radarr) }
+    nonisolated var sonarrClient: SonarrClient { SonarrClient(config: sonarr) }
+    nonisolated var lidarrClient: LidarrClient { LidarrClient(config: lidarr) }
+    nonisolated var whisparrClient: WhisparrClient { WhisparrClient(config: whisparr) }
+    nonisolated var tmdbClient: TMDBClient { TMDBClient(apiKey: tmdbApiKey) }
+    /// Used only by the `health` tool; empty configs are skipped.
     let downloadClients: DownloadClientConfigs
-    /// The one media server, when connected. Drives the `media_server_*` tools
-    /// and nothing else — no other tool consults it.
+    /// Used only by the `media_server_*` tools.
     let mediaServer: MediaServerConfig
 
-    /// Every tool call the app runs passes through here, whoever asked — chat,
-    /// MCP, App Intents — so this is where the audit trail belongs. The MCP
-    /// server logs its own `tools/call` on the way in, which covers only one of
-    /// the three callers; this covers all of them and, unlike that one, sees
-    /// how the call ended.
-    ///
-    /// Tool *arguments* are never logged: they carry the user's search terms
-    /// and, through them, the shape of their library. The name plus the outcome
-    /// is what a support question actually needs.
+    /// Every caller (chat, MCP, App Intents) passes through here, so the audit trail lives here.
+    /// Arguments are never logged: they carry the user's search terms.
     nonisolated private static let log = Logger(category: "Tools")
+    nonisolated static let discoverLog = Logger(category: "Quiz")
 
-    /// Cards already surfaced by suggest_titles in this conversation, by
-    /// SearchResult identity. Cuts cross-call repeats — the loop where every
-    /// retry resurfaces the same lone unowned survivor.
+    /// Stops retries from resurfacing the same lone unowned survivor across calls.
     var surfacedSuggestionIds: Set<String> = []
 
-    /// Deck being resolved from `discover_in_quiz` arguments the model is
-    /// still streaming; claimed by the tool call when it arrives.
+    /// Built while the model is still streaming `discover_in_quiz` arguments; claimed by the tool call.
     var quizEarlyPipeline: QuizDeckPipeline?
     var quizStreamCloses = 0
 
-    /// True when this backend serves a caller with no ArrBarr UI in front of
-    /// it (the MCP server): tools that would otherwise drive the app's own
-    /// surfaces (opening the quiz overlay) return their data as text instead
-    /// of popping windows the remote client cannot see.
+    /// MCP server: tools that would open app surfaces (the quiz overlay) return text instead.
     let headlessSurface: Bool
 
     public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig = .empty,
@@ -98,46 +70,26 @@ public actor LocalToolBackend {
 
     var tmdbEnabled: Bool { !tmdbApiKey.isEmpty }
 
-    /// THE choke point. Every tool call — chat (OpenAI or Foundation Models),
-    /// MCP server, App Intents — lands here, and a tool that isn't on
-    /// `MCPToolWhitelist.readOnlyTools` does not execute without an explicit
-    /// user confirmation obtained through `ToolConfirmationContext`.
-    ///
-    /// The gate used to be re-implemented at each of the three call sites,
-    /// which meant a new call site that forgot it bypassed the gate entirely.
-    /// Call sites still decide HOW to ask (confirm card / MCP elicitation);
-    /// deciding WHETHER to ask, and refusing when the answer never comes, is
-    /// this method's job alone.
+    /// The single gate: a tool outside `MCPToolWhitelist.readOnlyTools` never runs without confirmation
+    /// through `ToolConfirmationContext`. Call sites decide how to ask, never whether.
     public func callTool(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
-        // Guard Whisparr tools when the toggle is off
         if name.hasPrefix("whisparr_") && !aiKnowsAboutWhisparr {
             return ToolCallOutput(text: "Whisparr AI access is disabled in Settings.")
         }
-        // Guard media-server tools when nothing is connected — same shape as
-        // the TMDB guard: a canned line beats a confirmation prompt for a tool
-        // that could only fail.
+        // A canned line beats a confirmation prompt for a tool that could only fail.
         if name.hasPrefix("media_server_") && !mediaServer.isConfigured {
             return ToolCallOutput(text: "No media server is configured in Settings → Media server.")
         }
-        // Guard TMDB tools when no key is configured
         if name.hasPrefix("tmdb_") && !tmdbEnabled {
             return ToolCallOutput(text: "TMDB API key is not configured in Settings → AI → Discovery.")
         }
-        // A name we don't implement can't run whatever the user answers, so
-        // reject it plainly instead of raising a confirmation for a tool that
-        // doesn't exist. Still fail-closed — nothing executes either way.
+        // Unknown names are rejected before any confirmation prompt.
         guard ChatToolCatalog.allToolNames.contains(name) else {
-            // The catalog is ours and the caller picked from it, so a name
-            // outside it means a model hallucinated one — expected — or the
-            // catalog and this file disagree. Only the second is our bug, and
-            // `run`'s backstop is where that one surfaces as a fault.
+            // Usually a hallucinated name; a catalog/implementation mismatch faults in `run` instead.
             Self.log.notice("tool \(name, privacy: .public): not in the catalog, refused")
             throw LocalToolError.unknownTool(name)
         }
-        // Read-only tools run straight through — that is the whole point of
-        // keeping the allowlist tight. Everything else has to be confirmed.
-        // The guards above run first so we never prompt for a tool that is
-        // switched off and would only return a canned "not configured" line.
+        // The guards above run first so switched-off tools never prompt.
         guard MCPToolWhitelist.isDestructive(name) else {
             Self.log.debug("tool \(name, privacy: .public): running (read-only)")
             return try await runLogging(name: name, arguments: arguments)
@@ -148,9 +100,7 @@ public actor LocalToolBackend {
         }
         switch await confirm(ToolCall(name: name, arguments: arguments)) {
         case .approved(let approvedArguments):
-            // The one line worth keeping: a state-changing call the user
-            // approved. `.notice` so "what did the AI actually do to my
-            // library an hour ago" survives in `log show`.
+            // `.notice` so an approved state-changing call survives in `log show`.
             Self.log.notice("tool \(name, privacy: .public): confirmed, running (destructive)")
             return try await runLogging(name: name, arguments: approvedArguments)
         case .declined:
@@ -162,13 +112,8 @@ public actor LocalToolBackend {
         }
     }
 
-    /// `run`, plus the failure half of the audit trail.
-    ///
-    /// A tool that throws surfaces to the caller as prose in the chat bubble
-    /// ("(tool error: …)") and nowhere else, so without this the interesting
-    /// half — which arr, what kind of failure — has no route out of the app.
-    /// The error is `.private`: a `URLError` carries the failing URL, and for
-    /// SABnzbd that URL carries `apikey=` (same reasoning as `QueueAggregator`).
+    /// Tool errors otherwise reach only the chat bubble. `.private` because a `URLError`
+    /// carries the URL, and SABnzbd's carries `apikey=`.
     private func runLogging(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         do {
             return try await run(name: name, arguments: arguments)
@@ -180,8 +125,7 @@ public actor LocalToolBackend {
         }
     }
 
-    /// Dispatch to the actual implementation. Private so the gate above is the
-    /// only way in — an extension or a future call site cannot reach past it.
+    /// Private so `callTool`'s gate is the only way in.
     private func run(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
         switch name {
         case "sonarr_search":       return try await searchSeries(arguments)
@@ -189,11 +133,7 @@ public actor LocalToolBackend {
         case "sonarr_get_series":   return try await listSeries(arguments)
         case "radarr_get_movies":   return try await listMovies(arguments)
         case "get_calendar":        return try await getCalendar(arguments)
-        // `*_add_*` tools used to live here. Removed in favour of "model
-        // surfaces, user adds via the SearchAddPanel card flow" — see
-        // ChatToolCatalog for the rationale. The model now drops the user
-        // off at a tappable card; tapping opens the same panel `+` uses,
-        // with profile/folder/quality pickers and a single confirm button.
+        // No add tools: the model surfaces cards and the user adds through `SearchAddPanel`.
         case "lidarr_search":       return try await searchArtist(arguments)
         case "lidarr_get_artists":  return try await listArtists(arguments)
         case "whisparr_search":     return try await searchScene(arguments)
@@ -220,11 +160,7 @@ public actor LocalToolBackend {
         case "media_server_now_playing":    return try await mediaServerNowPlaying()
         case "media_server_scan_library":   return try await mediaServerScanLibrary()
         default:
-            // `callTool` already rejected anything outside the directory, so
-            // reaching here means the directory lists a tool this switch never
-            // implemented. Same error, deliberate backstop — and a `.fault`,
-            // because unlike an invented tool name this one is our bug: the
-            // catalog advertised something the app cannot do.
+            // `.fault`: the catalog advertises a tool this switch never implemented.
             Self.log.fault("tool \(name, privacy: .public) is in the catalog but has no implementation")
             throw LocalToolError.unknownTool(name)
         }
@@ -232,11 +168,7 @@ public actor LocalToolBackend {
 
     // MARK: - Generic helpers — collapse the per-arr handler boilerplate
 
-    /// Standard `*_search` shape: required `query` arg, configured check,
-    /// SearchClient lookup, condensed text + rich payload. Series/movie/scene
-    /// share this shape; lidarr_search uses its own helper because the
-    /// formatter and rich case both diverge (artist subtitle, foreignArtistId
-    /// label) — see `runSearchArtist`.
+    /// Shared `*_search` shape; Lidarr uses `runSearchArtist` (different formatter and rich case).
     func runSearch(
         args: JSONValue,
         source: QueueItem.Source,
@@ -274,10 +206,6 @@ public actor LocalToolBackend {
         return ToolCallOutput(text: text, rich: .searchArtistResults(results))
     }
 
-    /// Standard `*_get_*` shape: configured check, fetch full library,
-    /// optional substring filter on a record-specific field, condensed text,
-    /// rich payload. The closure approach keeps it type-safe across the four
-    /// different record types without resorting to a protocol.
     func runLibraryList<Rec>(
         args: JSONValue,
         source: QueueItem.Source,
@@ -295,13 +223,14 @@ public actor LocalToolBackend {
         let filter = Self.stringArg(args, key: "query").lowercased()
         let all = try await fetch()
         let matched = filter.isEmpty ? all : all.filter { filterMatch($0, filter) }
-        let text = Self.formatLibrary(
-            serviceName: source.displayName,
-            itemNounSingular: itemNounSingular,
-            itemNounPlural: itemNounPlural,
-            items: matched, filter: filter, line: line
+        let query = LibraryQuery(title: filter)
+        let shown = filter.isEmpty ? LibraryFilter.sample(matched, count: Self.librarySampleSize) : Array(matched.prefix(Self.libraryRowCap))
+        let text = libraryText(
+            serviceName: source.displayName, noun: itemNounSingular, nounPlural: itemNounPlural,
+            total: all.count, matched: matched.count, shown: shown, query: query, nearest: [],
+            line: line, nearestLine: line
         )
-        return ToolCallOutput(text: text, rich: rich(matched))
+        return ToolCallOutput(text: text, rich: rich(shown))
     }
 
 
@@ -314,8 +243,7 @@ public actor LocalToolBackend {
         return ""
     }
 
-    /// Extract an integer arg. Tolerates JSON numbers OR strings (LLM might
-    /// serialize "12345" instead of 12345).
+    /// Accepts JSON numbers or strings: models sometimes send "12345".
     nonisolated static func intArg(_ value: JSONValue, key: String) -> Int {
         guard case .object(let dict) = value, let v = dict[key] else { return 0 }
         switch v {
@@ -325,8 +253,7 @@ public actor LocalToolBackend {
         }
     }
 
-    /// Like `intArg` but distinguishes "absent" from "zero". Used by
-    /// tools where 0 is a legitimate value (season number, etc.).
+    /// Distinguishes absent from zero, for tools where 0 is valid (season number).
     nonisolated static func optionalIntArg(_ value: JSONValue, key: String) -> Int? {
         guard case .object(let dict) = value, let v = dict[key] else { return nil }
         switch v {
@@ -336,8 +263,6 @@ public actor LocalToolBackend {
         }
     }
 
-    /// Bool arg parser. Defaults to `nil` when absent so callers can
-    /// distinguish "missing" from "explicit false".
     nonisolated static func optionalBoolArg(_ value: JSONValue, key: String) -> Bool? {
         guard case .object(let dict) = value, let v = dict[key] else { return nil }
         switch v {
@@ -347,7 +272,6 @@ public actor LocalToolBackend {
         }
     }
 
-    /// Pull `[Int]` out of a JSON-RPC arguments object.
     nonisolated static func intArrayArg(_ value: JSONValue, key: String) -> [Int] {
         guard case .object(let dict) = value, case .array(let arr) = dict[key] else { return [] }
         return arr.compactMap { entry -> Int? in
@@ -359,18 +283,14 @@ public actor LocalToolBackend {
         }
     }
 
-    /// Condensed search result text for the LLM — id + title + year only.
-    /// No overview, no rating, no year-match markers (the carousel makes those visible).
+    /// No overview or ratings: the carousel shows those.
     nonisolated static func formatSearchResultsCondensed(
         _ results: [SearchResult],
         query: String,
         kind: String
     ) -> String {
         guard !results.isEmpty else {
-            // A bare "No results found." reads as an invitation to rephrase
-            // and retry — models will happily do that five times in a row.
-            // One miss IS the answer; say so, and name the two ways a miss
-            // is usually a routing mistake instead.
+            // A bare "No results" invites the model to rephrase and retry repeatedly; one miss is the answer.
             var out = "No \(kind) results for \"\(query)\". One miss is the answer — do NOT retry this tool with rephrasings of the same title."
             switch kind {
             case "series":
@@ -385,45 +305,15 @@ public actor LocalToolBackend {
         let top = results.prefix(15)
         let lines = top.map { r -> String in
             let yearPart = r.year.map { " (\($0))" } ?? ""
-            // The external ref rides along on every line. Without it the model
-            // has no id for a title it is about to name in prose — and asked to
-            // link that title, it will reach into memory and invent one.
+            // Without the ref on every line, the model invents ids when asked to link a title.
             let ref = r.mediaRef.isAddressable ? " — \(r.mediaRef.urlString)" : ""
             return "• \(r.title)\(yearPart)\(ref)"
         }
-        // No more "pass tvdbId to sonarr_add_series" instruction — add tools
-        // are gone. Cards in `rich` are tappable; the user opens
-        // SearchAddPanel from the chat to confirm/configure/add.
         var out = "Surfaced \(results.count) \(kind) result\(results.count == 1 ? "" : "s") for \"\(query)\" as cards in the chat:"
         out += "\n" + lines.joined(separator: "\n")
         if results.count > top.count {
             out += "\n(\(results.count - top.count) more not shown — refine query if needed)"
         }
-        return out
-    }
-
-    /// Shared library-list formatter. Caller passes the line transform so
-    /// per-arr field selection (tvdbId vs tmdbId vs foreignArtistId vs file
-    /// state) stays where it belongs without four near-identical functions.
-    nonisolated static func formatLibrary<Rec>(
-        serviceName: String,
-        itemNounSingular: String,
-        itemNounPlural: String,
-        items: [Rec],
-        filter: String,
-        line: (Rec) -> String
-    ) -> String {
-        guard !items.isEmpty else {
-            return filter.isEmpty
-                ? "\(serviceName) library is empty."
-                : "No \(itemNounPlural) in your library match '\(filter)'."
-        }
-        let top = items.prefix(20)
-        let noun = items.count == 1 ? itemNounSingular : itemNounPlural
-        var out = "\(serviceName) library — \(items.count) \(noun)"
-        if !filter.isEmpty { out += " matching '\(filter)'" }
-        out += ":\n" + top.map(line).joined(separator: "\n")
-        if items.count > top.count { out += "\n(\(items.count - top.count) more not shown)" }
         return out
     }
 
@@ -444,14 +334,7 @@ public actor LocalToolBackend {
 
 }
 
-/// Which download client a health probe targets. Plain Sendable enum so it
-/// can cross the `health` tool's parallel task group without closures.
-enum DownloadClientKind: Sendable {
-    case qbittorrent, transmission, nzbget, sabnzbd, rtorrent, deluge
-}
-
-/// The six download-client connection configs the `health` tool can probe.
-/// Each defaults to `.empty` (skipped) so callers only fill what's set up.
+/// Each defaults to `.empty` (skipped).
 nonisolated public struct DownloadClientConfigs: Sendable {
     public var qbittorrent: ServiceConfig
     public var transmission: ServiceConfig
@@ -479,16 +362,11 @@ nonisolated public struct DownloadClientConfigs: Sendable {
 
 public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {
     case unknownTool(String)
-    /// The user was asked to confirm a destructive tool and said no.
     case confirmationDeclined(String)
-    /// A destructive tool was requested with no way to ask the user — no
-    /// handler bound, or the caller reported it cannot prompt. The tool did
-    /// not run.
+    /// No handler bound, or the caller cannot prompt. The tool did not run.
     case confirmationUnavailable(String)
 
-    // Plain English on purpose: these strings go to the LLM / an MCP client
-    // as tool-call text, not into the app's own UI, so they live outside the
-    // string catalog like the rest of the tool output in this file.
+    // Plain English, not the catalog: these go to the LLM / MCP client as tool output.
     public var errorDescription: String? {
         switch self {
         case .unknownTool(let name):

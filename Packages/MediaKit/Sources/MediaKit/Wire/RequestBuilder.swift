@@ -1,8 +1,8 @@
 import Foundation
 
-public enum RequestBuilder {
+enum RequestBuilder {
     /// Joins `baseURL` (which may carry a path prefix) with a template whose `{name}` segments come from `values`.
-    public static func url(base: URL, pathTemplate: String, values: [String: String], query: [(String, String)]) -> URL {
+    static func url(base: URL, pathTemplate: String, values: [String: String], query: [(String, String)]) -> URL {
         var path = pathTemplate
         for (name, value) in values {
             path = path.replacingOccurrences(of: "{\(name)}", with: value.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? value)
@@ -16,11 +16,11 @@ public enum RequestBuilder {
     }
 
     /// RFC 3986 unreserved set, `+` and `/` escaped, keys in the caller's order.
-    public static func formEncode(_ pairs: [(String, String)]) -> String {
+    static func formEncode(_ pairs: [(String, String)]) -> String {
         pairs.map { "\(escape($0.0))=\(escape($0.1))" }.joined(separator: "&")
     }
 
-    public static func formEncode(_ fields: [String: String]) -> String {
+    static func formEncode(_ fields: [String: String]) -> String {
         formEncode(fields.sorted { $0.key < $1.key }.map { ($0.key, $0.value) })
     }
 
@@ -30,9 +30,9 @@ public enum RequestBuilder {
         return set
     }()
 
-    public static func escape(_ s: String) -> String { s.addingPercentEncoding(withAllowedCharacters: unreserved) ?? s }
+    static func escape(_ s: String) -> String { s.addingPercentEncoding(withAllowedCharacters: unreserved) ?? s }
 
-    public static func urlRequest(from request: HTTPRequest) -> URLRequest {
+    static func urlRequest(from request: HTTPRequest) -> URLRequest {
         var out = URLRequest(url: request.url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: request.timeout.seconds)
         out.httpMethod = request.method
         for (name, value) in request.headers.dictionary { out.setValue(value, forHTTPHeaderField: name) }
@@ -66,28 +66,33 @@ public enum RequestBuilder {
         return data
     }
 
-    public static func json<T: Encodable>(_ value: T) throws -> HTTPRequest.Body {
+    static func json<T: Encodable>(_ value: T) throws -> HTTPRequest.Body {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return .bytes(try encoder.encode(value), contentType: "application/json")
     }
 
-    public static func jsonRPC(method: String, params: JSONValue, id: Int = 1) throws -> HTTPRequest.Body {
+    static func jsonRPC(method: String, params: JSONValue, id: Int = 1) throws -> HTTPRequest.Body {
         try json(JSONRPCEnvelope(method: method, params: params, id: id))
     }
 
     /// The reason a server gave, in any of the three shapes the arr stack uses.
-    public static func serverMessage(from body: Data) -> String? {
+    static func serverMessage(from body: Data) -> String? {
         guard !body.isEmpty, let value = try? JSONDecoder().decode(JSONValue.self, from: body) else {
             let text = String(decoding: body.prefix(200), as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
             return text.isEmpty || text.hasPrefix("<") ? nil : text
         }
         switch value {
         case let .array(items):
-            let messages = items.compactMap { $0["errorMessage"]?.stringValue ?? $0["message"]?.stringValue }
+            let messages = items.compactMap { $0["errorMessage"]?.stringValue ?? $0["message"]?.stringValue }.filter { !$0.isEmpty }
             return messages.isEmpty ? nil : messages.joined(separator: "; ")
-        case .object:
-            return value["message"]?.stringValue ?? value["error"]?.stringValue ?? value["title"]?.stringValue ?? value["detail"]?.stringValue
+        case let .object(object):
+            // ASP.NET ProblemDetails: {"title": "...", "errors": {"field": ["...", ...]}}
+            if case let .object(errors)? = object["errors"] {
+                let messages = errors.keys.sorted().flatMap { key in errors[key]?.arrayValue?.compactMap(\.stringValue) ?? errors[key]?.stringValue.map { [$0] } ?? [] }
+                if !messages.isEmpty { return messages.joined(separator: "; ") }
+            }
+            return ["errorMessage", "message", "error", "title", "detail"].lazy.compactMap { value[$0]?.stringValue }.first { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
         case let .string(s): return s
         default: return nil
         }

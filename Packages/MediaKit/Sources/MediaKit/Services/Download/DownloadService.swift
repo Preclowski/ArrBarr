@@ -52,16 +52,18 @@ extension Capability {
 extension DownloadService {
     var downloadsTag: InvalidationTag { .collection(.downloads, instance) }
 
-    func command(_ name: String, optimistic: PendingEffect? = nil, run: @escaping @Sendable (CommandContext) async throws -> CommandReceipt) -> Command {
-        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: [downloadsTag], optimistic: optimistic, run: run)
+    func command(_ name: String, effects: [PendingEffect] = [], run: @escaping @Sendable (CommandContext) async throws -> CommandReceipt) -> Command {
+        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: [downloadsTag], effects: effects, run: run)
     }
 
-    func optimistic(_ action: DownloadAction, id: String, now: Date) -> PendingEffect? {
-        switch action {
-        case .pause: PendingEffect(elementID: id.lowercased(), change: .status(DownloadTask.State.paused.rawValue), expiresAt: now.addingTimeInterval(30))
-        case .resume, .forceStart: PendingEffect(elementID: id.lowercased(), change: .status(DownloadTask.State.downloading.rawValue), expiresAt: now.addingTimeInterval(30))
-        case .delete: PendingEffect(elementID: id.lowercased(), change: .removed, expiresAt: now.addingTimeInterval(30))
+    /// Keyed by the download id, with no instance: it names the client's task and every arr queue row tracking it.
+    func effects(_ action: DownloadAction, ids: [String]) -> [PendingEffect] {
+        let change: PendingEffect.Change = switch action {
+        case .pause: .status(DownloadTask.State.paused.rawValue)
+        case .resume, .forceStart: .status(DownloadTask.State.downloading.rawValue)
+        case .delete: .removed
         }
+        return ids.map { PendingEffect(elementID: $0.lowercased(), change: change) }
     }
 
     public func fetchTasks(ids: Set<String>, pipeline: RequestPipeline) async throws -> [DownloadTask] {

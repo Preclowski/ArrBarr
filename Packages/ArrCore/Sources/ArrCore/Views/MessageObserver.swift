@@ -1,16 +1,8 @@
 import SwiftUI
 
 public extension View {
-    /// Runs `perform` for every `AppMessages` message of `type` while this view
-    /// exists.
-    ///
-    /// Deliberately NOT a bare `.task { for await … }`: a task is cancelled the
-    /// moment the view disappears and only restarts a turn (in practice several
-    /// seconds, with the main actor busy) after it comes back. The menu-bar
-    /// panel does that constantly while a chat turn runs, and an `AsyncMessage`
-    /// has no replay — anything posted into one of those gaps was gone for
-    /// good. The observation is held by state instead, so it spans the whole
-    /// life of the view and survives every disappear/reappear in between.
+    /// Held by state rather than a bare `.task`: the panel disappears constantly and
+    /// an `AsyncMessage` has no replay, so a restarting task lost posts in the gap.
     func onMessage<M: NotificationCenter.AsyncMessage>(_ type: M.Type, perform: @escaping @MainActor (M) -> Void) -> some View where M.Subject == AppMessageBus {
         modifier(MessageObserver<M>(perform: perform))
     }
@@ -29,7 +21,6 @@ private struct MessageObserver<M: NotificationCenter.AsyncMessage>: ViewModifier
     }
 }
 
-@MainActor
 private final class Observation<M: NotificationCenter.AsyncMessage> where M.Subject == AppMessageBus {
     var perform: @MainActor (M) -> Void = { _ in }
     private var task: Task<Void, Never>?

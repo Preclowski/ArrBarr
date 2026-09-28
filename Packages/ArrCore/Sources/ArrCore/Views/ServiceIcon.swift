@@ -1,14 +1,11 @@
 import SwiftUI
 
 public extension QueueItem.Source {
-    /// Brand icon asset in `ServiceIcons.xcassets`. Every arr ships one, so
-    /// this is always non-nil (matches the enum's raw value).
     var brandIconName: String { rawValue }
 }
 
 public extension ServiceKind {
-    /// Brand icon asset name in `ServiceIcons.xcassets`, or `nil` when none
-    /// ships (→ SF Symbol fallback). Only rTorrent currently lacks one.
+    /// `nil` → SF Symbol fallback (only rTorrent today).
     var brandIconName: String? {
         switch self {
         case .radarr, .sonarr, .lidarr, .whisparr, .sabnzbd,
@@ -19,7 +16,6 @@ public extension ServiceKind {
         }
     }
 
-    /// SF Symbol used when no brand asset ships (only rTorrent today).
     var symbol: String {
         switch self {
         case .radarr: return "film"
@@ -33,16 +29,10 @@ public extension ServiceKind {
 }
 
 public extension MediaServerKind {
-    /// Brand icon asset in `ServiceIcons.xcassets`. All three ship one, so
-    /// unlike `ServiceKind` this is never nil.
     var brandIconName: String { rawValue }
 }
 
-/// A service's brand icon: a monochrome vector (tinted by the inherited
-/// foreground style, so it adapts to light/dark automatically) sized at a
-/// point size that tracks the user's font-scale preset — exactly like the
-/// `.scaledFont` SF Symbols it replaces. Falls back to an SF Symbol when no
-/// brand asset ships for the service.
+/// Monochrome, tinted by the foreground style, sized by the font-scale preset.
 public struct ServiceIcon: View {
     @Environment(\.fontScale) private var scale
     private let brandName: String?
@@ -64,6 +54,14 @@ public struct ServiceIcon: View {
     public init(mediaServer kind: MediaServerKind, size: CGFloat) {
         self.brandName = kind.brandIconName
         self.fallbackSymbol = "play.tv"
+        self.size = size
+    }
+
+    /// Prowlarr has no `ServiceKind`. The asset is selfh.st's monochrome line art,
+    /// so it tints like every other mark.
+    public init(prowlarr size: CGFloat) {
+        self.brandName = "prowlarr"
+        self.fallbackSymbol = "magnifyingglass.circle"
         self.size = size
     }
 

@@ -1,8 +1,8 @@
 import Foundation
 
-public enum ExternalIDParsing {
+enum ExternalIDParsing {
     /// `tmdb://603`, `tvdb://81189`, `imdb://tt0133093`, legacy `com.plexapp.agents.imdb://tt…?lang=en`; `plex://` and `local://` are skipped.
-    public static func plexGuids(_ guids: [String], kind: MediaKind) -> Set<MediaID> {
+    static func plexGuids(_ guids: [String], kind: MediaKind) -> Set<MediaID> {
         var out = Set<MediaID>()
         for guid in guids {
             guard let scheme = guid.split(separator: ":", maxSplits: 1).first.map(String.init) else { continue }
@@ -21,7 +21,7 @@ public enum ExternalIDParsing {
         return out
     }
 
-    public static func jellyfinProviderIDs(_ ids: [String: String], kind: MediaKind) -> Set<MediaID> {
+    static func jellyfinProviderIDs(_ ids: [String: String], kind: MediaKind) -> Set<MediaID> {
         var out = Set<MediaID>()
         for (name, value) in ids {
             switch name.lowercased() {
@@ -37,7 +37,7 @@ public enum ExternalIDParsing {
         return out
     }
 
-    public static func servarrIDs(tmdbId: Int?, imdbId: String?, tvdbId: Int?, foreignId: String?, kind: MediaKind) -> Set<MediaID> {
+    static func servarrIDs(tmdbId: Int?, imdbId: String?, tvdbId: Int?, foreignId: String?, kind: MediaKind) -> Set<MediaID> {
         var out = Set<MediaID>()
         if let tmdbId, tmdbId > 0 { out.insert(kind == .movie ? .tmdbMovie(tmdbId) : .tmdbSeries(tmdbId)) }
         if let imdbId, imdbId.lowercased().hasPrefix("tt") { out.insert(.imdb(imdbId)) }
@@ -53,7 +53,7 @@ public enum ExternalIDParsing {
         return out
     }
 
-    public static func tmdbExternalIDs(imdb: String?, tvdb: Int?) -> Set<MediaID> {
+    static func tmdbExternalIDs(imdb: String?, tvdb: Int?) -> Set<MediaID> {
         var out = Set<MediaID>()
         if let imdb, imdb.lowercased().hasPrefix("tt") { out.insert(.imdb(imdb)) }
         if let tvdb, tvdb > 0 { out.insert(.tvdb(tvdb)) }

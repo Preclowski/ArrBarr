@@ -1,15 +1,13 @@
 import Foundation
+import os
 
-/// Thin, extension-safe entry point: given the four arr configs, fetch each
-/// configured library and return per-source summaries. Constructs the arr
-/// `actor` clients directly — deliberately avoids `LocalToolBackend` (TMDB,
-/// custom formats, discover) which is too heavy for a widget's memory budget.
+/// Extension-safe: builds the arr clients directly rather than `LocalToolBackend`,
+/// which is too heavy for a widget's memory budget.
 public actor LibrarySummaryService {
+    nonisolated private static let log = Logger(category: "Widget")
     public init() {}
 
-    /// Fetch summaries for the given configs, in `LibrarySummary.Source` order,
-    /// skipping unconfigured services. A service that errors is omitted (the
-    /// caller renders it as a stale/"—" row).
+    /// A service that errors is omitted; the caller renders it as a stale row.
     public func summaries(
         radarr: ServiceConfig,
         sonarr: ServiceConfig,
@@ -23,14 +21,25 @@ public actor LibrarySummaryService {
         return await [r, s, l, w].compactMap { $0 }
     }
 
+    /// The demo library for `sources`, from the bundled fixtures (the widget's demo mode).
+    public static func demo(sources: Set<LibrarySummary.Source>) async -> [LibrarySummary] {
+        let gateway = await MainActor.run { ServiceGateway.demo(kinds: Set(sources.map(\.serviceKind))) }
+        let configs = await MainActor.run { LibrarySummary.Source.allCases.map { gateway.configStore.config(for: $0.serviceKind) } }
+        let summaries = await ServiceGateway.$override.withValue(gateway) {
+            await LibrarySummaryService().summaries(radarr: configs[0], sonarr: configs[1], lidarr: configs[2], whisparr: configs[3])
+        }
+        await gateway.kit.stop()
+        return summaries
+    }
+
     nonisolated private static func fetch(
         _ config: ServiceConfig,
         _ body: @Sendable (ServiceConfig) async throws -> LibrarySummary
     ) async -> LibrarySummary? {
-        // isVisible (not isConfigured): an arr enabled with a URL but no API
-        // key would 401 and be silently dropped, yielding a blank widget. Gate
-        // it out so the "Set up a server" empty state shows instead.
+        // isVisible, not isConfigured: a keyless arr would 401 and leave a blank widget
+        // instead of the "Set up a server" state.
         guard config.isVisible else { return nil }
-        return try? await body(config)
+        // The widget has no other diagnostics, so a failed source is kept at notice.
+        return await log.attempt("library summary", level: .default) { try await body(config) }
     }
 }

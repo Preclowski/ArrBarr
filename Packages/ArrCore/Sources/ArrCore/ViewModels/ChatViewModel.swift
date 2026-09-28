@@ -1,35 +1,30 @@
 import Foundation
 import Observation
 import os
+import MediaKit
 
 @Observable
-public final class ChatViewModel {
-    public private(set) var messages: [ChatMessage] = []
-    public private(set) var isThinking: Bool = false
-    public private(set) var pendingConfirm: ToolCall?
-    public private(set) var lastError: String?
+final class ChatViewModel {
+    private(set) var messages: [ChatMessage] = []
+    private(set) var isThinking: Bool = false
+    private(set) var pendingConfirm: ToolCall?
+    private(set) var lastError: String?
 
     private let provider: LLMProvider
     private let tools: [LLMTool]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput
-    /// Suspended continuation that resumes when the user taps Confirm
-    /// or Cancel on a `ConfirmActionCard`. nil when no destructive
-    /// tool is pending. Resume value is `JSONValue?`: confirmed args
-    /// to proceed, or nil = cancel.
+    /// Resumed by Confirm (with the args to proceed) or Cancel (nil).
     private var pendingResume: CheckedContinuation<JSONValue?, Never>?
     private let onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)?
     private let onTurnEnded: (@Sendable () -> Void)?
     private var turnTask: Task<Void, Never>?
 
-    /// Never logs a prompt, a reply or a tool argument — all three are the
-    /// user's own words. What it records is that a turn happened, which
-    /// provider handled it (an on-device model and a third-party API are very
-    /// different answers to "where did my question go"), and how it ended.
+    /// Never logs prompts, replies or tool arguments — they are the user's words. Records turn, provider and outcome.
     private static let log = Logger(category: "Chat")
 
-    public var providerIsAvailable: Bool { provider.isAvailable }
+    var providerIsAvailable: Bool { provider.isAvailable }
 
-    public init(provider: LLMProvider,
+    init(provider: LLMProvider,
                 tools: [LLMTool],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
                 onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
@@ -41,7 +36,7 @@ public final class ChatViewModel {
         self.invokeTool = invokeTool
     }
 
-    public func send(_ text: String) async {
+    func send(_ text: String) async {
         guard pendingResume == nil else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
@@ -53,49 +48,34 @@ public final class ChatViewModel {
         onTurnEnded?()
     }
 
-    /// Stops the running turn. Ignored while a confirm card is up — that gate
-    /// resolves through its own buttons.
-    public func cancelTurn() {
+    /// Ignored while a confirm card is up; that gate resolves through its own buttons.
+    func cancelTurn() {
         guard pendingResume == nil else { return }
         turnTask?.cancel()
     }
 
-    /// Wipe the conversation. Refuses while a destructive-tool gate is
-    /// pending so we don't leak a CheckedContinuation.
-    public func clear() {
+    /// Refuses while a confirm gate is pending so the CheckedContinuation isn't leaked.
+    func clear() {
         guard pendingResume == nil else { return }
         messages = []
         lastError = nil
     }
 
-    /// User tapped Confirm on a ConfirmActionCard. Resumes the
-    /// suspended tool with the original args (unchanged — we don't
-    /// support arg editing yet, that's a separate UX project).
-    public func confirmPending() {
+    func confirmPending() {
         guard let call = pendingConfirm else { return }
         pendingResume?.resume(returning: call.arguments)
         pendingResume = nil
     }
 
-    /// User tapped Cancel on a ConfirmActionCard. Resumes with nil so
-    /// the call-site knows to short-circuit + emit a "cancelled" tool
-    /// result.
-    public func cancelPending() {
+    func cancelPending() {
         guard pendingConfirm != nil else { return }
         pendingResume?.resume(returning: nil)
         pendingResume = nil
     }
 
-    /// Block until the user resolves a destructive tool gate. Surfaces
-    /// `call` via `pendingConfirm` (the view shows ConfirmActionCard),
-    /// suspends until `confirmPending` / `cancelPending` lands, returns
-    /// args-to-proceed-with or nil for cancel. Used by both providers:
-    ///   - OpenAI path: ChatViewModel.runLoop calls this before
-    ///     invoking the tool
-    ///   - Foundation Models path: DynamicMCPTool.call calls this via
-    ///     the `confirmDestructive` closure wired in ChatViewModelFactory
-    /// Re-entrant attempts return nil immediately (one gate at a time).
-    public func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
+    /// Suspends until the user confirms or cancels; nil = cancel. Used by the OpenAI loop and, via
+    /// `confirmDestructive`, by Foundation Models tools. Re-entrant calls return nil (one gate at a time).
+    func awaitConfirm(_ call: ToolCall) async -> JSONValue? {
         guard pendingResume == nil else { return nil }
         pendingConfirm = call
         isThinking = false
@@ -119,23 +99,22 @@ public final class ChatViewModel {
         Self.log.notice(
             "turn started via \(String(describing: type(of: self.provider)), privacy: .public), \(self.tools.count, privacy: .public) tools offered"
         )
+        // Bound once: reading the stored property inside the round's closure is a main-actor access.
+        let observer = onToolCallStream
         do {
             var nextPrompt: String? = prompt
-            // Hard cap on rounds to keep a misbehaving model from spinning forever.
             var roundsLeft = 6
             while let p = nextPrompt, roundsLeft > 0 {
                 roundsLeft -= 1
                 Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
                 let response = try await timedRound {
-                    try await ToolCallStreamContext.$observer.withValue(onToolCallStream) {
+                    try await ToolCallStreamContext.$observer.withValue(observer) {
                         try await provider.respond(prompt: p, tools: tools, history: messages)
                     }
                 }
                 try Task.checkCancellation()
 
-                // --- Pre-executed path (e.g. FoundationModelsProvider) ---
-                // The provider already ran the tools inside its session; toolResults is non-nil.
-                // We only render the messages — no re-execution, no further round.
+                // The provider already ran the tools in its session; only render, no further round.
                 if let toolResults = response.toolResults {
                     let toolCall = response.toolCalls.first
                     let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
@@ -152,20 +131,14 @@ public final class ChatViewModel {
                     return
                 }
 
-                // --- View-model-executes path (e.g. OpenAI provider) ---
                 let toolCalls = response.toolCalls
                 guard !toolCalls.isEmpty else {
                     messages.append(ChatMessage(role: .assistant, content: response.text))
                     return
                 }
 
-                // The model can return SEVERAL tool calls in one turn
-                // (parallel tool-calling). Execute all of them — dropping the
-                // extras leaves the next request with tool_calls that were
-                // never answered and confuses strict providers. Each call gets
-                // its own assistant carrier so every tool result has a matching
-                // preceding tool_call in the OpenAI history; the prose rides on
-                // the first carrier only.
+                // Execute every parallel tool call: unanswered tool_calls confuse strict providers. Each result gets its own
+                // assistant carrier so the OpenAI history pairs them.
                 var ranAnyTool = false
                 for (index, call) in toolCalls.enumerated() {
                     messages.append(ChatMessage(
@@ -174,13 +147,8 @@ public final class ChatViewModel {
                         toolCall: call
                     ))
 
-                    // Destructive-tool gate, presentation half. The backend is
-                    // what refuses to RUN an unconfirmed tool (see
-                    // LocalToolBackend.callTool); we put the confirm card up
-                    // first so the user sees the call in context, then hand
-                    // that answer down through ToolConfirmationContext.
-                    // Cancel returns "(cancelled by user)" so the model can
-                    // adapt its plan.
+                    // The backend refuses unconfirmed tools; the card shows the call in context first. Cancel returns
+                    // "(cancelled by user)" so the model can adapt.
                     let preApproved: JSONValue?
                     if MCPToolWhitelist.isDestructive(call.name) {
                         guard let args = await awaitConfirm(call) else {
@@ -199,11 +167,7 @@ public final class ChatViewModel {
                     }
                     let confirmedArgs = preApproved ?? call.arguments
 
-                    // What the backend's gate calls. Usually the card above
-                    // already ran for this very call, so we hand back the
-                    // approval we're holding. It only asks again if the
-                    // backend gates something this loop didn't — the
-                    // fail-closed direction, and still worth a card.
+                    // Usually returns the approval already held; asks again only if the backend gates something this loop didn't.
                     let confirm: ToolConfirmationHandler = { [weak self] pending in
                         if let preApproved { return .approved(preApproved) }
                         guard let self else { return .unavailable }
@@ -217,8 +181,6 @@ public final class ChatViewModel {
                             try await invokeTool(call.name, confirmedArgs)
                         }
                     } catch LocalToolError.confirmationDeclined(_) {
-                        // Vetoed at the backend gate rather than the card
-                        // above — render it identically.
                         messages.append(ChatMessage(
                             role: .tool,
                             content: call.name,
@@ -240,32 +202,24 @@ public final class ChatViewModel {
                     ))
                     ranAnyTool = true
                 }
-                // Next round carries NO prompt. Every result is already in
-                // `messages` as a properly-roled tool message, which is what the
-                // provider sends; re-sending the same text as a user turn told
-                // the model the human had just pasted tool output at it, and it
-                // answered that instead of the original question — the tool-call
-                // spiral. An empty prompt means "continue from what's there".
+                // No prompt: results are already in `messages` as tool messages. Re-sending them as a user turn made
+                // the model answer the tool output instead of the question.
                 nextPrompt = ranAnyTool ? "" : nil
             }
             if roundsLeft == 0 {
                 Self.log.notice("turn hit the 6-round tool-call cap and stopped")
-                lastError = "Reached the maximum number of tool-call rounds."
-                messages.append(ChatMessage(role: .assistant, content: "Sorry — I got stuck in a loop and stopped."))
+                lastError = String(localized: "chat.error.roundCap", bundle: .module)
+                messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.stuckInLoop", bundle: .module)))
             }
         } catch where Task.isCancelled {
             Self.log.notice("turn cancelled by the user")
         } catch {
-            // The user sees `error.localizedDescription` in a bubble and
-            // nothing else. Keep that half public (it is a provider's own
-            // sanitized message) and put the type/underlying detail behind
-            // `.private` — an API error can quote the request that carried the
-            // user's prompt.
+            // The description is the provider's sanitized message; the underlying error can quote the user's prompt, so `.private`.
             Self.log.error(
                 "turn failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
             lastError = error.localizedDescription
-            messages.append(ChatMessage(role: .assistant, content: "Sorry — \(error.localizedDescription)"))
+            messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.failed \(error.localizedDescription)", bundle: .module)))
         }
     }
 }

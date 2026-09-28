@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
     public enum Role: Equatable, Sendable { case user, assistant, tool }
@@ -6,11 +7,10 @@ nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let role: Role
     public var content: String
-    /// Set when the assistant is requesting a tool call.
     public var toolCall: ToolCall?
-    /// Set on `.tool` messages — the text returned by the MCP server.
+    /// Set on `.tool` messages: the text result the model sees.
     public var toolResult: String?
-    /// Set on `.tool` messages — structured UI payload (not sent to LLM).
+    /// Set on `.tool` messages: UI-only payload, never sent to the model.
     public var richContent: ChatRichContent?
 
     public init(id: UUID = UUID(),
@@ -29,8 +29,7 @@ nonisolated public struct ChatMessage: Identifiable, Equatable, Sendable {
 }
 
 nonisolated public struct ToolCall: Equatable, Sendable {
-    /// Provider-side correlation id (e.g. OpenAI's tool_call_id). Optional;
-    /// Foundation Models doesn't need this, OpenAI does.
+    /// Provider-side correlation id (OpenAI's tool_call_id); Foundation Models doesn't use it.
     public let id: String?
     public let name: String
     public let arguments: JSONValue

@@ -1,25 +1,13 @@
 import SwiftUI
 
-/// Shared metrics for the queue section headers and their item rows, so the
-/// chevron column width and the item indent stay in lock-step.
 enum QueueHeaderMetrics {
     static let chevronWidth: CGFloat = 10
     static let iconWidth: CGFloat = 16
 
-    /// Leading inset that lines an item row's content up under the section icon
-    /// (past the chevron column) — the "Next week" banner indents this way, so
-    /// the Needs-you rows use it too for a matching slight left margin.
     static var contentIndent: CGFloat { Tokens.Spacing.queueRowH + chevronWidth + 6 }
 }
 
-/// The ONE collapsible section-header row shared by every queue group
-/// (Next week / Needs you / each arr). A single component ⇒ identical chevron x,
-/// icon footprint, text size, horizontal padding and height across all three.
-/// Each host emits this as its own List row and its items as SIBLING rows, so
-/// collapse animates as native row insert/remove.
-/// Header type sizes. macOS keeps the compact popover values; iOS uses a real
-/// section-header scale — 12pt secondary text reads as a caption on a phone,
-/// not as the heading of everything under it.
+/// iOS uses a real section-header scale: 12pt secondary reads as a caption on a phone.
 private enum QueueHeaderType {
     #if os(iOS)
     static let title: CGFloat = 17
@@ -32,20 +20,21 @@ private enum QueueHeaderType {
     static let count: CGFloat = 11
     static let chevron: CGFloat = 9
     static let vPad: CGFloat = 0
-    // `.primary`, like every other section title: the popover's text is
-    // vibrant, so a secondary heading blends into the glass and reads as
-    // half-transparent. The count beside it stays `.tertiary`.
+    // `.primary`: the popover's text is vibrant, so a secondary heading reads as half-transparent.
     static let titleStyle: HierarchicalShapeStyle = .primary
     #endif
 }
 
+/// Shared by every queue group so chevron, icon and text line up. Items are SIBLING List rows,
+/// so collapse animates as native row insert/remove.
 struct QueueHeaderRow<Trailing: View>: View {
     let icon: AnyView
     let title: String
     var count: Int? = nil
+    var hiddenCount: Int = 0
+    var onToggleHidden: (() -> Void)? = nil
     let collapsed: Bool
-    /// Hidden (slot preserved) for a genuine reachable arr error so the icon and
-    /// label don't shift sideways.
+    /// Hidden, slot preserved, so the icon and label don't shift sideways.
     var showChevron: Bool = true
     let onToggle: () -> Void
     @ViewBuilder var trailing: () -> Trailing
@@ -58,8 +47,7 @@ struct QueueHeaderRow<Trailing: View>: View {
                 .rotationEffect(.degrees(collapsed ? 0 : 90))
                 .frame(width: QueueHeaderMetrics.chevronWidth)
                 .opacity(showChevron ? 1 : 0)
-            // Fixed-width slot so every section's title starts at the same x,
-            // whatever the icon glyph — and items can indent to align under it.
+            // Fixed-width slot so every title starts at the same x whatever the glyph.
             icon
                 .frame(width: QueueHeaderMetrics.iconWidth, alignment: .center)
             Text(verbatim: title)
@@ -69,6 +57,15 @@ struct QueueHeaderRow<Trailing: View>: View {
                 Text(verbatim: "\(count)")
                     .scaledFont(size: QueueHeaderType.count)
                     .foregroundStyle(.tertiary)
+            }
+            if hiddenCount > 0 {
+                Button { onToggleHidden?() } label: {
+                    Text("queue.hiddenCount \(hiddenCount)", bundle: .module)
+                        .scaledFont(size: QueueHeaderType.count)
+                        .foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .disabled(onToggleHidden == nil)
             }
             Spacer(minLength: 4)
             trailing()
@@ -97,10 +94,6 @@ extension QueueHeaderRow where Trailing == EmptyView {
     }
 }
 
-/// "Show history ›" trailing link for section headers. Shared by the native
-/// queue list and the search-mode section header so both get the same hover
-/// affordance (accent tint + pointer feedback) — the list copy used to be a
-/// static `.tertiary` label and read as dead text next to every other link.
 struct ShowHistoryLink: View {
     let action: () -> Void
     @State private var hovering = false
@@ -114,8 +107,7 @@ struct ShowHistoryLink: View {
                     .accessibilityHidden(true)
             }
             .scaledFont(size: 10)
-            // Brighten, don't tint — every other inline link (LinkChevron)
-            // answers hover by stepping up the gray ramp, not going accent.
+            // Brighten, don't tint — inline links answer hover by stepping up the gray ramp.
             .foregroundStyle(hovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.tertiary))
         }
         .buttonStyle(.plain)

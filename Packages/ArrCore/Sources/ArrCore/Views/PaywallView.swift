@@ -1,10 +1,6 @@
 import SwiftUI
 
-/// ArrBarr Control paywall. The app is free to *watch*; this screen sells the
-/// one-time unlock that turns on *interaction* ("Control"). The hero, headline
-/// and subtitle adapt to the gated feature; the free reassurance, benefits, CTA
-/// and footer are constant. No "pro"/"premium" wording — the upgrade is
-/// "Control". Hosted in an NSWindow on macOS and a full-screen cover on iOS.
+/// Free to watch; this sells the one-time "Control" unlock. Never "pro"/"premium" wording.
 public struct PaywallView: View {
     @ObservedObject private var store = StoreManager.shared
     let context: ProFeature?
@@ -104,8 +100,7 @@ public struct PaywallView: View {
         VStack(alignment: .leading, spacing: 9) {
             ForEach(benefitKeys, id: \.self) { key in
                 HStack(alignment: .firstTextBaseline, spacing: 9) {
-                    // Bullet glyph — every line has one, so announcing
-                    // "checkmark" before each benefit is pure repetition.
+                    // Every line has one, so announcing "checkmark" per benefit is repetition.
                     Image(systemName: "checkmark")
                         .scaledFont(size: 11, weight: .bold)
                         .foregroundStyle(.green)

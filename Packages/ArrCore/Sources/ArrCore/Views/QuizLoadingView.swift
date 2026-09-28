@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// What the quiz overlay shows between "start" and the first card: which
-/// stage the deck is in, how far along, and a way out.
 struct QuizLoadingView: View {
     let phase: DiscoverViewModel.LoadPhase
     let startedAt: Date?
@@ -75,8 +73,7 @@ struct QuizLoadingView: View {
         }
     }
 
-    /// Determinate only once the pick count stops growing; a bar whose total
-    /// keeps moving reads as going backwards.
+    /// Determinate only once the pick count stops growing; a moving total reads as going backwards.
     @ViewBuilder
     private var progressBar: some View {
         if case .resolving(let done, let total, true) = phase, total > 0 {

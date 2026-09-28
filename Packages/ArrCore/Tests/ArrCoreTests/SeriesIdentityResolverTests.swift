@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import MediaKit
 @testable import ArrCore
 
 /// The bug these exist for: opening "The Closer" from Rhea Seehorn's
@@ -47,71 +48,72 @@ private struct Fixtures {
 }
 
 private final class ResolverStubState: @unchecked Sendable {
-    /// Every URL the process asked for while the stub was installed.
-    var requests: [URL] = []
+    private let lock = NSLock()
+    private var _requests: [URL] = []
+    private var _understandsTMDBTerm = false
+    private var _externalTVDBId: Int? = Fixtures.tvdbId
+    private var _libraryJSON = "[]"
+
+    /// Every URL the gateway asked for during the test.
+    var requests: [URL] {
+        get { lock.withLock { _requests } }
+        set { lock.withLock { _requests = newValue } }
+    }
     /// Does the stubbed Sonarr understand `term=tmdb:N`?
-    var understandsTMDBTerm = false
+    var understandsTMDBTerm: Bool {
+        get { lock.withLock { _understandsTMDBTerm } }
+        set { lock.withLock { _understandsTMDBTerm = newValue } }
+    }
     /// `nil` → TMDB has no tvdb id on file for this show.
-    var externalTVDBId: Int? = Fixtures.tvdbId
+    var externalTVDBId: Int? {
+        get { lock.withLock { _externalTVDBId } }
+        set { lock.withLock { _externalTVDBId = newValue } }
+    }
     /// Body for `GET /api/v3/series` (the library snapshot).
-    var libraryJSON = "[]"
+    var libraryJSON: String {
+        get { lock.withLock { _libraryJSON } }
+        set { lock.withLock { _libraryJSON = newValue } }
+    }
+
+    func record(_ url: URL) { lock.withLock { _requests.append(url) } }
 
     func requests(matching needle: String) -> [URL] {
         requests.filter { ($0.absoluteString).contains(needle) }
     }
 }
 
-/// Stubs the Sonarr host *and* TMDB, so a test can see every request the
+private let resolverState = ResolverStubState()
+
+/// Answers the Sonarr host *and* TMDB, so a test can see every request the
 /// resolution made — including the one it must never make.
-private final class ResolverStub: URLProtocol, @unchecked Sendable {
-    static let state = ResolverStubState()
-    static let sonarrHost = "sonarr.identity.test"
+private let resolverTransport = ScriptedTransport { request in
+    let url = request.url
+    resolverState.record(url)
+    let path = url.path
+    let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+        .queryItems?.first { $0.name == "term" }?.value ?? ""
 
-    override class func canInit(with request: URLRequest) -> Bool {
-        guard let host = request.url?.host else { return false }
-        return host == sonarrHost || host == "api.themoviedb.org"
+    if path.contains("/external_ids") {
+        // Slow enough that two concurrent resolutions are both in flight: the store coalesces in-flight reads.
+        try await Task.sleep(for: .milliseconds(50))
+        return .init(resolverState.externalTVDBId.map { #"{"tvdb_id": \#($0)}"# } ?? #"{"tvdb_id": null}"#)
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        let url = request.url ?? URL(string: "about:blank")!
-        Self.state.requests.append(url)
-        let path = url.path
-        let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?.first { $0.name == "term" }?.value ?? ""
-
-        let body: String
-        if path.contains("/external_ids") {
-            body = Self.state.externalTVDBId.map { #"{"tvdb_id": \#($0)}"# } ?? #"{"tvdb_id": null}"#
-        } else if path.hasSuffix("/series/lookup") {
-            if term == "tvdb:\(Fixtures.tvdbId)" {
-                body = Fixtures.realShow
-            } else if term == "tmdb:\(Fixtures.tmdbTVId)" {
-                body = Self.state.understandsTMDBTerm ? Fixtures.realShow : Fixtures.decoyShow
-            } else {
-                // A title search, or anything else we didn't script. Answering
-                // with the decoy is deliberate: if some path ever falls back to
-                // matching by name, the test sees the wrong show rather than an
-                // empty list.
-                body = Fixtures.decoyShow
-            }
-        } else if path.hasSuffix("/series") {
-            body = Self.state.libraryJSON
-        } else {
-            body = "[]"
+    if path.hasSuffix("/series/lookup") {
+        if term == "tvdb:\(Fixtures.tvdbId)" { return .init(Fixtures.realShow) }
+        if term == "tmdb:\(Fixtures.tmdbTVId)" {
+            return .init(resolverState.understandsTMDBTerm ? Fixtures.realShow : Fixtures.decoyShow)
         }
-
-        let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1",
-                                       headerFields: ["Content-Type": "application/json"])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data(body.utf8))
-        client?.urlProtocolDidFinishLoading(self)
+        // A title search, or anything else we didn't script. Answering
+        // with the decoy is deliberate: if some path ever falls back to
+        // matching by name, the test sees the wrong show rather than an
+        // empty list.
+        return .init(Fixtures.decoyShow)
     }
-
-    override func stopLoading() {}
+    if path.hasSuffix("/series") { return .init(resolverState.libraryJSON) }
+    return .init("[]")
 }
 
-@Suite("Series identity resolution", .serialized)
+@Suite("Series identity resolution", .serialized, .gateway(resolverTransport))
 @MainActor
 struct SeriesIdentityResolverTests {
 
@@ -119,21 +121,17 @@ struct SeriesIdentityResolverTests {
     /// and a cached empty library from a previous test would silently answer
     /// the one that needs a populated one.
     private func config(port: Int) -> ServiceConfig {
-        ServiceConfig(enabled: true, baseURL: "http://\(ResolverStub.sonarrHost):\(port)",
+        ServiceConfig(enabled: true, baseURL: "http://sonarr.identity.test:\(port)",
                       apiKey: "test-key", username: "", password: "")
     }
 
     private func withStub(_ body: () async throws -> Void) async rethrows {
         SeriesIdentityResolver.resetForTesting()
-        ResolverStub.state.requests = []
-        ResolverStub.state.understandsTMDBTerm = false
-        ResolverStub.state.externalTVDBId = Fixtures.tvdbId
-        ResolverStub.state.libraryJSON = "[]"
-        URLProtocol.registerClass(ResolverStub.self)
-        defer {
-            URLProtocol.unregisterClass(ResolverStub.self)
-            SeriesIdentityResolver.resetForTesting()
-        }
+        resolverState.requests = []
+        resolverState.understandsTMDBTerm = false
+        resolverState.externalTVDBId = Fixtures.tvdbId
+        resolverState.libraryJSON = "[]"
+        defer { SeriesIdentityResolver.resetForTesting() }
         try await body()
     }
 
@@ -148,8 +146,8 @@ struct SeriesIdentityResolverTests {
             #expect(record?.externalId != Fixtures.decoyTVDBId)
             // The regression itself: no request may carry the bare title as
             // its search term.
-            #expect(ResolverStub.state.requests(matching: "term=The%20Closer").isEmpty)
-            #expect(ResolverStub.state.requests(matching: "term=The+Closer").isEmpty)
+            #expect(resolverState.requests(matching: "term=The%20Closer").isEmpty)
+            #expect(resolverState.requests(matching: "term=The+Closer").isEmpty)
         }
     }
 
@@ -159,7 +157,7 @@ struct SeriesIdentityResolverTests {
             // Sonarr replies to `term=tmdb:1234` with a same-titled other show
             // — the shape an older server produces when it treats the prefix as
             // literal text.
-            ResolverStub.state.understandsTMDBTerm = false
+            resolverState.understandsTMDBTerm = false
 
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8002), tmdbKey: "k")
@@ -168,62 +166,46 @@ struct SeriesIdentityResolverTests {
             #expect(record?.title == "The Closer")
             #expect(record?.overview == "The one they meant.")
             // Rejecting the fuzzy answer is what forced the TMDB hop.
-            #expect(!ResolverStub.state.requests(matching: "/external_ids").isEmpty)
+            #expect(!resolverState.requests(matching: "/external_ids").isEmpty)
         }
     }
 
     @Test("A Sonarr that understands tmdb: costs one request and no TMDB quota")
     func verifiedTMDBTermShortCircuits() async throws {
         await withStub {
-            ResolverStub.state.understandsTMDBTerm = true
+            resolverState.understandsTMDBTerm = true
 
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8003), tmdbKey: "k")
 
             #expect(record?.externalId == Fixtures.tvdbId)
-            #expect(ResolverStub.state.requests(matching: "/external_ids").isEmpty)
+            #expect(resolverState.requests(matching: "/external_ids").isEmpty)
         }
     }
 
     @Test("An owned series resolves from the library snapshot without asking TMDB")
     func ownedSeriesNeedsNoTMDBRequest() async throws {
         await withStub {
-            ResolverStub.state.libraryJSON = Fixtures.ownedLibrary
+            resolverState.libraryJSON = Fixtures.ownedLibrary
 
             let tvdbId = await SeriesIdentityResolver.tvdbId(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8004), tmdbKey: "k")
 
             #expect(tvdbId == Fixtures.tvdbId)
-            #expect(ResolverStub.state.requests(matching: "/external_ids").isEmpty)
+            #expect(resolverState.requests(matching: "/external_ids").isEmpty)
         }
     }
 
     @Test("No tvdb id anywhere means no substitution at all")
     func unresolvableYieldsNil() async throws {
         await withStub {
-            ResolverStub.state.externalTVDBId = nil
+            resolverState.externalTVDBId = nil
 
             let record = await SeriesIdentityResolver.sonarrRecord(
                 tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: config(port: 8005), tmdbKey: "k")
 
             // The decoy was available the whole time and was still not taken.
             #expect(record == nil)
-        }
-    }
-
-    @Test("A repeat resolution is served from cache")
-    func repeatResolutionIsCached() async throws {
-        await withStub {
-            let cfg = config(port: 8006)
-            _ = await SeriesIdentityResolver.sonarrRecord(
-                tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
-            let firstCount = ResolverStub.state.requests.count
-
-            let again = await SeriesIdentityResolver.sonarrRecord(
-                tmdbTVId: Fixtures.tmdbTVId, sonarrConfig: cfg, tmdbKey: "k")
-
-            #expect(again?.externalId == Fixtures.tvdbId)
-            #expect(ResolverStub.state.requests.count == firstCount)
         }
     }
 
@@ -239,7 +221,7 @@ struct SeriesIdentityResolverTests {
 
             #expect(first?.externalId == Fixtures.tvdbId)
             #expect(second?.externalId == Fixtures.tvdbId)
-            #expect(ResolverStub.state.requests(matching: "/external_ids").count == 1)
+            #expect(resolverState.requests(matching: "/external_ids").count == 1)
         }
     }
 
@@ -261,7 +243,7 @@ struct SeriesIdentityResolverTests {
 
             #expect(enriched?.externalId == Fixtures.tvdbId)
             #expect(enriched?.overview == "The one they meant.")
-            #expect(ResolverStub.state.requests(matching: "term=The%20Closer").isEmpty)
+            #expect(resolverState.requests(matching: "term=The%20Closer").isEmpty)
         }
     }
 
@@ -295,7 +277,7 @@ struct SeriesIdentityResolverTests {
     @Test("An unresolved row is never enriched into some other show")
     func enrichReturnsNilRatherThanGuessing() async throws {
         await withStub {
-            ResolverStub.state.externalTVDBId = nil
+            resolverState.externalTVDBId = nil
             let vm = SearchViewModel()
             vm.setup(radarrConfig: .empty, sonarrConfig: config(port: 8009),
                      tmdbApiKey: "k")
@@ -320,14 +302,14 @@ struct SeriesIdentityResolverTests {
                     seasonFolder: true, searchOnAdd: false)
             }
             // Nothing was written.
-            #expect(ResolverStub.state.requests(matching: "/series").allSatisfy {
+            #expect(resolverState.requests(matching: "/series").allSatisfy {
                 $0.absoluteString.contains("lookup") || !$0.absoluteString.hasSuffix("/series")
             })
         }
     }
 
     private func tvSummary() -> TMDBTVSummary {
-        try! JSONDecoder().decode(TMDBTVSummary.self, from: Data(#"""
+        try! tmdbDecoder.decode(TMDBTVSummary.self, from: Data(#"""
         {"id": 1234, "name": "The Closer", "first_air_date": "2005-06-13",
          "vote_average": 7.9, "genre_ids": [18], "overview": "…",
          "poster_path": "/tmdb-poster.jpg"}

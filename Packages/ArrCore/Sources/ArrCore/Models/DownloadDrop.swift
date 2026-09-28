@@ -1,20 +1,12 @@
 import Foundation
 
-/// Which family of download client can take a given payload. A `.torrent` file
-/// and a magnet link both go to a torrent client; an `.nzb` only ever goes to a
-/// usenet client. This is what filters the arrs offered in the add sheet — an
-/// arr whose download client can't speak the payload's protocol isn't a choice,
-/// it's a dead end.
+/// Filters the arrs offered in the add sheet: an arr whose client can't speak the protocol is a dead end.
 nonisolated public enum DownloadKind: String, Sendable, CaseIterable {
     case torrent
     case usenet
 
-    /// Read an arr's `protocol` field, whose spelling is NOT consistent across
-    /// the family: Sonarr/Radarr/Whisparr (v3) serialise the enum's wire value
-    /// (`"torrent"`, `"usenet"`), while Lidarr (v1) sends the enum's *name*
-    /// (`"TorrentDownloadProtocol"`, `"UsenetDownloadProtocol"`). An exact
-    /// match therefore silently discarded every Lidarr download client, and
-    /// Lidarr never appeared as a drop destination.
+    /// Sonarr/Radarr/Whisparr (v3) send `"torrent"`/`"usenet"`, Lidarr (v1) sends the enum name
+    /// (`"TorrentDownloadProtocol"`); an exact match drops every Lidarr client.
     init?(arrProtocol raw: String) {
         let value = raw.lowercased()
         if value.contains("torrent") { self = .torrent }
@@ -23,9 +15,7 @@ nonisolated public enum DownloadKind: String, Sendable, CaseIterable {
     }
 }
 
-/// One thing the user dropped, opened or clicked: a torrent/nzb file's bytes, or
-/// a magnet link. Carries its own display name so the UI never has to re-derive
-/// one from a URL it no longer holds.
+/// Carries its own display name so the UI never re-derives one from a URL it no longer holds.
 nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
     public enum Content: Sendable, Equatable {
         case file(Data, filename: String)
@@ -35,7 +25,7 @@ nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
     public let id: UUID
     public let content: Content
     public let kind: DownloadKind
-    /// What the add sheet shows — the file name, or a magnet's `dn` parameter.
+    /// The file name, or a magnet's `dn` parameter.
     public let displayName: String
 
     public init(id: UUID = UUID(), content: Content, kind: DownloadKind, displayName: String) {
@@ -45,11 +35,7 @@ nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
         self.displayName = displayName
     }
 
-    /// Build a drop from anything LaunchServices hands us — a dropped/opened
-    /// file URL or a `magnet:` link. Returns nil for a URL we have no client
-    /// for, so callers can ignore it rather than opening a sheet that can't
-    /// complete. File reads happen here (once), not at add time: the security
-    /// scope on a dropped URL doesn't outlive the drop handler.
+    /// Nil for a URL no client can take. Reads the file here: a dropped URL's security scope doesn't outlive the drop handler.
     public init?(url: URL) {
         if url.scheme?.lowercased() == "magnet" {
             self.init(
@@ -65,23 +51,17 @@ nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
         case "nzb": kind = .usenet
         default: return nil
         }
-        // A sandboxed app reaching a file it was handed (drop, Open With, Dock)
-        // needs the scope open for the read itself. `startAccessing…` returns
-        // false for URLs that don't need it — that's not a failure, so the read
-        // is attempted either way and only its own error is fatal.
+        // `startAccessing…` returns false for URLs that don't need a scope — not a failure, so read anyway.
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url), !data.isEmpty else { return nil }
         self.init(content: .file(data, filename: url.lastPathComponent), kind: kind, displayName: url.lastPathComponent)
     }
 
-    /// A magnet's human-readable name lives in `dn` (display name). Absent on
-    /// bare hash-only magnets, which is why callers fall back to the raw link.
+    /// Absent on hash-only magnets, so callers fall back to the raw link.
     private static func magnetName(_ url: URL) -> String? {
         guard let items = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
-        // `+` is a legal sub-delimiter, so URLComponents leaves it literal —
-        // but trackers write `dn` in form encoding, where it means a space.
-        // Without this the window titles a drop "The+Movie+2019".
+        // URLComponents leaves `+` literal, but trackers form-encode `dn`, where it means a space.
         let raw = items.first { $0.name == "dn" }?.value?
             .replacingOccurrences(of: "+", with: " ")
             .trimmingCharacters(in: .whitespaces)
@@ -89,23 +69,16 @@ nonisolated public struct DownloadDrop: Identifiable, Sendable, Equatable {
     }
 }
 
-/// A download client as *the arr* has it configured — the piece that makes the
-/// import work. The category is the whole point: drop a file into the client
-/// under `tv-sonarr` and Sonarr picks it up on its next scan; drop it in with no
-/// category and it sits there orphaned.
-nonisolated public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
+/// The category is the point: a file added under `tv-sonarr` gets imported; with no category it's orphaned.
+nonisolated public struct ArrDropClient: Identifiable, Sendable, Hashable {
     public let id: Int
     public let name: String
-    /// The arr's implementation name — "QBittorrent", "Sabnzbd", … Mapped to our
-    /// own `ServiceKind` by `serviceKind`, which is how we find the credentials
-    /// to actually talk to it.
+    /// Mapped to our `ServiceKind` by `serviceKind`, which finds the credentials to talk to it.
     public let implementation: String
     public let kind: DownloadKind
     public let category: String?
 
-    /// Our `ServiceKind` for this arr client, or nil for a client ArrBarr has no
-    /// support for (Flood, Hadouken, …) — those are filtered out of the picker
-    /// rather than offered and then failing at add time.
+    /// Nil for clients ArrBarr doesn't support (Flood, Hadouken, …), which are filtered out of the picker.
     public var serviceKind: ServiceKind? {
         switch implementation.lowercased() {
         case "qbittorrent": return .qbittorrent
@@ -119,27 +92,20 @@ nonisolated public struct ArrDownloadClient: Identifiable, Sendable, Hashable {
     }
 }
 
-/// A resolved "where this file is going": the arr that will import it, and the
-/// client + category it has to land in for that import to happen.
 nonisolated public struct DownloadDestination: Identifiable, Sendable, Hashable {
     public var id: String { "\(arr.rawValue)-\(client.id)" }
     public let arr: ServiceKind
-    public let client: ArrDownloadClient
-    /// The locally configured client we send through — same box the arr points
-    /// at, but with the credentials the user gave *us*.
+    public let client: ArrDropClient
+    /// Same box the arr points at, with the credentials the user gave us.
     public let serviceKind: ServiceKind
 }
 
-/// A download client that can be handed a new torrent/nzb, as opposed to only
-/// reporting on the ones it already has (`DownloadProgressSource`).
-nonisolated public protocol DownloadAddSource: Sendable {
+nonisolated protocol DownloadAddSource: Sendable {
     func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws
-    /// The client's own "add downloads paused" preference, so the sheet's
-    /// checkbox starts on what the client would have done anyway. nil when the
-    /// client has no such setting — the sheet then starts unchecked.
+    /// Seeds the sheet's checkbox; nil when the client has no such setting.
     func defaultAddPaused() async -> Bool?
 }
 
-nonisolated public extension DownloadAddSource {
+nonisolated extension DownloadAddSource {
     func defaultAddPaused() async -> Bool? { nil }
 }

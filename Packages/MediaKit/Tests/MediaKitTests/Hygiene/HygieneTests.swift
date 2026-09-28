@@ -35,6 +35,29 @@ import Testing
         #expect(report.contains("radarr.fetchQueue: 1") && report.contains("hits 1") && !report.contains("http"))
     }
 
+    @Test func telemetryReportCountsEveryKindOfEventPerHost() async throws {
+        let kit = try await TestKit()
+        // Applying the registry already invalidated each instance once.
+        let before = (kit.telemetry.cacheCounters(for: TestKit.radarr).invalidations, kit.telemetry.cacheCounters(for: TestKit.sonarr).invalidations)
+        kit.transport.delay = .milliseconds(50)
+        kit.transport.answer("fetchQueue", json: "[]")
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        async let first = kit.store.read(r)
+        async let second = kit.store.read(r)
+        _ = try await (first, second)
+        _ = try await kit.store.read(r)
+        await kit.store.invalidate([.collection(.queue, TestKit.radarr), .entity(TestKit.radarr, .movie, 1)], reason: .event)
+        await kit.store.invalidate([.collection(.queue, TestKit.sonarr)], reason: .command)
+        kit.transport.delay = .zero
+        kit.transport.fallback = { _ in throw URLError(.cannotConnectToHost) }
+        // Three attempts of one retried read open the breaker; the next two sends are skipped.
+        for _ in 0..<3 { _ = try? await kit.pipeline.send(kit.plan("fetchHealth", path: "/api/v3/health")) }
+        let report = kit.telemetry.report()
+        #expect(report.contains("radarr.fixture.invalid:8080: requests 4 skipped 2 failures 3 breaker 1 "))
+        #expect(report.contains("radarr#0: hits 1 misses 2 stale 0 coalesced 1 invalidated \(before.0 + 1)"))
+        #expect(report.contains("sonarr#0: hits 0 misses 0 stale 0 coalesced 0 invalidated \(before.1 + 1)"))
+    }
+
     @Test func fixtureTransportAnswersFromTheBundleAndRefusesUnknownReads() async throws {
         let transport = FixtureTransport(clock: TestClock())
         let ok = try await transport.send(HTTPRequest(method: "GET", url: URL(string: "http://demo/api/v3/queue")!, operation: "radarr.fetchQueue", pathTemplate: "/api/v3/queue"))
@@ -46,6 +69,19 @@ import Testing
         #expect(echo.status == 200 && String(decoding: echo.body, as: UTF8.self) == #"{"id":1}"#)
         let command = try await transport.send(HTTPRequest(method: "POST", url: URL(string: "http://demo/api/v3/command")!, body: .bytes(Data("{}".utf8), contentType: "application/json"), operation: "radarr.search", pathTemplate: "/api/v3/command"))
         #expect(command.status == 201 && String(decoding: command.body, as: UTF8.self).contains("queued"))
+    }
+
+    @Test func aDemoPauseSticksOnTheArrRowTrackingTheDownload() async throws {
+        let transport = FixtureTransport(clock: TestClock())
+        func queue() async throws -> [JSONValue] {
+            let r = try await transport.send(HTTPRequest(method: "GET", url: URL(string: "http://demo/api/v3/queue")!, operation: "radarr.fetchQueue", pathTemplate: "/api/v3/queue"))
+            return try JSONDecoder().decode(JSONValue.self, from: r.body)["records"]?.arrayValue ?? []
+        }
+        let row = try #require(try await queue().first { $0["downloadId"]?.stringValue?.isEmpty == false })
+        let hash = try #require(row["downloadId"]?.stringValue)
+        _ = try await transport.send(HTTPRequest(method: "POST", url: URL(string: "http://demo/api/v2/torrents/pause")!, body: .form(["hashes": hash.lowercased()]),
+                                                 operation: "qbittorrent.pause", pathTemplate: "/api/v2/torrents/pause"))
+        #expect(try await queue().first { $0["downloadId"] == row["downloadId"] }?["status"]?.stringValue == "paused")
     }
 
     @Test func allowListRefusesWritesAndReleases() {

@@ -27,4 +27,16 @@ struct DemoDataFlowTests {
         #expect(queue.allSatisfy { !$0.title.isEmpty })
         await gateway.kit.stop()
     }
+
+    @Test("The demo download clients answer the health probe and a pause", arguments: [ServiceKind.qbittorrent, .sabnzbd])
+    func downloadClientsAnswer(kind: ServiceKind) async throws {
+        let gateway = await MainActor.run { ServiceGateway.demo(kinds: [kind]) }
+        let config = await MainActor.run { gateway.configStore.config(for: kind) }
+        try await ServiceGateway.$override.withValue(gateway) {
+            _ = try await ServiceHandles.testConnection(kind, config: config)
+            let service = try #require(gateway.download(kind))
+            try await gateway.run(service.action(.pause, ids: ["abc"], deleteFiles: false))
+        }
+        await gateway.kit.stop()
+    }
 }

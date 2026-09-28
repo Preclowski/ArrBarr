@@ -30,4 +30,19 @@ struct MediaKitErrorCatalogTests {
             #expect(!MediaKitErrorPresenter.message(for: error).isEmpty)
         }
     }
+
+    @Test("An auth failure names the fix and keeps the server's reason")
+    func authFailureCarriesAHint() {
+        let instance = InstanceID(.qbittorrent)
+        let bare = MediaKitErrorPresenter.message(for: MediaKitError.unauthorized(instance, status: 401, serverMessage: nil))
+        let withBody = MediaKitErrorPresenter.message(for: MediaKitError.unauthorized(instance, status: 403, serverMessage: "Fails."))
+        #expect(bare.contains("401"))
+        #expect(withBody.contains("403") && withBody.hasSuffix("(Fails.)"))
+    }
+
+    @Test("A rejection shows the arr's own reason")
+    func rejectionShowsServerReason() {
+        let error = MediaKitError.rejected(InstanceID(.sonarr), status: 400, serverMessage: "This series has already been added")
+        #expect(error.userFacingMessage == "This series has already been added")
+    }
 }

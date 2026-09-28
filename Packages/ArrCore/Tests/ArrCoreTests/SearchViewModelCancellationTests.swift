@@ -13,32 +13,24 @@ private enum StubBehaviour {
 }
 
 private final class SearchStubState: @unchecked Sendable {
-    var behaviour: StubBehaviour = .hang
+    private let lock = NSLock()
+    private var _behaviour: StubBehaviour = .hang
+    var behaviour: StubBehaviour {
+        get { lock.withLock { _behaviour } }
+        set { lock.withLock { _behaviour = newValue } }
+    }
 }
 
-/// Stubs `URLSession.shared` — which is what `SearchClient` runs on — for ONE
-/// host, so suites running in parallel keep their own traffic.
-private final class SearchCancelStub: URLProtocol, @unchecked Sendable {
-    static let state = SearchStubState()
-    static let host = "search.cancel.test"
+private let searchState = SearchStubState()
 
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host == host
+/// `.hang` never answers: the request sits in flight until the superseding
+/// keystroke cancels it.
+private let searchTransport = ScriptedTransport { _ in
+    guard searchState.behaviour == .fail else {
+        try await Task.sleep(for: .seconds(3600))
+        return .init()
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
-
-    override func startLoading() {
-        // `.hang` deliberately calls nothing back: the task sits in flight
-        // until URLSession cancels it and reports `URLError.cancelled`.
-        guard Self.state.behaviour == .fail else { return }
-        let url = request.url ?? URL(string: "about:blank")!
-        let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: "HTTP/1.1", headerFields: [:])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: Data("boom".utf8))
-        client?.urlProtocolDidFinishLoading(self)
-    }
-
-    override func stopLoading() {}
+    return .init(status: 500, "boom")
 }
 
 /// arr lookups take 1-3 s, so typing supersedes them constantly. Every one of
@@ -47,14 +39,13 @@ private final class SearchCancelStub: URLProtocol, @unchecked Sendable {
 /// landed in the search UI's error slot while a perfectly healthy search was
 /// still running behind it.
 ///
-/// `.serialized` because the stub is registered process-wide (that is the only
-/// way to reach `URLSession.shared`) and carries shared script state.
-@Suite("Search cancellation", .serialized)
+/// `.serialized` because the transport carries shared script state.
+@Suite("Search cancellation", .serialized, .gateway(searchTransport))
 @MainActor
 struct SearchViewModelCancellationTests {
 
     private var radarrConfig: ServiceConfig {
-        ServiceConfig(enabled: true, baseURL: "http://\(SearchCancelStub.host):7878",
+        ServiceConfig(enabled: true, baseURL: "http://search.cancel.test:7878",
                       apiKey: "test-key", username: "", password: "")
     }
 
@@ -67,9 +58,7 @@ struct SearchViewModelCancellationTests {
 
     @Test("A lookup cancelled by the next keystroke leaves no error on screen")
     func cancelledLookupIsSilent() async throws {
-        SearchCancelStub.state.behaviour = .hang
-        URLProtocol.registerClass(SearchCancelStub.self)
-        defer { URLProtocol.unregisterClass(SearchCancelStub.self) }
+        searchState.behaviour = .hang
 
         let vm = SearchViewModel()
         vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
@@ -80,7 +69,7 @@ struct SearchViewModelCancellationTests {
         // in-flight task and clears `errorMessage` — so anything found there
         // afterwards was written by the cancelled lookup's catch block.
         try await startSearch(vm, "matrix reloaded")
-        // Let the cancellation finish propagating out of URLSession.
+        // Let the cancellation finish propagating out of the pipeline.
         try await Task.sleep(for: .milliseconds(400))
 
         #expect(vm.errorMessage == nil)
@@ -93,12 +82,8 @@ struct SearchViewModelCancellationTests {
     /// failure on the search the user is actually waiting for still surfaces.
     @Test("A genuine failure on the current search still surfaces")
     func realFailureStillSurfaces() async throws {
-        SearchCancelStub.state.behaviour = .fail
-        URLProtocol.registerClass(SearchCancelStub.self)
-        defer {
-            URLProtocol.unregisterClass(SearchCancelStub.self)
-            SearchCancelStub.state.behaviour = .hang
-        }
+        searchState.behaviour = .fail
+        defer { searchState.behaviour = .hang }
 
         let vm = SearchViewModel()
         vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)

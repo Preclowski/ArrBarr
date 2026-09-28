@@ -1,8 +1,7 @@
 import Foundation
+import MediaKit
 
-/// A person credit entry as the merge cares about it — both TMDB summary
-/// types (movie / tv) qualify.
-nonisolated public protocol TMDBPersonCredit {
+nonisolated protocol TMDBPersonCredit {
     var id: Int { get }
     var department: String? { get }
     var popularity: Double? { get }
@@ -11,16 +10,9 @@ nonisolated public protocol TMDBPersonCredit {
 extension TMDBMovieSummary: TMDBPersonCredit {}
 extension TMDBTVSummary: TMDBPersonCredit {}
 
-/// Collapses a TMDB person-credits response (cast + crew) into one unique
-/// title list plus a role line per title.
-///
-/// TMDB lists a title once per credit — an actor with three roles, or an
-/// episode-by-episode guest, repeats the same id many times ("104 × The
-/// Simpsons"), and identical duplicates also poison SwiftUI's ForEach
-/// identity. Cast entries read as Actor; crew entries count only when the
-/// department is Directing or Writing (producer-type credits would balloon
-/// the list without saying anything a media library cares about).
-nonisolated public enum PersonCreditMerge {
+/// TMDB lists a title once per credit ("104 × The Simpsons"), which also breaks ForEach identity.
+/// Crew counts only for Directing and Writing; producer credits would balloon the list.
+nonisolated enum PersonCreditMerge {
     private enum Role: Int, CaseIterable {
         case actor, director, writer
         var label: String {
@@ -39,10 +31,8 @@ nonisolated public enum PersonCreditMerge {
         }
     }
 
-    /// `credits`: one entry per unique title (first occurrence wins — TMDB
-    /// lists the primary billing first). `roles`: title id → "Actor, Director"
-    /// style line, roles in fixed actor→director→writer order.
-    public static func merge<T: TMDBPersonCredit>(
+    /// First occurrence wins: TMDB lists the primary billing first.
+    static func merge<T: TMDBPersonCredit>(
         cast: [T], crew: [T]
     ) -> (credits: [T], roles: [Int: String]) {
         var credits: [T] = []
@@ -65,10 +55,8 @@ nonisolated public enum PersonCreditMerge {
         return (credits, lines)
     }
 
-    /// Popularity-desc, year-desc. TMDB returns credits unordered; popularity
-    /// (TMDB's "what people are searching/watching" metric) beats voteAverage,
-    /// whose top entries are niche cameos with a handful of votes.
-    public static func byPopularity<T: TMDBPersonCredit>(_ credits: [T]) -> [T] {
+    /// TMDB returns credits unordered; popularity beats voteAverage, whose top entries are niche cameos.
+    static func byPopularity<T: TMDBPersonCredit>(_ credits: [T]) -> [T] {
         credits.sorted { lhs, rhs in
             let lp = lhs.popularity ?? 0, rp = rhs.popularity ?? 0
             if lp != rp { return lp > rp }

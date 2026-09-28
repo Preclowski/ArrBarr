@@ -1,22 +1,11 @@
+import MediaKit
 import SwiftUI
 
-/// Settings → Media server.
-///
-/// One connection, one server. The picker is the whole feature's shape: Plex,
-/// Jellyfin or Emby, never two at once — the integration reads artwork and
-/// watch state, and merging two servers' answers would raise questions
-/// ("watched where?") that nothing in the UI could sensibly answer.
-///
-/// Shared by both platforms: macOS hosts it as a sidebar detail pane, iOS
-/// pushes it from the Settings list.
+/// One server at a time: merging two servers' watch state raises "watched where?" questions.
 struct MediaServerSettingsPane: View {
     @EnvironmentObject var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
 
-    /// Every operation here has one shape: it runs, then either says a short
-    /// thing or shows the error it came back with. The connection test and
-    /// the index refresh each own one; library maintenance owns one per
-    /// library, so a scan on Movies and a purge on TV report side by side.
     @State private var testState: OperationState = .idle
     @State private var reindexState: OperationState = .idle
     @State private var libraryStates: [String: OperationState] = [:]
@@ -45,8 +34,7 @@ struct MediaServerSettingsPane: View {
     var body: some View {
         Form {
             connectionSection
-            // Both need a reachable connection to say anything true, and
-            // `isConfigured` already implies `enabled`.
+            // Both need a reachable connection; `isConfigured` already implies `enabled`.
             if configStore.mediaServer.isConfigured {
                 librarySection
                 indexSection
@@ -58,9 +46,7 @@ struct MediaServerSettingsPane: View {
             if isLocked { ProLockOverlay(feature: .mediaServer) }
         }
         .task { refreshIndexSummary() }
-        // Re-read the library list whenever the connection changes: a new
-        // server has different libraries, and a token fix is what makes the
-        // list load at all.
+        // A new server has different libraries, and a token fix is what makes the list load at all.
         .task(id: configStore.mediaServer) { await loadLibraries() }
         #if os(iOS)
         .navigationTitle(Text("settings.mediaServer.label", bundle: .module))
@@ -72,10 +58,6 @@ struct MediaServerSettingsPane: View {
 
     private var connectionSection: some View {
         Section {
-            // One picker instead of a switch plus a picker: the integration
-            // has exactly four states and naming all four — including Off —
-            // says more than a toggle read together with a separate picker.
-            // A menu, not segments: it matches the other selects in Settings.
             Picker(selection: selectionBinding) {
                 ForEach(MediaServerKind.allCases) { kind in
                     Text(verbatim: kind.displayName).tag(Optional(kind))
@@ -100,16 +82,12 @@ struct MediaServerSettingsPane: View {
                 }
                 .apiKeyField()
 
-                // Test directly under the credentials it checks, then the
-                // how-to for where the token comes from.
                 testRow
                 tokenHint
             }
         } header: {
             HStack(spacing: 6) {
-                // Brand mark only once a server is actually chosen — Off has
-                // no brand, and a generic glyph there would read as a fourth
-                // server rather than the absence of one.
+                // Off has no brand; a generic glyph would read as a fourth server.
                 if configStore.mediaServer.enabled {
                     ServiceIcon(mediaServer: configStore.mediaServer.kind, size: 12)
                         .foregroundStyle(.secondary)
@@ -120,17 +98,11 @@ struct MediaServerSettingsPane: View {
         }
     }
 
-    /// Where the token comes from, per server.
-    ///
-    /// Jellyfin and Emby name a screen you can walk to, which is short enough
-    /// to say inline. Plex gets a link in the same slot instead — see below.
     @ViewBuilder
     private var tokenHint: some View {
         switch configStore.mediaServer.kind {
         case .plex:
-            // A link rather than a sentence: Plex has no "API keys" screen, and
-            // the route (open an item's XML, read the token out of the address
-            // bar) is longer than a settings row should carry.
+            // Plex has no "API keys" screen; the token route is too long for a settings row.
             Link(destination: URL(string: "https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/")!) {
                 Label { Text("settings.howToFindPlexToken.button", bundle: .module) } icon: { Image(systemName: "questionmark.circle") }
             }
@@ -156,8 +128,6 @@ struct MediaServerSettingsPane: View {
         }
     }
 
-    /// The one rendering of an operation's outcome, shared by the test row and
-    /// the maintenance buttons.
     @ViewBuilder
     private func status(_ state: OperationState) -> some View {
         switch state {
@@ -201,9 +171,6 @@ struct MediaServerSettingsPane: View {
         }
     }
 
-    /// One library: its name and kind on the left, the maintenance it
-    /// accepts on the right, with that library's own last outcome beside
-    /// the buttons.
     private func libraryRow(_ library: MediaServerLibrary) -> some View {
         let state = libraryStates[library.id] ?? .idle
         return LabeledContent {
@@ -216,9 +183,7 @@ struct MediaServerSettingsPane: View {
                 .controlSize(.small)
                 .disabled(state == .running)
 
-                // Plex only. Jellyfin and Emby have no trash — an item leaves
-                // the library when its file does — so the button is absent
-                // rather than present and permanently failing.
+                // Jellyfin and Emby have no trash — an item leaves with its file.
                 if configStore.mediaServer.kind == .plex {
                     Button { run(.emptyTrash, on: library) } label: {
                         Label { Text("settings.emptyTrash.button", bundle: .module) } icon: { Image(systemName: "trash") }
@@ -230,9 +195,9 @@ struct MediaServerSettingsPane: View {
             }
         } label: {
             Label {
-                Text(verbatim: library.name)
+                Text(verbatim: library.displayName)
             } icon: {
-                Image(systemName: library.kind.symbol)
+                Image(systemName: library.symbol)
                     .foregroundStyle(.secondary)
             }
         }
@@ -248,10 +213,7 @@ struct MediaServerSettingsPane: View {
             }
             if let refreshedAt = indexSummary.refreshedAt {
                 LabeledContent {
-                    // A coarse, still string rather than `.relative`, which
-                    // ticks the seconds up live and reads like a countdown to
-                    // something. Nothing is counting down; this is just when we
-                    // last read the server.
+                    // Not `.relative`, which ticks seconds live and reads like a countdown.
                     Text(verbatim: Self.agoFormatter.localizedString(for: refreshedAt, relativeTo: Date()))
                         .foregroundStyle(.secondary)
                 } label: {
@@ -271,7 +233,6 @@ struct MediaServerSettingsPane: View {
         }
     }
 
-    /// Whole-unit relative dates ("2 minutes ago"), never seconds.
     private static let agoFormatter: RelativeDateTimeFormatter = {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
@@ -279,20 +240,9 @@ struct MediaServerSettingsPane: View {
     }()
 
     // MARK: - Bindings
-    //
-    // Every field writes through to `configStore.mediaServer` as a whole value,
-    // because that is what the persistence sink observes. Editing a copy and
-    // assigning it back is the only shape that triggers exactly one save per
-    // keystroke instead of none.
+    // Every field writes the whole `configStore.mediaServer` value, which is what the persistence sink observes.
 
-    /// The segmented control's value: a server, or `nil` for Off. Collapses
-    /// `enabled` and `kind` into the one thing the user is actually choosing.
-    ///
-    /// Switching servers clears the token and the resolved user id — they
-    /// belong to one server, and carrying them across would leave a config
-    /// that looks complete and authenticates against nothing. Switching to Off
-    /// keeps them, so turning the same server back on doesn't mean re-pasting
-    /// a token.
+    /// Switching servers clears the token and user id (they belong to one server); Off keeps them.
     private var selectionBinding: Binding<MediaServerKind?> {
         Binding(
             get: { configStore.mediaServer.enabled ? configStore.mediaServer.kind : nil },
@@ -348,34 +298,28 @@ struct MediaServerSettingsPane: View {
 
     // MARK: - Actions
 
-    /// Drop a stale verdict once the fields it was about have changed — but
-    /// never interrupt a test that is still running.
+    /// Never interrupts a test that is still running.
     private func invalidateTestResult() {
         if testState != .running { testState = .idle }
     }
 
     private func runTest() {
         testState = .running
-        let config = configStore.mediaServer
+        let client = configStore.mediaServerClient
         Task {
-            guard let client = ServiceHandles.mediaServer(config: config) else {
+            guard let client else {
                 testState = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }
             do {
                 let handshake = try await client.testConnection()
-                // Persist the user id the server resolved for us, so every
-                // later play-state query uses the same account without asking.
                 if let userId = handshake.userId, userId != configStore.mediaServer.userId {
                     var cfg = configStore.mediaServer
                     cfg.userId = userId
                     configStore.mediaServer = cfg
                 }
                 testState = .succeeded(handshake.versionLine)
-                // A successful test is the moment the index can finally be
-                // built — don't make the user wait for the next poll. Same
-                // for the library list, whose earlier failure was the very
-                // thing the user just fixed.
+                // Build the index and reload libraries now rather than waiting for the next poll.
                 await MediaServerIndex.shared.refresh(config: configStore.mediaServer)
                 refreshIndexSummary()
                 await loadLibraries()
@@ -400,9 +344,9 @@ struct MediaServerSettingsPane: View {
 
     private func run(_ action: LibraryAction, on library: MediaServerLibrary) {
         libraryStates[library.id] = .running
-        let config = configStore.mediaServer
+        let client = configStore.mediaServerClient
         Task {
-            guard let client = ServiceHandles.mediaServer(config: config) else {
+            guard let client else {
                 libraryStates[library.id] = .failed(String(localized: "settings.enterAValidUrl.tooltip", bundle: .module))
                 return
             }

@@ -1,25 +1,14 @@
 import SwiftUI
 
-/// The one search, hosted once above the tabs.
-///
-/// Wraps a tab's content and owns everything search-shaped around it: the
-/// field (macOS floating `SearchCapsule`; iOS `.searchable` + `SearchScopeBar`),
-/// the takeover that replaces the content while a query is live, the shared
-/// `SearchResultsSurface` and the person push it can trigger. Tabs render only
-/// their own content and know nothing about search — the same host sits on the
-/// Queue, Library and Upcoming tabs, so the search behaves identically on all
-/// three because it IS the same view.
+/// The one search, hosted above the tabs: field, takeover and results. Tabs know
+/// nothing about search, so it behaves identically on every tab.
 struct SearchHost<Content: View>: View {
     @Bindable var searchVM: SearchViewModel
-    /// What the app already knows about that matches the query — the same on
-    /// every tab (see `LocalHit.hits`).
     var localHits: [LocalHit]
-    /// True when at least one arr can answer a lookup; gates the cold-start spinner.
     var searchAvailable: Bool
     /// iOS only: withdrawn while multi-select owns the toolbar.
     var enabled: Bool = true
-    /// iOS only: the `.searchable` presentation, owned by the root so an empty
-    /// field closes on a tab switch.
+    /// iOS only: owned by the root so an empty field closes on a tab switch.
     var isPresented: Binding<Bool> = .constant(false)
     /// macOS only: the capsule's focus, owned by the root (⌘N aims at it).
     var focused: FocusState<Bool>.Binding? = nil
@@ -52,11 +41,8 @@ struct SearchHost<Content: View>: View {
         .modifier(SearchField(searchVM: searchVM, enabled: enabled, isPresented: isPresented))
         .personDestination($personRef)
         #else
-        // The capsule floats at the bottom (Apple's recent search/Spotlight
-        // direction). ZStack and not `safeAreaInset`: the inset modifier reacts
-        // to any identity change in the parent tree — and the results re-render
-        // on every keystroke — which re-mounts the TextField and drops focus
-        // mid-typing. `ChatView` carries the long-form note.
+        // ZStack, not `safeAreaInset`: the inset re-mounts the TextField on every
+        // keystroke's re-render and drops focus.
         ZStack(alignment: .bottom) {
             if searchVM.isActive {
                 SearchTakeoverView(searchVM: searchVM, searchAvailable: searchAvailable) {

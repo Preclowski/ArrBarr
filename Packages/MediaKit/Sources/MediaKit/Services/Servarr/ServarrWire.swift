@@ -78,13 +78,15 @@ public struct ArrStatistics: Codable, Equatable, Sendable, Hashable {
     public let albumCount: Int?
     public let trackCount: Int?
     public let trackFileCount: Int?
+    public let totalTrackCount: Int?
     public let sizeOnDisk: Int64?
     public let percentOfEpisodes: Double?
 }
 
 public struct ArrSeason: Codable, Equatable, Sendable, Hashable {
     public let seasonNumber: Int
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let statistics: ArrStatistics?
 }
 
@@ -108,7 +110,8 @@ public struct ArrMovie: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let runtime: Int?
     public let status: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let hasFile: Bool?
     public let isAvailable: Bool?
     public let minimumAvailability: String?
@@ -151,7 +154,8 @@ public struct ArrSeries: Codable, Equatable, Sendable, Hashable {
     public let status: String?
     public let network: String?
     public let seriesType: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let qualityProfileId: Int?
     public let rootFolderPath: String?
     public let path: String?
@@ -166,11 +170,12 @@ public struct ArrSeries: Codable, Equatable, Sendable, Hashable {
     public let images: [ArrImage]?
     public let ratings: ArrRatings?
     public let statistics: ArrStatistics?
-    public let seasons: [ArrSeason]?
+    /// `var` with the seasons' own `monitored`: a detail screen flips one before Sonarr confirms.
+    public var seasons: [ArrSeason]?
     public let alternateTitles: [ArrAlternateTitle]?
 }
 
-public struct ArrEpisode: Codable, Equatable, Sendable, Hashable {
+public struct ArrEpisode: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int
     public let seriesId: Int?
     public let seasonNumber: Int?
@@ -180,11 +185,19 @@ public struct ArrEpisode: Codable, Equatable, Sendable, Hashable {
     public let airDateUtc: String?
     public let overview: String?
     public let hasFile: Bool?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let episodeFileId: Int?
     public let runtime: Int?
     public let finaleType: String?
     public let series: ArrSeries?
+
+    /// A stand-in from coordinates known before the record arrives (a queue row); every other field is unknown.
+    public init(placeholderSeason seasonNumber: Int?, episode episodeNumber: Int?) {
+        id = 0; seriesId = nil; self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber; title = nil
+        airDate = nil; airDateUtc = nil; overview = nil; hasFile = nil; monitored = nil; episodeFileId = nil
+        runtime = nil; finaleType = nil; series = nil
+    }
 }
 
 public struct ArrArtist: Codable, Equatable, Sendable, Hashable {
@@ -196,7 +209,8 @@ public struct ArrArtist: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let status: String?
     public let artistType: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let qualityProfileId: Int?
     public let metadataProfileId: Int?
     public let rootFolderPath: String?
@@ -209,7 +223,7 @@ public struct ArrArtist: Codable, Equatable, Sendable, Hashable {
     public let statistics: ArrStatistics?
 }
 
-public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
+public struct ArrAlbum: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int?
     public let foreignAlbumId: String?
     public let artistId: Int?
@@ -218,8 +232,11 @@ public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
     public let overview: String?
     public let albumType: String?
     public let releaseDate: String?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let anyReleaseOk: Bool?
+    public let qualityProfileId: Int?
+    public let duration: Int?
     public let genres: [String]?
     public let images: [ArrImage]?
     public let ratings: ArrRatings?
@@ -227,7 +244,7 @@ public struct ArrAlbum: Codable, Equatable, Sendable, Hashable {
     public let artist: ArrArtist?
 }
 
-public struct ArrTrack: Codable, Equatable, Sendable, Hashable {
+public struct ArrTrack: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let id: Int
     public let albumId: Int?
     public let trackNumber: String?
@@ -280,6 +297,15 @@ public struct ArrQueueRecord: Codable, Equatable, Sendable, Hashable, LivePatcha
         copy.status = value
         return copy
     }
+
+    public var liveAliases: [String] { downloadId.map { [$0.lowercased()] } ?? [] }
+
+    /// A grabbed pending release (no download id yet) comes back under a new queue id, tracking the same title.
+    public func succeeds(_ gone: ArrQueueRecord) -> Bool {
+        guard gone.downloadId?.isEmpty ?? true, !(downloadId?.isEmpty ?? true) else { return false }
+        return movieId == gone.movieId && episodeId == gone.episodeId && albumId == gone.albumId && seriesId == gone.seriesId
+            && (movieId ?? episodeId ?? albumId) != nil
+    }
 }
 
 public struct ArrHistoryRecord: Codable, Equatable, Sendable, Hashable {
@@ -313,7 +339,8 @@ public struct ArrCalendarRecord: Codable, Equatable, Sendable, Hashable {
     public let year: Int?
     public let overview: String?
     public let hasFile: Bool?
-    public let monitored: Bool?
+    /// `var`: a detail screen flips it optimistically before the arr confirms.
+    public var monitored: Bool?
     public let images: [ArrImage]?
     public let runtime: Int?
     public let genres: [String]?
@@ -446,9 +473,9 @@ public struct ArrCredit: Codable, Equatable, Sendable, Hashable {
     public let images: [ArrImage]?
 }
 
-public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
+public struct ArrRelease: Codable, Equatable, Sendable, Hashable, Identifiable {
     public let guid: String
-    public let title: String?
+    public let title: String
     public let indexer: String?
     public let indexerId: Int?
     public let size: Int64?
@@ -456,6 +483,7 @@ public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
     public let leechers: Int?
     public let age: Int?
     public let ageHours: Double?
+    public let publishDate: String?
     public let `protocol`: String?
     public let quality: ArrQuality?
     public let customFormatScore: Int?
@@ -466,6 +494,17 @@ public struct ArrRelease: Codable, Equatable, Sendable, Hashable {
     public let infoUrl: String?
     public let downloadUrl: String?
     public let languages: [ArrLanguage]?
+    public let releaseGroup: String?
+    /// Sonarr: a full-season pack, and the season and episodes a release carries.
+    public let fullSeason: Bool?
+    public let seasonNumber: Int?
+    public let episodeNumbers: [Int]?
+    /// Names on Sonarr v4, a bitfield on older builds.
+    public let indexerFlags: JSONValue?
+
+    public var id: String { guid }
+    /// Only the name form: a bitfield has no mapping worth guessing at.
+    public var indexerFlagNames: [String] { indexerFlags?.arrayValue?.compactMap(\.stringValue).filter { !$0.isEmpty } ?? [] }
 }
 
 /// Lidarr `GET /search` rows: either an artist or an album.
@@ -493,6 +532,8 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
     public var tvdbId: Int?
     public var foreignArtistId: String?
     public var foreignAlbumId: String?
+    /// Whisparr scenes without a TMDB id.
+    public var foreignId: String?
     public var artistName: String?
     public var year: Int?
     public var titleSlug: String?
@@ -502,6 +543,8 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
     public var metadataProfileId: Int?
     public var rootFolderPath: String
     public var monitored: Bool
+    /// Radarr/Whisparr take the monitor mode at the top level; Sonarr and Lidarr in `addOptions`.
+    public var monitor: String?
     public var minimumAvailability: String?
     public var seriesType: String?
     public var seasonFolder: Bool?
@@ -514,18 +557,56 @@ public struct ArrAddPayload: Codable, Equatable, Sendable {
 }
 
 /// Typed read-modify-write: the fields MediaKit models plus everything else, echoed back on PUT.
-public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
-    public var known: Known
-    public var extra: [String: JSONValue]
-    /// Top-level edits applied last, so `set("monitored", .bool(true))` wins over both.
-    public var overrides: [String: JSONValue] = [:]
+/// The settings the Edit form reads and writes on a movie, series or artist; nil means "leave as is".
+public struct ArrRecordSettings: Codable, Equatable, Sendable {
+    public var qualityProfileId: Int?
+    public var metadataProfileId: Int?
+    public var minimumAvailability: String?
+    public var seriesType: String?
+    public var monitorNewItems: String?
+    public var seasonFolder: Bool?
+    public var rootFolderPath: String?
+    public var path: String?
 
-    public init(from decoder: any Decoder) throws {
+    public init(qualityProfileId: Int? = nil, metadataProfileId: Int? = nil, minimumAvailability: String? = nil, seriesType: String? = nil,
+                monitorNewItems: String? = nil, seasonFolder: Bool? = nil, rootFolderPath: String? = nil) {
+        self.qualityProfileId = qualityProfileId; self.metadataProfileId = metadataProfileId
+        self.minimumAvailability = minimumAvailability; self.seriesType = seriesType
+        self.monitorNewItems = monitorNewItems; self.seasonFolder = seasonFolder; self.rootFolderPath = rootFolderPath
+    }
+
+    mutating func merge(_ edit: ArrRecordSettings) {
+        qualityProfileId = edit.qualityProfileId ?? qualityProfileId
+        metadataProfileId = edit.metadataProfileId ?? metadataProfileId
+        minimumAvailability = edit.minimumAvailability ?? minimumAvailability
+        seriesType = edit.seriesType ?? seriesType
+        monitorNewItems = edit.monitorNewItems ?? monitorNewItems
+        seasonFolder = edit.seasonFolder ?? seasonFolder
+        rootFolderPath = edit.rootFolderPath ?? rootFolderPath
+    }
+
+    /// The record's folder under the new root, when this edit changes the root.
+    func movedPath(from current: ArrRecordSettings) -> String? {
+        let slash = CharacterSet(charactersIn: "/")
+        guard let newRoot = rootFolderPath, let oldRoot = current.rootFolderPath,
+              newRoot.trimmingCharacters(in: slash) != oldRoot.trimmingCharacters(in: slash),
+              let folder = current.path?.split(separator: "/").last else { return nil }
+        return (newRoot.hasSuffix("/") ? String(newRoot.dropLast()) : newRoot) + "/" + folder
+    }
+}
+
+struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
+    var known: Known
+    var extra: [String: JSONValue]
+    /// Top-level edits applied last, so `set("monitored", .bool(true))` wins over both.
+    var overrides: [String: JSONValue] = [:]
+
+    init(from decoder: any Decoder) throws {
         known = try Known(from: decoder)
         extra = try [String: JSONValue](from: decoder)
     }
 
-    public func encode(to encoder: any Encoder) throws {
+    func encode(to encoder: any Encoder) throws {
         let knownData = try WireCodec.encoder.encode(known)
         guard case var .object(merged)? = try? WireCodec.decoder.decode(JSONValue.self, from: knownData) else { return }
         for (k, v) in extra where merged[k] == nil || merged[k] == .null { merged[k] = v }
@@ -533,25 +614,12 @@ public struct ArrRecordEnvelope<Known: Codable & Sendable>: Codable, Sendable {
         try JSONValue.object(merged).encode(to: encoder)
     }
 
-    public mutating func set(_ key: String, _ value: JSONValue) { overrides[key] = value }
-    public subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
+    mutating func set(_ key: String, _ value: JSONValue) { overrides[key] = value }
+    subscript(key: String) -> JSONValue? { overrides[key] ?? extra[key] }
 }
 
-extension Array where Element == ArrImage {
-    /// Prefers a remote URL of the requested cover types, in order.
-    public func url(coverTypes: [String]) -> URL? {
-        for type in coverTypes {
-            if let image = first(where: { ($0.coverType ?? "").lowercased() == type.lowercased() }),
-               let raw = image.remoteUrl ?? image.url, let url = URL(string: raw) { return url }
-        }
-        return nil
-    }
-}
-
-/// An indexer as configured *in the arr* (`/indexer`). ArrBarr reads two things
-/// from it: the id a release carries, and the `baseUrl` field, whose path holds
-/// the Prowlarr indexer id when the indexer was synced from Prowlarr
-/// ("http://prowlarr:9696/14/api").
+/// An indexer as configured in the arr. When synced from Prowlarr, `baseUrl`'s path
+/// holds the Prowlarr indexer id ("http://prowlarr:9696/14/api").
 public struct ArrIndexerDefinition: Codable, Sendable, Identifiable {
     public let id: Int
     public let name: String?
@@ -562,7 +630,6 @@ public struct ArrIndexerDefinition: Codable, Sendable, Identifiable {
         public let value: JSONValue?
     }
 
-    /// The Prowlarr-side id, when this indexer came from Prowlarr.
     public var prowlarrIndexerID: Int? {
         guard let base = fields?.first(where: { $0.name == "baseUrl" }),
               case let .string(url)? = base.value,

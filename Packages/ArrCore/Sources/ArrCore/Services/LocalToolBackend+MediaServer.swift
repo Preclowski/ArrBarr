@@ -1,25 +1,15 @@
 import Foundation
+import MediaKit
 
-// Media-server tool implementations (Plex / Jellyfin / Emby). Kept in their own
-// extension for the same reason the arr tools are: the core actor stays init +
-// dispatch, and these three touch no arr at all.
-//
-// All three answer in plain text — a watch list and a session list are prose
-// the model relays, not cards the user taps.
+// Media-server tools (Plex / Jellyfin / Emby). Plain-text answers: prose the model relays, not tappable cards.
 
 extension LocalToolBackend {
 
-    /// Default and ceiling for `media_server_watch_history`. The ceiling exists
-    /// because the model will happily ask for "all of it", and a full Plex
-    /// history is thousands of rows of tokens for a question that never needed
-    /// more than a page.
+    /// Capped because the model will ask for "all of it", and a full Plex history is thousands of rows of tokens.
     nonisolated private static var watchHistoryDefaultLimit: Int { 20 }
     nonisolated private static var watchHistoryMaxLimit: Int { 100 }
 
-    /// The client, or a thrown error. `callTool` already turns an unconfigured
-    /// media server into a canned line before dispatch, so this is a backstop
-    /// rather than a path anyone reaches — which is exactly why it should not
-    /// be three copies of the same string.
+    /// A backstop: `callTool` already answers an unconfigured media server before dispatch.
     private func mediaServerClient() throws -> MediaServerClient {
         guard let client = MediaServerClientFactory.make(config: mediaServer) else {
             throw MediaServerError.notConfigured
@@ -74,8 +64,8 @@ extension LocalToolBackend {
         }
 
         let lines = sessions.map { session -> String in
-            var line = session.title
-            if let subtitle = session.subtitle { line += " — \(subtitle)" }
+            var line = session.headline
+            if let episode = session.episodeLine { line += " — \(episode)" }
             if let user = session.user { line += ", \(user)" }
             if let device = session.device { line += " on \(device)" }
             line += session.isTranscoding ? ", transcoding" : ", direct play"
@@ -96,9 +86,7 @@ extension LocalToolBackend {
         } catch {
             return ToolCallOutput(text: "FAILED: the scan request was rejected — \(error.userFacingMessage)")
         }
-        // Deliberately does not claim the scan finished: every one of the three
-        // servers accepts the request and works through it on its own schedule,
-        // so "done" would be a claim we cannot back up.
+        // Doesn't claim the scan finished: every server works through it on its own schedule.
         return ToolCallOutput(
             text: "OK: asked \(mediaServer.kind.displayName) to rescan its libraries. "
                 + "It runs in the background — newly imported titles appear once it finishes."

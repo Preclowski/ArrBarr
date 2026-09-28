@@ -1,8 +1,9 @@
 import SwiftUI
+import MediaKit
 
 // MARK: - Public entry point
 
-public struct RichToolResultView: View {
+struct RichToolResultView: View {
     let content: ChatRichContent
     let sonarr: ServiceConfig
     let radarr: ServiceConfig
@@ -13,7 +14,7 @@ public struct RichToolResultView: View {
     @State private var visibleCount: Int = Self.pageSize
     private static let pageSize = 10
 
-    public init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
+    init(content: ChatRichContent, sonarr: ServiceConfig, radarr: ServiceConfig,
                 lidarr: ServiceConfig = .empty, whisparr: ServiceConfig = .empty,
                 blurWhisparr: Bool = true) {
         self.content = content
@@ -24,27 +25,20 @@ public struct RichToolResultView: View {
         self.blurWhisparr = blurWhisparr
     }
 
-    public var body: some View {
-        // Two payloads are vertical stacks rather than a bare rail: people (one
-        // card per candidate) and a filmography (the person, then their titles).
-        // Everything else is the carousel as it was.
+    var body: some View {
         switch content {
         case .people(let people):
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(people) { ChatPersonCardView(person: $0) }
             }
         case .cast(let members):
-            // The detail surfaces' own cast strip, tap wired to the chat's
-            // person route. Its "Cast (N)" header stays — the enclosing tool
-            // header only says which tool ran, not what the heads are.
+            // The "Cast (N)" header stays: the tool header names only the tool.
             CastRow(cast: members, onTapPerson: { member in
                 if let ref = PersonRef(castMember: member) { PersonRequest.post(ref) }
             })
         case .albums(let artist, _):
             VStack(alignment: .leading, spacing: 4) {
-                // Whose albums these are. The tool header names the TOOL, and a
-                // rail of covers with no artist above it is a guessing game when
-                // the answer covers two artists.
+                // The tool header names the tool, not the artist, and a result can cover two artists.
                 if let artist, !artist.isEmpty {
                     Text(verbatim: artist)
                         .scaledFont(size: 12, weight: .semibold)
@@ -67,11 +61,8 @@ public struct RichToolResultView: View {
     @ViewBuilder
     private func carousel(for content: ChatRichContent) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            // Eager HStack (not Lazy): with `.fixedSize(vertical:)` on the
-            // ScrollView, a LazyHStack only measures the first rendered card, so
-            // the row height locked to card #1 and taller later cards got clipped.
-            // An eager HStack measures every card up front → height = tallest card.
-            // Card counts here are small (bounded by visibleCount), so this is cheap.
+            // Eager HStack: under `.fixedSize(vertical:)` a LazyHStack measures only the first card
+            // and clips taller ones. Card counts are bounded by `visibleCount`.
             HStack(alignment: .top, spacing: 10) {
                 switch content {
                 case .searchMovieResults(let results):
@@ -118,14 +109,15 @@ public struct RichToolResultView: View {
                     let visible = Array(recs.prefix(visibleCount))
                     ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
-                            title: rec.title ?? "(untitled)",
+                            title: rec.title,
                             year: rec.year,
                             hasFile: rec.hasFile ?? false,
                             images: rec.images,
                             baseURL: radarr.baseURL,
                             apiKey: radarr.apiKey,
                             source: .radarr,
-                            entityId: rec.id
+                            entityId: rec.id,
+                            mediaServerKeys: rec.mediaServerKeys
                         )
                     }
                     if visible.count < recs.count {
@@ -137,14 +129,15 @@ public struct RichToolResultView: View {
                     let visible = Array(recs.prefix(visibleCount))
                     ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
-                            title: rec.title ?? "(untitled)",
+                            title: rec.title,
                             year: rec.year,
                             hasFile: nil,
                             images: rec.images,
                             baseURL: sonarr.baseURL,
                             apiKey: sonarr.apiKey,
                             source: .sonarr,
-                            entityId: rec.id
+                            entityId: rec.id,
+                            mediaServerKeys: rec.mediaServerKeys
                         )
                     }
                     if visible.count < recs.count {
@@ -170,7 +163,7 @@ public struct RichToolResultView: View {
                     let visible = Array(recs.prefix(visibleCount))
                     ForEach(Array(visible.enumerated()), id: \.offset) { _, rec in
                         LibraryRecordCard(
-                            title: rec.title ?? "(untitled)",
+                            title: rec.title,
                             year: rec.year,
                             hasFile: rec.hasFile ?? false,
                             images: rec.images,
@@ -219,21 +212,14 @@ public struct RichToolResultView: View {
                         }
                     }
                 case .people, .personCredits, .cast:
-                    // Handled a level up as a vertical stack — `carousel(for:)`
-                    // is only ever called with the rail-shaped payloads.
+                    // `carousel(for:)` is only called with rail-shaped payloads.
                     EmptyView()
                 case .discoverSession(let mood, let posterURLs):
-                    // Stacked-poster resume widget — tap reopens the
-                    // Quiz overlay (live `sessionMatched` count shows
-                    // as a "Picked: N" chip).
                     QuizResumeCard(mood: mood, posterURLs: posterURLs)
                 }
             }
             .padding(.vertical, 4)
-            // No horizontal inset: the rail shares its leading edge with the
-            // section header, the person card and the cast strip. Two points of
-            // "just a little breathing room" here read as a misalignment,
-            // because the neighbouring cards start at zero.
+            // No horizontal inset: the rail shares its leading edge with the neighbouring cards.
         }
         .fixedSize(horizontal: false, vertical: true)
         .onChange(of: content) { _, _ in visibleCount = Self.pageSize }
@@ -250,15 +236,8 @@ private struct LoadMoreSentinel: View {
     var body: some View {
         ProgressView()
             .controlSize(.small)
-            // Flexible height, never a fixed one: the eager `HStack(alignment:
-            // .top)` sizes to its tallest child, so a hard 180pt sentinel *defined*
-            // the row height. Harmless next to ~180pt poster cards, but a calendar
-            // row's cards are ~76pt — the leftover ~100pt showed up as a dead gap
-            // under the carousel. Stretching instead means the sentinel takes the
-            // row's natural height rather than dictating it.
-            // Leading, not the default centre: a card whose title wraps
-            // narrower than 100pt would otherwise float its poster to the
-            // right of the column and break the rail's left edge.
+            // Flexible height: the eager HStack sizes to its tallest child, so a fixed-height sentinel
+            // would dictate the row height. Leading so a narrow wrapped card doesn't float right.
             .frame(width: 100, alignment: .leading)
             .frame(maxHeight: .infinity, alignment: .center)
             .task { onAppear() }
@@ -323,12 +302,8 @@ private struct SearchResultCard: View {
         .frame(width: 100, alignment: .leading)
     }
 
-    /// Owned results route to DetailView; missing ones go through the add
-    /// flow. The owned check uses `inLibraryArrId` set by the TMDB handlers
-    /// when they cross-reference results against the arr library. Missing
-    /// items now route to the full `SearchAddPanel` overlay so the user gets
-    /// the same hero card + form they'd see if they'd reached the result via
-    /// the `+` search flow — SearchAddPanel is the single source of truth.
+    /// Owned results (`inLibraryArrId`, set by the TMDB handlers) open DetailView; missing ones
+    /// open `SearchAddPanel`, the same flow as `+`.
     private func handleTap() {
         DetailRequest.tap(result, addOrigin: .chat)
     }
@@ -336,11 +311,6 @@ private struct SearchResultCard: View {
 
 // MARK: - Album card
 
-/// One album in the chat rail. Square art (a sleeve is not a poster), title,
-/// year · type, and the two states that matter for a music library: whether
-/// every track is on disk, and whether Lidarr is watching for the rest.
-/// Tapping opens the album-shaped `DetailView` — the same surface the artist
-/// view's album rows push.
 private struct AlbumCard: View {
     let album: ChatAlbum
     let baseURL: String
@@ -385,8 +355,7 @@ private struct AlbumCard: View {
                             .scaledFont(size: 11)
                             .foregroundStyle(.secondary)
                     }
-                    // Track progress only where it says something the check
-                    // doesn't: a partially-grabbed album.
+                    // Only for a partially grabbed album.
                     if !album.isComplete, let progress = album.trackProgress {
                         Text(verbatim: progress)
                             .scaledFont(size: 10)
@@ -410,22 +379,24 @@ private struct AlbumCard: View {
 private struct LibraryRecordCard: View {
     let title: String
     let year: Int?
-    /// nil for series (they have season/episode statistics, not single-file).
-    /// Bool for movies — true = downloaded, false = missing.
+    /// nil for series; for movies, whether the file is on disk.
     let hasFile: Bool?
     let images: [ArrImage]?
     let baseURL: String
     let apiKey: String
     let source: QueueItem.Source
     let entityId: Int?
+    var mediaServerKeys: [MediaServerExternalKey] = []
     var blurred: Bool = false
+
+    private var poster: (url: URL?, requiresAuth: Bool) { images?.posterURL(baseURL: baseURL, mediaServerKeys: mediaServerKeys) ?? (nil, false) }
+    private var posterURL: URL? { poster.url }
 
     var body: some View {
         Button {
             guard let entityId else { return }
-            let url = images?.posterURL(baseURL: baseURL).0
-            // `.libraryArtists` cards carry an ARTIST id — open the artist
-            // surface, not the album-shaped DetailView.
+            let url = posterURL
+            // `.libraryArtists` cards carry an artist id, so open the artist surface.
             if source == .lidarr {
                 DetailRequest.post(
                     DetailRequest.syntheticArtistItem(
@@ -456,8 +427,8 @@ private struct LibraryRecordCard: View {
             ZStack(alignment: .bottomTrailing) {
                 PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
                     RemotePoster(
-                        url: images?.posterURL(baseURL: baseURL).0,
-                        apiKey: apiKey,
+                        url: posterURL,
+                        apiKey: poster.requiresAuth ? apiKey : nil,
                         size: CGSize(width: 90, height: 135),
                         cornerRadius: Tokens.Radius.card
                     )

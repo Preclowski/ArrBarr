@@ -1,69 +1,46 @@
 import SwiftUI
 
-public struct SearchResultRow: View {
+struct SearchResultRow: View {
     let result: SearchResult
     let onTap: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
-    /// Drives the country name's language — see `MediaHeaderCard`.
     @Environment(\.locale) private var locale
 
-    /// Country of production (ISO 3166-1), fetched per row through
-    /// `CountryProvider`. The arr lookups carry no country, so this is the
-    /// one segment the row has to ask TMDB for; the provider's cache means
-    /// the detail view opened from here shows it without a second fetch.
-    /// Empty (no key, no id, music) = the segment just isn't there.
+    /// Arr lookups carry no country, so it comes from TMDB via `CountryProvider`, whose cache the detail view reuses.
     @State private var countries: [String] = []
 
-    /// True when the search result carries enough metadata to populate
-    /// a tooltip — guards against renderering empty popover chrome on
-    /// results stripped of overview/genres by an upstream cache.
+    /// Guards against empty popover chrome on results stripped of overview/genres by an upstream cache.
     private var hasTooltipContent: Bool {
         (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty || !countries.isEmpty
     }
 
-    /// True when this result is already in the user's arr library.
-    /// Set by `SearchViewModel.fetchOne` from the library-id map.
-    /// Drives the row's trailing "In library" pill (tap drills into
-    /// DetailView; without it, tap opens SearchAddPanel).
+    /// Set by `SearchViewModel.fetchOne`; tap drills into DetailView when true, SearchAddPanel otherwise.
     private var isInLibrary: Bool { result.inLibraryArrId != nil }
 
-    public var body: some View {
+    var body: some View {
         PosterMetadataRow(
             posterURL: result.posterURL,
-            // Library-sourced rows point at the arr's own MediaCover route,
-            // which needs the key; lookup rows point at TMDB/TVDB, which
-            // must never see it.
+            // Library rows point at the arr's MediaCover route, which needs the key; TMDB/TVDB must never see it.
             posterAPIKey: result.posterRequiresAuth
                 ? configStore.config(for: result.source.serviceKind).apiKey : nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,
-            // Watch state comes from the media server's index, matched on the
-            // row's own provider ids — a lookup hit carries no arr record, so
-            // there is no monitored flag to draw.
+            // A lookup hit carries no arr record, so there is no monitored flag to draw.
             posterWatched: MediaServerIndex.shared.isWatched(result.mediaServerKeys),
             title: titleWithYear,
             metadataSegments: metadataSegments,
-            // Title slot: arr identity ("Sonarr"/"Radarr") only. The
-            // library tag lives on the trailing edge with the other
-            // ownership affordances — same placement as the queue /
-            // upcoming rows, so every surface reads the same way.
             onTap: onTap,
             titleBadge: { SourceGlyphChip(source: result.source) }
         ) {
-            // Trailing edge carries only the ownership badge. The drill-in
-            // affordance is the title chevron PosterMetadataRow already
-            // draws — a second trailing chevron (or a `+`) made search rows
-            // read differently from every other row surface.
+            // No second trailing chevron or `+`: the title chevron is the drill-in, like every other row surface.
             if isInLibrary {
                 LibraryStateBadge(isDownloaded: result.libraryDownloaded)
             }
         }
         #if os(macOS)
-        // Long-hover rich tooltip — reuses the overview / genres /
-        // ratings that arr's lookup already sent with this result, no
-        // additional network call. Shared 600 ms plumbing (HoverTooltip).
+        // No extra request: uses what the lookup already sent.
         .hoverTooltip(enabled: hasTooltipContent) {
             SearchResultTooltip(result: result, countries: countries)
                 .environmentObject(configStore)
@@ -72,9 +49,7 @@ public struct SearchResultRow: View {
         .task(id: result.id) { countries = await loadCountries() }
     }
 
-    /// Radarr rows are keyed by TMDB movie id; Sonarr rows carry TMDB's own
-    /// series id when SkyHook shipped one, else the TVDB id the provider
-    /// resolves. Whisparr ids aren't TMDB ids and music has no country.
+    /// Sonarr rows carry TMDB's series id when SkyHook shipped one, else the TVDB id. Whisparr ids aren't TMDB ids.
     private func loadCountries() async -> [String] {
         switch result.source {
         case .radarr:
@@ -89,8 +64,6 @@ public struct SearchResultRow: View {
         }
     }
 
-    /// "Title (1994)" — same idea as MediaHeaderCard. The year is just a
-    /// year, so it joins the title rather than burning a metadata segment.
     private var titleWithYear: String {
         if let year = result.year {
             return "\(result.title) (\(year))"
@@ -98,12 +71,7 @@ public struct SearchResultRow: View {
         return result.title
     }
 
-    /// Second-line metadata. Arr's lookup endpoint hands us all of these in
-    /// the same response that fetched the row, so showing them costs zero
-    /// extra requests: subtitle (Sonarr "X seasons" / Lidarr disambiguation)
-    /// → IMDb → RT → Metacritic → ★ (TMDB, when IMDb is missing) → runtime
-    /// → certification → country. Filter to what's populated. One country
-    /// only: the row has a single line, and a co-production's full list
+    /// All from the lookup response, so zero extra requests. One country only: a co-production's full list
     /// belongs to the tooltip and the detail.
     private var metadataSegments: [String] {
         let country: String? = CountryProvider.displayNames(countries, locale: locale, limit: 1).first
@@ -122,21 +90,14 @@ public struct SearchResultRow: View {
 }
 
 // MARK: - Rich tooltip
-//
-// Hover preview for a search row. Pulls solely from data the
-// `*_lookup` endpoint already sent — no extra network round-trip.
-// Mirrors the queue / upcoming tooltip chrome (poster + heading +
-// info grid + overview) so the user reads one tooltip vocabulary
-// across the app.
 
-public struct SearchResultTooltip: View {
+struct SearchResultTooltip: View {
     let result: SearchResult
-    /// Country codes the row already fetched — the tooltip never fetches.
     var countries: [String] = []
     @EnvironmentObject var configStore: ConfigStore
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         MediaTooltipChrome(
             title: result.title,
             year: result.year,
@@ -147,12 +108,9 @@ public struct SearchResultTooltip: View {
             fallbackSymbol: result.source.symbol
         ) {
             VStack(alignment: .leading, spacing: 6) {
-                // Same order as detail heroes / the library tooltip:
-                // genres (GenreChips), rating pills, then extras.
                 if !result.genres.isEmpty {
                     GenreChips(genres: result.genres)
                 }
-                // Detail-hero order: metadata line above the rating pills.
                 if !runtimeCertLine.isEmpty {
                     Text(verbatim: runtimeCertLine)
                         .scaledFont(size: 11)
@@ -166,8 +124,7 @@ public struct SearchResultTooltip: View {
         }
     }
 
-    /// Labeled facts — the same table form every other tooltip carries.
-    /// `network` holds Sonarr's network or Radarr's studio; label follows.
+    /// `network` holds Sonarr's network or Radarr's studio.
     private var infoLines: [TooltipInfoLine] {
         var lines: [TooltipInfoLine] = []
         if let n = result.network, !n.isEmpty {
@@ -179,9 +136,6 @@ public struct SearchResultTooltip: View {
         return lines
     }
 
-    /// "148 min · R · United States" — the same line the Library and
-    /// Upcoming tooltips put under the rating pills, and the detail hero's
-    /// metadata row.
     private var runtimeCertLine: String {
         var parts: [String] = []
         if let r = result.runtime, r > 0 { parts.append("\(r) min") }
@@ -190,9 +144,7 @@ public struct SearchResultTooltip: View {
         return parts.joined(separator: " · ")
     }
 
-    /// Same brand-icon pills as the detail headers (`RatingPill`), minus the
-    /// links — a tooltip is hover chrome, not a click target. The bare-rating
-    /// fallback is TVDB-sourced for Sonarr results and TMDB otherwise.
+    /// No links — a tooltip is hover chrome. The bare-rating fallback is TVDB for Sonarr, TMDB otherwise.
     private var ratingChips: [RatingChip] {
         var chips: [RatingChip] = [
             result.imdb.flatMap { RatingChip.imdb($0) },

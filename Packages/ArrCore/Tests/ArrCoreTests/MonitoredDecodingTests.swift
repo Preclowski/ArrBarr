@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// The monitored flag drives whether a bookmark renders at all: present →
@@ -15,7 +16,7 @@ struct MonitoredDecodingTests {
         let json = """
         {"id": 100, "title": "Test Movie", "year": 2024, "monitored": false}
         """
-        let detail = try JSONDecoder().decode(RadarrMovieDetail.self, from: Data(json.utf8))
+        let detail = try JSONDecoder().decode(ArrMovie.self, from: Data(json.utf8))
         #expect(detail.monitored == false)
     }
 
@@ -30,7 +31,7 @@ struct MonitoredDecodingTests {
             ]
         }
         """
-        let detail = try JSONDecoder().decode(SonarrSeriesDetail.self, from: Data(json.utf8))
+        let detail = try JSONDecoder().decode(ArrSeries.self, from: Data(json.utf8))
         #expect(detail.monitored == true)
         #expect(detail.seasons?.first { $0.seasonNumber == 2 }?.monitored == false)
     }
@@ -40,7 +41,7 @@ struct MonitoredDecodingTests {
         let json = """
         {"id": 42, "seasonNumber": 2, "episodeNumber": 4, "monitored": false, "hasFile": false}
         """
-        let episode = try JSONDecoder().decode(SonarrEpisodeDetail.self, from: Data(json.utf8))
+        let episode = try JSONDecoder().decode(ArrEpisode.self, from: Data(json.utf8))
         #expect(episode.monitored == false)
     }
 
@@ -49,7 +50,7 @@ struct MonitoredDecodingTests {
         let json = """
         {"id": 301, "title": "Test Album", "monitored": true}
         """
-        let album = try JSONDecoder().decode(LidarrAlbumDetail.self, from: Data(json.utf8))
+        let album = try JSONDecoder().decode(ArrAlbum.self, from: Data(json.utf8))
         #expect(album.monitored == true)
     }
 
@@ -59,13 +60,13 @@ struct MonitoredDecodingTests {
     @Test("Absent monitored stays nil rather than defaulting to false")
     func absentStaysNil() throws {
         let movie = try JSONDecoder().decode(
-            RadarrMovieDetail.self, from: Data(#"{"id": 1, "title": "M"}"#.utf8))
+            ArrMovie.self, from: Data(#"{"id": 1, "title": "M"}"#.utf8))
         let series = try JSONDecoder().decode(
-            SonarrSeriesDetail.self, from: Data(#"{"id": 2, "title": "S"}"#.utf8))
+            ArrSeries.self, from: Data(#"{"id": 2, "title": "S"}"#.utf8))
         let album = try JSONDecoder().decode(
-            LidarrAlbumDetail.self, from: Data(#"{"id": 3, "title": "A"}"#.utf8))
+            ArrAlbum.self, from: Data(#"{"id": 3, "title": "A"}"#.utf8))
         let episode = try JSONDecoder().decode(
-            SonarrEpisodeDetail.self, from: Data(#"{"id": 4}"#.utf8))
+            ArrEpisode.self, from: Data(#"{"id": 4}"#.utf8))
         #expect(movie.monitored == nil)
         #expect(series.monitored == nil)
         #expect(album.monitored == nil)

@@ -1,21 +1,17 @@
 import SwiftUI
 import AppIntents
 
-/// Settings content educating the user about ArrBarr's Siri / Shortcuts
-/// actions, with one-tap "Add to Siri" tips and a link into the Shortcuts
-/// app. Embedded as Form sections on both platforms. Read-only actions, so
-/// no per-command toggles — they're always available.
+/// Read-only actions, so no per-command toggles.
 @available(iOS 16.0, macOS 13.0, *)
-public struct SiriShortcutsSettingsContent: View {
+struct SiriShortcutsSettingsContent: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject private var configStore: ConfigStore
     @State private var clearingIntents = false
     @State private var clearedIntents = false
-    public init() {}
+    init() {}
 
-    public var body: some View {
+    var body: some View {
         #if os(iOS)
-        // SiriTipView is iOS-only — one-tap "Add to Siri" per action.
         Section {
             SiriTipView(intent: ShowDownloadQueueIntent())
             SiriTipView(intent: ShowUpcomingIntent())

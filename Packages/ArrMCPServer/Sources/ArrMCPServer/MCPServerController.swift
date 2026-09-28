@@ -3,8 +3,6 @@ import MCP
 import Logging
 import Foundation
 
-/// Owns the lifecycle of the MCP HTTP server: starts/stops the NIO host from a
-/// config snapshot and publishes status back to the app via a callback.
 public actor MCPServerController {
     public struct Config: Sendable {
         public let hostPort: String
@@ -19,14 +17,12 @@ public actor MCPServerController {
         }
     }
 
-    /// Snapshot of the arr/tmdb config needed to build `LocalToolBackend` + catalog.
     public struct BackendInputs: Sendable {
         public let sonarr, radarr, lidarr, whisparr: ServiceConfig
         public let aiKnowsAboutWhisparr: Bool
         public let tmdbApiKey: String
         public let downloadClients: DownloadClientConfigs
-        /// The one media server, when connected — drives the `media_server_*`
-        /// tools. Defaulted so existing call sites (and tests) compile unchanged.
+        /// Drives the `media_server_*` tools.
         public let mediaServer: MediaServerConfig
         public init(sonarr: ServiceConfig, radarr: ServiceConfig, lidarr: ServiceConfig,
                     whisparr: ServiceConfig, aiKnowsAboutWhisparr: Bool, tmdbApiKey: String,
@@ -43,9 +39,7 @@ public actor MCPServerController {
         case stopped, running(url: String), failed(message: String)
     }
 
-    /// What the caller last asked for. `restart`/`stop` are fire-and-forget from
-    /// a debounced Settings sink, so several can be in flight at once; they
-    /// collapse into this single slot so the newest request wins.
+    /// `restart`/`stop` come fire-and-forget from a debounced Settings sink; they collapse here so the newest wins.
     private enum DesiredState: Sendable {
         case stopped
         case running(Config)
@@ -61,17 +55,12 @@ public actor MCPServerController {
 
     public func setStatusHandler(_ handler: @escaping @Sendable (Status) -> Void) { onStatus = handler }
 
-    /// (Re)start the server with a fresh config. Stops any running instance first.
     public func restart(with config: Config) async { await apply(.running(config)) }
 
-    /// Stop the server, superseding any queued restart.
     public func stop() async { await apply(.stopped) }
 
-    /// Serialises every state change. Actor isolation alone is not enough: each
-    /// `performRestart` suspends at the awaited bind, so without this two
-    /// restarts would interleave — both see `host == nil`, both bind the same
-    /// port, one gets EADDRINUSE — and whichever finished last would decide the
-    /// published status, potentially showing `.failed` while the winner serves.
+    /// Actor isolation is not enough: `performRestart` suspends at the bind, so two restarts would both
+    /// bind the port (EADDRINUSE) and the loser could publish `.failed` while the winner serves.
     private func apply(_ desired: DesiredState) async {
         pendingState = desired
         guard !isApplying else { return }
@@ -95,9 +84,8 @@ public actor MCPServerController {
         }
         let bindHost = String(parts[0])
 
-        // Never expose the tool surface (queue deletes, library writes) beyond
-        // loopback without a bearer token. The Origin check below only stops
-        // browser-based DNS rebinding — a direct client just omits the header.
+        // Never expose the tool surface beyond loopback without a bearer token. The Origin check below only
+        // stops browser-based DNS rebinding — a direct client just omits the header.
         let loopback = ["127.0.0.1", "localhost", "::1"].contains(bindHost.lowercased())
         if !loopback && !config.requireAuth {
             emit(.failed(message: "Refusing to bind \(config.hostPort) without authentication — enable the bearer token or bind to 127.0.0.1."))
@@ -154,9 +142,7 @@ public actor MCPServerController {
             emit(.running(url: url))
             logger.notice("MCP server started", metadata: ["url": .string(url)])
         } catch {
-            // `start()` already reaped its own event-loop group; this is the
-            // belt-and-braces teardown (a no-op after a failed bind) so no
-            // half-built host is ever dropped on the floor.
+            // Belt-and-braces: `start()` already reaped its event-loop group; a no-op after a failed bind.
             await host.stop()
             self.host = nil
             emit(.failed(message: "\(error)"))

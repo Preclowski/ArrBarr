@@ -3,60 +3,57 @@ import WebKit
 
 // MARK: - Session
 
-/// The one live trailer, owned ABOVE the view tree.
-///
-/// The menu-bar popover rebuilds its entire content view on every open, so any
-/// trailer state kept in a surface's `@State` dies with the popover — the clip
-/// kept playing (WebKit holds the page until it is blanked) while the UI that
-/// could show or stop it was gone. Holding the key AND the web view here lets
-/// the root overlay re-present the same, still-playing player when the popover
-/// comes back, and gives closing it a single owner.
-///
-/// One session, not one per surface: the overlay is full-surface, so two
-/// concurrent clips can't exist anyway.
+/// The one live trailer, owned above the view tree: the popover rebuilds its content on
+/// every open, so the key and web view live here to re-present the still-playing clip.
 public final class TrailerSession: ObservableObject {
     public static let shared = TrailerSession()
 
-    /// YouTube id of the clip on screen (or playing behind a closed popover).
-    /// Nil = no trailer up.
+    /// Nil = no trailer up; set while a clip plays behind a closed popover too.
     @Published public private(set) var key: String?
+    @Published public private(set) var reel: TrailerReel?
 
-    /// The live player, kept so a popover close/reopen re-parents the SAME
-    /// web view instead of reloading the clip from zero.
+    /// Kept so a popover reopen re-parents the same web view instead of reloading the clip.
     var webView: WKWebView?
-    /// Which clip `webView` has loaded — lives here (not on a coordinator)
-    /// because coordinators die with the popover's view tree.
+    /// Here, not on a coordinator, because coordinators die with the popover's view tree.
     var loadedKey: String?
 
-    public func present(_ key: String) {
-        self.key = key
+    public func present(_ reel: TrailerReel) {
+        self.reel = reel
+        key = reel.featuredKey
         Self.syncInterfaceOrientations()
     }
 
-    /// The whole iPhone app is portrait-locked; a playing trailer is the one
-    /// exception, so `AppDelegate.supportedInterfaceOrientations` reads this and
-    /// the system re-evaluates when it flips.
-    public private(set) static var allowsLandscape = false
-
-    /// The badge's toggle: play, or stop if this clip is already up.
-    public func toggle(_ key: String?) {
-        guard let key else { return }
-        if self.key == key { dismiss() } else { present(key) }
+    func play(_ clip: TrailerClip) {
+        guard key != nil, reel?.clips.contains(clip) == true else { return }
+        key = clip.key
     }
 
-    /// Stops playback for real: releasing the web view is NOT enough — WebKit
-    /// keeps the media playing until the page goes, so blank it.
+    /// By title, not clip, so picking another tile doesn't read as the trailer closing.
+    public func isShowing(_ reel: TrailerReel?) -> Bool {
+        reel != nil && self.reel == reel
+    }
+
+    /// The iPhone app is portrait-locked except while a trailer plays;
+    /// `AppDelegate.supportedInterfaceOrientations` reads this.
+    public private(set) static var allowsLandscape = false
+
+    public func toggle(_ reel: TrailerReel?) {
+        guard let reel else { return }
+        if isShowing(reel) { dismiss() } else { present(reel) }
+    }
+
+    /// Releasing the web view is not enough — WebKit keeps playing until the page goes, so blank it.
     public func dismiss() {
         key = nil
+        reel = nil
         loadedKey = nil
         webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
         webView = nil
         Self.syncInterfaceOrientations()
     }
 
-    /// Re-derives `allowsLandscape` from whether a clip is up, then asks the
-    /// system to re-read it. Closing in landscape must also actively rotate the
-    /// window back — otherwise the portrait-only app is left lying on its side.
+    /// Closing in landscape must also rotate the window back, or the portrait-only app is left
+    /// on its side.
     private static func syncInterfaceOrientations() {
         #if os(iOS)
         let playing = shared.key != nil
@@ -71,25 +68,16 @@ public final class TrailerSession: ObservableObject {
         #endif
     }
 
-    /// True while `view` must be kept alive and audible even though its host
-    /// tree is being dismantled (popover closed or rebuilt mid-clip).
+    /// The host tree is being dismantled mid-clip (popover closed or rebuilt) but the session keeps it.
     func keepsAlive(_ view: WKWebView) -> Bool {
         key != nil && webView === view
     }
 }
 
 // MARK: - Web view
-//
-// YouTube's embed is the only legal way to play these clips — pulling the
-// media stream out to feed AVPlayer breaks YouTube's terms — so the player is
-// a WKWebView pointed at the `nocookie` embed host. Everything the app draws
-// around it (fullscreen, close) is native chrome; the rectangle itself is the
-// iframe.
+// YouTube's embed is the only legal way to play these clips — feeding the stream to
+// AVPlayer breaks YouTube's terms.
 
-/// Shared configuration: inline playback (so the clip stays inside our card
-/// rather than being taken over by the system player) and no tap-to-start gate,
-/// since the user already pressed a play button to get here.
-/// Name of the JS → native channel carrying fullscreen enter/exit.
 private let trailerFullscreenMessage = "trailerFullscreen"
 
 private func trailerWebConfiguration() -> WKWebViewConfiguration {
@@ -98,60 +86,36 @@ private func trailerWebConfiguration() -> WKWebViewConfiguration {
     #if os(iOS)
     config.allowsInlineMediaPlayback = true
     #endif
-    // Element fullscreen ON: this is what makes the player's OWN fullscreen
-    // button work, and WebKit's fullscreen window is a far better one than a
-    // hand-rolled screen-sized panel — it works from the menu-bar popover
-    // (verified: `document.fullscreenEnabled` is true in a non-activating
-    // panel) and brings the player's native controls with it.
+    // WebKit's element fullscreen works from the non-activating popover
+    // (`document.fullscreenEnabled` is true there) and keeps the player's controls.
     config.preferences.isElementFullscreenEnabled = true
     return config
 }
 
-/// The embed host the iframe points at, and the origin we embed AS.
-///
-/// The origin is the app's own site on purpose. Claiming YouTube's own origin
-/// (the obvious way to make a local page look "allowed") is read as an
-/// embedder pretending to be YouTube and the player answers
-/// `embedder.identity.denied` — error 152. An honest third-party origin plays.
+/// We embed as the app's own site: claiming YouTube's origin is read as impersonation and
+/// fails with `embedder.identity.denied` (error 152).
 private let trailerEmbedHost = "https://www.youtube-nocookie.com"
 private let trailerEmbedOrigin = "https://arrbarr.app"
 
-/// A page wrapping the embed in an iframe — NOT the embed URL loaded directly.
-///
-/// Loading `…/embed/KEY` straight into a WKWebView gives every clip "Error 153
-/// — player configuration error": the navigation carries no origin or referrer
-/// (the web view starts from `about:blank`), and the player refuses to run for
-/// an embedder it can't identify. Serving our own HTML with a real `baseURL`
-/// gives the iframe an origin, which is what the player checks.
+/// Wraps the embed in an iframe: loading `…/embed/KEY` directly has no origin (the view starts
+/// at `about:blank`) and every clip fails with error 153.
 private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
     let query = [
         "autoplay=\(autoplay ? 1 : 0)",
         "playsinline=1",
-        // No "more videos from around YouTube" grid when the clip ends —
-        // `rel=0` keeps suggestions inside the same channel.
+        // `rel=0` keeps end-of-clip suggestions inside the same channel.
         "rel=0",
-        // The player's own fullscreen button, which is now the ONLY one —
-        // ours sat next to it doing the same job worse.
         "fs=1",
-        // Everything the embed API lets us switch off, off. What's left is
-        // play/pause, the scrubber, volume and fullscreen — the controls a
-        // trailer actually needs.
-        //
         // No annotation / card overlays on the video.
         "iv_load_policy=3",
-        // Captions stay off unless the viewer turns them on.
         "cc_load_policy=0",
-        // Grey progress bar instead of YouTube red — the one piece of chrome
-        // colour the API does expose.
+        // The one piece of chrome colour the API exposes.
         "color=white",
-        // Deprecated by YouTube in 2023 (the logo shows regardless now) but
-        // still accepted and free to send.
+        // Deprecated by YouTube in 2023 (the logo shows regardless) but still accepted.
         "modestbranding=1",
         "origin=\(trailerEmbedOrigin)",
-        // No `enablejsapi=1`. It was here to read player state, but nothing
-        // ever listened for those messages, and switching it on is what turns
-        // a plain embed into a YouTube API Services client — with the privacy
-        // policy obligations that carries. A dead diagnostic is not worth it.
+        // No `enablejsapi=1`: it makes the app a YouTube API Services client, with the privacy
+        // policy obligations that carries.
     ].joined(separator: "&")
     return """
     <!doctype html>
@@ -168,9 +132,7 @@ private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowfullscreen></iframe>
         <script>
-          // The popover floats above WebKit's fullscreen window, so native
-          // code has to hide it — and only this event knows when the player's
-          // own fullscreen button was pressed.
+          // The popover floats above WebKit's fullscreen window, so native code has to hide it.
           document.addEventListener("fullscreenchange", function () {
             window.webkit?.messageHandlers?.\(trailerFullscreenMessage)
               ?.postMessage(!!document.fullscreenElement);
@@ -181,18 +143,9 @@ private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
     """
 }
 
-/// One web view per host, owned by SwiftUI.
-///
-/// There is no cross-surface handoff any more: fullscreen is WebKit's own,
-/// driven by the player's button, so the clip never has to move between two
-/// windows we manage. That also means teardown needs no bookkeeping — when the
-/// host disappears the web view is released and the audio stops with it.
 #if os(macOS)
-/// Reports every re-parenting. WebKit's element fullscreen moves the web view
-/// into its OWN window, so this hook — not a JS event — is the signal that
-/// cannot be missed: it fires whoever asked for fullscreen, including a
-/// cross-origin iframe like YouTube's player, whose `fullscreenchange` does not
-/// reliably reach our page.
+/// WebKit's element fullscreen moves the web view into its own window; this hook fires even
+/// when the cross-origin iframe's `fullscreenchange` never reaches our page.
 private final class TrailerBackingWebView: WKWebView {
     var onWindowChange: ((NSWindow?) -> Void)?
 
@@ -209,11 +162,8 @@ private struct TrailerWebView: NSViewRepresentable {
         let session = TrailerSession.shared
         let coordinator = context.coordinator
         if let existing = session.webView as? TrailerBackingWebView {
-            // The still-playing player from a torn-down popover tree — hand it
-            // to this tree's coordinator without touching the page, so the
-            // clip carries on exactly where it was. Remove-then-add because
-            // the dead tree's handler may still be registered, and `add` with
-            // a duplicate name raises.
+            // A still-playing player from a torn-down tree: adopt it without touching the page.
+            // Remove-then-add because `add` with a duplicate handler name raises.
             existing.configuration.userContentController
                 .removeScriptMessageHandler(forName: trailerFullscreenMessage)
             existing.configuration.userContentController
@@ -239,17 +189,14 @@ private struct TrailerWebView: NSViewRepresentable {
     }
 
     func updateNSView(_ view: WKWebView, context: Context) {
-        // Reload only when the clip changes: updateNSView fires on every parent
-        // redraw, and reloading would restart playback each time.
+        // updateNSView fires on every parent redraw; reloading would restart playback.
         guard TrailerSession.shared.loadedKey != key else { return }
         load(into: view)
     }
 
     static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) {
-        // The popover (or its content tree) died mid-clip while the session
-        // still owns the player: leave the page — and its message handler,
-        // which the next tree's coordinator takes over — alone, so the clip
-        // survives to be re-presented on reopen.
+        // The tree died mid-clip while the session owns the player: leave the page and its
+        // handler alone so the clip survives to be re-presented.
         if TrailerSession.shared.keepsAlive(view) { return }
         view.configuration.userContentController
             .removeScriptMessageHandler(forName: trailerFullscreenMessage)
@@ -258,36 +205,19 @@ private struct TrailerWebView: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    /// Hides the popover while the player is fullscreen, and brings it back
-    /// after.
-    ///
-    /// Hiding, not closing: the panel outranks WebKit's fullscreen window, so
-    /// it has to go — but CLOSING it tore down the view tree holding the
-    /// player, which is why leaving fullscreen dumped the user on a dead black
-    /// overlay (and took the popover with it). Ordered out, the tree stays
-    /// alive, the clip keeps its page, and coming back is just ordering the
-    /// same window front again.
-    ///
-    /// (An earlier attempt at ordering out "did nothing" — that was the JS
-    /// `fullscreenchange` never arriving from YouTube's cross-origin iframe,
-    /// not the hiding. `viewDidMoveToWindow` is the signal that actually
-    /// fires.)
+    /// Hides the popover while the player is fullscreen. Ordered out, not closed: closing tore
+    /// down the tree holding the player and left a dead black overlay on return.
     final class Coordinator: NSObject, WKScriptMessageHandler {
         weak var webView: WKWebView?
-        /// The window the player lives in normally — the popover, or the
-        /// detached window. Captured the first time we are placed.
+        /// The popover or detached window; captured the first time we are placed.
         private weak var hostWindow: NSWindow?
-        /// Keeps the player alive while its host window is gone.
         private var retainedDuringFullscreen: WKWebView?
-        /// Where the popover sat before we closed it. Coming back from
-        /// fullscreen, AppKit restores the panel at whatever frame it last
-        /// computed — which is off-screen, since the panel was closed while a
-        /// screen-filling window owned the display.
+        /// Restored on return: AppKit otherwise puts the panel back at a frame it computed off-screen
+        /// while the fullscreen window owned the display.
         private var hostFrameBeforeFullscreen: NSRect?
 
         func webViewMoved(to window: NSWindow?) {
-            // No window at all is teardown, not fullscreen — `hostTornDown()`
-            // handles stopping the clip there.
+            // No window at all is teardown, handled by `hostTornDown()`.
             guard let window else { return }
             guard let hostWindow else {
                 hostWindow = window
@@ -301,27 +231,20 @@ private struct TrailerWebView: NSViewRepresentable {
         }
 
         private func beginFullscreen(hostWindow: NSWindow) {
-            // Belt and braces: the tree stays alive behind a hidden window, but
-            // a strong reference means nothing can pull the player out from
-            // under WebKit mid-clip.
+            // The tree stays alive behind the hidden window, but a strong reference guarantees nothing
+            // pulls the player out from under WebKit mid-clip.
             retainedDuringFullscreen = webView
             hostFrameBeforeFullscreen = hostWindow.frame
             hostWindow.orderOut(nil)
         }
 
-        /// The view that hosted the player went away — the user closed the
-        /// overlay or left the surface. Releasing the web view is NOT enough:
-        /// WebKit keeps the media playing until the page goes, so the audio
-        /// carried on with nothing on screen. Blanking the page is what stops
-        /// it.
+        /// Releasing the web view is not enough — WebKit keeps the audio playing until the page goes.
         func hostTornDown() {
             guard retainedDuringFullscreen == nil else { return }   // fullscreen owns it
             webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
         }
 
-        /// Back from fullscreen into the popover: show it again, put it back
-        /// where it was, and leave the clip alone — it is still playing, and
-        /// the small player is what the user expects to land in.
+        /// Leaves the clip alone — it is still playing, and the small player is where the user expects to land.
         private func endFullscreen(hostWindow: NSWindow) {
             retainedDuringFullscreen = nil
             guard hostFrameBeforeFullscreen != nil else { return }
@@ -329,14 +252,8 @@ private struct TrailerWebView: NSViewRepresentable {
             restoreHostFrame()
         }
 
-        /// Puts the popover back where it was, clamped to the screen it is on.
-        ///
-        /// Repeated over the next few runloop turns, not done once: AppKit
-        /// re-places the panel itself as it comes back, and whether that lands
-        /// before or after a single restore is a coin flip — which is exactly
-        /// why the popover came back correctly on one trailer and off-screen on
-        /// the next. Re-applying until the frame sticks removes the race
-        /// instead of betting on it.
+        /// Re-applied over a few runloop turns: AppKit re-places the panel itself as it returns, and
+        /// a single restore races it.
         private func restoreHostFrame() {
             guard hostFrameBeforeFullscreen != nil else { return }
             for delay in [0, 0.05, 0.2, 0.5] {
@@ -359,13 +276,10 @@ private struct TrailerWebView: NSViewRepresentable {
             hostWindow.setFrame(frame, display: true)
         }
 
-        /// Second signal, for the case where the page DOES see the change (a
-        /// same-origin request, or a future WebKit that forwards the iframe's).
-        /// Harmless when `webViewMoved(to:)` already handled it.
+        /// Second signal, for when the page does see the change; harmless after `webViewMoved(to:)`.
         func userContentController(_ controller: WKUserContentController,
                                    didReceive message: WKScriptMessage) {
-            // JS booleans arrive as NSNumber, so read it as one — `as? Bool`
-            // alone is a bridging detail to depend on.
+            // JS booleans arrive as NSNumber; `as? Bool` alone relies on a bridging detail.
             guard message.name == trailerFullscreenMessage,
                   let entered = (message.body as? NSNumber)?.boolValue
                       ?? (message.body as? Bool),
@@ -388,8 +302,7 @@ private struct TrailerWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let session = TrailerSession.shared
         if let existing = session.webView {
-            // Same as macOS: a surviving player from a torn-down tree keeps
-            // its page (and playback position) across the re-parent.
+            // A surviving player from a torn-down tree keeps its page and position.
             if session.loadedKey != key { load(into: existing) }
             return existing
         }
@@ -408,8 +321,7 @@ private struct TrailerWebView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
-        // See the macOS note: releasing the view leaves the clip playing —
-        // blank it, unless the session still owns it (tree rebuilt mid-clip).
+        // Releasing the view leaves the clip playing — blank it, unless the session still owns it.
         if TrailerSession.shared.keepsAlive(view) { return }
         view.loadHTMLString("<html><body></body></html>", baseURL: nil)
     }
@@ -428,19 +340,15 @@ private struct TrailerWebView: UIViewRepresentable {
 
 // MARK: - Overlay presentation
 
-/// Portrait leaves a margin so the dimmed surface behind still reads as the
-/// page you came from. Turning the phone means "I want to watch this", so
-/// landscape drops the inset and the safe area and gives the clip the glass.
+/// Portrait keeps a margin; landscape drops the inset and safe area to give the clip the glass.
 private struct TrailerStageInsets: ViewModifier {
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif
 
     func body(content: Content) -> some View {
-        // Deliberately branch on VALUES, never with `if`/`else`: a structural
-        // branch here gives the two layouts different identities, so rotating
-        // tore down `TrailerWebView` and rebuilt it — and the picture vanished
-        // mid-clip. One view, two sets of numbers, identity preserved.
+        // Branch on values, never `if`/`else`: a structural branch changes identity and rotating
+        // rebuilt `TrailerWebView`, blanking the picture mid-clip.
         content
             .padding(.horizontal, isLandscape ? 0 : 12)
             .ignoresSafeArea(edges: isLandscape ? .all : [])
@@ -456,25 +364,16 @@ private struct TrailerStageInsets: ViewModifier {
 }
 
 extension View {
-    /// Present the trailer over the WHOLE surface — dimmed backdrop, player
-    /// centred — the way tapping the poster raises the lightbox. Under the
-    /// synopsis the player was a block the page had to make room for, and on a
-    /// narrow popover that pushed everything else out of view.
+    /// Over the whole surface, like the poster lightbox — inline, the player pushed everything
+    /// else out of the narrow popover.
     @ViewBuilder
     func trailerOverlay(key: Binding<String?>) -> some View {
         overlay {
             if let presented = key.wrappedValue {
-                // Top-LEADING: the ✕ sits in the same corner as the poster
-                // lightbox's, and as every pushed view's back chevron.
+                // Top-leading: the ✕ matches the lightbox's corner and every back chevron.
                 ZStack(alignment: .topLeading) {
-                    // ONE near-black layer, not a material with a black plate on
-                    // top. Tinting the glass was the tidier idea but it can't
-                    // get there: measured over bright content, `.regularMaterial`
-                    // lands at 0.51 luminance and even an ultra-thick material
-                    // forced to its dark variant only reaches 0.37 — a mid-grey
-                    // blur is what a material IS. Video wants ~0.09, and at that
-                    // point the blur underneath contributes nothing visible, so
-                    // the material is dropped rather than paid for.
+                    // One near-black layer, not a material: measured over bright content even a dark ultra-thick
+                    // material only reaches 0.37 luminance; video wants ~0.09.
                     Rectangle()
                         .fill(Color.black.opacity(0.92))
                         .ignoresSafeArea()
@@ -482,43 +381,124 @@ extension View {
                         .onTapGesture {
                             withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                         }
-                    TrailerPlayerCard(key: presented)
-                        .modifier(TrailerStageInsets())
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    VStack(spacing: 14) {
+                        TrailerPlayerCard(key: presented)
+                            .modifier(TrailerStageInsets())
+                        TrailerReelStrip(playing: presented)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     LightboxCloseButton(labelKey: "detail.trailerClose.button") {
                         withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                     }
                 }
                 .transition(.opacity)
-                // Below the poster lightbox (10) so the two can't fight, above
-                // everything else on the surface.
+                // Below the poster lightbox (10) so the two can't fight.
                 .zIndex(9)
             }
         }
     }
 }
 
+// MARK: - Reel strip
+
+/// Hidden with a single clip, and in landscape, where the clip owns the glass.
+private struct TrailerReelStrip: View {
+    let playing: String
+    @ObservedObject private var session = TrailerSession.shared
+    #if os(iOS)
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    #endif
+
+    var body: some View {
+        if let clips = session.reel?.clips, clips.count > 1, !isLandscape {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 10) {
+                        ForEach(clips) { clip in
+                            TrailerClipTile(clip: clip, isPlaying: clip.key == playing) {
+                                withAnimation(.smooth(duration: 0.2)) { session.play(clip) }
+                            }
+                            .id(clip.key)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+                .onAppear { proxy.scrollTo(playing, anchor: .center) }
+                .onChange(of: playing) { _, key in
+                    withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(key, anchor: .center) }
+                }
+            }
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var isLandscape: Bool {
+        #if os(iOS)
+        verticalSizeClass == .compact
+        #else
+        false
+        #endif
+    }
+}
+
+private struct TrailerClipTile: View {
+    let clip: TrailerClip
+    let isPlaying: Bool
+    let action: () -> Void
+
+    private static let thumbnail = CGSize(width: 128, height: 72)
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: 5) {
+                RemotePoster(url: clip.thumbnailURL, apiKey: nil, tier: .icon,
+                             size: Self.thumbnail, cornerRadius: 6,
+                             fallbackSymbol: "play.rectangle")
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 6)
+                            .strokeBorder(Color.white, lineWidth: isPlaying ? 2 : 0)
+                    }
+                Group {
+                    if let name = clip.name, !name.isEmpty {
+                        Text(verbatim: name)
+                    } else {
+                        Text("detail.trailer.button", bundle: .module)
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.white)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.leading)
+            }
+            .frame(width: Self.thumbnail.width)
+            .opacity(isPlaying ? 1 : 0.7)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isPlaying ? .isSelected : [])
+        #if os(macOS)
+        .onHover { hovering in
+            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
+        }
+        #endif
+    }
+}
+
 // MARK: - Poster badge
 
-/// YouTube mark tucked into the poster's bottom-right corner — the trailer
-/// affordance lives ON the artwork it belongs to, instead of taking a row of
-/// its own under it. The poster's own tap (the lightbox) keeps the rest of the
-/// artwork; only this corner opens the trailer.
+/// Only this corner opens the trailer; the rest of the poster keeps its lightbox tap.
 struct TrailerPosterBadge: View {
     let isPlaying: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            // The full-colour mark, bare on the artwork. It carries its own
-            // contrast (red body, white glyph) which is why the plate could go;
-            // the shadow keeps its edge on a light or busy poster.
+            // The mark carries its own contrast; the shadow keeps its edge on a light or busy poster.
             Image("brand-youtube", bundle: .module)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 21)
                 .shadow(color: .black.opacity(0.55), radius: 2, y: 0.5)
-                // Playing is a full-strength mark; idle sits back a little.
                 .opacity(isPlaying ? 1 : 0.88)
                 .contentShape(Rectangle())
         }
@@ -536,10 +516,7 @@ struct TrailerPosterBadge: View {
 
 // MARK: - Inline card
 
-/// The 16:9 clip itself, sized by aspect ratio rather than a fixed height so it
-/// fills the narrow menu-bar panel and the wide detached window equally.
-/// Fullscreen comes from the player's own control bar; dismissal from the
-/// overlay around it.
+/// Sized by aspect ratio so it fills both the narrow panel and the wide detached window.
 struct TrailerPlayerCard: View {
     let key: String
 
@@ -548,7 +525,6 @@ struct TrailerPlayerCard: View {
             .aspectRatio(16.0 / 9.0, contentMode: .fit)
             .background(Color.black)
             .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.card))
-        // Dismissal is the overlay's job (round ✕ in the corner, scrim tap,
-        // Esc) — exactly as it is for the poster. The card is only the clip.
+        // Dismissal is the overlay's job (✕, scrim tap, Esc).
     }
 }

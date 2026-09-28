@@ -18,7 +18,8 @@ public struct MediaServerIndexEntry: Sendable, Hashable, Codable {
     }
 }
 
-public struct MediaServerLibrary: Sendable, Hashable, Codable {
+public struct MediaServerLibrary: Sendable, Hashable, Codable, Identifiable {
+    public var id: String { key }
     public let key: String
     public let title: String
     public let kind: MediaKind?
@@ -43,9 +44,7 @@ public struct MediaServerHistoryRow: Sendable, Hashable, Codable {
     public let kind: MediaKind
     public let title: String
     public let viewedAt: Date
-    /// Episodes only: the SERIES this play belongs to, and where in it. An
-    /// episode's own provider ids are the episode's, which no arr record can
-    /// be matched against — the series item id can, via the library index.
+    /// An episode's own provider ids match no arr record; the series item id can, via the library index.
     public var seriesItemID: String?
     public var season: Int?
     public var episode: Int?
@@ -98,9 +97,7 @@ struct PlexMetadata: Decodable {
     let grandparentTitle: String?
     let grandparentThumb: String?
     let grandparentRatingKey: String?
-    /// "/library/metadata/<id>" — history rows ship this instead of
-    /// `grandparentRatingKey`, and it is the only route from a played episode
-    /// back to its series.
+    /// History rows ship this instead of `grandparentRatingKey`; the only route from a played episode to its series.
     let grandparentKey: String?
     let parentIndex: Int?
     let leafCount: Int?

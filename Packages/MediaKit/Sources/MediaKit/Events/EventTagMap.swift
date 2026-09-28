@@ -26,7 +26,7 @@ public struct EventTagMap: Sendable {
             let lowered = name.lowercased()
             let touchesQueue = lowered.contains("search") || lowered.contains("grab") || lowered.contains("download")
             return touchesQueue ? [.collection(.commands, i), .collection(.queue, i)] : [.collection(.commands, i)]
-        case .other, .woke, .connectivity:
+        case .other:
             return []
         }
     }

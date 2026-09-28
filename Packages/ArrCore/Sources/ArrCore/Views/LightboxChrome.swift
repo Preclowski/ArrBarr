@@ -1,19 +1,9 @@
 import SwiftUI
 
 // MARK: - Lightbox chrome
-//
-// Shared by every full-surface overlay: the poster lightbox and the trailer
-// player. Both dim the popover and put one round dismiss control in the corner,
-// so the control itself lives here rather than being reimplemented (and drifting
-// in size, padding and shortcut) once per surface.
 
-/// Round glass ✕ for a full-surface overlay. Carries the Esc shortcut on macOS,
-/// and its own shadow — artwork or video behind the glass can be any colour, so
-/// the pill can't rely on contrast from what it sits on.
+/// Carries its own shadow: the artwork or video behind the glass can be any colour.
 struct LightboxCloseButton: View {
-    /// String-catalog key for the tooltip / accessibility label. Differs per
-    /// surface ("Close poster" vs "Close trailer"), which is the only thing
-    /// that does.
     let labelKey: String
     let action: () -> Void
 
@@ -25,10 +15,8 @@ struct LightboxCloseButton: View {
                 .contentShape(Circle())
         }
         .buttonStyle(.plain)
-        // The glass shape follows the view's BOUNDS, so the bounds have to be
-        // square or a "circle" comes out an oval: the button's own style adds
-        // horizontal padding around the label on macOS, which is what widened
-        // it. Pin the frame first, then draw the glass in it.
+        // Glass follows the view's bounds, and macOS button styles add horizontal padding, so pin a square
+        // frame first or the circle comes out an oval.
         .frame(width: 30, height: 30)
         .glassEffect(.regular.interactive(), in: .circle)
         #if os(macOS)

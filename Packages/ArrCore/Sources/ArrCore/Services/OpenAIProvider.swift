@@ -1,26 +1,23 @@
 import Foundation
 import OSLog
+import MediaKit
 
-public struct OpenAIProvider: LLMProvider {
+struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
     private let session: URLSession
-    /// Human-readable language the assistant should reply in by default
-    /// (e.g. "Polish"). Sourced from the app's language setting.
     private let replyLanguage: String
     private static let log = Logger(category: "Chat")
 
-    public init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
+    init(config: OpenAIConfig, session: URLSession = .shared, replyLanguage: String = "English") {
         self.config = config
         self.session = session
         self.replyLanguage = replyLanguage
     }
 
-    public var isAvailable: Bool { config.isConfigured }
+    var isAvailable: Bool { config.isConfigured }
 
-    /// Lightweight key/endpoint check: `GET {baseURL}/models` with the Bearer
-    /// key. 200 means the key + base URL are valid; throws otherwise. Used by the
-    /// Settings "Test key" button.
-    public func testConnection() async throws {
+    /// `GET {baseURL}/models` with the Bearer key.
+    func testConnection() async throws {
         let base = config.baseURL.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard let url = URL(string: base + "/models") else { throw OpenAIError.empty }
         var req = URLRequest(url: url)
@@ -33,22 +30,19 @@ public struct OpenAIProvider: LLMProvider {
         }
     }
 
-    public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
         var body = Self.buildRequestBody(
             model: config.model,
             prompt: prompt,
             tools: tools,
             history: history,
             replyLanguage: replyLanguage,
-            // Read at request time, not at init: the user can regenerate or
-            // switch the profile off mid-session and the very next turn obeys.
-            // Empty when tools is empty — a tool-less call (taste-profile
-            // generation itself) must not see the previous profile.
+            // Read per request so a regenerated or disabled profile applies on the next turn. Tool-less calls
+            // (taste-profile generation itself) must not see the previous profile.
             tasteProfile: tools.isEmpty ? nil : TasteProfileStore.shared.promptBlock()
         )
         body.stream = true
-        // Hidden reasoning is the quiz's whole wait: a flash model spent 77 s
-        // thinking before the first tool-call byte. Each host has its own
+        // Hidden reasoning is the quiz's whole wait (77 s measured on a flash model). Each host has its own
         // switch; an unknown host gets none rather than a field it may reject.
         let host = URL(string: config.baseURL)?.host?.lowercased() ?? ""
         if host.hasSuffix("deepseek.com") {
@@ -65,9 +59,7 @@ public struct OpenAIProvider: LLMProvider {
         req.setValue("Bearer \(config.apiKey)", forHTTPHeaderField: "Authorization")
         req.setValue("https://github.com/Preclowski/ArrBarr", forHTTPHeaderField: "HTTP-Referer")
         req.setValue("ArrBarr", forHTTPHeaderField: "X-Title")
-        // LLM completions can take a while (slow/free endpoints, reasoning
-        // models, multi-round tool loops). The 60s URLSession default was too
-        // tight and surfaced as "chat timed out"; give it generous headroom.
+        // Reasoning models and multi-round tool loops outrun URLSession's 60 s default.
         req.timeoutInterval = 120
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
@@ -76,9 +68,7 @@ public struct OpenAIProvider: LLMProvider {
         let (bytes, response) = try await session.bytes(for: req)
         guard let http = response as? HTTPURLResponse else { throw OpenAIError.empty }
 
-        // One reader for both shapes: SSE `data:` lines feed the accumulator,
-        // anything else is kept as the plain JSON body (error payloads, and
-        // endpoints that ignore `stream`).
+        // SSE `data:` lines feed the accumulator; anything else is the plain JSON body (errors, non-streaming hosts).
         var stream = ChatCompletionStream()
         var plainBody = ""
         var loggedReasoning = false
@@ -133,19 +123,8 @@ public struct OpenAIProvider: LLMProvider {
 
     // MARK: - History window
 
-    /// Which slice of the conversation goes to the model.
-    ///
-    /// Not a plain `suffix(n)`: one tool round costs at least two messages, so a
-    /// fixed message count silently evicts the user's actual QUESTION after a
-    /// few rounds — the model then sees nothing but its own tool traffic and
-    /// keeps digging, which is exactly how a "list this artist's albums" turn
-    /// span out into six rounds of unrelated calls. So the current turn (from
-    /// the last user message on) is kept whole and earlier context only fills
-    /// what's left of the budget.
-    ///
-    /// If a single turn is longer than the budget, the user message is still
-    /// pinned and the MIDDLE of the turn is what gets dropped — the question and
-    /// the freshest results are the two things worth keeping.
+    /// Not `suffix(n)`: tool rounds would evict the user's question and the model keeps digging. The
+    /// current turn is kept whole (over budget, its middle is dropped); earlier context fills the rest.
     static func window(_ history: [ChatMessage], budget: Int = 16) -> [ChatMessage] {
         guard history.count > budget else { return history }
         let turnStart = history.lastIndex { $0.role == .user } ?? history.startIndex
@@ -216,12 +195,7 @@ public struct OpenAIProvider: LLMProvider {
 
         var msgs: [ChatCompletionsRequest.Message] = [systemMessage]
         let history = Self.window(history)
-        // Track the tool-call IDs emitted by assistant messages WITHIN this
-        // window. Trimming can begin mid tool-sequence, slicing off the
-        // `assistant`+`tool_calls` that a `tool` result answers — and OpenAI
-        // rejects an orphaned tool message ("messages with role 'tool' must be
-        // a response to a preceding message with 'tool_calls'"). Only emit a
-        // tool result whose call survived into this window.
+        // OpenAI rejects a `tool` message whose `tool_calls` fell outside the window, so track the ids emitted here.
         var emittedToolCallIDs = Set<String>()
         for msg in history {
             switch msg.role {
@@ -250,8 +224,6 @@ public struct OpenAIProvider: LLMProvider {
                 }
             case .tool:
                 let tcID = msg.toolCall?.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
-                // Drop orphaned tool results (their assistant call fell outside
-                // the window) so the request stays well-formed.
                 guard emittedToolCallIDs.contains(tcID) else { continue }
                 msgs.append(.init(
                     role: "tool",
@@ -261,12 +233,8 @@ public struct OpenAIProvider: LLMProvider {
                 ))
             }
         }
-        // An empty prompt means "continue from the tool results already in the
-        // history" — the mid-loop rounds. Those results are ALREADY here as
-        // properly-roled `tool` messages; appending a copy as a `user` turn (the
-        // old behaviour) told the model the human had just pasted a tool log at
-        // it, which reads as a fresh instruction and is what sent it off calling
-        // more tools instead of answering.
+        // Empty prompt = continue from tool results already in history; a `user` copy of them reads as
+        // a fresh instruction and sends the model off calling more tools.
         if !prompt.isEmpty {
             msgs.append(.init(role: "user", content: prompt, tool_calls: nil, tool_call_id: nil))
         }
@@ -281,15 +249,14 @@ public struct OpenAIProvider: LLMProvider {
     }
 }
 
-public enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
+enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
     case http(status: Int, body: String)
     case decoding(String)
     case empty
 
-    public var errorDescription: String? {
+    var errorDescription: String? {
         switch self {
         case .http(let status, let body):
-            // Try to surface the OpenAI/OpenRouter-style {"error":{"message":"..."}}.
             if let data = body.data(using: .utf8),
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let err = obj["error"] as? [String: Any],
@@ -307,71 +274,69 @@ public enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
 
 // MARK: - Wire types
 
-public struct ChatCompletionsRequest: Encodable, Sendable {
-    public let model: String
-    public let messages: [Message]
-    public let tools: [Tool]?
-    public let tool_choice: String?
-    public var stream: Bool? = nil
-    public var thinking: Thinking? = nil
-    public var reasoning: Reasoning? = nil
+struct ChatCompletionsRequest: Encodable, Sendable {
+    let model: String
+    let messages: [Message]
+    let tools: [Tool]?
+    let tool_choice: String?
+    var stream: Bool? = nil
+    var thinking: Thinking? = nil
+    var reasoning: Reasoning? = nil
 
-    public struct Thinking: Encodable, Sendable { public let type: String }
-    public struct Reasoning: Encodable, Sendable { public let enabled: Bool }
+    struct Thinking: Encodable, Sendable { let type: String }
+    struct Reasoning: Encodable, Sendable { let enabled: Bool }
 
-    public struct Message: Encodable, Sendable {
-        public let role: String
-        public let content: String?
-        public let tool_calls: [ToolCallWire]?
-        public let tool_call_id: String?
+    struct Message: Encodable, Sendable {
+        let role: String
+        let content: String?
+        let tool_calls: [ToolCallWire]?
+        let tool_call_id: String?
     }
 
-    public struct ToolCallWire: Encodable, Sendable {
-        public let id: String
-        public let type: String
-        public let function: Function
-        public struct Function: Encodable, Sendable {
-            public let name: String
-            public let arguments: String
+    struct ToolCallWire: Encodable, Sendable {
+        let id: String
+        let type: String
+        let function: Function
+        struct Function: Encodable, Sendable {
+            let name: String
+            let arguments: String
         }
     }
 
-    public struct Tool: Encodable, Sendable {
-        public let type: String
-        public let function: Function
-        public struct Function: Encodable, Sendable {
-            public let name: String
-            public let description: String
-            public let parameters: JSONValue
-        }
-    }
-}
-
-public struct ChatCompletionsResponse: Decodable, Sendable {
-    public let choices: [Choice]
-    public struct Choice: Decodable, Sendable {
-        public let message: Message
-    }
-    public struct Message: Decodable, Sendable {
-        public let role: String
-        public let content: String?
-        public let tool_calls: [ToolCallWire]?
-    }
-    public struct ToolCallWire: Decodable, Sendable {
-        public let id: String
-        public let type: String
-        public let function: Function
-        public struct Function: Decodable, Sendable {
-            public let name: String
-            public let arguments: String
+    struct Tool: Encodable, Sendable {
+        let type: String
+        let function: Function
+        struct Function: Encodable, Sendable {
+            let name: String
+            let description: String
+            let parameters: JSONValue
         }
     }
 }
 
-/// Lets whoever runs a turn watch tool-call arguments while the model is still
-/// writing them. Called with the arguments accumulated so far.
-public enum ToolCallStreamContext {
-    @TaskLocal nonisolated public static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
+struct ChatCompletionsResponse: Decodable, Sendable {
+    let choices: [Choice]
+    struct Choice: Decodable, Sendable {
+        let message: Message
+    }
+    struct Message: Decodable, Sendable {
+        let role: String
+        let content: String?
+        let tool_calls: [ToolCallWire]?
+    }
+    struct ToolCallWire: Decodable, Sendable {
+        let id: String
+        let type: String
+        let function: Function
+        struct Function: Decodable, Sendable {
+            let name: String
+            let arguments: String
+        }
+    }
+}
+
+enum ToolCallStreamContext {
+    @TaskLocal nonisolated static var observer: (@Sendable (_ name: String, _ arguments: String) -> Void)?
 }
 
 nonisolated struct ChatCompletionChunk: Decodable, Sendable {
@@ -408,7 +373,6 @@ nonisolated struct ChatCompletionChunk: Decodable, Sendable {
     }
 }
 
-/// Folds streamed chunks back into the message a non-streamed call returns.
 nonisolated struct ChatCompletionStream {
     struct PendingCall {
         var id: String?
@@ -424,7 +388,6 @@ nonisolated struct ChatCompletionStream {
         calls.keys.sorted().compactMap { calls[$0] }.filter { !$0.name.isEmpty }
     }
 
-    /// Returns the calls whose arguments grew with this chunk.
     mutating func apply(_ chunk: ChatCompletionChunk) -> [PendingCall] {
         sawChunk = true
         var touched: [PendingCall] = []

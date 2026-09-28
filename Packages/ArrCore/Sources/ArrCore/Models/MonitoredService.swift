@@ -1,34 +1,26 @@
 import Foundation
 
-/// One target of the unified connection-health system. Wraps every
-/// `ServiceKind` (the 4 arrs + 6 download clients) and adds the two AI services
-/// (OpenAI, TMDB) that have no `ServiceKind` of their own. Kept separate from
-/// `ServiceKind` so the arr/download semantics there (and its many `.allCases`
-/// iterations) stay untouched.
+/// A connection-health target: every `ServiceKind` plus services that have none
+/// (Prowlarr, the media server, OpenAI, TMDB).
 nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
     case arr(ServiceKind)
     case openai
     case tmdb
-    /// The one connected media server (Plex / Jellyfin / Emby). Which server it
-    /// is lives in `ConfigStore.mediaServer`, not in the case — there is only
-    /// ever one, and a per-kind case would imply otherwise.
+    /// Not fetched on the queue cycle, so it is probed like the download clients.
+    case prowlarr
+    /// Which server lives in `ConfigStore.mediaServer`: there is only ever one.
     case mediaServer
 
-    /// The 6 download clients — the non-arr `ServiceKind` cases. These are not
-    /// fetched on the normal queue cycle, so they need active probing.
+    /// Not fetched on the queue cycle, so they need active probing.
     public static let downloadClientKinds: [ServiceKind] =
         [.sabnzbd, .nzbget, .qbittorrent, .transmission, .rtorrent, .deluge]
 
-    /// Every monitored target, arrs first (declaration order) then download
-    /// clients, then the AI services.
     public static var allCases: [MonitoredService] {
-        ServiceKind.allCases.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
+        ServiceKind.allCases.map { .arr($0) } + [.prowlarr, .mediaServer, .openai, .tmdb]
     }
 
-    /// Targets that are NOT live-fetched by the queue refresh and therefore
-    /// require their own probe: the download clients + the AI services.
     public static var probeTargets: [MonitoredService] {
-        downloadClientKinds.map { .arr($0) } + [.mediaServer, .openai, .tmdb]
+        downloadClientKinds.map { .arr($0) } + [.prowlarr, .mediaServer, .openai, .tmdb]
     }
 
     public var id: String {
@@ -36,6 +28,7 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return "arr.\(kind.rawValue)"
         case .openai: return "openai"
         case .tmdb: return "tmdb"
+        case .prowlarr: return "prowlarr"
         case .mediaServer: return "mediaServer"
         }
     }
@@ -45,23 +38,19 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
         case .arr(let kind): return kind.displayName
         case .openai: return "OpenAI"
         case .tmdb: return "TMDB"
-        // Named generically because the case is: the row's detail line carries
-        // the version the handshake reported ("Plex 1.40.2"), which says which
-        // server it is more precisely than a stale display name could.
+        case .prowlarr: return "Prowlarr"
+        // Generic name: the row's detail line carries the handshake version ("Plex 1.40.2").
         case .mediaServer: return String(localized: "settings.mediaServer.label", bundle: .module)
         }
     }
 
-    /// The backing `ServiceKind`, or `nil` for the AI services.
     public var serviceKind: ServiceKind? {
         if case .arr(let kind) = self { return kind }
         return nil
     }
 
-    /// Whether this service is configured well enough to be worth probing.
-    /// Unlike `ServiceConfig.isConfigured` (URL only), this also requires a
-    /// non-empty key for the kinds that need one, so a keyless-but-URL'd arr /
-    /// SABnzbd isn't probed and shown spuriously red.
+    /// Unlike `ServiceConfig.isConfigured` (URL only), also requires a key where one is needed,
+    /// so a keyless arr isn't probed and shown red.
     @MainActor
     public func isConfigured(in store: ConfigStore) -> Bool {
         switch self {
@@ -74,6 +63,8 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
             return store.openai.isConfigured
         case .tmdb:
             return !store.tmdbApiKey.isEmpty
+        case .prowlarr:
+            return store.prowlarr.isConfigured && !store.prowlarr.apiKey.isEmpty
         case .mediaServer:
             return store.mediaServer.isConfigured
         }

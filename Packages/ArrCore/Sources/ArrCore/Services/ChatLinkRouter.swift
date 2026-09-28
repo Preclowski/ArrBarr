@@ -1,19 +1,12 @@
 import Foundation
 import os
 
-/// Opens the surface behind a `ChatLink`.
-///
-/// People are direct — `PersonView` takes a TMDB id and fetches the rest. Titles
-/// are not: the link carries an EXTERNAL id (tmdb/tvdb/imdb) while the detail
-/// panel needs the arr-internal record id, so the ref is resolved through the
-/// same `/lookup?term=tmdb:N` path a typed `tmdb:123` query uses, tagged against
-/// the library map, and then handed to `DetailRequest.tap` — which owns the
-/// "owned → detail, missing → add panel" decision for every other surface too.
-@MainActor
-public enum ChatLinkRouter {
+/// Titles carry an external id while the detail needs the arr record id, so the ref is
+/// resolved through `/lookup?term=tmdb:N` and handed to `DetailRequest.tap`.
+enum ChatLinkRouter {
     private static let log = Logger(category: "ChatLink")
 
-    public static func open(_ link: ChatLink) {
+    static func open(_ link: ChatLink) {
         switch link {
         case .person(let id, let name):
             PersonRequest.post(PersonRef(tmdbId: id, name: name))
@@ -32,30 +25,20 @@ public enum ChatLinkRouter {
     private static func openMedia(_ incoming: MediaRef, radarr: ServiceConfig,
                                   sonarr: ServiceConfig, lidarr: ServiceConfig,
                                   tmdbKey: String) async {
-        // A TMDB *series* id addresses nothing any arr can look up, so it is
-        // translated to a tvdbId first — by id, through the resolver, never by
-        // matching the title. If that can't be proven the link simply doesn't
-        // navigate: opening the wrong show is worse than opening nothing, and
-        // the generic search fallback below would type a `tmdb:` term that
-        // Radarr, not Sonarr, would answer.
+        // A TMDB series id is translated to a tvdbId by id, never by title; unproven means no
+        // navigation, since opening the wrong show is worse and Radarr would answer a `tmdb:` search.
         var ref = incoming
         if case .tmdbTV(let tmdbTVId) = ref {
             guard let tvdbId = await SeriesIdentityResolver.tvdbId(
                 tmdbTVId: tmdbTVId, sonarrConfig: sonarr, tmdbKey: tmdbKey)
             else {
-                // Not an error: TMDB knows series the TVDB mapping doesn't
-                // cover, and refusing to navigate is the designed outcome.
-                // `.notice` because a dead-looking link is exactly what gets
-                // reported hours later.
+                // Not an error: TMDB knows series the TVDB mapping doesn't cover.
                 log.notice("chat link: no tvdb id for tmdb tv \(tmdbTVId, privacy: .public) — not navigating")
                 return
             }
             ref = .tvdb(tvdbId)
         }
-        // `imdb:` resolves against Radarr first and Sonarr second — the ref
-        // itself doesn't say which kind of title it is, and both accept it on
-        // /lookup. Whichever answers first wins; a series' imdb id simply
-        // returns nothing from Radarr.
+        // The ref doesn't say which kind of title it is; a series' imdb id returns nothing from Radarr.
         let candidates: [(QueueItem.Source, ServiceConfig)]
         switch ref {
         case .tmdb:        candidates = [(.radarr, radarr)]
@@ -68,18 +51,9 @@ public enum ChatLinkRouter {
 
         for (source, config) in candidates where config.isConfigured {
             let client = SearchClient(config: config, source: source)
-            guard let result = try? await client.lookup(input: .ref(ref)).first else { continue }
+            guard let result = await log.attempt("chat link lookup", { try await client.lookup(input: .ref(ref)) })?.first else { continue }
             let owned = await libraryOwnership(for: ref, source: source, config: config)
-            // `.notice`, not `.info`: this line exists to be read back AFTER a
-            // user reports "that link opened the wrong film", and `log show`
-            // doesn't return info-level entries on this machine. Says which ref
-            // was asked for and what it actually resolved to, which is the whole
-            // question in a wrong-link report.
-            //
-            // The ids and the arr stay public — they are what makes the line
-            // diagnostic. The resolved title is the user's, so it is `.private`;
-            // `tmdb:1234 → radarr <private> (1999)` still answers "did it
-            // resolve, and to which id".
+            // Read back after a wrong-link report: ids and arr public, the resolved title private.
             log.notice("""
                 chat link \(incoming.urlString, privacy: .public) → \
                 \(source.rawValue, privacy: .public) "\(result.title, privacy: .private)" \
@@ -88,16 +62,12 @@ public enum ChatLinkRouter {
             DetailRequest.tap(owned.map(result.withLibraryOwnership) ?? result, addOrigin: .chat)
             return
         }
-        // Nothing resolved: the id was wrong, or the arr that owns this kind of
-        // title isn't configured. Fall back to the search bar with the ref
-        // pre-typed — the user sees what was asked for rather than a dead tap.
+        // Fall back to search with the ref pre-typed rather than a dead tap.
         log.notice("chat link \(incoming.urlString, privacy: .public) resolved to nothing — falling back to search")
         AppMessages.post(AppMessages.SearchQuery(query: ref.lookupTerm))
     }
 
-    /// Library ownership for a ref the user already owns, or nil. Sonarr's map
-    /// is keyed by TVDB id and Radarr's by TMDB id — the same maps the chat's
-    /// TMDB tools use to tag results as OWNED.
+    /// Sonarr's map is keyed by TVDB id, Radarr's by TMDB id.
     private static func libraryOwnership(for ref: MediaRef, source: QueueItem.Source,
                                          config: ServiceConfig) async -> LibraryOwnership? {
         switch (ref, source) {
@@ -106,8 +76,7 @@ public enum ChatLinkRouter {
         case (.tvdb(let id), .sonarr):
             return await ArrLibraryMaps.sonarrByTVDBId(config: config)[id]
         default:
-            // imdb / musicBrainz: no id map. The lookup record's own
-            // `inLibraryArrId` (when the client filled it in) is all we have.
+            // imdb / musicBrainz have no id map; only the record's own `inLibraryArrId`.
             return nil
         }
     }

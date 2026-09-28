@@ -9,6 +9,10 @@
 /* Begin PBXBuildFile section */
 		1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DC7B599FC995056A674DBF /* AppDelegate.swift */; };
 		A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */; };
+		480D5987EC1F1302ADC060C2 /* AppDelegate+MCP.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */; };
+		4344F5B4AC072E228FE72ECC /* AppDelegate+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */; };
+		2F55EE30E5C5C10CCAE09450 /* AppDelegate+Downloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */; };
+		57305E782FFC672A99056CF8 /* AppDelegate+Windows.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */; };
 		7A1D7C162F00000100000005 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
 		953E24EE53AE7971D31F0FA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C345657BD587401B20496BE6 /* Assets.xcassets */; };
 		D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */; };
@@ -61,6 +65,10 @@
 		33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrApp.swift; sourceTree = "<group>"; };
 		64DC7B599FC995056A674DBF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemDropTarget.swift; sourceTree = "<group>"; };
+		3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+MCP.swift"; sourceTree = "<group>"; };
+		BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Notifications.swift"; sourceTree = "<group>"; };
+		8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Downloads.swift"; sourceTree = "<group>"; };
+		E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Windows.swift"; sourceTree = "<group>"; };
 		7A1D7C152F00000100000005 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
 		C345657BD587401B20496BE6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		E476A3C86CE13DD5526DF9D8 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -124,6 +132,10 @@
 			children = (
 				64DC7B599FC995056A674DBF /* AppDelegate.swift */,
 				A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */,
+				3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */,
+				BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */,
+				8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */,
+				E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */,
 				7A1D7C152F00000100000005 /* AppIcon.icon */,
 				310F6F8DD8AF0FDCD7BA6CBB /* ArrBarr.entitlements */,
 				33A8662C0F95882A1E6A959B /* ArrBarrApp.swift */,
@@ -335,6 +347,10 @@
 			files = (
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
 				A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */,
+				480D5987EC1F1302ADC060C2 /* AppDelegate+MCP.swift in Sources */,
+				4344F5B4AC072E228FE72ECC /* AppDelegate+Notifications.swift in Sources */,
+				2F55EE30E5C5C10CCAE09450 /* AppDelegate+Downloads.swift in Sources */,
+				57305E782FFC672A99056CF8 /* AppDelegate+Windows.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
 				SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */,
 			);
@@ -431,7 +447,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -502,7 +518,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -561,7 +577,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_NO_COMMON_BLOCKS = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -611,7 +627,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
 				PRODUCT_NAME = ArrBarr;
 				SDKROOT = iphoneos;
@@ -659,7 +675,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
 				PRODUCT_NAME = ArrBarr;
 				SDKROOT = iphoneos;
@@ -688,7 +704,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS;
 				PRODUCT_NAME = ArrBarr;
 				SDKROOT = iphoneos;
@@ -715,7 +731,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -743,7 +759,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
@@ -771,7 +787,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 2.1.0;
+				MARKETING_VERSION = 3.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = pl.incred.ArrBarr.iOS.Widgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;

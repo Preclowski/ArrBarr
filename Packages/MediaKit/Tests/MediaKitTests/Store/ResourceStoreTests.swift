@@ -21,6 +21,21 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         #expect(kit.transport.count == 2)
     }
 
+    @Test func aVolatileRowIsServedInsideItsTTL() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        kit.transport.answer("fetchReleases", json: "[]")
+        let r: Resource<[Row]> = kit.resource("fetchReleases", path: "/api/v3/release", freshness: .volatile)
+        _ = try await kit.store.read(r)
+        kit.clock.advance(by: .seconds(2))
+        let second = try await kit.store.read(r)
+        #expect(second.origin == .memory && kit.transport.count == 1)
+        kit.clock.advance(by: .seconds(4))
+        kit.transport.answer("fetchReleases", json: "[]")
+        _ = try await kit.store.read(r)
+        #expect(kit.transport.count == 2)
+    }
+
     @Test func maxAgeTightensTheClassTTL() async throws {
         let kit = try await TestKit()
         kit.transport.answer("fetchLibrary", json: "[]")
@@ -43,6 +58,35 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         _ = try await (a, b, c)
         #expect(kit.transport.count == 1)
         #expect(kit.telemetry.cacheCounters(for: TestKit.radarr).coalesced == 2)
+    }
+
+    @Test func cancellingOneCoalescedReaderLeavesTheOtherItsValue() async throws {
+        let kit = try await TestKit()
+        kit.transport.delay = .milliseconds(200)
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"Elephants Dream"}]"#)
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        let leaving = Task { try await kit.store.read(r) }
+        let staying = Task { try await kit.store.read(r) }
+        try await eventually { kit.transport.count == 1 && kit.telemetry.cacheCounters(for: TestKit.radarr).coalesced == 1 }
+        leaving.cancel()
+        let served = try await staying.value
+        #expect(served.value.first?.title == "Elephants Dream")
+        _ = try? await leaving.value
+        #expect(kit.transport.count == 1 && kit.transport.cancelledSends == 0)
+    }
+
+    @Test(arguments: [1, 2])
+    func cancellingEveryReaderCancelsTheRequestAndCommitsNothing(readers: Int) async throws {
+        let kit = try await TestKit()
+        kit.transport.delay = .seconds(10)
+        kit.transport.answer("fetchQueue", json: "[]")
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        let tasks = (0..<readers).map { _ in Task { try await kit.store.read(r) } }
+        try await eventually { kit.transport.count == 1 && kit.telemetry.cacheCounters(for: TestKit.radarr).coalesced == readers - 1 }
+        for task in tasks { task.cancel() }
+        for task in tasks { await #expect(throws: CancellationError.self) { try await task.value } }
+        #expect(kit.transport.count == 1 && kit.transport.cancelledSends == 1)
+        await #expect(throws: MediaKitError.self) { try await kit.store.read(r, policy: .cacheOnly) }
     }
 
     @Test func invalidationMakesTheRowStaleNotGone() async throws {

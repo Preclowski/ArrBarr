@@ -1,69 +1,51 @@
 import SwiftUI
+import MediaKit
 
 /// What the detail header's pencil opens — the record being edited.
-public struct MediaEditRequest: Identifiable, Hashable {
+struct MediaEditRequest: Identifiable, Hashable {
     let source: QueueItem.Source
-    /// Arr record id — movie id (Radarr/Whisparr), series id (Sonarr),
-    /// ARTIST id (Lidarr; albums have no editable profile of their own).
+    /// Movie / series id, or the ARTIST id for Lidarr (albums have no editable profile).
     let entityId: Int
-    public var id: String { "\(source.rawValue)-edit-\(entityId)" }
+    var id: String { "\(source.rawValue)-edit-\(entityId)" }
 }
 
-/// True modal for editing an in-library movie / series / artist — quality
-/// profile, availability / series type / metadata profile, root folder.
-///
-/// macOS hosts the card in `MediaEditModalOverlay` (scrim + bottom card, the
-/// `ConfirmAlertOverlay` pattern) so the detail view stays visible behind it;
-/// iOS presents the same card as a native sheet. Neither is a navigation
-/// push — the detail surface never moves.
+/// Edit modal for an in-library movie / series / artist. macOS hosts it in
+/// `MediaEditModalOverlay`, iOS as a native sheet.
 struct MediaEditPanel: View {
     let request: MediaEditRequest
     let onBack: () -> Void
-    /// Fired once `load()` settles (options + record fetched, or the demo /
-    /// error path resolved). The macOS overlay keeps the whole modal
-    /// invisible until then — showing it mid-load meant a short spinner card
-    /// that grew when the pickers landed, which read as a 2-frame slide-in.
+    /// Fired once `load()` settles; the macOS overlay stays invisible until then.
     var onReady: (() -> Void)? = nil
 
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var storeManager = StoreManager.shared
 
-    @State private var qualityProfiles: [QualityProfile] = []
-    @State private var metadataProfiles: [MetadataProfile] = []
-    @State private var rootFolders: [RootFolder] = []
+    @State private var qualityProfiles: [ArrQualityProfile] = []
+    @State private var metadataProfiles: [ArrMetadataProfile] = []
+    @State private var rootFolders: [String] = []
     @State private var loading = true
     @State private var loadError: String?
     @State private var saving = false
     @State private var saveError: String?
 
-    // Selections, seeded from the record's current values in `load()`.
     @State private var selectedProfileId: Int?
     @State private var selectedMetadataProfileId: Int?
     @State private var selectedRootFolder: String?
     @State private var availability: RadarrMinimumAvailability = .released
     @State private var seriesType: SonarrSeriesType = .standard
-    /// `monitorNewItems` — whether freshly-announced seasons (Sonarr) /
-    /// albums (Lidarr) get monitored automatically. Both arrs use the same
-    /// record field; Sonarr's enum is "all" / "none", Lidarr adds "new".
+    /// Sonarr's values are "all" / "none"; Lidarr adds "new".
     @State private var monitorNewItems = "all"
     @State private var seasonFolder = true
-    /// Root folder the record lives in right now — a differing selection
-    /// shows the "files will move on disk" note (the save then goes out
-    /// with `moveFiles=true`, see `updateLibraryRecord`).
+    /// A differing selection saves with `moveFiles=true`.
     @State private var originalRootFolder: String?
 
     #if os(iOS)
-    /// One Form row at the user's text size — the sheet is sized from this, so
-    /// Dynamic Type grows the sheet instead of scrolling inside a half screen.
+    /// Sizes the sheet, so Dynamic Type grows it instead of scrolling inside it.
     @ScaledMetric(relativeTo: .body) private var formRowHeight: CGFloat = 44
     #endif
 
     var body: some View {
-        // Presentation forks, logic does not: `load`, `save` and every piece of
-        // @State below are shared. macOS keeps the compact card that matches
-        // SearchAddPanel's footer inside its overlay; iOS gets a real Form,
-        // because the card's 11pt rows and mini switches are desktop controls
-        // and a `.medium` detent left them floating in half a screen of air.
+        // iOS gets a real Form: the card's 11pt rows and mini switches are desktop controls.
         #if os(iOS)
         iosForm
             .task(id: request.id) { await load() }
@@ -100,10 +82,7 @@ struct MediaEditPanel: View {
             }
             .navigationTitle(Text("detail.edit.button", bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
-            // Sized to what is actually in it. `.medium` is a fixed half screen
-            // whatever the content, which left a three-row form floating in a
-            // pane twice its height; Sonarr's five rows needed the drag anyway.
-            // `.large` stays available for big text and long root-folder lists.
+            // Fitted rather than `.medium`, a fixed half screen whatever the content.
             .presentationDetents([.height(fittedSheetHeight), .large])
             .presentationDragIndicator(.visible)
             .toolbar {
@@ -119,8 +98,7 @@ struct MediaEditPanel: View {
                         } else {
                             HStack(spacing: 4) {
                                 if !storeManager.isPro { Image(systemName: "lock.fill") }
-                                // "Save changes" crowds the title out of an
-                                // iOS bar; the title already says Edit.
+                                // "Save changes" crowds the title out of an iOS bar.
                                 Text("common.save.button", bundle: .module)
                             }
                         }
@@ -132,8 +110,6 @@ struct MediaEditPanel: View {
         }
     }
 
-    /// Rows currently on screen, so the sheet can be exactly as tall as the
-    /// form rather than a fixed fraction of the display.
     private var fieldRowCount: Int {
         var rows = 2  // quality profile + root folder, every source
         switch request.source {
@@ -152,7 +128,6 @@ struct MediaEditPanel: View {
         return CGFloat(fieldRowCount) * formRowHeight + chrome + extras
     }
 
-    /// The same choices the macOS card offers, as system rows.
     @ViewBuilder
     private var iosFields: some View {
         Picker(selection: Binding(
@@ -205,10 +180,10 @@ struct MediaEditPanel: View {
         }
 
         Picker(selection: Binding(
-            get: { selectedRootFolder ?? rootFolders.first?.path ?? "" },
+            get: { selectedRootFolder ?? rootFolders.first ?? "" },
             set: { selectedRootFolder = $0 }
         )) {
-            ForEach(rootFolders, id: \.path) { Text(verbatim: $0.path).tag($0.path) }
+            ForEach(rootFolders, id: \.self) { Text(verbatim: $0).tag($0) }
         } label: {
             Text("search.rootFolder.button", bundle: .module)
         }
@@ -216,10 +191,6 @@ struct MediaEditPanel: View {
     #endif
 
     private var macCard: some View {
-        // Same skeleton as SearchAddPanel's sticky footer — spacing 6, form
-        // rows, then the glass CTA — so add and edit read as one form
-        // language. Only the slim title/dismiss row on top is extra: a modal
-        // needs an explicit close affordance.
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Text("detail.edit.button", bundle: .module)
@@ -315,16 +286,14 @@ struct MediaEditPanel: View {
 
             formPicker("search.rootFolder.button",
                        selection: Binding(
-                           get: { selectedRootFolder ?? rootFolders.first?.path ?? "" },
+                           get: { selectedRootFolder ?? rootFolders.first ?? "" },
                            set: { selectedRootFolder = $0 }
                        ),
-                       options: rootFolders.map { ($0.path, $0.path) })
+                       options: rootFolders.map { ($0, $0) })
         }
         .padding(.horizontal, 14)
     }
 
-    /// True when the selected root folder differs from the record's current
-    /// one — the save will relocate the files on disk.
     private var movesFiles: Bool {
         guard let original = originalRootFolder, let selected = selectedRootFolder else { return false }
         return normalizedRoot(selected) != normalizedRoot(original)
@@ -363,26 +332,8 @@ struct MediaEditPanel: View {
 
     // MARK: - Data
 
-    private var config: ServiceConfig {
-        switch request.source {
-        case .radarr: return configStore.radarr
-        case .sonarr: return configStore.sonarr
-        case .lidarr: return configStore.lidarr
-        case .whisparr: return configStore.whisparr
-        }
-    }
-
     private var client: any ArrAPIClient {
         configStore.arrClient(for: request.source)
-    }
-
-    /// The record's REST path — the same one the raw fetch and the PUT hit.
-    private var recordPath: String {
-        switch request.source {
-        case .radarr, .whisparr: return "/movie/\(request.entityId)"
-        case .sonarr: return "/series/\(request.entityId)"
-        case .lidarr: return "/artist/\(request.entityId)"
-        }
     }
 
     private func normalizedRoot(_ path: String) -> String {
@@ -397,51 +348,28 @@ struct MediaEditPanel: View {
             onReady?()
         }
 
-        let search = ServiceHandles.search(request.source, config: config)
-        async let q = (try? search.fetchQualityProfiles()) ?? []
-        async let f = (try? search.fetchRootFolders()) ?? []
-        qualityProfiles = await q
-        rootFolders = await f
-        if request.source == .lidarr {
-            metadataProfiles = (try? await search.fetchMetadataProfiles()) ?? []
-        }
-
-        // Demo mode has no raw record to read — seed from the first options
-        // so the form is usable; the save no-ops server-side anyway.
-        if DemoMode.isActive {
-            selectedProfileId = qualityProfiles.first?.id
-            selectedMetadataProfileId = metadataProfiles.first?.id
-            selectedRootFolder = rootFolders.first?.path
-            originalRootFolder = selectedRootFolder
-            return
-        }
-
+        let search = configStore.searchClient(for: request.source)
         do {
-            let record = try await client.getRawObject(recordPath)
-            selectedProfileId = record["qualityProfileId"] as? Int
-            selectedMetadataProfileId = record["metadataProfileId"] as? Int
-            if let raw = record["minimumAvailability"] as? String,
-               let parsed = RadarrMinimumAvailability(rawValue: raw) {
-                availability = parsed
+            async let q = search.fetchQualityProfiles()
+            async let f = search.fetchRootFolders()
+            (qualityProfiles, rootFolders) = try await (q, f)
+            if request.source == .lidarr {
+                metadataProfiles = try await search.fetchMetadataProfiles()
             }
-            if let raw = record["seriesType"] as? String,
-               let parsed = SonarrSeriesType(rawValue: raw) {
-                seriesType = parsed
-            }
-            if let raw = record["monitorNewItems"] as? String {
-                monitorNewItems = raw
-            }
-            if let raw = record["seasonFolder"] as? Bool {
-                seasonFolder = raw
-            }
-            if let recordRoot = record["rootFolderPath"] as? String, !recordRoot.isEmpty {
-                if let match = rootFolders.first(where: { normalizedRoot($0.path) == normalizedRoot(recordRoot) }) {
-                    selectedRootFolder = match.path
+            let record = try await client.read { $0.settings(entityID: request.entityId) }
+            selectedProfileId = record.qualityProfileId
+            selectedMetadataProfileId = record.metadataProfileId
+            if let parsed = record.minimumAvailability.flatMap(RadarrMinimumAvailability.init(rawValue:)) { availability = parsed }
+            if let parsed = record.seriesType.flatMap(SonarrSeriesType.init(rawValue:)) { seriesType = parsed }
+            if let raw = record.monitorNewItems { monitorNewItems = raw }
+            if let raw = record.seasonFolder { seasonFolder = raw }
+            if let recordRoot = record.rootFolderPath, !recordRoot.isEmpty {
+                if let match = rootFolders.first(where: { normalizedRoot($0) == normalizedRoot(recordRoot) }) {
+                    selectedRootFolder = match
                 } else {
-                    // The record sits outside every configured root (folder
-                    // was removed / renamed server-side) — keep its actual
-                    // location selectable so an untouched save can't move it.
-                    rootFolders.insert(RootFolder(id: -1, path: recordRoot), at: 0)
+                    // Outside every configured root (removed/renamed server-side): keep it
+                    // selectable so an untouched save can't move the files.
+                    rootFolders.insert(recordRoot, at: 0)
                     selectedRootFolder = recordRoot
                 }
                 originalRootFolder = selectedRootFolder
@@ -449,7 +377,7 @@ struct MediaEditPanel: View {
         } catch {
             loadError = String(
                 format: String(localized: "Couldn't load details: %@", bundle: .module),
-                error.localizedDescription
+                error.userFacingMessage
             )
         }
     }
@@ -460,23 +388,21 @@ struct MediaEditPanel: View {
         saveError = nil
         defer { saving = false }
 
-        var fields: [String: Any] = [:]
-        if let pid = selectedProfileId { fields["qualityProfileId"] = pid }
-        if let root = selectedRootFolder { fields["rootFolderPath"] = root }
+        var settings = ArrRecordSettings(qualityProfileId: selectedProfileId, rootFolderPath: selectedRootFolder)
         switch request.source {
         case .radarr, .whisparr:
-            fields["minimumAvailability"] = availability.rawValue
+            settings.minimumAvailability = availability.rawValue
         case .sonarr:
-            fields["seriesType"] = seriesType.rawValue
-            fields["monitorNewItems"] = monitorNewItems
-            fields["seasonFolder"] = seasonFolder
+            settings.seriesType = seriesType.rawValue
+            settings.monitorNewItems = monitorNewItems
+            settings.seasonFolder = seasonFolder
         case .lidarr:
-            if let mid = selectedMetadataProfileId { fields["metadataProfileId"] = mid }
-            fields["monitorNewItems"] = monitorNewItems
+            settings.metadataProfileId = selectedMetadataProfileId
+            settings.monitorNewItems = monitorNewItems
         }
 
         do {
-            try await client.updateLibraryRecord(path: recordPath, fields: fields)
+            try await client.run { $0.updateSettings(entityID: request.entityId, settings) }
             onBack()
         } catch {
             saveError = error.localizedDescription
@@ -520,24 +446,17 @@ struct MediaEditPanel: View {
 }
 
 #if os(macOS)
-/// macOS host for the edit card: light scrim over the (still-visible) detail
-/// surface + the card pinned to the bottom — the `ConfirmAlertOverlay`
-/// pattern, because `.sheet` doesn't render inside a `MenuBarExtra` popover.
+/// `.sheet` doesn't render inside a `MenuBarExtra` popover, hence an overlay.
 struct MediaEditModalOverlay: View {
     let request: MediaEditRequest
     let onDismiss: () -> Void
 
-    /// Render-first-show-later: the modal mounts invisible (and
-    /// click-through), loads its options + record, and only then appears —
-    /// fully formed, in one frame. Showing it mid-load produced a short
-    /// spinner card that grew when the pickers landed, which read as a
-    /// choppy two-step slide-in.
+    /// Mounts invisible and appears once loaded; mid-load it grew from a
+    /// spinner card and read as a two-step slide-in.
     @State private var ready = false
 
     var body: some View {
-        // No entry/exit animation on purpose — the modal (and its scrim)
-        // snaps in and out. Callers set `editRequest` without withAnimation;
-        // a slide/fade here read as movement the user explicitly didn't want.
+        // No entry/exit animation on purpose; the user didn't want movement here.
         ZStack(alignment: .bottom) {
             Rectangle()
                 .fill(.black.opacity(0.20))
@@ -545,9 +464,7 @@ struct MediaEditModalOverlay: View {
                 .onTapGesture { onDismiss() }
                 .ignoresSafeArea()
 
-            // Edge-to-edge bottom surface with the EXACT chrome of
-            // SearchAddPanel's sticky footer (thin material + top divider) —
-            // the add form and the edit modal must read as the same surface.
+            // Same chrome as SearchAddPanel's sticky footer.
             MediaEditPanel(request: request, onBack: onDismiss, onReady: { ready = true })
                 .background(
                     Rectangle()

@@ -1,34 +1,23 @@
 import SwiftUI
 
-public struct ChatView: View {
+struct ChatView: View {
     var viewModel: ChatViewModel
     @EnvironmentObject var configStore: ConfigStore
     @State private var draft: String = ""
     @State private var quizPosterURLs: [URL] = LibraryPosterSampler.cached ?? []
     @FocusState private var inputFocused: Bool
 
-    public init(viewModel: ChatViewModel) {
+    init(viewModel: ChatViewModel) {
         self.viewModel = viewModel
     }
 
-    public var body: some View {
-        // iMessage-style: scrolling messages fill the surface, the input bar
-        // floats over the bottom with a liquid-glass / material background.
-        // ZStack — not `safeAreaInset` — because the inset modifier reacts
-        // to any identity change in its parent view tree (e.g. messages's
-        // empty-vs-populated branches re-render on every keystroke), which
-        // re-mounted the TextField and lost focus mid-typing on the search
-        // surface — the same trap `QueueTabContent`'s filter bar sidesteps.
-        // The ZStack here keeps the bar as a stable sibling. The messages
-        // ScrollView already pads its content for the bar's height (see
-        // `messages` below) so nothing scrolls under it.
+    var body: some View {
+        // ZStack, not `safeAreaInset`: the inset re-mounts the TextField on parent
+        // identity changes and loses focus mid-typing.
         ZStack(alignment: .bottom) {
             messages
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            // Confirm card sits above the input bar when a destructive
-            // tool is gated. Disables the input while pending (the
-            // view-model also refuses new sends) so the user resolves
-            // the gate before typing anything else.
+            // The view-model also refuses new sends while a confirm is pending.
             VStack(spacing: 8) {
                 if let pending = viewModel.pendingConfirm {
                     ConfirmActionCard(
@@ -42,10 +31,7 @@ public struct ChatView: View {
             .padding(.horizontal, 10)
             .padding(.bottom, 10)
         }
-        // Titles and people the assistant links in its prose open in-app rather
-        // than in a browser. Anything that isn't a well-formed `arrbarr://`
-        // chat link — including an `arrbarr://` URL we don't recognise — is left
-        // to the system, so ordinary http links behave exactly as before.
+        // `arrbarr://` chat links open in-app; anything unrecognised goes to the system.
         .environment(\.openURL, OpenURLAction { url in
             guard let link = ChatLink(url: url) else {
                 return url.scheme == ChatLink.scheme ? .discarded : .systemAction
@@ -57,22 +43,13 @@ public struct ChatView: View {
 
     @State private var clearHovered: Bool = false
 
-    /// Height the floating input bar takes out of the surface — it is a sibling
-    /// of the content, not a safe-area inset, so the content keeps clear of it
-    /// itself.
-    ///
-    /// The conversation reserves more than the bar measures: a confirm card can
-    /// appear above it, and the newest bubble must still land clear after
-    /// autoscroll. The empty state can't be gated by a tool call and has
-    /// nothing to autoscroll, so it reserves the bar and a margin — the 20pt
-    /// difference is a whole suggestion row.
+    /// The input bar is a sibling, not a safe-area inset, so content keeps clear itself.
+    /// The conversation reserves extra for a confirm card and autoscroll.
     private static let inputBarReservation: CGFloat = 84
     private static let emptyStateReservation: CGFloat = 64
 
-    /// Two surfaces, not two branches inside one scroll view: a conversation
-    /// scrolls, the empty state fits. `ViewThatFits` in the empty state can
-    /// only do its job when something proposes a real height to it, and a
-    /// ScrollView proposes infinity.
+    /// Two surfaces: `ViewThatFits` in the empty state needs a real proposed
+    /// height, and a ScrollView proposes infinity.
     @ViewBuilder
     private var messages: some View {
         if viewModel.messages.isEmpty && !viewModel.isThinking {
@@ -92,19 +69,8 @@ public struct ChatView: View {
             },
             locale: configStore.currentLocale,
             onQuizStart: { kind, variant in
-                // Synthesised chat message that the LLM routes
-                // through `discover_in_quiz`. We name a SINGLE
-                // kind so the model opens one deck (it used to
-                // fire a movie session *and* a series session
-                // when the prompt said "movies and shows") and
-                // ask for a dozen-plus so the deck isn't thin.
-                // The variant only changes which pool the message
-                // asks for — the deck it opens is the same one.
-                //
-                // Resolve in the *in-app* language, not the process
-                // language — otherwise the sent message stays in the
-                // pre-switch language and the model answers the whole
-                // turn in it (see AppLocalized).
+                // A single kind, so the model opens one deck rather than two. Resolved
+                // in the in-app language, else the model answers in the pre-switch one.
                 let prompt = AppLocalized.string(variant.promptKey(for: kind),
                                                  locale: configStore.currentLocale)
                 DiscoverViewModel.shared.beginLoading()
@@ -119,13 +85,7 @@ public struct ChatView: View {
             }
         )
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        // Clearance for the floating input bar, which is a sibling
-        // of this view rather than a safe-area inset. The empty
-        // state fits itself into what is left (it has no scroll to
-        // fall back on).
         .padding(.bottom, Self.emptyStateReservation)
-        // Sample a few library posters for the Quiz deck on first
-        // appearance; cached process-wide so re-entry is instant.
         .task {
             if quizPosterURLs.isEmpty {
                 quizPosterURLs = await LibraryPosterSampler.sample(configStore: configStore)
@@ -137,17 +97,13 @@ public struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 Group {
-                    // One person, one card per answer — see ChatPersonCardDedupe.
-                    // Computed over the whole history rather than stored on the
-                    // messages, because which card wins depends on tool calls
-                    // that hadn't happened yet when the earlier one arrived.
+                    // Computed over the whole history: which card wins depends on
+                    // tool calls that hadn't happened when the earlier one arrived.
                     let adjusted = ChatPersonCardDedupe.adjustments(for: viewModel.messages)
-                    // Ids the tools actually returned. Handed to every bubble so
-                    // a link the model invented never becomes clickable.
+                    // Handed to every bubble so a link the model invented never becomes clickable.
                     let knownLinks = ChatLinkVerification.knownKeys(in: viewModel.messages)
-                    // Present-but-nil means the message lost its only content —
-                    // a person card another call in the same turn now owns — so
-                    // it drops out of the list entirely, header and all.
+                    // Present-but-nil: the message's only content was a person card
+                    // another call now owns, so it drops out entirely.
                     let visible = viewModel.messages.filter {
                         !Self.shouldHide($0) && adjusted[$0.id] != ChatRichContent??.some(nil)
                     }
@@ -158,41 +114,22 @@ public struct ChatView: View {
                         if viewModel.isThinking {
                             ThinkingRow()
                         }
-                        // Bottom reservation so the floating input bar /
-                        // confirm card don't cover the last message after
-                        // autoscroll. Sized to clear the glass input bar +
-                        // its bottom padding (56 was too short — the newest
-                        // bubble landed behind the bar).
                         Color.clear.frame(height: Self.inputBarReservation).id("chatBottom")
                     }
                     .environment(\.chatKnownLinkKeys, knownLinks)
                     .padding(.horizontal, 12)
                     .padding(.bottom, 12)
-                    // Extra top inset so the floating "New chat" pill doesn't
-                    // sit on the first bubble at rest (it may still overlap
-                    // mid-scroll, which is fine).
+                    // Keeps the floating "New chat" pill off the first bubble at rest.
                     .padding(.top, 44)
                 }
             }
-            // Bubbles blur softly under the tab bar / "New chat" pill rather
-            // than being cut off by them — same edge as every other tab.
             .scrollEdgeEffectStyle(.soft, for: .top)
             .onChange(of: viewModel.messages.count) { _, _ in
                 withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("chatBottom", anchor: .bottom) }
             }
-            // Also follow the thinking indicator + the growing last reply.
             .onChange(of: viewModel.isThinking) { _, _ in
                 withAnimation(.easeOut(duration: 0.18)) { proxy.scrollTo("chatBottom", anchor: .bottom) }
             }
-            // "New chat" sits top-leading so it doesn't fight the user's
-            // trailing-aligned message bubble. Floating glass pill matching
-            // the rest of the app's chrome language (tab bar, back button).
-            // The trash icon used to live here but it read as destructive /
-            // intrusive and felt unApple-y for "wipe the conversation".
-            // `arrow.counterclockwise` + "New chat" carries the same intent
-            // with iOS Messages / ChatGPT cadence — start over, not delete.
-            // Visible at low opacity at rest so it's discoverable; lifts to
-            // full on hover.
             .overlay(alignment: .topLeading) {
                 if !viewModel.messages.isEmpty {
                     Button(action: { viewModel.clear() }) {
@@ -225,20 +162,14 @@ public struct ChatView: View {
             TextField(text: $draft, prompt: Text("chat.askAnything.button", bundle: .module), axis: .vertical) {
                 Text("chat.askAnything.button", bundle: .module)
             }
-                // 14pt, like both filter bars — the chat field used to inherit
-                // the platform default (13 on macOS), so the two "same" glass
-                // pills sat on different type sizes.
+                // 14pt, like both filter bars, so the glass pills share a type size.
                 .scaledFont(size: 14)
                 .textFieldStyle(.plain)
                 .focused($inputFocused)
                 .onSubmit(send)
                 #if os(macOS)
-                // Return sends (via `.onSubmit`); Shift+Return inserts a newline.
-                // `.onSubmit` fires for BOTH and can't tell them apart, so
-                // intercept only Shift+Return: append a newline and mark the
-                // event handled so the submit doesn't also run. Plain Return
-                // falls through (`.ignored`) to `.onSubmit` — keeping the proven
-                // send path intact even if `onKeyPress` ever misses.
+                // `.onSubmit` fires for Return and Shift+Return alike, so intercept only
+                // Shift+Return; plain Return falls through to `.onSubmit`.
                 .onKeyPress(.return, phases: .down) { press in
                     guard press.modifiers.contains(.shift) else { return .ignored }
                     draft.append("\n")
@@ -249,12 +180,8 @@ public struct ChatView: View {
             Button(action: send) {
                 Image(systemName: "arrow.up.circle.fill")
                     .scaledFont(size: 21)
-                    // The glyph is taller than a line of text, and it was the
-                    // tallest thing in the row — so it, not the text, set the
-                    // bar's height and made the chat pill ~5pt fatter than the
-                    // filter pills. Measuring it as one text line puts both
-                    // bars on the same geometry; the icon still DRAWS at full
-                    // size, it just doesn't get a vote on the height.
+                    // Measured as one text line so the glyph doesn't set the bar's height;
+                    // it still draws at full size.
                     .frame(height: 17)
             }
             .buttonStyle(.plain)
@@ -262,38 +189,25 @@ public struct ChatView: View {
             .accessibilityLabel(Text("chat.send.button", bundle: .module))
         }
         .padding(.horizontal, 14)
-        // 14/10 insets — the queue and library filter bars to the point, so the
-        // three glass pills are one control family and not three near-misses.
         .padding(.vertical, 10)
-        // Fixed radius, not a capsule: the field grows to 4 lines, and a capsule
-        // re-derives its radius from the (now much taller) height, ballooning
-        // into a lozenge. 18.5 = half the one-line height (17pt of text + 2×10
-        // padding), i.e. exactly the capsule the filter bars draw — so at rest
-        // they are indistinguishable, and growing just adds straight sides.
-        // Inverted for the same reason as the search capsule — the two inputs
-        // are the same control surface and must not drift apart.
+        // Fixed radius, not a capsule: the field grows to 4 lines and a capsule would
+        // balloon. 18.5 = half the one-line height, so at rest it matches the filter bars.
         .glassyFloatingBar(focused: inputFocused, cornerRadius: 18.5, inverted: true)
-        // Typeable the moment Chat is on screen, whether the panel just opened
-        // on this tab or the user switched to it. Hopped to the next main-actor
-        // turn because the field is not in the responder chain during
-        // `onAppear`, and an assignment made before it is there is dropped.
-        .onAppear { Task { @MainActor in inputFocused = true } }
+        // Next main-actor turn: the field isn't in the responder chain during
+        // `onAppear`, and an earlier assignment is dropped.
+        .onAppear { Task { inputFocused = true } }
     }
 
     private func send() {
-        // Guard here too — the Send button is `.disabled` while thinking, but
-        // the TextField's `.onSubmit` (Return key) bypasses that, so without
-        // this a second prompt could fire mid-response.
+        // `.onSubmit` bypasses the Send button's `.disabled`.
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty, !viewModel.isThinking else { return }
         draft = ""
         Task { await viewModel.send(text) }
     }
 
-    /// Filter out content-less assistant messages — when the model only emits
-    /// a tool call (no prose), we get an assistant ChatMessage with empty
-    /// content and the tool result lives in the separate .tool message that
-    /// follows. The bare icon for the empty assistant message is just noise.
+    /// A tool-call-only assistant message has empty content; its result lives
+    /// in the following .tool message.
     static func shouldHide(_ msg: ChatMessage) -> Bool {
         guard msg.role == .assistant else { return false }
         return msg.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -303,20 +217,14 @@ public struct ChatView: View {
 
 private struct MessageBubble: View {
     let message: ChatMessage
-    /// Payload to draw instead of the message's own, when the de-duplicator
-    /// stripped a person card another tool call in the same turn now owns.
+    /// Replaces the message's payload when the de-duplicator stripped a person
+    /// card another tool call in the same turn now owns.
     var richOverride: ChatRichContent?
     @State private var expanded = false
     @EnvironmentObject var configStore: ConfigStore
 
     private var rich: ChatRichContent? { richOverride ?? message.richContent }
 
-    /// iMessage-style routing: user prompts on the trailing edge in an accent
-    /// bubble, assistant prose leading in a secondary bubble. LLM tool calls
-    /// (plain + rich) span the full width — they're conceptually "system
-    /// output", not either party's voice. There used to be `.userAdd` cases
-    /// for tap-to-add status pills, but tap-to-add now opens a SearchAddPanel
-    /// overlay instead of writing a status row, so those cases are gone.
     var body: some View {
         switch kind {
         case .user:
@@ -334,14 +242,9 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Wraps a bubble in the side-aligned row with the right `Spacer`. With
-    /// `fullWidth`, the content takes the full chat column (carousels need it).
     @ViewBuilder
     private func row<Content: View>(trailing: Bool, fullWidth: Bool = false,
                                     @ViewBuilder _ content: () -> Content) -> some View {
-        // Bubble max-width 340 (out of ~376 usable column) — wide enough to
-        // avoid skinny text columns on common chat phrases, narrow enough to
-        // still read as a side-aligned bubble.
         HStack(spacing: 0) {
             if trailing && !fullWidth { Spacer(minLength: 16) }
             content()
@@ -361,9 +264,7 @@ private struct MessageBubble: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
-            // Permanent gutter for the copy badge, so the glyph never lands on
-            // the last line's text and nothing reflows when it lights up — plus a
-            // little floor under it so it isn't pressed against the bubble's edge.
+            // Permanent gutter so the copy badge never lands on text or reflows it.
             .padding(.trailing, CopyBadge.gutter)
             .padding(.bottom, CopyBadge.floor)
             .overlay(alignment: .bottomTrailing) { CopyBadge(text: text, tint: .white) }
@@ -371,10 +272,6 @@ private struct MessageBubble: View {
     }
 
     private func assistantBubble(_ text: String) -> some View {
-        // Full Markdown via swift-markdown (bold/italic/code, lists, headings,
-        // block quotes and GFM tables). One path for every assistant message —
-        // the old `||spoiler||` blur is gone (its markers are stripped inside
-        // MarkdownMessage) so it can never bypass Markdown rendering.
         MarkdownMessage(text: text, baseSize: 13)
             .foregroundStyle(.primary)
             .fixedSize(horizontal: false, vertical: true)
@@ -382,9 +279,8 @@ private struct MessageBubble: View {
             .padding(.vertical, 6)
             .padding(.trailing, CopyBadge.gutter)
             .padding(.bottom, CopyBadge.floor)
-            // Copy takes the raw Markdown source — the whole answer in one go,
-            // and the fallback for the messages MarkdownMessage still has to
-            // render as separate, separately-selectable views (tables, code).
+            // Copies the raw Markdown source, the fallback for tables and code that
+            // render as separately-selectable views.
             .overlay(alignment: .bottomTrailing) { CopyBadge(text: text) }
             .background(Color.primary.opacity(0.07), in: RoundedRectangle(cornerRadius: 14))
             // textSelection is owned by MarkdownMessage (it disables selection on
@@ -393,11 +289,7 @@ private struct MessageBubble: View {
 
     @ViewBuilder
     private var llmToolBubble: some View {
-        // Header layout intentionally mirrors `carouselSection`'s header so
-        // a series of plain + rich tool calls in a row line up on the same
-        // leading X. The chevron lives at the trailing end of the header
-        // row, not before the label, so adding/removing it doesn't shift
-        // the label horizontally.
+        // Chevron trails the label so toggling it doesn't shift the label.
         VStack(alignment: .leading, spacing: 2) {
             Button {
                 withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
@@ -428,10 +320,6 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Full-width section for an LLM-driven tool result that brought a rich
-    /// payload (search results, library lists, calendar etc.). The header
-    /// "Tool call: X" label sits above the carousel; tap on a card inside
-    /// is wired by the carousel itself.
     @ViewBuilder
     private func carouselSection(headerKey: String) -> some View {
         if let rich {
@@ -456,9 +344,6 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Display category derived from `ChatMessage`. Tool messages all come
-    /// from the LLM now; tap-to-add takes a different (overlay-based) path
-    /// that doesn't write to the chat.
     private enum Kind { case user, assistant, llmTool }
 
     private var kind: Kind {
@@ -469,54 +354,25 @@ private struct MessageBubble: View {
         }
     }
 
-    /// Parse inline markdown (bold, italic, code, links). Block-level markdown
-    /// like headings or lists falls back to inline rendering — the model
-    /// usually emits paragraph + inline emphasis which renders cleanly.
-    ///
-    /// We trim trailing whitespace before parsing: `.inlineOnlyPreservingWhitespace`
-    /// keeps any newlines or spaces the model tacked on at the end, and
-    /// those render as a visible half-line of empty space inside the
-    /// bubble. The trim is leaf-only so legitimate intra-message
-    /// whitespace (mid-paragraph line breaks) stays put.
+    /// Trailing whitespace is trimmed first: `.inlineOnlyPreservingWhitespace`
+    /// keeps it and it renders as an empty half-line in the bubble.
     static func attributed(_ raw: String) -> AttributedString {
-        inlineMarkdown(raw.trimmingCharacters(in: .whitespacesAndNewlines))
-    }
-
-    /// Inline-markdown parse without edge-trimming — used per spoiler segment
-    /// so the whitespace adjoining `||markers||` survives reassembly.
-    static func inlineMarkdown(_ s: String) -> AttributedString {
-        let opts = AttributedString.MarkdownParsingOptions(
-            interpretedSyntax: .inlineOnlyPreservingWhitespace
-        )
-        if let attr = try? AttributedString(markdown: s, options: opts) {
-            return attr
-        }
-        return AttributedString(s)
+        let s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        let opts = AttributedString.MarkdownParsingOptions(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        return (try? AttributedString(markdown: s, options: opts)) ?? AttributedString(s)
     }
 
 }
 
-/// Copy-the-whole-message affordance, living in the bubble's bottom-right
-/// corner. Selection inside a bubble is per-`Text` by nature, so this is the
-/// guaranteed way to take an entire answer — including the messages that have to
-/// render as several views (tables, code). It copies the raw Markdown source.
-///
-/// Inside the bubble on purpose: an earlier version sat *below* it and only
-/// appeared on hover, which made it unreachable — the pointer had to leave the
-/// bubble to get to the badge, and leaving hid it again. So it's always visible,
-/// just quiet, and the bubble reserves `gutter` points on the right for it.
+/// Always visible inside the bubble: a hover-only badge below it was unreachable,
+/// since leaving the bubble to reach it hid it.
 private struct CopyBadge: View {
     let text: String
-    /// Assistant bubbles inherit `.secondary`; the accent-filled user bubble
-    /// needs white to stay legible on it.
     var tint: Color?
     @State private var hovering = false
     @State private var copied = false
 
-    /// Trailing space the bubble reserves so the badge never overlaps text.
     static let gutter: CGFloat = 18
-    /// Extra bottom padding on the bubble so the badge has room to breathe
-    /// instead of sitting on the rounded edge.
     static let floor: CGFloat = 4
 
     var body: some View {
@@ -524,7 +380,6 @@ private struct CopyBadge: View {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .scaledFont(size: 9, weight: .medium)
                 .foregroundStyle(tint ?? .secondary)
-                // Hit area a fingertip / careless mouse can actually land on.
                 .frame(width: 18, height: 17)
                 .contentShape(Rectangle())
         }
@@ -547,8 +402,7 @@ private struct CopyBadge: View {
         UIPasteboard.general.string = text
         #endif
         copied = true
-        // Back to the plain glyph once the confirmation has been read.
-        Task { @MainActor in
+        Task {
             try? await Task.sleep(nanoseconds: 1_500_000_000)
             copied = false
         }
@@ -556,15 +410,12 @@ private struct CopyBadge: View {
 }
 
 private struct ThinkingRow: View {
-    // Cycle a few verbs so a long tool round doesn't read as "stuck on
-    // Thinking…". Crossfades every ~1.8s.
+    // Cycled so a long tool round doesn't read as stuck.
     private static let phrases: [LocalizedStringKey] = ["Thinking…", "Working…", "Almost there…"]
     @State private var phase = 0
 
     var body: some View {
-        // Match MessageBubble's icon-column layout (18pt frame + 8pt spacing)
-        // so the spinner sits exactly where a message's sparkles/wrench icon
-        // would, and the label aligns with bubble text.
+        // Matches MessageBubble's icon column (18pt + 8pt spacing).
         HStack(alignment: .firstTextBaseline, spacing: 8) {
             ProgressView()
                 .controlSize(.small)
@@ -577,7 +428,6 @@ private struct ThinkingRow: View {
             Spacer(minLength: 0)
         }
         .task {
-            // Hold on the first phrase, then advance only while still shown.
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 1_800_000_000)
                 if Task.isCancelled { break }

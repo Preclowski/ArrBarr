@@ -23,8 +23,6 @@ struct ArrBarrWidgetsBundle: WidgetBundle {
 
 // MARK: - Configuration intent (which services to show)
 
-/// Which service the small widget features. `.automatic` falls back to the
-/// first enabled service.
 enum FeaturedService: String, AppEnum {
     case automatic, radarr, sonarr, lidarr, whisparr
 
@@ -48,7 +46,6 @@ enum FeaturedService: String, AppEnum {
     }
 }
 
-/// Small widget config: just pick which single service to show.
 struct ServiceWidgetConfigIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Library Service"
     static let description = IntentDescription("Pick which service the widget shows.")
@@ -56,7 +53,6 @@ struct ServiceWidgetConfigIntent: WidgetConfigurationIntent {
     @Parameter(title: "Service", default: .automatic) var service: FeaturedService
 }
 
-/// Medium widget config: enable/disable each service (no single-service pick).
 struct GridWidgetConfigIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Library Status"
     static let description = IntentDescription("Choose which services to show.")
@@ -74,11 +70,8 @@ struct LibraryStatusEntry: TimelineEntry {
     let date: Date
     let summaries: [LibrarySummary]
     let anyConfigured: Bool
-    /// Which source the small widget should feature (nil = first available).
     var featured: LibrarySummary.Source? = nil
 
-    /// The summary the small widget shows: the featured source if present,
-    /// otherwise the first available.
     var featuredSummary: LibrarySummary? {
         if let featured, let match = summaries.first(where: { $0.source == featured }) {
             return match
@@ -87,39 +80,29 @@ struct LibraryStatusEntry: TimelineEntry {
     }
 }
 
-/// Shared timeline-entry builder for both widgets. Fetches only the requested
-/// sources; `featured` is carried through for the small widget's hero pick.
 enum LibraryWidgetData {
-    /// The extension is a separate process the user never sees running: a
-    /// timeline that comes back empty renders as "no data" with no error, no
-    /// UI to inspect and no way to attach a debugger after the fact. The log is
-    /// the only instrument it has, so both providers say what they asked for
-    /// and what came back.
+    /// The extension's only instrument: an empty timeline renders as "no data" with nothing to inspect.
     static let log = Logger(category: "Widget")
 
     static func entry(sources: Set<LibrarySummary.Source>,
                       featured: LibrarySummary.Source?) async -> LibraryStatusEntry {
-        // Demo mode: the app mirrors the flag into the group suite, so the
-        // widget renders the curated demo library instead of hitting servers.
+        // The app mirrors the demo flag into the group suite.
         if WidgetDataStore.isDemoActive {
-            let demo = DemoMocks.librarySummaries().filter { sources.contains($0.source) }
+            let demo = await LibrarySummaryService.demo(sources: sources)
             return LibraryStatusEntry(date: Date(), summaries: demo, anyConfigured: true, featured: featured)
         }
 
         func config(_ s: LibrarySummary.Source) -> ServiceConfig {
-            sources.contains(s) ? WidgetDataStore.serviceConfig(s.kind) : .empty
+            sources.contains(s) ? WidgetDataStore.serviceConfig(s.serviceKind) : .empty
         }
         let radarr = config(.radarr), sonarr = config(.sonarr)
         let lidarr = config(.lidarr), whisparr = config(.whisparr)
 
-        // isVisible (requires an API key, matching the app's own visibility
-        // gate) so a keyless-but-enabled service shows the empty state rather
-        // than a blank widget.
+        // `isVisible` requires an API key, matching the app's own gate, so a keyless service shows the empty state.
         let anyConfigured = [radarr, sonarr, lidarr, whisparr].contains { $0.isVisible }
         let summaries = await LibrarySummaryService().summaries(
             radarr: radarr, sonarr: sonarr, lidarr: lidarr, whisparr: whisparr)
-        // Configured-but-empty is the interesting shape: it means the fetch
-        // reached nothing, which on a widget looks the same as "not set up".
+        // Configured-but-empty means the fetch reached nothing, which looks the same as "not set up".
         if anyConfigured && summaries.isEmpty {
             log.notice("library timeline: \(sources.count, privacy: .public) source(s) configured, none answered")
         } else {
@@ -128,7 +111,6 @@ enum LibraryWidgetData {
         return LibraryStatusEntry(date: Date(), summaries: summaries, anyConfigured: anyConfigured, featured: featured)
     }
 
-    /// Library grows slowly — refresh roughly every 6 hours.
     static func timeline(_ entry: LibraryStatusEntry) -> Timeline<LibraryStatusEntry> {
         Timeline(entries: [entry], policy: .after(entry.date.addingTimeInterval(6 * 3600)))
     }
@@ -153,8 +135,6 @@ struct ServiceWidgetProvider: AppIntentTimelineProvider {
 
     private func entry(for configuration: ServiceWidgetConfigIntent) async -> LibraryStatusEntry {
         let featured = configuration.service.source
-        // A specific pick fetches only that service; Automatic fetches the
-        // non-adult arrs and shows the first available.
         let sources: Set<LibrarySummary.Source> = featured.map { [$0] } ?? [.radarr, .sonarr, .lidarr]
         return await LibraryWidgetData.entry(sources: sources, featured: featured)
     }
@@ -191,16 +171,6 @@ struct GridWidgetProvider: AppIntentTimelineProvider {
 // MARK: - View presentation per source
 
 private extension LibrarySummary.Source {
-    /// Maps to the ArrCore service kind so we can reuse `ServiceIcon`'s brand art.
-    var kind: ServiceKind {
-        switch self {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
-    }
-
     var label: String {
         switch self {
         case .radarr: return String(localized: "Movies", bundle: .arrCore)
@@ -210,7 +180,7 @@ private extension LibrarySummary.Source {
         }
     }
 
-    /// Brand accent (full-colour mode only; the system tints in accented mode).
+    /// Full-colour mode only; in accented mode the system tints.
     var brandColor: Color {
         switch self {
         case .radarr: return Color(red: 1.00, green: 0.76, blue: 0.18) // gold
@@ -243,14 +213,10 @@ struct LibraryStatusView: View {
         }
     }
 
-    /// Background fill: a brand-tinted glass for the small widget (the colour of
-    /// the featured arr), a neutral liquid-glass base everywhere else. In
-    /// accented/tinted mode the system supplies the tint, so stay neutral.
+    /// In accented/tinted mode the system supplies the tint, so stay neutral.
     @ViewBuilder private var background: some View {
         if family == .systemSmall, rendering == .fullColor,
            let c = entry.featuredSummary?.source.brandColor {
-            // Brand-tinted liquid glass: a frosted material under a soft
-            // diagonal colour wash plus a top sheen highlight.
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
                 LinearGradient(colors: [c.opacity(0.42), c.opacity(0.10)],
@@ -259,11 +225,7 @@ struct LibraryStatusView: View {
                                startPoint: .top, endPoint: .center)
             }
         } else {
-            // Tinted frosted glass that picks up the services' brand hues, so
-            // it reads as coloured glass rather than a flat white panel.
-            // (Standard home-screen widgets are opaque — the wallpaper can't
-            // show through — so this simulates glass with a translucent
-            // material + colour wash + sheen.)
+            // Home-screen widgets are opaque, so this simulates glass with material, colour wash and sheen.
             ZStack {
                 Rectangle().fill(.ultraThinMaterial)
                 LinearGradient(colors: tintColors, startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -272,9 +234,6 @@ struct LibraryStatusView: View {
         }
     }
 
-    /// Brand-coloured wash for the medium glass. Uses the leading service's
-    /// hue prominently (like the small widget) so it reads as coloured glass
-    /// rather than a flat white panel; a faint second hue adds depth.
     private var tintColors: [Color] {
         guard let first = entry.summaries.first?.source.brandColor else {
             return [.blue.opacity(0.40), .indigo.opacity(0.24)]
@@ -296,12 +255,10 @@ struct LibraryStatusView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // Small: a single hero service on a brand-coloured glass, with the brand
-    // icon as a faded background watermark (matching the medium tiles).
     private var small: some View {
         ZStack(alignment: .topLeading) {
             if let s = entry.featuredSummary {
-                ServiceIcon(kind: s.source.kind, size: 96)
+                ServiceIcon(kind: s.source.serviceKind, size: 96)
                     .foregroundStyle(smallWatermarkStyle)
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .offset(x: 22, y: 22)
@@ -325,12 +282,10 @@ struct LibraryStatusView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    /// Watermark icon for the small widget — a light emboss on the brand glass.
     private var smallWatermarkStyle: AnyShapeStyle {
         rendering == .fullColor ? AnyShapeStyle(.white.opacity(0.22)) : AnyShapeStyle(.secondary)
     }
 
-    // Medium: header (label + total size) over a row of per-service tiles.
     private var medium: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
@@ -354,11 +309,9 @@ struct LibraryStatusView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    // Tile: a big brand icon as a faded background watermark, with bold
-    // count + label + size on top.
     private func tile(_ s: LibrarySummary) -> some View {
         ZStack(alignment: .topLeading) {
-            ServiceIcon(kind: s.source.kind, size: 66)
+            ServiceIcon(kind: s.source.serviceKind, size: 66)
                 .foregroundStyle(watermarkStyle(s.source))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                 .offset(x: 16, y: 16)
@@ -388,7 +341,6 @@ struct LibraryStatusView: View {
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    /// Faded brand icon behind the tile content.
     private func watermarkStyle(_ source: LibrarySummary.Source) -> AnyShapeStyle {
         rendering == .fullColor
             ? AnyShapeStyle(source.brandColor.opacity(0.30))
@@ -408,7 +360,6 @@ struct LibraryStatusView: View {
 
 // MARK: - Widgets
 
-/// Small (single-service) widget. Config: pick the service only.
 struct LibraryServiceWidget: Widget {
     let kind = "LibraryServiceWidget"
 
@@ -427,7 +378,6 @@ struct LibraryServiceWidget: Widget {
     }
 }
 
-/// Medium (multi-service) widget. Config: enable/disable services only.
 struct LibraryStatusGridWidget: Widget {
     let kind = "LibraryStatusGridWidget"
 
@@ -449,14 +399,6 @@ struct LibraryStatusGridWidget: Widget {
 // MARK: - Up Next widget (upcoming calendar)
 
 private extension UpcomingItem.Source {
-    var kind: ServiceKind {
-        switch self {
-        case .radarr: return .radarr
-        case .sonarr: return .sonarr
-        case .lidarr: return .lidarr
-        case .whisparr: return .whisparr
-        }
-    }
     var brandColor: Color {
         switch self {
         case .radarr: return Color(red: 1.00, green: 0.76, blue: 0.18)
@@ -467,8 +409,6 @@ private extension UpcomingItem.Source {
     }
 }
 
-/// Config: which services feed the upcoming list (same for both families,
-/// since both just show the soonest items — no single-service pick needed).
 struct UpcomingConfigIntent: WidgetConfigurationIntent {
     static let title: LocalizedStringResource = "Up Next"
     static let description = IntentDescription("Choose which services to include.")
@@ -501,7 +441,6 @@ struct UpNextProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: UpcomingConfigIntent, in context: Context) async -> Timeline<UpcomingEntry> {
         let e = await entry(for: configuration)
-        // The calendar shifts daily — refresh roughly every 3 hours.
         return Timeline(entries: [e], policy: .after(e.date.addingTimeInterval(3 * 3600)))
     }
 
@@ -518,7 +457,7 @@ struct UpNextProvider: AppIntentTimelineProvider {
         }
 
         func cfg(_ s: UpcomingItem.Source) -> ServiceConfig {
-            enabled.contains(s) ? WidgetDataStore.serviceConfig(s.kind) : .empty
+            enabled.contains(s) ? WidgetDataStore.serviceConfig(s.serviceKind) : .empty
         }
         let r = cfg(.radarr), s = cfg(.sonarr), l = cfg(.lidarr), w = cfg(.whisparr)
         let anyConfigured = [r, s, l, w].contains { $0.isVisible }
@@ -542,8 +481,6 @@ struct UpNextView: View {
             .containerBackground(for: .widget) { background }
     }
 
-    /// Small = brand-coloured glass of the soonest item (like the library
-    /// small widget); medium = neutral frosted glass.
     @ViewBuilder private var background: some View {
         if family == .systemSmall, rendering == .fullColor, let c = entry.items.first?.source.brandColor {
             ZStack {
@@ -579,8 +516,6 @@ struct UpNextView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // Small: the single soonest item, with the brand icon as a faded
-    // background watermark (matching the library small widget).
     private var small: some View {
         ZStack(alignment: .topLeading) {
             if let it = entry.items.first {
@@ -609,7 +544,6 @@ struct UpNextView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
 
-    // Medium: a list of the soonest items.
     private var medium: some View {
         VStack(alignment: .leading, spacing: 7) {
             header

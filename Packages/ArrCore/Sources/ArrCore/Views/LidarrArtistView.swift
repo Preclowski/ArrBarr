@@ -1,60 +1,46 @@
 import SwiftUI
+import MediaKit
 
-/// Artist-level surface for Lidarr. Search results, the post-add navigation
-/// and the chat library cards all carry an ARTIST id (Lidarr's addable entity
-/// is the artist), so they land here: artist header + the album list, each
-/// album drilling into the existing album `DetailView`. Queue rows keep going
-/// straight to the album detail — their `entityId` is an album id.
+/// Lidarr's addable entity is the artist, so search, post-add and chat cards
+/// land here; queue rows go straight to album detail.
 struct LidarrArtistView: View {
-    /// Synthetic artist item (`DetailRequest.syntheticArtistItem`) —
-    /// `entityId` is the Lidarr artist id.
+    /// Synthetic artist item: `entityId` is the Lidarr artist id.
     let item: QueueItem
     let onBack: () -> Void
     var viewModel: QueueViewModel
 
     @EnvironmentObject private var configStore: ConfigStore
 
-    @State private var artist: LidarrArtistDetail?
-    @State private var albums: [LidarrAlbumListRecord] = []
+    @State private var artist: ArrArtist?
+    @State private var albums: [ArrAlbum] = []
     @State private var loading = true
     @State private var loadError: String?
     @State private var enlargedPoster: URL?
-    /// Album drill-down, owned locally (like PersonView's `titleDetail`) so
-    /// back from the album returns HERE, not to the queue.
+    /// Owned locally so back from the album returns here, not to the queue.
     @State private var albumDetail: QueueItem?
-    /// Release-type sections the user folded shut (queue-view style). Keyed
-    /// by the server's type string; empty = everything expanded.
+    /// Keyed by the server's type string; empty means all expanded.
     @State private var collapsedTypes: Set<String> = []
-    /// Header pencil → edit panel push (profiles / root folder).
     @State private var editRequest: MediaEditRequest?
-    /// The other half of the pencil's menu — remove the artist from Lidarr.
     @State private var deleteRequest: MediaDeleteRequest?
 
-    /// What the header pencil edits — the artist record (Lidarr's profile-
-    /// carrying entity).
     private var editTarget: MediaEditRequest? {
         guard let artistId = item.entityId else { return nil }
         return MediaEditRequest(source: .lidarr, entityId: artistId)
     }
 
-    /// The same artist record, addressed for removal.
     private var deleteTarget: MediaDeleteRequest? {
         guard let artistId = item.entityId else { return nil }
         return MediaDeleteRequest(source: .lidarr, entityId: artistId,
                                   title: artist?.artistName ?? item.title)
     }
 
-    /// The artist is gone from Lidarr: close the modal, drop its queue rows and
-    /// leave a surface that now describes nothing.
     private func handleDeleted() {
         deleteRequest = nil
         Task { await viewModel.refresh() }
         onBack()
     }
 
-    /// Artist bookmark, on the poster corner like every other detail surface.
-    /// `nil` monitored (older Lidarr that doesn't report it, or the fetch
-    /// still in flight) renders nothing rather than asserting a state.
+    /// Nil monitored (older Lidarr, or still fetching) renders nothing.
     @ViewBuilder
     private var monitorPosterToggle: some View {
         if let monitored = artist?.monitored {
@@ -64,8 +50,7 @@ struct LidarrArtistView: View {
         }
     }
 
-    /// Optimistic flip, then the PUT; a failure refetches so the bookmark
-    /// snaps back to the server's truth. Mirrors `DetailView`.
+    /// A failed PUT refetches so the bookmark snaps back.
     private func setArtistMonitored(_ monitored: Bool) async {
         guard let artistId = item.entityId else { return }
         artist?.monitored = monitored
@@ -81,9 +66,7 @@ struct LidarrArtistView: View {
         ZStack {
             mainContent
 
-            // Edit modal — scrim + bottom form card OVER the still-visible
-            // artist surface (matches DetailView). iOS presents it as a
-            // sheet instead.
+            // iOS presents it as a sheet instead.
             #if os(macOS)
             if let req = editRequest {
                 MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
@@ -113,8 +96,7 @@ struct LidarrArtistView: View {
     private var mainContent: some View {
         VStack(spacing: 0) {
             #if os(macOS)
-            // Popover hides the native chevron and the detached window never
-            // draws one — self-drawn back header, same as DetailView/PersonView.
+            // Popover hides the native chevron and the detached window has none.
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
@@ -123,8 +105,6 @@ struct LidarrArtistView: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if let target = editTarget {
-                    // Menu, not a direct push — same two actions, same reason
-                    // as DetailView's header.
                     Menu {
                         Button { editRequest = target } label: {
                             Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
@@ -160,9 +140,7 @@ struct LidarrArtistView: View {
             #endif
 
             ScrollView {
-                // PersonView's inset scheme: header/overview padded to 14,
-                // the album list full-bleed (its rows are PosterMetadataRow,
-                // which self-insets 12) so rows don't sit doubly indented.
+                // Album rows (PosterMetadataRow) self-inset 12, so the list is full-bleed.
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 12) {
                         headerCard
@@ -284,11 +262,8 @@ struct LidarrArtistView: View {
 
     // MARK: - Album list
 
-    /// Lidarr's release taxonomy, in its own display order — albums first,
-    /// then EPs / singles, everything else (Broadcast, Other, …) after.
-    /// Types are server-side enum values ("Album", "EP", "Single"), shown
-    /// verbatim as section headers.
-    private var albumTypeGroups: [(type: String, albums: [LidarrAlbumListRecord])] {
+    /// Types are Lidarr enum values ("Album", "EP", "Single"), shown verbatim.
+    private var albumTypeGroups: [(type: String, albums: [ArrAlbum])] {
         let grouped = Dictionary(grouping: albums) { $0.albumType ?? "Other" }
         let preferred = ["Album", "EP", "Single"]
         let rest = grouped.keys
@@ -317,10 +292,7 @@ struct LidarrArtistView: View {
                     .padding(.vertical, 12)
             }
         } else {
-            // One spacing-0 stack so the Upcoming-style header paddings
-            // (14 above, 4 below) own ALL the vertical rhythm — nested in
-            // the outer `VStack(spacing: 12)` directly, every header/rows
-            // pair would pick up extra 12pt gaps.
+            // Spacing 0 so the headers' own paddings set the rhythm, not the outer 12pt.
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(albumTypeGroups.enumerated()), id: \.element.type) { index, group in
                     sectionHeader(for: group, isFirst: index == 0)
@@ -336,12 +308,8 @@ struct LidarrArtistView: View {
         }
     }
 
-    /// Section header for one release type — the Upcoming tab's Today /
-    /// Tomorrow treatment (11pt semibold .secondary, 14pt above / 4pt
-    /// below) plus the queue view's collapse affordance (rotating chevron,
-    /// whole row tappable, count in the tertiary gutter).
     private func sectionHeader(
-        for group: (type: String, albums: [LidarrAlbumListRecord]), isFirst: Bool
+        for group: (type: String, albums: [ArrAlbum]), isFirst: Bool
     ) -> some View {
         let collapsed = collapsedTypes.contains(group.type)
         return HStack(spacing: 6) {
@@ -351,10 +319,7 @@ struct LidarrArtistView: View {
                 .rotationEffect(.degrees(collapsed ? 0 : 90))
                 .frame(width: 10)
                 .accessibilityHidden(true)
-            // "Album" (the type) gets the plural header key; the other types
-            // show the server's own name — they're Lidarr enum values, not
-            // free text, and pluralising them per-language buys nothing
-            // ("EP", "Single" read fine as-is).
+            // Other types are Lidarr enum values; pluralising them per language buys nothing.
             if group.type == "Album" {
                 DetailSectionHeader("Albums", count: group.albums.count)
             } else {
@@ -362,8 +327,7 @@ struct LidarrArtistView: View {
             }
             Spacer(minLength: 0)
         }
-        // 12pt inset mirrors the queue-view section header, so the chevron
-        // column lines up with the rows' PosterMetadataRow inset below.
+        // Matches the rows' PosterMetadataRow inset.
         .padding(.horizontal, 12)
         .padding(.top, isFirst ? 0 : 14)
         .padding(.bottom, 4)
@@ -381,18 +345,12 @@ struct LidarrArtistView: View {
         )
     }
 
-    /// One album row — the shared `PosterMetadataRow` chrome (same component
-    /// as search results and Upcoming rows), so spacing, hover and the
-    /// drill-in chevron can't drift from the rest of the app.
-    private func albumRow(_ album: LidarrAlbumListRecord) -> some View {
-        let (cover, coverAuth) = album.images?.posterURL(
-            baseURL: configStore.lidarr.baseURL, coverTypes: ["cover", "poster"]) ?? (nil, false)
+    private func albumRow(_ album: ArrAlbum) -> some View {
+        let (cover, coverAuth) = album.coverURL(baseURL: configStore.lidarr.baseURL)
         let trackCount = album.statistics?.totalTrackCount ?? album.statistics?.trackCount ?? 0
         let fileCount = album.statistics?.trackFileCount ?? 0
         let complete = trackCount > 0 && fileCount >= trackCount
-        // "12 utworów" / "8/12 utworów" — same plural the album detail uses;
-        // incomplete albums prefix the on-disk count. (Type is NOT a segment —
-        // the section header already says Album / EP / Single.)
+        // No type segment: the section header already says it.
         var segments: [String] = []
         if let year = albumYear(album) { segments.append(year) }
         if trackCount > 0 {
@@ -410,9 +368,10 @@ struct LidarrArtistView: View {
             title: album.title,
             metadataSegments: segments,
             onTap: {
+                guard let id = album.id else { return }
                 albumDetail = DetailRequest.syntheticItem(
                     source: .lidarr,
-                    entityId: album.id,
+                    entityId: id,
                     title: album.title,
                     posterURL: cover,
                     posterRequiresAuth: coverAuth
@@ -432,13 +391,12 @@ struct LidarrArtistView: View {
         }
     }
 
-    private func albumYear(_ album: LidarrAlbumListRecord) -> String? {
+    private func albumYear(_ album: ArrAlbum) -> String? {
         guard let dateStr = album.releaseDate, let date = parseArrDate(dateStr) else { return nil }
         return CachedDateFormatters.format("yyyy").string(from: date)
     }
 
-    /// Lidarr's web UI keys artists by `foreignArtistId` — only known after
-    /// the fetch, so the link appears once the record lands.
+    /// Keyed by `foreignArtistId`, known only after the fetch.
     private var artistWebURL: URL? {
         guard let foreign = artist?.foreignArtistId, !foreign.isEmpty else { return nil }
         return URL(string: configStore.lidarr.baseURL)?
@@ -457,7 +415,7 @@ struct LidarrArtistView: View {
         async let al = client.fetchArtistAlbums(artistId: artistId)
         do {
             artist = try await a
-            // Newest first — same order Lidarr's own artist page defaults to.
+            // Newest first, like Lidarr's own artist page.
             albums = try await al.sorted { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
         } catch {
             loadError = String(

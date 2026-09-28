@@ -1,12 +1,8 @@
 import Foundation
 
-/// Compact trailing label for the IN QUEUE row in the queue-search
-/// status-grouped layout. Short on purpose — sits next to a 26×38
-/// poster + title and shares the row with library/new rows that show
-/// chevrons / plus glyphs. Returns a plain `String`; callers wrap it
-/// in `Text(_:bundle:)` for localization.
-nonisolated public enum QueueSearchStatusLabel {
-    public static func label(for item: QueueItem) -> String {
+/// Short on purpose: it shares the row with a 26×38 poster and title. Callers localize it.
+nonisolated enum QueueSearchStatusLabel {
+    static func label(for item: QueueItem) -> String {
         switch item.status {
         case .downloading:
             if item.progress > 0 {

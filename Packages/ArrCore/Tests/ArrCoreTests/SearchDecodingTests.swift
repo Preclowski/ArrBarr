@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("Search Decoding")
@@ -12,7 +13,7 @@ struct SearchDecodingTests {
           "ratings":{"tmdb":{"value":8.5}},
           "images":[{"coverType":"poster","remoteUrl":"https://example.com/p.jpg"}]}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([RadarrLookupRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrMovie].self, from: json)
         #expect(records[0].tmdbId == 438631)
         #expect(records[0].title == "Dune: Part Two")
         #expect(records[0].ratings?.tmdb?.value == 8.5)
@@ -26,7 +27,7 @@ struct SearchDecodingTests {
           "statistics":{"seasonCount":5},
           "images":[]}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([SonarrLookupRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrSeries].self, from: json)
         #expect(records[0].tvdbId == 81189)
         #expect(records[0].statistics?.seasonCount == 5)
         #expect(records[0].title == "Breaking Bad")
@@ -54,7 +55,7 @@ struct SearchDecodingTests {
           "artist":{"artistName":"The Hound Of Love","foreignArtistId":"36bbaf5a",
             "genres":[],"ratings":{"value":0}}}]
         """.data(using: .utf8)!
-        let records = try JSONDecoder().decode([LidarrSearchRecord].self, from: json)
+        let records = try JSONDecoder().decode([ArrSearchRecord].self, from: json)
         #expect(records.count == 3)
         #expect(records[0].album?.id == 5446)
         #expect(records[0].album?.artist?.id == 82)
@@ -63,11 +64,11 @@ struct SearchDecodingTests {
         #expect(records[2].artist?.artistName == "The Hound Of Love")
 
         // Unify: in-library album keeps its arr id, foreign album has none.
-        let inLibrary = SearchClient.unifyLidarrAlbum(records[0].album!, baseURL: "http://x")
+        let inLibrary = SearchResult(album: records[0].album!, baseURL: "http://x")
         #expect(inLibrary?.inLibraryArrId == 5446)
         #expect(inLibrary?.isLidarrAlbum == true)
         #expect(inLibrary?.subtitle == "Kate Bush · Album")
-        let foreign = SearchClient.unifyLidarrAlbum(records[1].album!, baseURL: "http://x")
+        let foreign = SearchResult(album: records[1].album!, baseURL: "http://x")
         #expect(foreign?.inLibraryArrId == nil)
     }
 
@@ -77,22 +78,19 @@ struct SearchDecodingTests {
     /// trusting it produced a scheme-less URL and artist posters never
     /// loaded anywhere (search rows AND the artist detail header).
     @Test("Relative remoteUrl is ignored; url resolves against base")
-    func relativeRemoteUrlFallsThrough() {
-        let images = [ArrImage(
-            coverType: "poster",
-            url: "/MediaCover/82/poster.jpg?lastWrite=639220808915209853",
-            remoteUrl: "/config/MediaCover/82/poster.jpg"
-        )]
+    func relativeRemoteUrlFallsThrough() throws {
+        let images = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "url": "/MediaCover/82/poster.jpg?lastWrite=639220808915209853",
+              "remoteUrl": "/config/MediaCover/82/poster.jpg"}]
+            """#.utf8))
         let (url, auth) = images.posterURL(baseURL: "https://lidarr.example")
         #expect(url?.absoluteString == "https://lidarr.example/MediaCover/82/poster.jpg")
         #expect(auth == true)
 
         // A genuine absolute remoteUrl still wins (no auth needed).
-        let remote = [ArrImage(
-            coverType: "poster",
-            url: "/MediaCover/1/poster.jpg",
-            remoteUrl: "https://images.example/p.jpg"
-        )]
+        let remote = try JSONDecoder().decode([ArrImage].self, from: Data(#"""
+            [{"coverType": "poster", "url": "/MediaCover/1/poster.jpg", "remoteUrl": "https://images.example/p.jpg"}]
+            """#.utf8))
         let (rUrl, rAuth) = remote.posterURL(baseURL: "https://lidarr.example")
         #expect(rUrl?.absoluteString == "https://images.example/p.jpg")
         #expect(rAuth == false)

@@ -26,19 +26,23 @@ public struct ArtworkReference: Hashable, Sendable, Codable {
     }
 
     public func sized(_ tier: ArtworkTier) -> ArtworkReference {
-        guard let pixels = tier.pixels, var c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return self }
-        switch sizing {
-        case .native:
-            return self
-        case let .tmdbCDN(path):
-            let width = tier == .icon ? "w185" : "w342"
+        guard var c = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return self }
+        if case let .tmdbCDN(path) = sizing {
+            // TMDB's own widths nearest each tier (w185 ≈ 13 kB, w780 ≈ 161 kB vs 241 kB for the original).
+            let width = switch tier { case .icon: "w185"; case .card: "w780"; case .full: "original" }
             c.path = "/t/p/\(width)\(path.hasPrefix("/") ? path : "/" + path)"
+            return ArtworkReference(url: c.url ?? url, headers: headers, sizing: sizing, kind: kind)
+        }
+        guard let pixels = tier.pixels else { return self }
+        switch sizing {
+        case .native, .tmdbCDN:
+            return self
         case let .plexTranscode(photoPath):
             c.path = "/photo/:/transcode"
             c.queryItems = [URLQueryItem(name: "width", value: String(pixels)), URLQueryItem(name: "height", value: String(pixels * 3 / 2)),
-                            URLQueryItem(name: "minSize", value: "1"), URLQueryItem(name: "upscale", value: "1"), URLQueryItem(name: "url", value: photoPath)]
-        case let .jellyfinFill(itemID, tag):
-            c.path = "/Items/\(itemID)/Images/Primary"
+                            URLQueryItem(name: "minSize", value: "1"), URLQueryItem(name: "upscale", value: "0"), URLQueryItem(name: "url", value: photoPath)]
+        case let .jellyfinFill(_, tag):
+            // The url already names the item's image; rewriting the path would drop a reverse-proxy prefix.
             c.queryItems = [URLQueryItem(name: "maxWidth", value: String(pixels))] + (tag.map { [URLQueryItem(name: "tag", value: $0)] } ?? [])
         }
         return ArtworkReference(url: c.url ?? url, headers: headers, sizing: sizing, kind: kind)

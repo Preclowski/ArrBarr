@@ -1,20 +1,6 @@
 import Foundation
 
-/// A rule the demo applies to a write so later reads reflect it.
-public struct DemoRule: Sendable {
-    public enum Effect: Sendable {
-        case setQueueStatus(status: String)
-        case removeQueueItem
-        case setMonitored
-        case appendLibrary
-        case commandRunning(seconds: Int)
-    }
-    public let on: OperationID
-    public let effect: Effect
-    public init(on: OperationID, effect: Effect) { self.on = on; self.effect = effect }
-}
-
-/// Demo mode and every fixture-driven test: answers from `Fixtures/<kind>.json`, echoes writes, replays queued frames.
+/// Demo mode and every fixture-driven test: answers from `Fixtures/<kind>.json` and echoes writes.
 public actor FixtureTransport: Transport, SocketTransport {
     private struct Entry: Decodable {
         let status: Int
@@ -24,23 +10,21 @@ public actor FixtureTransport: Transport, SocketTransport {
     }
 
     private let root: URL
-    private let rules: [DemoRule]
     private let clock: any MediaClock
     private var files: [InstanceKind: [String: Entry]] = [:]
-    private var overrides: [String: JSONValue] = [:]
     /// PUT bodies keyed by path: a demo monitor toggle survives the next GET of the same record.
     private var putBodies: [String: JSONValue] = [:]
-    private var queueStatus: [String: String] = [:]
+    /// Demo pause/resume by download id: the arr queue rows tracking those downloads report it.
+    private var downloadStatus: [String: String] = [:]
     private var removedQueueItems: Set<String> = []
-    private var frames: [InstanceID: [String]] = [:]
     private var log: [(OperationID, Date)] = []
     private var commands: [Int: Date] = [:]
     private var nextCommandID = 1000
 
     public static var bundledFixtures: URL { Bundle.module.resourceURL!.appendingPathComponent("Fixtures") }
 
-    public init(bundleRoot: URL? = nil, rules: [DemoRule] = [], clock: any MediaClock = SystemClock()) {
-        root = bundleRoot ?? Self.bundledFixtures; self.rules = rules; self.clock = clock
+    public init(bundleRoot: URL? = nil, clock: any MediaClock = SystemClock()) {
+        root = bundleRoot ?? Self.bundledFixtures; self.clock = clock
     }
 
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
@@ -56,6 +40,9 @@ public actor FixtureTransport: Transport, SocketTransport {
             return s.replacingOccurrences(of: "--", with: "-")
         }()
         let pathKey = "\(kind.rawValue)\(request.url.path)"
+        // SABnzbd's API writes are GETs; a download action is a write whatever the verb.
+        let isWrite = request.method != "GET" || (kind.family == .download && DownloadAction(rawValue: request.operation.name) != nil)
+        if isWrite { noteWrite(request) }
         if request.method == "PUT", case let .bytes(data, contentType) = request.body, contentType.contains("json"),
            let json = try? JSONDecoder().decode(JSONValue.self, from: data) {
             putBodies[pathKey] = json
@@ -64,13 +51,10 @@ public actor FixtureTransport: Transport, SocketTransport {
             return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
         }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
-            var body = entry.body
-            if let override = overrides[request.operation.rawValue] { body = override }
-            body = applyState(body, kind: kind, name: name)
+            let body = applyState(entry.body, kind: kind, name: name)
             return HTTPResponse(status: entry.status, headers: HTTPHeaders(entry.headers), body: try encode(body))
         }
-        guard request.method != "GET" else { throw MediaKitError.fixtureMissing(request.operation) }
-        apply(rulesFor: request.operation, request: request)
+        guard isWrite else { throw MediaKitError.fixtureMissing(request.operation) }
         if request.pathTemplate.hasSuffix("/command") {
             let id = nextCommandID
             nextCommandID += 1
@@ -85,16 +69,10 @@ public actor FixtureTransport: Transport, SocketTransport {
 
     public func open(_ request: HTTPRequest) async throws -> any WireSocket {
         log.append((request.operation, clock.now))
-        let queued = frames.removeValue(forKey: InstanceID(request.operation.kind)) ?? []
-        return FixtureSocket(frames: [#"{}"#] + queued)
+        return FixtureSocket(frames: [#"{}"#])
     }
 
-    public func enqueueFrames(_ newFrames: [String], for instance: InstanceID) { frames[instance, default: []].append(contentsOf: newFrames) }
     public func requestLog() -> [(OperationID, Date)] { log }
-    public func reset() { overrides = [:]; putBodies = [:]; queueStatus = [:]; removedQueueItems = []; frames = [:]; log = []; commands = [:] }
-
-    /// Tests and the demo seed variants without touching the bundle.
-    public func override(_ operation: OperationID, body: JSONValue) { overrides[operation.rawValue] = body }
 
     // MARK: - Internals
 
@@ -112,16 +90,21 @@ public actor FixtureTransport: Transport, SocketTransport {
         return try JSONEncoder().encode(value)
     }
 
-    private func apply(rulesFor operation: OperationID, request: HTTPRequest) {
-        let id = request.url.lastPathComponent
-        for rule in rules where rule.on == operation {
-            switch rule.effect {
-            case let .setQueueStatus(status): queueStatus[id] = status
-            case .removeQueueItem: removedQueueItems.insert(id)
-            case .setMonitored, .appendLibrary, .commandRunning: break
-            }
+    private func noteWrite(_ request: HTTPRequest) {
+        if request.pathTemplate.contains("/queue/{id}"), request.method == "DELETE" { removedQueueItems.insert(request.url.lastPathComponent) }
+        guard request.operation.kind.family == .download else { return }
+        let status: String? = switch DownloadAction(rawValue: request.operation.name) {
+        case .pause: "paused"
+        case .resume, .forceStart: "downloading"
+        default: nil
         }
-        if request.method == "DELETE", request.pathTemplate.contains("/queue/") { removedQueueItems.insert(id) }
+        guard let status else { return }
+        var ids: [String] = []
+        if case let .form(fields) = request.body, let hashes = fields["hashes"] { ids += hashes.split(separator: "|").map(String.init) }
+        if let value = URLComponents(url: request.url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == "value" })?.value {
+            ids += value.split(separator: ",").map(String.init)
+        }
+        for id in ids { downloadStatus[id.lowercased()] = status }
     }
 
     /// Queue rows reflect pause/resume/delete for the process lifetime; commands complete after 3 s of clock time.
@@ -130,7 +113,9 @@ public actor FixtureTransport: Transport, SocketTransport {
             o["records"] = .array(records.compactMap { record in
                 guard let id = record["id"]?.intValue.map(String.init) else { return record }
                 if removedQueueItems.contains(id) { return nil }
-                if let status = queueStatus[id], case var .object(r) = record { r["status"] = .string(status); return .object(r) }
+                if let download = record["downloadId"]?.stringValue?.lowercased(), let status = downloadStatus[download], case var .object(r) = record {
+                    r["status"] = .string(status); return .object(r)
+                }
                 return record
             })
             return .object(o)

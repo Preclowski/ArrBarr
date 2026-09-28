@@ -1,40 +1,18 @@
 import SwiftUI
 
-/// Settings → Quiz: the swipe feature's memory and its standing preferences.
-///
-/// Two sections, deliberately NOT a "taste profile": standing preferences are
-/// the user's own written constraints (mood-independent by construction —
-/// they wrote them as rules), and the signals list is the quiz's persistent
-/// memory (skip cooldowns, vetoes, kept titles) with per-row removal.
-///
-/// The whole pane grays out while the assistant is off or unconfigured: the
-/// note travels inside chat prompts and the signals only accumulate through
-/// quiz decks, both of which need the assistant.
-public struct QuizSettingsPane: View {
+/// Grayed out while the assistant is off: the note travels in chat prompts and signals accumulate
+/// only through quiz decks.
+struct QuizSettingsPane: View {
 
     @State private var signalsTick = 0   // bumps to re-read the store
     @State private var userNote: String = TasteProfileStore.shared.userNote
     @State private var useInChat: Bool = TasteProfileStore.shared.useInChat
 
-    public init() {}
+    init() {}
 
-    /// Mirrors PopoverContentView.chatAvailable — the pane is about features
-    /// that ride on the assistant, so it follows the same gate.
-    private var assistantAvailable: Bool {
-        let store = ConfigStore.shared
-        guard store.aiEnabled else { return false }
-        if DemoMode.isActive { return true }
-        switch store.chatProvider {
-        case .foundationModels:
-            return true
-        case .openai:
-            return store.openai.isConfigured
-        }
-    }
-
-    public var body: some View {
+    var body: some View {
         Form {
-            if !assistantAvailable {
+            if !ConfigStore.shared.aiConfigured {
                 Section {
                     Label {
                         Text("settings.quiz.needsAssistant", bundle: .module)
@@ -50,8 +28,8 @@ public struct QuizSettingsPane: View {
                 standingSection
                 signalsSection
             }
-            .disabled(!assistantAvailable)
-            .opacity(assistantAvailable ? 1 : 0.5)
+            .disabled(!ConfigStore.shared.aiConfigured)
+            .opacity(ConfigStore.shared.aiConfigured ? 1 : 0.5)
         }
         .formStyle(.grouped)
         #if os(iOS)
@@ -96,8 +74,7 @@ public struct QuizSettingsPane: View {
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)
             } else {
-                // Totals up front — the list below caps at 20, and without
-                // this line the cap reads as "that's all there is".
+                // Totals up front: the list caps at 20, which would read as "that's all".
                 summaryRow(all)
                 ForEach(mediaGroups(signals), id: \.id) { group in
                     Text(group.label, bundle: .module)
@@ -128,9 +105,7 @@ public struct QuizSettingsPane: View {
         .id(signalsTick)
     }
 
-    /// Rows split per media type — movies, series, music — matching how the
-    /// arrs split the world. Entries persisted before the media field existed
-    /// land in a trailing "Other" bucket rather than being guessed.
+    /// Entries persisted before the media field existed land in "Other" rather than being guessed.
     private func mediaGroups(_ signals: [SwipeSignal])
         -> [(id: String, label: LocalizedStringKey, rows: [SwipeSignal])] {
         let buckets: [(String, LocalizedStringKey, (SwipeSignal) -> Bool)] = [
@@ -145,8 +120,6 @@ public struct QuizSettingsPane: View {
         }
     }
 
-    /// One capsule per kind with its total, in the same colours as the row
-    /// badges — the vocabulary stays identical between summary and rows.
     private func summaryRow(_ all: [SwipeSignal]) -> some View {
         let kept = all.filter { $0.kind == .kept }.count
         let skipped = all.filter { $0.kind == .skipped }.count

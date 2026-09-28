@@ -4,29 +4,20 @@ import AppIntents
 
 @main
 struct ArrBarrApp: App {
-    // Runs before every other stored property (incl. `configStore`), so the
-    // App Store flag is set before `ConfigStore.shared` first chooses its secret
-    // store. `#if APPSTORE` is live here (app target), unlike inside ArrCore.
+    // Before every other stored property, so the flag is set before `ConfigStore.shared`
+    // picks its secret store. `#if APPSTORE` is live here, unlike inside ArrCore.
     #if APPSTORE
     private let _capabilities: Void = { AppCapabilities.configure(isAppStore: true) }()
     #endif
 
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
-    // Observe shared models so the menu-bar icon label rebuilds when the
-    // active count changes. The AppDelegate uses the same `.shared`
-    // instances for badge updates / notifications.
     @State private var queueVM = QueueViewModel.shared
     @ObservedObject private var configStore = ConfigStore.shared
 
     init() {
-        // Apply the chosen in-app language to the process before the first
-        // localized lookup, so model-layer String(localized:) (download statuses,
-        // notifications, history) matches the UI instead of the system language.
+        // Before the first localized lookup, so model-layer strings match the UI language.
         ConfigStore.applyAppLanguageToProcess()
-        // Paywall is App Store-only. In every other build (Debug, GitHub/OSS
-        // Release) no backend is injected, so StoreManager stays unlocked and
-        // no StoreKit code is compiled in.
         #if APPSTORE
         StoreManager.shared.use(StoreKitBackend())
         KVSyncCoordinator.startShared()
@@ -34,18 +25,8 @@ struct ArrBarrApp: App {
     }
 
     var body: some Scene {
-        // ArrBarr's menu-bar surface. `style: .window` opens a small
-        // detached panel under the icon (Apple Wallet / Music mini-player
-        // pattern) instead of NSPopover's arrow-anchored balloon. The
-        // window backing gives SwiftUI a proper window context, so
-        // NavigationStack drill-downs render native `< title` chrome
-        // automatically — which was the whole reason we migrated off
-        // NSPopover.
-        // `isInserted` hides the status item in detached (Dock-window) mode.
-        // The flag is the single source of truth; the AppDelegate flips the
-        // activation policy + window off the same value, so the menu-bar icon
-        // and the detached window are never shown at the same time. Read-only
-        // setter — visibility is owned by the Settings toggle, not by ⌘-drag.
+        // `style: .window` gives SwiftUI a real window context, so NavigationStack renders native chrome.
+        // Read-only `isInserted` setter: the Settings toggle owns visibility, not ⌘-drag.
         MenuBarExtra(isInserted: Binding(
             get: { !configStore.detachedWindow },
             set: { _ in }
@@ -58,10 +39,7 @@ struct ArrBarrApp: App {
             )
             .environmentObject(configStore)
         } label: {
-            // Custom pirate-popcorn glyph (template image, auto-tinted by the
-            // menu bar). Compose glyph + active count in an HStack: a custom
-            // (non-symbol) image inside a `Label` suppresses the title in the
-            // status item, so build the row explicitly instead.
+            // A custom (non-symbol) image inside a `Label` suppresses the title in the status item.
             let active = queueVM.activeCount
             HStack(spacing: 2) {
                 Image("MenuBarGlyph").renderingMode(.template)
@@ -75,9 +53,6 @@ struct ArrBarrApp: App {
         Settings { EmptyView() }
             .commands {
                 CommandGroup(replacing: .appSettings) { }
-                // Route the app menu's "About ArrBarr" (visible in detached /
-                // Dock mode) to the same custom About window as the "…" menu,
-                // instead of AppKit's default standard about panel.
                 CommandGroup(replacing: .appInfo) {
                     Button {
                         appDelegate.showAbout()
@@ -89,9 +64,8 @@ struct ArrBarrApp: App {
     }
 }
 
-/// Ready-made Siri / Shortcuts / Spotlight phrases. `\(.applicationName)` is
-/// required by Apple in zero-config phrases. Lives in the app target so the
-/// App Intents metadata processor discovers it.
+/// `\(.applicationName)` is required in zero-config phrases. Lives in the app target
+/// so the App Intents metadata processor discovers it.
 struct ArrBarrAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(

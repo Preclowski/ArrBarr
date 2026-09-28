@@ -84,7 +84,7 @@ import Testing
         #expect(libraries.count > 0)
         let index = try await step("index") { try await kit.store.read(plex.libraryIndex(section: libraries[0].key)).value }
         #expect(index.count > 0 && index.contains { !$0.ids.isEmpty })
-        let sessions = try await step("sessions") { try plex.decodeSessions(try await kit.pipeline.send(plex.sessionsPlan())) }
+        let sessions = try await step("sessions") { try await kit.store.read(plex.sessions()).value }
         #expect(sessions.count >= 0)
         let history = try await step("history") { try await kit.store.read(plex.watchHistory()).value }
         #expect(history.count > 0)
@@ -101,8 +101,6 @@ import Testing
         #expect(!version.isEmpty)
         let sab = SABnzbdService(instance: InstanceID(.sabnzbd))
         try await step("sab tasks") { _ = try await sab.fetchTasks(ids: [], pipeline: kit.pipeline) }
-        let slots = try await step("sab history") { try await kit.store.read(sab.history()).value }
-        #expect(slots.count >= 0)
     }
 
     func step<T>(_ name: String, _ body: () async throws -> T) async throws -> T {
@@ -240,7 +238,9 @@ extension TestKit {
         let rows = try JSONDecoder().decode([Row].self, from: Data(contentsOf: url))
         let corpus = Set(rows.map { "\($0.client).\($0.operation)" })
         let produced = Set(ProducedOperations.all().map(\.rawValue))
-        let excluded: Set<String> = ["tmdb.similarMovies", "tmdb.similarTV", "qbittorrent.contains", "sabnzbd.contains", "tmdb.tvCreators", "sonarr.realtime.negotiate"]
+        // Retired on purpose: the untyped `postCommand` gave way to typed commands, and nothing reads SABnzbd history.
+        let excluded: Set<String> = ["tmdb.similarMovies", "tmdb.similarTV", "qbittorrent.contains", "sabnzbd.contains", "tmdb.tvCreators", "sonarr.realtime.negotiate",
+                                     "radarr.postCommand", "sabnzbd.history"]
         let missing = corpus.subtracting(produced).subtracting(excluded).sorted()
         #expect(missing.isEmpty, "not produced: \(missing)")
     }
@@ -259,17 +259,17 @@ enum ProducedOperations {
                     s.artist(id: 1).plan, s.album(id: 1).plan, s.episodes(seriesID: 1).plan, s.albums(artistID: 1).plan, s.tracks(albumID: 1).plan,
                     s.credits(movieID: 1).plan, s.alternateTitles().plan, s.qualityProfiles().plan, s.metadataProfiles().plan, s.rootFolders().plan,
                     s.customFormats().plan, s.downloadClients().plan, s.commands().plan, s.lookupMovies(term: "").plan, s.lookupSeries(term: "").plan,
-                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(entityID: 1).plan].map(\.operation)
+                    s.lookupArtists(term: "").plan, s.lidarrSearch(term: "").plan, s.releases(.movie(1)).plan, s.settings(entityID: 1).plan].map(\.operation)
             switch s.files.strategy {
             case let .chunked(_, make, _): ops.append(make([1]).plan.operation)
             case let .perKey(make): ops.append(make(1).plan.operation)
             }
-            ops += [s.deleteQueueItem(id: 1, removeFromClient: true, blocklist: false, now: Date()), s.grabQueueItem(id: 1), s.grabRelease(guid: "g", indexerID: 1),
+            ops += [s.deleteQueueItem(id: 1, removeFromClient: true, blocklist: false), s.grabQueueItem(id: 1), s.grabRelease(guid: "g", indexerID: 1),
                     s.search(.movies([1])), s.search(.series(1)), s.search(.season(seriesID: 1, season: 1)), s.search(.episodes([1])), s.search(.albums([1])),
-                    s.command(named: "RefreshMovie"), s.setMonitored(entityID: 1, true), s.setAlbumMonitored(albumID: 1, true), s.setEpisodesMonitored(ids: [1], true),
+                    s.setMonitored(entityID: 1, true), s.setAlbumMonitored(albumID: 1, true), s.setEpisodesMonitored(ids: [1], true),
                     s.setSeasonMonitored(seriesID: 1, season: 1, true), s.add(ArrAddPayload(qualityProfileId: 1, rootFolderPath: "/")),
                     s.addAlbum(foreignAlbumID: "x", term: "x", payload: ArrAddPayload(qualityProfileId: 1, rootFolderPath: "/")),
-                    s.update(entityID: 1) { _ in }, s.delete(entityID: 1, deleteFiles: false, addImportExclusion: false)].map(\.name)
+                    s.updateSettings(entityID: 1, ArrRecordSettings()), s.delete(entityID: 1, deleteFiles: false, addImportExclusion: false)].map(\.name)
             ops += ["search.fetchLibraryOwnership", "search.fetchQualityProfiles"].map { OperationID(kind, $0) }   // same requests as library/qualityProfiles
         }
         let downloads: [any DownloadService] = [QBittorrentService(instance: InstanceID(.qbittorrent), capabilities: caps), TransmissionService(instance: InstanceID(.transmission)),
@@ -280,7 +280,6 @@ enum ProducedOperations {
             ops += [DownloadAction.pause, .resume, .delete, .forceStart].map { d.action($0, ids: ["a"], deleteFiles: false).name }
             ops += [d.add(DownloadPayload(.magnet("m")), category: nil, paused: false).name, d.add(DownloadPayload(.file(Data(), filename: "f")), category: nil, paused: false).name]
         }
-        ops.append(SABnzbdService(instance: InstanceID(.sabnzbd)).history().plan.operation)
         for kind in [InstanceKind.plex, .jellyfin, .emby] {
             let m = MediaServerService(instance: InstanceID(kind), capabilities: caps, userID: "u")
             ops += [m.identity().plan, m.libraries().plan, m.libraryIndex(section: "1").plan, m.sessionsPlan(), m.watchHistory().plan, m.seasonArtwork(item: "1").plan, m.users().plan].map(\.operation)

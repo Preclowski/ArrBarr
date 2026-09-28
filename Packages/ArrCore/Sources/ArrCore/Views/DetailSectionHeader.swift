@@ -1,34 +1,23 @@
 import SwiftUI
 
-/// THE section header for detail surfaces — Cast, Seasons, Tracks, the
-/// artist view's Album / EP / Single groups. One class so the voice can't
-/// drift again: sentence case, 11pt semibold `.secondary`, optional item
-/// count in `.tertiary` (the Upcoming tab's Today / Tomorrow treatment,
-/// which the artist view established as the canonical style).
-///
-/// Callers that need extra chrome (the artist view's collapse chevron,
-/// a trailing Spacer + accessory) wrap this in their own HStack — the
-/// component owns only the title + count pair. Title is `.primary` (see body),
-/// the count `.tertiary`.
+/// The one section header for detail surfaces. Owns only the title + count pair;
+/// callers needing extra chrome wrap it in their own HStack.
 struct DetailSectionHeader: View {
     private enum Counter {
         case none
         case count(Int)
-        /// "5/10" downloaded-of-total — the SeasonRow vocabulary lifted to
-        /// the section level. Green when complete, tertiary otherwise.
+        /// "5/10" downloaded-of-total; green when complete.
         case progress(have: Int, total: Int)
     }
 
     private let title: Text
     private let counter: Counter
 
-    /// Localized catalog key (the usual case).
     init(_ key: LocalizedStringKey, count: Int? = nil) {
         self.title = Text(key, bundle: .module)
         self.counter = count.map { .count($0) } ?? .none
     }
 
-    /// Downloaded-of-total variant ("Episodes 5/10", "Tracks 8/12").
     init(_ key: LocalizedStringKey, have: Int, total: Int) {
         self.title = Text(key, bundle: .module)
         self.counter = .progress(have: have, total: total)
@@ -44,10 +33,8 @@ struct DetailSectionHeader: View {
         HStack(spacing: 6) {
             title
                 .scaledFont(size: 11, weight: .semibold)
-                // `.primary`, not `.secondary`: the popover's text is vibrant,
-                // so a secondary label blends into the glass behind it and
-                // reads as half-transparent rather than quiet. The count beside
-                // it keeps the lower level — that is what carries the hierarchy.
+                // Not `.secondary`: the popover's vibrant text makes it read half-transparent.
+                // The count keeps the lower level.
                 .foregroundStyle(.primary)
             switch counter {
             case .none:

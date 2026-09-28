@@ -1,26 +1,15 @@
 import SwiftUI
 
-/// One row inside the multi-item list (two grabs of the same movie/album, or
-/// several episodes of one series). Mirrors the queue-list row layout so the
-/// detail's download list reads identically to the queue: title line with the
-/// Upgrade/New badge, the compact `DownloadProgressCard` (status word + client
-/// + quality · size over the progress bar), and the custom-format strip with
-/// the score below — except the poster slot on the left holds the row's
-/// pause/resume ring instead of artwork (cancel lives in the context menu).
+/// One row of a detail's multi-download list, laid out like a queue row, with the
+/// pause/resume ring in the poster slot (cancel lives in the context menu).
 struct MultiRow: View {
     let item: QueueItem
-    /// Tap handler — drills the user into the episode detail
-    /// overlay. Nil keeps the row passive.
+    /// Nil keeps the row passive.
     var onTap: (() -> Void)? = nil
-    /// Per-item queue actions rendered as the always-visible control
-    /// column in the poster slot (plus the row's context menu).
     var onPause: (() -> Void)? = nil
     var onResume: (() -> Void)? = nil
     var onDelete: (() -> Void)? = nil
 
-    @State private var isHovering = false
-    @State private var showHoverPopover = false
-    @State private var hoverTask: Task<Void, Never>?
     #if os(iOS)
     @State private var showDeleteConfirm = false
     #endif
@@ -28,9 +17,8 @@ struct MultiRow: View {
     private func requestDeleteConfirm() {
         guard onDelete != nil else { return }
         #if os(macOS)
-        // Panel-wide inline overlay — `.confirmationDialog` steals key focus
-        // from the MenuBarExtra panel, which auto-dismisses it. The listener
-        // lives in PopoverContentView, which only exists on macOS…
+        // `.confirmationDialog` steals key focus from the MenuBarExtra panel, which dismisses it.
+        // The ConfirmCenter listener lives in PopoverContentView, macOS only…
         ConfirmCenter.request(PendingConfirm(
             title: "Remove this download?",
             message: "This will remove the download from the client.",
@@ -39,15 +27,12 @@ struct MultiRow: View {
             onConfirm: onDelete ?? {}
         ))
         #else
-        // …so iOS uses the platform-native sheet instead (same pattern as
-        // EpisodeRow) — a ConfirmCenter request there has no listener and
-        // the delete would silently never confirm.
+        // …so iOS uses the native sheet; a ConfirmCenter request there would never confirm.
         showDeleteConfirm = true
         #endif
     }
 
-    // Same rule as QueueRowView: a queued item (deferred / behind the client's
-    // queue limit) gets "play" too — `QueueViewModel.resume` force-starts it.
+    // A queued item gets "play" too: `QueueViewModel.resume` force-starts it.
     private var canPauseResume: Bool {
         item.status == .downloading || item.status == .paused || item.status == .queued
     }
@@ -56,16 +41,11 @@ struct MultiRow: View {
         item.isPaused || item.status == .queued
     }
 
-    public var body: some View {
-        // `.center` so the control column floats vertically centred against
-        // the card + chip strip, like the poster centres on a queue row.
+    var body: some View {
         HStack(alignment: .center, spacing: 10) {
             controlColumn
             VStack(alignment: .leading, spacing: 4) {
-                // No title line — the release name lives in the hover tooltip;
-                // the row leads straight with the status card.
-                // Status word + client + quality · size above the 6pt bar —
-                // byte-identical chrome to the queue list rows.
+                // No title line: the release name lives in the hover tooltip.
                 DownloadProgressCard(
                     item: item,
                     showUpgradeDiff: false,
@@ -84,16 +64,9 @@ struct MultiRow: View {
         .padding(.vertical, 4)
         .padding(.leading, 6)
         .padding(.trailing, 4)
-        // No row background at all — the focused accent wash read as random
-        // bluish rows and the hover tint as another shade; the rows are
-        // uniform now, like the queue list.
         .contentShape(Rectangle())
-        // Tap-to-drill via the same modifier queue rows use — a wrapping
-        // Button with `.disabled(onTap == nil)` greyed the whole row out
-        // for movie lists (no drill target), which read as "inactive".
+        // Not a disabled Button: that greyed out movie lists with no drill target.
         .modifier(RowTapToOpen(action: onTap))
-        // Context menu (long-press on iOS, right-click on macOS) mirrors the
-        // control column so the actions are reachable both ways.
         .contextMenu {
             if canPauseResume {
                 if showsPlay, let onResume {
@@ -129,32 +102,13 @@ struct MultiRow: View {
         }
         #endif
         #if os(macOS)
-        // Long-hover rich tooltip — same QueueItemTooltip the queue
-        // list rows use, anchored to .leading so it floats out on
-        // the *right* side of the row (per user feedback). One
-        // tooltip component everywhere = one place to bump styling.
-        .onHover { hovering in
-            isHovering = hovering
-            hoverTask?.cancel()
-            if hovering {
-                hoverTask = Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    if !Task.isCancelled, isHovering { showHoverPopover = true }
-                }
-            } else {
-                showHoverPopover = false
-            }
-        }
-        .tooltipPopover(isPresented: $showHoverPopover, arrowEdge: .leading) {
+        // Anchored .leading so the tooltip floats out on the right side of the row.
+        .hoverTooltip(arrowEdge: .leading) {
             QueueItemTooltip(item: item)
         }
         #endif
-        // Confirmation via ConfirmCenter.shared (see requestDeleteConfirm).
     }
 
-    /// Always-visible pause/resume control occupying the slot where the queue
-    /// row draws its poster — to the left of the progress card, wearing the
-    /// poster control's progress-ring chrome (tinted adaptively, no scrim).
     @ViewBuilder
     private var controlColumn: some View {
         HStack(spacing: 4) {
@@ -162,9 +116,7 @@ struct MultiRow: View {
                 Button {
                     if showsPlay { onResume?() } else { onPause?() }
                 } label: {
-                    // No dark disc — that backdrop exists to guarantee
-                    // contrast over poster artwork; on the plain row it read
-                    // as a black blob. The ring tints adaptively instead.
+                    // No dark disc: it exists for contrast over artwork and reads as a blob here.
                     LiveProgress(item: item) { progress in
                         DownloadProgressRing(
                             systemName: showsPlay ? "play.fill" : "pause.fill",
@@ -185,8 +137,6 @@ struct MultiRow: View {
                                     ? Text("queue.resume.button", bundle: .module)
                                     : Text("queue.pause.button", bundle: .module))
             }
-            // No inline trash — cancelling lives in the row's context menu,
-            // matching the queue list (macOS right-click / iOS long-press).
         }
     }
 }

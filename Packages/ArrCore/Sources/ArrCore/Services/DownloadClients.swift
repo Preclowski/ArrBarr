@@ -1,3 +1,4 @@
+import os
 import Foundation
 import MediaKit
 
@@ -24,7 +25,7 @@ extension DownloadClientFacade {
 
     public func defaultAddPaused() async -> Bool? {
         guard let (gateway, service) = try? await context() else { return nil }
-        return try? await gateway.store.read(service.defaultAddPaused()).value
+        return await Logger.extras.attempt("default add-paused") { try await gateway.store.read(service.defaultAddPaused()).value } ?? nil
     }
 
     public func add(_ drop: DownloadDrop, category: String?, paused: Bool) async throws {
@@ -33,13 +34,13 @@ extension DownloadClientFacade {
         case let .file(data, filename): DownloadPayload(.file(data, filename: filename))
         case let .magnet(link): DownloadPayload(.magnet(link))
         }
-        _ = try await gateway.store.run(service.add(payload, category: category, paused: paused))
+        try await gateway.run(service.add(payload, category: category, paused: paused))
     }
 }
 
-nonisolated public struct QbittorrentClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .qbittorrent; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct SabnzbdClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .sabnzbd; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct TransmissionClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .transmission; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct DelugeClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .deluge; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct RtorrentClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .rtorrent; init(config: ServiceConfig) { self.config = config } }
-nonisolated public struct NzbgetClient: DownloadClientFacade { public let config: ServiceConfig; let kind: ServiceKind = .nzbget; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct QbittorrentClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .qbittorrent; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct SabnzbdClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .sabnzbd; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct TransmissionClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .transmission; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct DelugeClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .deluge; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct RtorrentClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .rtorrent; init(config: ServiceConfig) { self.config = config } }
+nonisolated struct NzbgetClient: DownloadClientFacade { let config: ServiceConfig; let kind: ServiceKind = .nzbget; init(config: ServiceConfig) { self.config = config } }

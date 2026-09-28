@@ -1,70 +1,42 @@
 import SwiftUI
+import MediaKit
 
-/// Manual / interactive search results for a library item (movie / episode /
-/// season / album) that isn't currently downloading. Pushed from the detail
-/// view's "Download" CTA. Lists indexer releases; a row expands into the
-/// detail that decides the grab.
-///
-/// Row layout — three lines whose leading cells share a column, so the scope
-/// badge sits above the protocol chip and that above the age, and a trailing
-/// download control:
-///   (scope)   Release file name                          ⌄    (↓)
-///   (proto)   indexer · quality · size · seeders
-///   (age)     languages · flags · formats ……… upgrade + score
-/// The third line is what makes a score arguable rather than oracular.
+/// Manual search results for a library item that isn't downloading; a row expands
+/// into the detail that decides the grab.
 struct ReleaseListView: View {
     let target: ManualSearchTarget
-    /// The file the library already holds for this item, when it holds one.
-    /// Present → the list is framed as an upgrade: an upgrade glyph on every
-    /// row and a diff inside each expanded release. nil → the plain list (nothing on disk, or a season
-    /// pack, which replaces many files and so diffs against none).
-    ///
-    /// Passed in rather than fetched here: the detail views that push this
-    /// screen already have the file loaded (and it's the only source that works
-    /// in demo mode, where the file endpoints return nil).
+    /// Present → upgrade framing with a diff per release; nil for nothing on disk or a season pack.
+    /// Passed in because it's the only source that works in demo mode (file endpoints return nil).
     var existing: UpgradeDiffView.Side?
-    /// Season searches have no single baseline — a pack replaces many files —
-    /// but their per-episode rows each have one. Keyed by episode number, so a
-    /// row for E04 diffs against E04's file the same way an episode search does.
+    /// A season pack has no single baseline, but its per-episode rows do.
     var existingByEpisode: [Int: UpgradeDiffView.Side] = [:]
-    /// What the pusher knows about the title, for the cards shown while the
-    /// indexers answer.
     var waitContext = WaitCardContext()
     let onBack: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
 
-    @State private var releases: [Release] = []
+    @State private var releases: [ArrRelease] = []
     @State private var loading = true
     @State private var loadError: String?
-    /// Guards against re-running the (indexer-hitting) search every time the
-    /// menu-bar popover reopens — we fetch once per target and keep the results.
+    /// Fetch once per target; reopening the popover must not re-hit the indexers.
     @State private var loadedTargetId: String?
-    /// The in-flight fetch, held as an UNSTRUCTURED task so closing the menu-bar
-    /// popover (which would cancel a `.task`) doesn't abort the search mid-flight.
+    /// Unstructured so closing the popover (which cancels a `.task`) doesn't abort the search.
     @State private var loadTask: Task<Void, Never>?
     @State private var grabbing: Set<String> = []
     @State private var grabbed: Set<String> = []
-    @State private var pendingGrab: Release?
+    @State private var pendingGrab: ArrRelease?
     @State private var showGrabConfirm = false
-    /// The one release whose detail is open, by guid. One at a time: two open
-    /// rows in a 380pt popover is a scroll, not a comparison.
+    /// One at a time: two open rows in a 380pt popover is a scroll, not a comparison.
     @State private var expanded: String?
     @State private var scope: ScopeFilter = .all
     @State private var sort: ReleaseSort = .rank
     @State private var showRejected = false
-    /// Indexer id → the name a human gave it, through Prowlarr when it's
-    /// configured. Empty until it loads; the row falls back to the *arr's own
-    /// label, so nothing waits on this.
+    /// Empty until it loads; the row falls back to the arr's own label meanwhile.
     @State private var indexerNames: [Int: String] = [:]
     @Environment(\.colorScheme) private var colorScheme
 
-    /// What a season search can be narrowed to. Both kinds are legitimate ways
-    /// to fill a season, so the list shows everything by default.
     private enum ScopeFilter { case all, packs, episodes }
 
-    /// The *arr hands the list back already ranked; the rest is the user
-    /// overriding that with the one dimension they care about today.
     private enum ReleaseSort: CaseIterable {
         case rank, score, seeders, size, age
 
@@ -82,11 +54,8 @@ struct ReleaseListView: View {
     var body: some View {
         VStack(spacing: 0) {
             #if os(macOS)
-            // Always self-draw the back header on macOS. The parent DetailView
-            // hides the window toolbar (for its own self-drawn header), which
-            // suppresses the native NavigationStack chevron for everything pushed
-            // below it — so without this the release list would be a back-less
-            // trap in the menu-bar popover. iOS keeps the native nav bar.
+            // DetailView hides the toolbar, which suppresses the NavigationStack chevron
+            // for everything pushed below it; without this the list is a back-less trap.
             HStack(spacing: 6) {
                 FloatingBackButton(action: onBack)
                     .keyboardShortcut(.cancelAction)
@@ -111,14 +80,11 @@ struct ReleaseListView: View {
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { sortMenu } }
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { viewMenu } }
         #else
         .toolbar(.hidden, for: .windowToolbar)
         #endif
         .onAppear {
-            // Fetch once per target, in a detached task that survives the popover
-            // closing — reopening neither re-hits the indexers nor aborts a search
-            // that's still running.
             guard loadedTargetId != target.id, loadTask == nil else { return }
             loadTask = Task {
                 await load()
@@ -146,9 +112,7 @@ struct ReleaseListView: View {
         } else if releases.isEmpty {
             statusState(symbol: "magnifyingglass", text: Text("No releases found", bundle: .module))
         } else if visible.isEmpty {
-            // Results exist but none survive the filters — most often a season
-            // where every candidate was rejected. An empty scroll area under a
-            // filter bar reads as "the search found nothing", which is a lie.
+            // An empty scroll area under a filter bar would read as "the search found nothing".
             VStack(spacing: 0) {
                 filterBar
                 statusState(symbol: "line.3.horizontal.decrease.circle",
@@ -168,7 +132,7 @@ struct ReleaseListView: View {
     }
 
     @ViewBuilder
-    private func row(_ release: Release) -> some View {
+    private func row(_ release: ArrRelease) -> some View {
         let isExpanded = expanded == release.guid
         VStack(spacing: 0) {
             ReleaseRow(
@@ -197,8 +161,6 @@ struct ReleaseListView: View {
                     .padding(.bottom, 12)
             }
         }
-        // The open row and its drawer sit on one darker ground, so the drawer
-        // reads as belonging to the row above it.
         .background(isExpanded ? drawerFill : Color.clear)
         Divider().opacity(0.35)
     }
@@ -207,81 +169,56 @@ struct ReleaseListView: View {
         Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06)
     }
 
-    /// Rejected releases need an override to grab and are rarely what's
-    /// wanted, so they're out of the list until this chip puts them back —
-    /// sunk to the bottom, with the *arr's reason where the formats were.
-    /// When the arr rejected everything there is nothing to filter, so no chip.
-    @ViewBuilder
-    private var rejectedPill: some View {
-        let count = rejected.count
-        if count > 0, !accepted.isEmpty {
-            Button {
-                withAnimation(.easeInOut(duration: 0.15)) { showRejected.toggle() }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: showRejected ? "eye" : "eye.slash")
-                        .scaledFont(size: 9, weight: .semibold)
-                    (showRejected
-                        ? Text("release.hideRejected \(count)", bundle: .module)
-                        : Text("release.showRejected \(count)", bundle: .module))
-                        .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
-                }
-                .foregroundStyle(showRejected ? Color.orange : Color.secondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .chipOutline(showRejected ? Color.orange : Color.secondary, opacity: showRejected ? 0.55 : 0.35)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityAddTraits(showRejected ? .isSelected : [])
-        }
-    }
-
+    /// macOS only: iOS carries the same menu in the navigation bar.
     @ViewBuilder
     private var filterBar: some View {
+        #if os(macOS)
         HStack(spacing: 8) {
-            if target.isSeasonSearch {
-                Picker(selection: $scope) {
-                    Text("All", bundle: .module).tag(ScopeFilter.all)
-                    Text("Packs", bundle: .module).tag(ScopeFilter.packs)
-                    Text("Episodes", bundle: .module).tag(ScopeFilter.episodes)
-                } label: { EmptyView() }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .controlSize(.small)
-            }
-            rejectedPill
             Spacer(minLength: 0)
-            #if os(macOS)
-            sortMenu
-            #endif
+            viewMenu
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(Color.primary.opacity(0.04))
         Divider().opacity(0.5)
+        #endif
     }
 
-    /// The sort order and nothing else; the label names the order in force.
-    private var sortMenu: some View {
+    /// Rejected releases need an override to grab, so they stay hidden until toggled on.
+    private var viewMenu: some View {
         Menu {
-            Picker(selection: $sort) {
-                ForEach(ReleaseSort.allCases, id: \.self) { $0.title.tag($0) }
-            } label: { Text("Sort", bundle: .module) }
-            .pickerStyle(.inline)
-            .labelsHidden()
+            Section {
+                Picker(selection: $sort) {
+                    ForEach(ReleaseSort.allCases, id: \.self) { $0.title.tag($0) }
+                } label: { Text("Sort", bundle: .module) }
+                .pickerStyle(.inline)
+                .labelsHidden()
+            } header: { Text("Sort", bundle: .module) }
+            Section {
+                if target.isSeasonSearch {
+                    Picker(selection: $scope.animation(.easeInOut(duration: 0.15))) {
+                        Text("All", bundle: .module).tag(ScopeFilter.all)
+                        Text("Packs", bundle: .module).tag(ScopeFilter.packs)
+                        Text("Episodes", bundle: .module).tag(ScopeFilter.episodes)
+                    } label: { EmptyView() }
+                    .pickerStyle(.inline)
+                    .labelsHidden()
+                }
+                Toggle(isOn: $showRejected.animation(.easeInOut(duration: 0.15))) {
+                    Text("release.showRejected \(rejected.count)", bundle: .module)
+                }
+                .disabled(rejected.isEmpty)
+            } header: { Text("release.filter.header", bundle: .module) }
         } label: {
-            Label { sort.title } icon: { Image(systemName: "arrow.up.arrow.down") }
+            Label { Text("View", bundle: .module) } icon: { Image(systemName: "slider.horizontal.3") }
                 .scaledFont(size: 11, weight: .medium)
         }
         .menuStyle(.borderlessButton)
         .fixedSize()
-        .help(Text("Sort", bundle: .module))
     }
 
     private func statusState(symbol: String, text: Text) -> some View {
         VStack(spacing: 8) {
-            // Decorative empty/error glyph — the line under it says it.
             Image(systemName: symbol)
                 .scaledFont(size: 22, weight: .regular)
                 .accessibilityHidden(true)
@@ -293,13 +230,11 @@ struct ReleaseListView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func indexerName(for release: Release) -> String? {
+    private func indexerName(for release: ArrRelease) -> String? {
         release.indexerId.flatMap { indexerNames[$0] } ?? release.indexerName
     }
 
-    /// The file this release would replace: the screen's own baseline when it
-    /// has one, otherwise the file of the single episode this release carries.
-    private func baseline(for release: Release) -> UpgradeDiffView.Side? {
+    private func baseline(for release: ArrRelease) -> UpgradeDiffView.Side? {
         if let existing { return existing }
         let numbers = release.episodeNumbers ?? []
         guard numbers.count == 1, let number = numbers.first else { return nil }
@@ -308,13 +243,12 @@ struct ReleaseListView: View {
 
     // MARK: - Ordering
 
-    /// Accepted releases first, then — only when the pill is on — the rejected
-    /// ones, so revealing them never reorders the rows above.
-    private var visible: [Release] { accepted + (showRejected ? ordered(rejected) : []) }
-    private var accepted: [Release] { ordered(releases.filter { !$0.isRejected }) }
-    private var rejected: [Release] { releases.filter(\.isRejected) }
+    /// Rejected appended after, so revealing them never reorders the rows above.
+    private var visible: [ArrRelease] { accepted + (showRejected ? ordered(rejected) : []) }
+    private var accepted: [ArrRelease] { ordered(releases.filter { !$0.isRejected }) }
+    private var rejected: [ArrRelease] { releases.filter(\.isRejected) }
 
-    private func ordered(_ input: [Release]) -> [Release] {
+    private func ordered(_ input: [ArrRelease]) -> [ArrRelease] {
         let scoped = input.filter { release in
             guard target.isSeasonSearch else { return true }
             switch scope {
@@ -347,14 +281,10 @@ struct ReleaseListView: View {
             return
         }
         do {
-            releases = try await client.fetchReleases(query: target.query)
+            releases = try await client.fetchReleases(target.release)
             loadedTargetId = target.id
-            // Names are reference data, cached across searches — this is a
-            // no-op after the first search of a session.
-            Task { indexerNames = await IndexerNames.shared.names(for: target.source, configStore: configStore) }
-            // A search where the *arr rejected everything is the normal case for
-            // a season that's already complete — hiding all of it would answer
-            // "search" with a blank screen, so the pill starts on instead.
+            Task { indexerNames = await IndexerNames.names(for: target.source, configStore: configStore) }
+            // All rejected is normal for a complete season; hiding them all would show a blank screen.
             showRejected = releases.allSatisfy(\.isRejected)
         } catch is CancellationError {
             // view went away mid-load — ignore
@@ -363,7 +293,7 @@ struct ReleaseListView: View {
         }
     }
 
-    private func grab(_ release: Release?) {
+    private func grab(_ release: ArrRelease?) {
         guard let release, let indexerId = release.indexerId, let client = makeClient() else { return }
         grabbing.insert(release.guid)
         Task {
@@ -372,8 +302,6 @@ struct ReleaseListView: View {
                 await MainActor.run {
                     grabbing.remove(release.guid)
                     grabbed.insert(release.guid)
-                    // The detail did its job; collapsing returns the list to a
-                    // list, with the row's own tick carrying the outcome.
                     withAnimation(.easeInOut(duration: 0.15)) { expanded = nil }
                 }
             } catch {
@@ -388,14 +316,8 @@ struct ReleaseListView: View {
 
 // MARK: - Row
 
-/// The row's leading column — scope on line 1, protocol on line 2, age on 3.
-///
-/// Every cell reserves the width of the widest badge the list can produce
-/// ("Torrent") via a hidden ghost, so the column is *the same width on every
-/// row*: names and specs line up down the whole list, not just within one row's
-/// lines. A per-row Grid (or measuring the real content) can't do that —
-/// each row would still size its own column, and a measured max would make the
-/// list shuffle sideways as wider rows scroll into view.
+/// Every cell reserves the widest badge's width ("Torrent") via a hidden ghost, so the
+/// column is equal on every row; a measured max would shuffle sideways while scrolling.
 private struct ReleaseLeadCell<Content: View>: View {
     @ViewBuilder var content: Content
 
@@ -410,13 +332,9 @@ private struct ReleaseLeadCell<Content: View>: View {
 }
 
 private struct ReleaseRow: View {
-    let release: Release
+    let release: ArrRelease
     let existing: UpgradeDiffView.Side?
-    /// Resolved through Prowlarr when it's configured, the *arr's own label
-    /// otherwise — see `IndexerNames`.
     let indexerName: String?
-    /// Season searches mix packs and episodes; every other search has one kind,
-    /// so the badge cell would say the same thing on every row.
     let showScope: Bool
     let isExpanded: Bool
     let isGrabbing: Bool
@@ -425,8 +343,6 @@ private struct ReleaseRow: View {
     let onGrab: () -> Void
 
     @State private var hovering = false
-    @State private var showPopover = false
-    @State private var hoverTask: Task<Void, Never>?
 
     var body: some View {
         HStack(spacing: 0) {
@@ -449,39 +365,21 @@ private struct ReleaseRow: View {
                 .padding(.trailing, 12)
         }
         #if os(macOS)
-        // Hover is an accelerator over the same detail the row expands into —
-        // a mouse can compare three releases without opening and closing three
-        // rows. It shows no actions: grabbing stays a deliberate expand.
-        .onHover { isHovering in
-            hovering = isHovering
-            hoverTask?.cancel()
-            if isHovering, !isExpanded {
-                hoverTask = Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    if !Task.isCancelled, hovering { showPopover = true }
-                }
-            } else {
-                showPopover = false
-            }
-        }
-        .popover(isPresented: $showPopover, arrowEdge: .trailing) {
+        // Hover previews the same detail with no actions; grabbing stays a deliberate expand.
+        .hoverTooltip(enabled: !isExpanded, delay: .milliseconds(400), hovering: $hovering) {
             ReleaseDetail(release: release, existing: existing, indexerName: indexerName, showsLink: false)
                 .padding(12)
                 .frame(width: 340)
-                .popoverBehavior(.applicationDefined)
         }
         #endif
     }
 
-    // Line 1 — scope badge | release name | disclosure.
     private var titleLine: some View {
         HStack(spacing: 8) {
             if showScope {
                 ReleaseLeadCell { scopeBadge }
             }
-            // Full-strength regardless of rejection. Dimming the title made a
-            // rejected release read as less of a release, when the name is the
-            // one thing the user scans every row for.
+            // Not dimmed when rejected: the name is what the user scans every row for.
             Text(verbatim: release.shortTitle)
                 .scaledFont(size: 12, weight: .medium)
                 .foregroundStyle(.primary)
@@ -496,7 +394,6 @@ private struct ReleaseRow: View {
         }
     }
 
-    // Line 2 — protocol | indexer · quality · size · seeders.
     private var specLine: some View {
         HStack(spacing: 8) {
             ReleaseLeadCell {
@@ -511,12 +408,9 @@ private struct ReleaseRow: View {
         }
     }
 
-    // Line 3 — age | languages · flags · formats ……… upgrade + score.
     private var reasonLine: some View {
         HStack(spacing: 8) {
-            // Monospaced digits keep the column steady while scrolling ("9d"
-            // next to "31d"). Always rendered, dash and all — an omitted cell
-            // would slide the rest left and break the row's alignment.
+            // Always rendered: an omitted cell would slide the rest left and break alignment.
             let age = release.ageLabel ?? "—"
             ReleaseLeadCell {
                 Text(verbatim: age)
@@ -557,7 +451,7 @@ private struct ReleaseRow: View {
         }
     }
 
-    /// Download, then what became of it. A sent release is downloading, not downloaded.
+    /// A sent release is downloading, not downloaded.
     @ViewBuilder
     private var grabControl: some View {
         if isGrabbing {
@@ -589,8 +483,6 @@ private struct ReleaseRow: View {
         }
     }
 
-    /// indexer · quality · size · seeders / leechers — the cells that separate
-    /// two releases carrying the same name.
     private var specs: String {
         var parts: [String] = []
         if let indexer = indexerName { parts.append(indexer) }
@@ -604,16 +496,13 @@ private struct ReleaseRow: View {
         return parts.joined(separator: " · ")
     }
 
-    /// Why the score is what it is, at row scale: languages worth mentioning,
-    /// indexer flags, then the release's custom formats — green for the ones
-    /// the file on disk doesn't have. Capped, with the remainder counted.
     private var reasons: [(text: String, color: Color)] {
         var out: [(text: String, color: Color)] = []
         let languages = (release.languages ?? []).compactMap(\.name)
         if languages.count > 1 || (languages.first.map { $0 != "English" } ?? false) {
             out.append((languages.joined(separator: ", "), .secondary))
         }
-        out += release.flagLabels.map { (text: $0, color: Color.green) }
+        out += release.indexerFlagNames.map { (text: $0, color: Color.green) }
         let baseline = Set(existing?.formats ?? [])
         let formats = (release.customFormats ?? []).compactMap(\.name)
         out += formats.map { (text: $0, color: existing != nil && !baseline.contains($0) ? Color.green : Color.secondary) }
@@ -621,10 +510,7 @@ private struct ReleaseRow: View {
         return Array(out.prefix(3)) + [(text: "+\(out.count - 3)", color: .secondary)]
     }
 
-    /// A short label for the first rejection, because the *arr's own sentence
-    /// ("Not an upgrade for existing episode file(s). Existing quality: …") is
-    /// a paragraph, and printing it on twenty rows makes the list look broken
-    /// rather than filtered. The full reasons live in the expanded detail.
+    /// The arr's own rejection sentence is a paragraph; on twenty rows it looks broken, not filtered.
     private var rejectionSummary: String {
         guard let first = release.rejections?.first else { return "" }
         let text = first.lowercased()
@@ -643,7 +529,6 @@ private struct ReleaseRow: View {
         default: key = nil
         }
         guard let key else {
-            // Unmapped: the first clause only, so it still fits one line.
             let clause = first.split(whereSeparator: { $0 == "." || $0 == ":" }).first.map(String.init) ?? first
             return clause.count > 40 ? String(clause.prefix(38)) + "…" : clause
         }
@@ -654,22 +539,15 @@ private struct ReleaseRow: View {
 
 // MARK: - Detail
 
-/// Everything about one release — the single detail surface. The row expands
-/// into it on both platforms, and macOS hover shows the same view as an
-/// accelerator. Downloading lives on the row itself.
 private struct ReleaseDetail: View {
-    let release: Release
-    /// On-disk file to compare against, when the library has one — see
-    /// `ReleaseListView.existing`.
+    let release: ArrRelease
     let existing: UpgradeDiffView.Side?
     let indexerName: String?
     var showsLink = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // With a file on disk the drawer leads with the diff: is this better
-            // than what I have? The dimensions it covers (quality, size, score,
-            // formats) then drop out of the table below.
+            // The diff covers quality, size, score and formats, so they drop out of the table below.
             if let existing {
                 UpgradeDiffView(current: existing, incoming: UpgradeDiffView.side(release: release), labeled: true)
             }
@@ -682,8 +560,7 @@ private struct ReleaseDetail: View {
                 if existing == nil, let score = release.customFormatScore {
                     HStack(alignment: .top, spacing: 8) {
                         label("Score")
-                        // Zero is printed rather than hidden: an empty cell next
-                        // to a label reads as missing data.
+                        // Zero is printed: an empty cell next to a label reads as missing data.
                         Text(verbatim: ScoreLabel.text(score))
                             .scaledFont(size: 10, monospacedDigit: true)
                             .foregroundStyle(ScoreLabel.color(score))
@@ -695,7 +572,7 @@ private struct ReleaseDetail: View {
                     row("Seeders / leechers", "\(release.seeders ?? 0) / \(release.leechers ?? 0)")
                 }
                 if let age = release.ageLabel { row("Age", age) }
-                if let group = release.releaseGroup, !group.isEmpty { row("Release group", group) }
+                if let group = release.releaseGroup, !group.isEmpty { row("ArrRelease group", group) }
                 if let langs = languageNames { row("Languages", langs) }
             }
 
@@ -704,12 +581,10 @@ private struct ReleaseDetail: View {
                 CustomFormatChips(formats: formats, score: 0)
             }
 
-            // The arr's reasons, the way every other surface shows an arr's messages.
             if release.isRejected, let rejections = release.rejections, !rejections.isEmpty {
                 QueueStatusMessagesBanner(messages: rejections, tint: .orange)
             }
 
-            // Release name over the file it would replace, as in the download detail.
             ReleaseNameBlock(release: release.title, existing: existing?.filename)
                 .textSelection(.enabled)
 
@@ -761,10 +636,8 @@ private struct ReleaseDetail: View {
 
 // MARK: - Age
 
-private extension Release {
-    /// Compact indexer age — "3d" / "12h" / "<1h", `nil` when the arr didn't
-    /// report one. Shared by the row and the detail so the same release
-    /// can't read differently in the two places.
+private extension ArrRelease {
+    /// Shared by the row and the detail so the same release can't read differently.
     var ageLabel: String? {
         guard let hours = ageHours else { return nil }
         if hours >= 48 { return "\(Int(hours / 24))d" }

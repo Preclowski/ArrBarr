@@ -4,7 +4,7 @@ struct GenreChips: View {
     let genres: [String]
     @Environment(\.locale) private var locale
 
-    public var body: some View {
+    var body: some View {
         TooltipFlowLayout(spacing: 4) {
             ForEach(genres, id: \.self) { g in
                 Text(verbatim: GenreName.localized(g, locale: locale))

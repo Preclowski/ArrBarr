@@ -1,14 +1,15 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("TMDBSearchMapping")
 struct TMDBSearchMappingTests {
     private func decodeMovie(_ json: String) throws -> TMDBMovieSummary {
-        try JSONDecoder().decode(TMDBMovieSummary.self, from: Data(json.utf8))
+        try tmdbDecoder.decode(TMDBMovieSummary.self, from: Data(json.utf8))
     }
     private func decodeTV(_ json: String) throws -> TMDBTVSummary {
-        try JSONDecoder().decode(TMDBTVSummary.self, from: Data(json.utf8))
+        try tmdbDecoder.decode(TMDBTVSummary.self, from: Data(json.utf8))
     }
 
     @Test("A movie carries its tmdb id into id/foreignId and derives the year")

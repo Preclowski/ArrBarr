@@ -1,64 +1,38 @@
 import SwiftUI
 
-/// 4-line overview block with a "Show more" disclosure that ONLY
-/// appears when the text actually got truncated. The previous
-/// implementation gated the button on `text.count > 220`, which:
-///
-///   - false-positive: text with lots of newlines / short lines
-///     fit in 4 lines at >220 chars → button appeared, tapping
-///     "expanded" the same content (visual no-op);
-///   - false-negative: narrow popover width + long words → text
-///     wrapped to a 5th line at <220 chars → button missing.
-///
-/// Replaced with a SwiftUI height-comparison probe: render a hidden
-/// copy of the same text at the same width without `lineLimit`,
-/// measure its height, and compare against the visible-4-line
-/// height. If they disagree, the visible text is clipping; show
-/// the disclosure.
-public struct ExpandableOverview: View {
+/// 4-line overview whose "Show more" appears only when the text really clips, measured
+/// with a hidden unclamped probe (a character-count threshold misfires both ways).
+struct ExpandableOverview: View {
     let text: String
     @State private var expanded = false
     @State private var clampedHeight: CGFloat = 0
     @State private var fullHeight: CGFloat = 0
 
-    /// True when the line-limited render is shorter than the
-    /// unlimited render — i.e. tapping "Show more" would actually
-    /// reveal new text. The +0.5 slop absorbs sub-pixel rounding
-    /// from SwiftUI's text layout.
+    /// +0.5 absorbs sub-pixel rounding in text layout.
     private var isTruncated: Bool { fullHeight > clampedHeight + 0.5 }
 
-    /// The disclosure only pays for itself when it hides MORE than roughly a
-    /// line and a half — clipping one short line just to render a button of
-    /// the same height is a net loss; the text renders unclamped instead.
-    /// The threshold is derived from the measured 4-line render (÷4 = one
-    /// line) rather than fixed points, so it tracks the user's text scaling —
-    /// a fixed 18pt cutoff mis-fired the button over a few clipped letters
-    /// at larger font sizes.
+    /// Clipping one short line to show a button of the same height is a net loss. Derived from the
+    /// measured 4-line height (÷4 = one line) so it tracks text scaling.
     private var hiddenOverflowIsWorthAButton: Bool {
         guard clampedHeight > 0 else { return true }
         let lineHeight = clampedHeight / 4
         return fullHeight - clampedHeight > lineHeight * 1.5
     }
 
-    /// Show everything: user expanded, or the overflow is too small to be
-    /// worth a disclosure row.
     private var showsFullText: Bool {
         expanded || (isTruncated && !hiddenOverflowIsWorthAButton)
     }
 
-    public var body: some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(text)
                 .scaledFont(size: 12)
-                // Body copy, so `.primary`: at `.secondary` the synopsis blended
-                // into the glass behind it and read as half-transparent.
+                // `.secondary` blends into the glass behind it.
                 .foregroundStyle(.primary)
                 .lineLimit(showsFullText ? nil : 4)
                 .fixedSize(horizontal: false, vertical: true)
-                // The 4-line height is measured on a HIDDEN probe (below),
-                // not on the visible text — the visible line limit depends on
-                // the measurement result, so measuring it directly feeds the
-                // decision back into itself and oscillates.
+                // Measured on a hidden probe: the visible line limit depends on the result, so measuring
+                // the visible text would feed back into itself and oscillate.
                 .background(alignment: .topLeading) {
                     Text(text)
                         .scaledFont(size: 12)
@@ -77,14 +51,7 @@ public struct ExpandableOverview: View {
                         )
                 }
                 .background(alignment: .topLeading) {
-                    // Hidden, unlimited copy used as a measuring
-                    // stick. Same font, same width (the background
-                    // container takes the modified view's width), so
-                    // its full rendered height tells us whether
-                    // `lineLimit(4)` would clip. `opacity(0)` lets
-                    // SwiftUI actually lay it out; `.allowsHitTesting`
-                    // off and `.accessibilityHidden` keep it out of
-                    // VoiceOver / event handling.
+                    // Unclamped copy at the same width; `opacity(0)` so SwiftUI still lays it out.
                     Text(text)
                         .scaledFont(size: 12)
                         .fixedSize(horizontal: false, vertical: true)

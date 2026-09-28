@@ -37,11 +37,15 @@ import Testing
         #expect(await fresh.known(.tmdbMovie(603), in: .arr(radarr)) == nil)
     }
 
-    @Test func identityMatchesOnSharedIDOnly() {
-        let a = MediaIdentity(kind: .movie, ids: [.tmdbMovie(603), .imdb("tt0133093")])
-        let b = MediaIdentity(kind: .movie, ids: [.imdb("tt0133093")])
-        let c = MediaIdentity(kind: .series, ids: [.imdb("tt0133093")])
-        #expect(a.matches(b) && !a.matches(c))
-        #expect(a.merging(b).ids.count == 2)
+    @Test func externalIDsMeetThroughTheRecordThatCarriesBoth() async throws {
+        let store = IdentityStore(database: try SQLiteDatabase(location: .memory, log: NoLog()), clock: TestClock())
+        let sonarr = InstanceID(.sonarr)
+        await store.record([.tmdbSeries(1399), .tvdb(121361)].map {
+            Crosswalk(from: .arr(sonarr, 7), to: $0, kind: .series, confidence: .asserted, source: .arrRecord, fetchedAt: Date())
+        })
+        #expect(await store.known(.tmdbSeries(1399), in: .tvdb) == .tvdb(121361))
+        #expect(await store.known(.tvdb(121361), in: .tmdbSeries) == .tmdbSeries(1399))
+        #expect(await store.known(.tmdbSeries(1), in: .tvdb) == nil)
     }
+
 }

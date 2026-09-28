@@ -1,50 +1,44 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
-// MARK: - URL Protocol stub for shared session
+// MARK: - Scripted arr
 
-/// Stubs URLSession.shared by registering globally (before first use in each test).
-/// Keys responses by path prefix so multiple endpoints can coexist.
-private final class LocalStubProtocol: URLProtocol, @unchecked Sendable {
-    nonisolated(unsafe) static var handlers: [String: (Int, Data)] = [:]
+/// Responses keyed by path so multiple endpoints can coexist; answers only while a test has it active,
+/// so a test that scripts nothing still sees an unreachable arr.
+private final class LocalStub: @unchecked Sendable {
+    private let lock = NSLock()
+    private var _handlers: [String: (Int, Data)] = [:]
+    private var active = false
 
-    // Scoped to this suite's hosts. Answering every request — suites run in
-    // parallel — serves other suites their neighbour's fixture, and the victim
-    // sees impossible values (zero requests for a call it definitely made).
-    override class func canInit(with request: URLRequest) -> Bool {
-        request.url?.host?.hasSuffix(".local") ?? false
+    var handlers: [String: (Int, Data)] {
+        get { lock.withLock { _handlers } }
+        set { lock.withLock { _handlers = newValue } }
     }
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
-    override func startLoading() {
-        let path = request.url?.path ?? ""
-        // Most-specific match wins. `dict.first` iterates in hash
-        // order so when both "/api/v1/artist/lookup" and the looser
-        // "/api/v1/artist" are registered, either could be returned
-        // — which non-deterministically broke the lidarr_search test
-        // when the looser handler with `[]` body came up first.
-        // Sort handler keys by length descending and pick the first
-        // that matches.
-        let match = Self.handlers
+    func activate() { lock.withLock { active = true } }
+    func reset() { lock.withLock { _handlers = [:]; active = false } }
+
+    func answer(_ request: HTTPRequest) throws -> ScriptedTransport.Answer {
+        let (isActive, handlers) = lock.withLock { (active, _handlers) }
+        guard isActive, request.url.host?.hasSuffix(".local") == true else { throw URLError(.cannotFindHost) }
+        let path = request.url.path
+        // Most-specific match wins: "/api/v1/artist/lookup" must beat the looser "/api/v1/artist".
+        let match = handlers
             .sorted { $0.key.count > $1.key.count }
             .first { path.hasPrefix($0.key) || path.contains($0.key) }
         let (status, body) = match?.value ?? (200, Data("[]".utf8))
-        let url = request.url ?? URL(string: "about:blank")!
-        let response = HTTPURLResponse(url: url, statusCode: status, httpVersion: "HTTP/1.1", headerFields: [:])!
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        client?.urlProtocol(self, didLoad: body)
-        client?.urlProtocolDidFinishLoading(self)
+        return .init(status: status, body: body)
     }
-
-    override func stopLoading() {}
-
-    static func reset() { handlers = [:] }
 }
+
+private let localStub = LocalStub()
+private let localTransport = ScriptedTransport { try localStub.answer($0) }
 
 // MARK: - Test suite
 
-@Suite("LocalToolBackend", .serialized)
+@Suite("LocalToolBackend", .serialized, .gateway(localTransport))
 struct LocalToolBackendTests {
 
     private func sonarrConfig() -> ServiceConfig {
@@ -178,16 +172,13 @@ struct LocalToolBackendTests {
 
     @Test("callTool sonarr_monitor_season grabs EVERY season in seasonNumbers, not just the first")
     func sonarrMonitorMultipleSeasons() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
         // V5 season-monitor PUT + command POST both accepted.
-        LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        localStub.handlers["/api/v5/series"] = (200, Data("{}".utf8))
         // Without a probed Sonarr 5 the toggle is the v3 read-modify-write; the record must have the seasons.
-        LocalStubProtocol.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
-        LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
+        localStub.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
+        localStub.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
         let b = backend()
         let output = try await approvingConfirmation {
@@ -208,15 +199,12 @@ struct LocalToolBackendTests {
 
     @Test("callTool sonarr_monitor_season still accepts a legacy single seasonNumber")
     func sonarrMonitorSingleSeasonLegacy() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
-        LocalStubProtocol.handlers["/api/v5/series"] = (200, Data("{}".utf8))
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v5/series"] = (200, Data("{}".utf8))
         // Without a probed Sonarr 5 the toggle is the v3 read-modify-write; the record must have the seasons.
-        LocalStubProtocol.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
-        LocalStubProtocol.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
+        localStub.handlers["/api/v3/series/241"] = (200, Data(#"{"id":241,"title":"Show","seasons":[{"seasonNumber":10,"monitored":false},{"seasonNumber":11,"monitored":false}]}"#.utf8))
+        localStub.handlers["/api/v3/command"] = (201, Data("{\"id\":1}".utf8))
 
         let b = backend()
         let output = try await approvingConfirmation {
@@ -265,17 +253,14 @@ struct LocalToolBackendTests {
 
     @Test("callTool sonarr_search stubs HTTP and returns formatted results with rich payload")
     func sonarrSearchFormatted() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         let json = """
         [{"tvdbId":369232,"title":"Severance","year":2022,"images":[],
           "statistics":{"seasonCount":2},"ratings":{"value":8.5},"genres":[]}]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/series/lookup"] = (200, json)
+        localStub.handlers["/api/v3/series/lookup"] = (200, json)
 
         let output = try await backend().callTool(
             name: "sonarr_search",
@@ -294,16 +279,13 @@ struct LocalToolBackendTests {
 
     @Test("callTool radarr_search returns searchMovieResults rich payload")
     func radarrSearchRichPayload() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         let json = """
         [{"tmdbId":361743,"title":"Colony","year":2013,"images":[],"genres":[],"ratings":{"tmdb":{"value":7.2}}}]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/movie/lookup"] = (200, json)
+        localStub.handlers["/api/v3/movie/lookup"] = (200, json)
 
         let output = try await backend().callTool(
             name: "radarr_search",
@@ -320,18 +302,15 @@ struct LocalToolBackendTests {
 
     @Test("callTool get_calendar(service:sonarr) stubs HTTP and returns formatted calendar with rich payload")
     func sonarrCalendarFormatted() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         let json = """
         [{"id":1,"episodeNumber":1,"seasonNumber":1,"title":"Pilot",
           "airDateUtc":"2025-06-01T19:00:00Z","hasFile":false,
           "series":{"id":10,"title":"My Show","images":[]}}]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/calendar"] = (200, json)
+        localStub.handlers["/api/v3/calendar"] = (200, json)
 
         let output = try await backend().callTool(
             name: "get_calendar",
@@ -348,11 +327,8 @@ struct LocalToolBackendTests {
 
     @Test("callTool sonarr_get_series stubs HTTP and returns library with filter")
     func sonarrGetSeriesFiltered() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         let json = """
         [
@@ -360,7 +336,7 @@ struct LocalToolBackendTests {
           {"id":2,"tvdbId":121361,"title":"Game of Thrones","year":2011,"status":"ended","monitored":false}
         ]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/series"] = (200, json)
+        localStub.handlers["/api/v3/series"] = (200, json)
 
         let output = try await backend().callTool(
             name: "sonarr_get_series",
@@ -378,11 +354,8 @@ struct LocalToolBackendTests {
 
     @Test("callTool radarr_get_movies stubs HTTP and returns library with filter")
     func radarrGetMoviesFiltered() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         let json = """
         [
@@ -390,7 +363,7 @@ struct LocalToolBackendTests {
           {"id":2,"tmdbId":12345,"title":"Dune","year":2021,"hasFile":false,"monitored":true}
         ]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/movie"] = (200, json)
+        localStub.handlers["/api/v3/movie"] = (200, json)
 
         let output = try await backend().callTool(
             name: "radarr_get_movies",
@@ -437,11 +410,8 @@ struct LocalToolBackendTests {
 
     @Test("callTool lidarr_search stubs HTTP and returns formatted results with rich payload")
     func lidarrSearchFormatted() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
 
         // Text terms go through Lidarr's mixed `/search` endpoint (entries
         // wrapping either an artist or an album) — see SearchClient.lookup.
@@ -451,9 +421,9 @@ struct LocalToolBackendTests {
           "disambiguation":"","overview":"Alternative rock band","genres":["Alternative"],
           "images":[],"ratings":{"value":8.9}}}]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v1/search"] = (200, json)
+        localStub.handlers["/api/v1/search"] = (200, json)
         // library fetch returns empty
-        LocalStubProtocol.handlers["/api/v1/artist"] = (200, Data("[]".utf8))
+        localStub.handlers["/api/v1/artist"] = (200, Data("[]".utf8))
 
         let lidarrConfig = ServiceConfig(enabled: true, baseURL: "http://lidarr.local:8686", apiKey: "test-key",
                                          username: "", password: "")
@@ -475,17 +445,12 @@ struct LocalToolBackendTests {
     }
 
     @Test("unifyLidarr produces stable id and correct source")
-    func unifyLidarrHappyPath() {
-        let record = LidarrLookupRecord(
-            foreignArtistId: "a74b1b7f-71a5-4011-9441-d0b5e4122711",
-            artistName: "Radiohead",
-            disambiguation: "UK band",
-            overview: "Alt rock",
-            images: nil,
-            ratings: LidarrLookupRatings(value: 8.9),
-            genres: ["Alternative"]
-        )
-        let result = SearchClient.unifyLidarr(record, baseURL: "http://lidarr.local:8686")
+    func unifyLidarrHappyPath() throws {
+        let record = try JSONDecoder().decode(ArrArtist.self, from: Data(#"""
+            {"foreignArtistId": "a74b1b7f-71a5-4011-9441-d0b5e4122711", "artistName": "Radiohead",
+             "disambiguation": "UK band", "overview": "Alt rock", "ratings": {"value": 8.9}, "genres": ["Alternative"]}
+            """#.utf8))
+        let result = SearchResult(artist: record, baseURL: "http://lidarr.local:8686")
         #expect(result != nil)
         #expect(result?.title == "Radiohead")
         #expect(result?.subtitle == "UK band")
@@ -510,12 +475,9 @@ struct LocalToolBackendTests {
 
     @Test("get_title_details(radarr) returns overview + metadata, no cast by default")
     func titleDetailsMovie() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
-        LocalStubProtocol.handlers["/api/v3/movie/55"] = (200, Data("""
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v3/movie/55"] = (200, Data("""
         {"id":55,"tmdbId":603,"title":"The Matrix","year":1999,"runtime":136,
          "genres":["Action","Sci-Fi"],"overview":"A hacker learns the truth.","status":"released"}
         """.utf8))
@@ -533,16 +495,13 @@ struct LocalToolBackendTests {
 
     @Test("get_title_details movie cast comes from Radarr /credit (no TMDB key)")
     func titleDetailsMovieCast() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
-        LocalStubProtocol.handlers["/api/v3/movie/55"] = (200, Data("""
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v3/movie/55"] = (200, Data("""
         {"id":55,"tmdbId":603,"title":"The Matrix","year":1999,"overview":"x"}
         """.utf8))
         // Radarr's native credit endpoint — no TMDB key involved.
-        LocalStubProtocol.handlers["/api/v3/credit"] = (200, Data("""
+        localStub.handlers["/api/v3/credit"] = (200, Data("""
         [{"personName":"Keanu Reeves","character":"Neo","order":0,"type":"cast"},
          {"personName":"Lana Wachowski","department":"Directing","job":"Director","type":"crew"}]
         """.utf8))
@@ -559,12 +518,9 @@ struct LocalToolBackendTests {
 
     @Test("get_title_details series cast needs a TMDB key (Sonarr has no cast API)")
     func titleDetailsSeriesCastNoKey() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
-        LocalStubProtocol.handlers["/api/v3/series/9"] = (200, Data("""
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v3/series/9"] = (200, Data("""
         {"id":9,"tmdbId":1399,"title":"Game of Thrones","year":2011,"overview":"x"}
         """.utf8))
 
@@ -616,11 +572,8 @@ struct LocalToolBackendTests {
 
     @Test("custom_formats (no name) stubs HTTP and lists id + name + condition count")
     func customFormatsListed() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
         let json = """
         [
           {"id":7,"name":"x265 (HD)","specifications":[
@@ -629,7 +582,7 @@ struct LocalToolBackendTests {
           {"id":3,"name":"LQ","specifications":[]}
         ]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, json)
+        localStub.handlers["/api/v3/customformat"] = (200, json)
 
         let output = try await backend().callTool(
             name: "custom_formats",
@@ -643,11 +596,8 @@ struct LocalToolBackendTests {
 
     @Test("describe_format stubs HTTP and reports conditions + per-profile scores")
     func describeFormatScores() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
+        localStub.activate()
+        defer { localStub.reset() }
         let formats = """
         [{"id":7,"name":"x265 (HD)","specifications":[
             {"name":"x265","implementation":"ReleaseTitleSpecification","implementationName":"Release Title",
@@ -659,8 +609,8 @@ struct LocalToolBackendTests {
           {"id":2,"name":"Any","formatItems":[{"format":7,"name":"x265 (HD)","score":0}]}
         ]
         """.data(using: .utf8)!
-        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, formats)
-        LocalStubProtocol.handlers["/api/v3/qualityprofile"] = (200, profiles)
+        localStub.handlers["/api/v3/customformat"] = (200, formats)
+        localStub.handlers["/api/v3/qualityprofile"] = (200, profiles)
 
         let output = try await backend().callTool(
             name: "custom_formats",
@@ -677,12 +627,9 @@ struct LocalToolBackendTests {
 
     @Test("describe_format reports a helpful miss when the name isn't found")
     func describeFormatNotFound() async throws {
-        URLProtocol.registerClass(LocalStubProtocol.self)
-        defer {
-            URLProtocol.unregisterClass(LocalStubProtocol.self)
-            LocalStubProtocol.reset()
-        }
-        LocalStubProtocol.handlers["/api/v3/customformat"] = (200, Data("""
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v3/customformat"] = (200, Data("""
         [{"id":7,"name":"x265 (HD)","specifications":[]}]
         """.utf8))
 

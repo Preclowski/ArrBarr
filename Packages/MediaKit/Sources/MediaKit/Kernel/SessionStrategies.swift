@@ -7,10 +7,10 @@ enum AuthHeader {
 }
 
 /// Applies `plan.auth` from the credential material; services with a real session override `establish`.
-public struct HeaderAuthStrategy: SessionStrategy {
-    public init() {}
+struct HeaderAuthStrategy: SessionStrategy {
+    init() {}
 
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
         var out = request
         switch (plan.auth, credentials.material) {
         case let (.header(name), .apiKey(key)), let (.header(name), .token(key)):
@@ -31,11 +31,11 @@ public struct HeaderAuthStrategy: SessionStrategy {
         return out
     }
 
-    public func rejection(for response: HTTPResponse) -> SessionRejection? {
+    func rejection(for response: HTTPResponse) -> SessionRejection? {
         response.status == 401 || response.status == 403 ? .unauthenticated : nil
     }
 
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
 
     func appending(query: (String, String), to url: URL) -> URL {
         var c = URLComponents(url: url, resolvingAgainstBaseURL: false) ?? URLComponents()
@@ -45,30 +45,30 @@ public struct HeaderAuthStrategy: SessionStrategy {
     }
 }
 
-public struct SABnzbdStrategy: SessionStrategy {
+struct SABnzbdStrategy: SessionStrategy {
     private let base = HeaderAuthStrategy()
-    public init() {}
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+    init() {}
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
         var p = plan
         p.auth = .querySecret("apikey")
         return try base.authorize(request, plan: p, credentials: credentials, session: session)
     }
-    public func rejection(for response: HTTPResponse) -> SessionRejection? {
+    func rejection(for response: HTTPResponse) -> SessionRejection? {
         guard response.status == 200, let v = try? JSONDecoder().decode(JSONValue.self, from: response.body),
               v["status"]?.boolValue == false, v["error"]?.stringValue?.localizedCaseInsensitiveContains("api key") == true else {
             return response.status == 401 || response.status == 403 ? .unauthenticated : nil
         }
         return .unauthenticated
     }
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
 }
 
 /// Cookie jar lives in the instance's URLSession; `Referer` is required by qBittorrent's CSRF check.
-public struct QBittorrentStrategy: SessionStrategy {
+struct QBittorrentStrategy: SessionStrategy {
     private let base = HeaderAuthStrategy()
-    public init() {}
+    init() {}
 
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
         var out = request
         out.headers["Referer"] = credentials.baseURL.absoluteString
         if case .apiKey = credentials.material {
@@ -79,11 +79,11 @@ public struct QBittorrentStrategy: SessionStrategy {
         return out
     }
 
-    public func rejection(for response: HTTPResponse) -> SessionRejection? {
+    func rejection(for response: HTTPResponse) -> SessionRejection? {
         response.status == 401 || response.status == 403 ? .unauthenticated : nil
     }
 
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
         guard case let .userPassword(user, password) = credentials.material else { return nil }
         var login = HTTPRequest(method: "POST",
                                 url: RequestBuilder.url(base: credentials.baseURL, pathTemplate: "/api/v2/auth/login", values: [:], query: []),
@@ -98,10 +98,10 @@ public struct QBittorrentStrategy: SessionStrategy {
     }
 }
 
-public struct TransmissionStrategy: SessionStrategy {
-    public init() {}
+struct TransmissionStrategy: SessionStrategy {
+    init() {}
 
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
         var out = request
         if case let .userPassword(user, password) = credentials.material, !user.isEmpty {
             out.headers["Authorization"] = AuthHeader.basic(user, password)
@@ -109,7 +109,7 @@ public struct TransmissionStrategy: SessionStrategy {
         return out
     }
 
-    public func rejection(for response: HTTPResponse) -> SessionRejection? {
+    func rejection(for response: HTTPResponse) -> SessionRejection? {
         if response.status == 409, let id = response.headers["X-Transmission-Session-Id"] {
             return .handshake(header: "X-Transmission-Session-Id", value: id)
         }
@@ -117,7 +117,7 @@ public struct TransmissionStrategy: SessionStrategy {
     }
 
     /// The token is the rejection's header value; no request is made.
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
         guard case let .handshake(header, value)? = rejection else { return nil }
         var headers = HTTPHeaders()
         headers[header] = value
@@ -125,19 +125,19 @@ public struct TransmissionStrategy: SessionStrategy {
     }
 }
 
-public struct DelugeStrategy: SessionStrategy {
-    public init() {}
+struct DelugeStrategy: SessionStrategy {
+    init() {}
 
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest { request }
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest { request }
 
-    public func rejection(for response: HTTPResponse) -> SessionRejection? {
+    func rejection(for response: HTTPResponse) -> SessionRejection? {
         if response.status == 401 || response.status == 403 { return .unauthenticated }
         guard response.status == 200, let v = try? JSONDecoder().decode(JSONValue.self, from: response.body) else { return nil }
         if let message = v["error"]?["message"]?.stringValue, message.localizedCaseInsensitiveContains("not authenticated") { return .unauthenticated }
         return nil
     }
 
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? {
         let password: String
         switch credentials.material {
         case let .userPassword(_, p): password = p
@@ -158,20 +158,20 @@ public struct DelugeStrategy: SessionStrategy {
 }
 
 /// v4 read access tokens go in the Authorization header; a v3 key is the second sanctioned query secret.
-public struct TMDBStrategy: SessionStrategy {
+struct TMDBStrategy: SessionStrategy {
     private let base = HeaderAuthStrategy()
-    public init() {}
-    public func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
+    init() {}
+    func authorize(_ request: HTTPRequest, plan: RequestPlan, credentials: Credentials, session: SessionToken?) throws -> HTTPRequest {
         var p = plan
         if case let .apiKey(key) = credentials.material, !TMDBService.isReadAccessToken(key) { p.auth = .querySecret("api_key") } else { p.auth = .bearer }
         return try base.authorize(request, plan: p, credentials: credentials, session: session)
     }
-    public func rejection(for response: HTTPResponse) -> SessionRejection? { response.status == 401 ? .unauthenticated : nil }
-    public func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
+    func rejection(for response: HTTPResponse) -> SessionRejection? { response.status == 401 ? .unauthenticated : nil }
+    func establish(after rejection: SessionRejection?, credentials: Credentials, send: SessionSend) async throws -> SessionToken? { nil }
 }
 
-public enum SessionStrategies {
-    public static let standard: [InstanceKind: any SessionStrategy] = {
+enum SessionStrategies {
+    static let standard: [InstanceKind: any SessionStrategy] = {
         var table: [InstanceKind: any SessionStrategy] = [:]
         for kind in InstanceKind.allCases { table[kind] = HeaderAuthStrategy() }
         table[.sabnzbd] = SABnzbdStrategy()

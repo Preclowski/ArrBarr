@@ -1,11 +1,7 @@
 import SwiftUI
 
-/// An SF Symbol glyph (play/pause) wrapped in a circular progress ring that
-/// fills with download progress. Default white strokes + glyph — designed to
-/// sit on a tinted-glass CTA or a dark poster scrim; pass `tint` for surfaces
-/// with no dark backdrop. Shared by the detail download control
-/// (`PauseResumeButton`), the queue rows' on-poster hover control and the
-/// multi-download list's inline controls.
+/// Play/pause glyph in a progress ring. White by default for glass or dark
+/// scrims; pass `tint` elsewhere.
 struct DownloadProgressRing: View {
     let systemName: String
     let progress: Double
@@ -15,10 +11,7 @@ struct DownloadProgressRing: View {
 
     var body: some View {
         let clamped = max(0, min(1, progress))
-        // `play.fill` is already optically balanced by SF Symbols, but inside a
-        // tight ring its triangle still reads a hair left-of-centre — a small
-        // right nudge fixes it. (0.07·d over-corrected, pushing it visibly right.)
-        // `pause.fill` is symmetric and needs no nudge.
+        // `play.fill` reads a hair left of centre in a tight ring (0.07·d over-corrected).
         let playNudge: CGFloat = systemName == "play.fill" ? diameter * 0.03 : 0
         return ZStack {
             Circle()

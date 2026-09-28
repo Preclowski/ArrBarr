@@ -1,56 +1,37 @@
 import Foundation
 
-/// One remembered quiz verdict. `key` is `DiscoverItem.dedupKey`, so the same
-/// title collides across sources (curated, anchors, library) and sessions.
+/// `key` is `DiscoverItem.dedupKey`, so a title collides across sources and sessions.
 nonisolated public struct SwipeSignal: Codable, Sendable, Equatable {
     nonisolated public enum Kind: String, Codable, Sendable {
-        /// Right swipe — positive taste signal (future anchor / profile food).
         case kept
-        /// Left swipe — "not now". A cooldown, never a verdict: it expires,
-        /// and only repetition extends it.
+        /// A cooldown, never a verdict: it expires, and only repetition extends it.
         case skipped
-        /// Explicit "not interested" — the only permanent state, because it is
-        /// the only one the user said out loud.
+        /// The only permanent state, because the user said it explicitly.
         case veto
     }
-    /// What the title IS — drives the per-type grouping in the settings
-    /// pane. Optional because entries persisted before the field existed
-    /// decode without it.
+    /// Optional: entries persisted before the field existed decode without it.
     nonisolated public enum Media: String, Codable, Sendable {
         case movie, show, music
     }
     public var key: String
-    /// Human-readable label for the future signals UI; never matched on.
+    /// Display label for the Quiz settings pane; never matched on.
     public var title: String
     public var kind: Kind
-    /// When the signal last fired (a re-skip refreshes it).
     public var date: Date
-    /// How many times this title was skipped, across sessions.
     public var count: Int
     public var media: Media?
 }
 
-/// Persistent quiz-swipe memory. Before this, every `seed()` wiped the
-/// session's verdicts, so a title skipped last night led the very next deck.
-///
-/// The forgetting model is deliberate UX, not bookkeeping (2026-08-17 design
-/// discussion): a skip suppresses the title for 14 days; a repeat skip means
-/// it wasn't a mood, so it stretches to 90; only an explicit veto is forever.
-/// Kept titles are recorded as positive signal and never suppress anything.
-@MainActor
+/// Persistent quiz-swipe memory. A skip suppresses a title for 14 days, a repeat skip for 90;
+/// only a veto is forever. Kept titles never suppress anything.
 public final class SwipeSignalStore {
 
     public static let shared = SwipeSignalStore()
 
     static let storageKey = "ArrBarr.swipeSignals"
-    /// First skip: two weeks out of the decks — long enough that the next few
-    /// sessions aren't déjà vu, short enough that "not tonight" is not a life
-    /// sentence.
     public static let skipCooldown: TimeInterval = 14 * 24 * 3600
-    /// Skipped twice or more across different sessions: taste, not mood.
     public static let repeatSkipCooldown: TimeInterval = 90 * 24 * 3600
-    /// Cap on remembered signals. Oldest non-veto entries fall off first —
-    /// FIFO expiry IS the long-tail forgetting model.
+    /// Oldest non-veto entries fall off first — that FIFO is the long-tail forgetting.
     static let cap = 500
 
     private let defaults: UserDefaults
@@ -71,21 +52,17 @@ public final class SwipeSignalStore {
     public func record(key: String, title: String, kind: SwipeSignal.Kind,
                        media: SwipeSignal.Media? = nil, now: Date = Date()) {
         guard !key.isEmpty else { return }
-        // A series key is its TVDB id, a movie key its TMDB id: the same number
-        // can name both, so a known media type keeps them apart.
+        // A series key is its TVDB id, a movie key its TMDB id: the same number can name both.
         if let idx = signals.firstIndex(where: { $0.key == key && Self.sameMedia($0.media, media) }) {
             var signal = signals[idx]
             switch (signal.kind, kind) {
             case (.veto, .skipped):
-                // A veto outranks an ambient skip; nothing to update.
                 return
             case (.skipped, .skipped):
                 signal.count += 1
                 signal.date = now
             default:
-                // kept/veto overwrite whatever was there (a kept title was
-                // wrongly suppressed if it stayed skipped), and skipped
-                // overwrites a stale kept — latest decision wins.
+                // Latest decision wins: a kept title stays unsuppressed, a skip overwrites a stale kept.
                 signal.kind = kind
                 signal.date = now
                 signal.count = (kind == .skipped) ? signal.count + 1 : signal.count
@@ -93,7 +70,7 @@ public final class SwipeSignalStore {
             signal.title = title
             if let media { signal.media = media }
             signals.remove(at: idx)
-            signals.append(signal)   // newest last → cap drops oldest first
+            signals.append(signal)
         } else {
             signals.append(SwipeSignal(key: key, title: title, kind: kind,
                                        date: now, count: kind == .skipped ? 1 : 0,
@@ -105,10 +82,7 @@ public final class SwipeSignalStore {
 
     // MARK: - Reads
 
-    /// Keys the decks must not deal right now: active skip cooldowns + vetoes.
-    /// `media` limits the set to one type, so a skipped show can't hide the
-    /// movie whose TMDB id equals its TVDB id. Legacy untyped entries count
-    /// for every type.
+    /// `media` keeps a skipped show from hiding the movie whose TMDB id equals its TVDB id. Untyped legacy entries count for every type.
     public func suppressedKeys(media: SwipeSignal.Media? = nil, now: Date = Date()) -> Set<String> {
         Set(signals.compactMap { signal in
             isSuppressed(signal, now: now) && Self.sameMedia(signal.media, media) ? signal.key : nil
@@ -120,19 +94,17 @@ public final class SwipeSignalStore {
         return a == b
     }
 
-    /// Everything remembered, newest first — the future signals pane reads this.
+    /// Newest first.
     public var all: [SwipeSignal] { signals.reversed() }
 
     // MARK: - Management
 
-    /// Clears skip cooldowns (the "Reset skips" affordance). Vetoes and kept
-    /// signals survive — the user said those out loud.
+    /// Vetoes and kept signals survive.
     public func resetSkips() {
         signals.removeAll { $0.kind == .skipped }
         persist()
     }
 
-    /// Drops one signal entirely (row-level "Undo" / "Restore").
     public func remove(key: String) {
         signals.removeAll { $0.key == key }
         persist()
@@ -152,8 +124,7 @@ public final class SwipeSignalStore {
 
     private func enforceCap() {
         guard signals.count > Self.cap else { return }
-        // Evict oldest-first but never a veto; if somehow all vetoes, oldest
-        // vetoes go too rather than growing without bound.
+        // Never a veto, unless everything is a veto — then the oldest go rather than growing without bound.
         var overflow = signals.count - Self.cap
         var kept: [SwipeSignal] = []
         for signal in signals {

@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 import Testing
 @testable import ArrCore
 
@@ -8,12 +9,14 @@ struct TMDBScheduleTests {
 
     private let today = ISO8601DateFormatter().date(from: "2026-09-26T12:00:00Z")!
 
-    private func schedule(last: (String, Int)?, next: (String, Int)? = nil, premieres: [Int: String]) -> TMDBTVSchedule {
-        TMDBTVSchedule(
-            lastEpisodeToAir: last.map { .init(airDate: $0.0, seasonNumber: $0.1) },
-            nextEpisodeToAir: next.map { .init(airDate: $0.0, seasonNumber: $0.1) },
-            seasons: premieres.map { .init(airDate: $0.value, seasonNumber: $0.key) }
-        )
+    /// `/tv/{id}` the way TMDB sends it, reduced to the schedule.
+    private func schedule(last: (String, Int)?, next: (String, Int)? = nil, premieres: [Int: String]) -> TMDBDetails {
+        var json: [String: Any] = ["id": 1, "seasons": premieres.map { ["air_date": $0.value, "season_number": $0.key] }]
+        if let last { json["last_episode_to_air"] = ["air_date": last.0, "season_number": last.1] }
+        if let next { json["next_episode_to_air"] = ["air_date": next.0, "season_number": next.1] }
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try! decoder.decode(TMDBDetails.self, from: JSONSerialization.data(withJSONObject: json))
     }
 
     @Test("A season that began six weeks ago and airs this week is on air")

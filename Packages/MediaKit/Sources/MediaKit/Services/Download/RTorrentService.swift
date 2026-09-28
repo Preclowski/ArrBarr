@@ -1,8 +1,8 @@
 import Foundation
 
-public struct RTorrentService: DownloadService {
-    public let instance: InstanceID
-    public init(instance: InstanceID) { self.instance = instance }
+struct RTorrentService: DownloadService {
+    let instance: InstanceID
+    init(instance: InstanceID) { self.instance = instance }
 
     private static let fields = ["d.hash=", "d.name=", "d.completed_bytes=", "d.size_bytes=", "d.down.rate=", "d.state=", "d.is_active=", "d.custom1="]
 
@@ -11,17 +11,17 @@ public struct RTorrentService: DownloadService {
                     auth: .basic, priority: priority, retry: method.hasPrefix("system.") || method == "d.multicall2" ? .idempotent : .never, rpcMethod: method)
     }
 
-    public func version() -> Resource<String> {
+    func version() -> Resource<String> {
         Resource(plan: call("testConnection", method: "system.client_version"), tags: [.capabilities(instance)], freshness: .reference) { data in
             (try? XMLRPC.parse(data))?.stringValue ?? ""
         }
     }
 
-    public func tasks(ids: Set<String>) -> RequestPlan {
+    func tasks(ids: Set<String>) -> RequestPlan {
         call("fetchProgress", method: "d.multicall2", params: [.string(""), .string("main")] + Self.fields.map { .string($0) }, priority: .background)
     }
 
-    public func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
+    func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let op = OperationID(instance.kind, "fetchProgress")
         let value: XMLRPC.Value
         do { value = try XMLRPC.parse(response.body) } catch { throw MediaKitError.decoding(op, detail: "\(error)") }
@@ -38,21 +38,21 @@ public struct RTorrentService: DownloadService {
         }
     }
 
-    public func defaultAddPaused() -> Resource<Bool?> {
+    func defaultAddPaused() -> Resource<Bool?> {
         Resource(plan: call("defaultAddPaused", method: "system.client_version"), tags: [.capabilities(instance)], freshness: .reference) { _ in nil }
     }
 
-    public func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
+    func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
         guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let method = switch action { case .pause: "d.stop"; case .resume: "d.start"; default: "d.erase" }
         let service = self
-        return command(action.rawValue) { ctx in
+        return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
             for id in ids { _ = try await ctx.send(service.call(action.rawValue, method: method, params: [.string(id.uppercased())])) }
             return CommandReceipt(acceptedAt: ctx.clock.now)
         }
     }
 
-    public func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
+    func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command {
         let label = category.map { "d.custom1.set=\($0)" }
         let p = switch payload.content {
         case let .magnet(link): call("addMagnet", method: paused ? "load.normal" : "load.start", params: [.string(""), .string(link)] + (label.map { [.string($0)] } ?? []))

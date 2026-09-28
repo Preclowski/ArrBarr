@@ -1,8 +1,8 @@
+import os
 import SwiftUI
+import MediaKit
 
-/// One "Did you know that…" while the indexers answer a manual search: a
-/// sentence in markdown (bold marks names and numbers), an optional second
-/// sentence, and the portraits of the people it talks about.
+/// One "Did you know that…" shown while the indexers answer a manual search.
 nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     struct Person: Hashable, Sendable {
         let name: String
@@ -14,12 +14,11 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     var id: String { sentence }
 }
 
-/// What the pushing detail screen already knows about the title. Everything
-/// here is a value it holds; the provider only adds cache-first TMDB reads.
+/// Values the pushing detail screen already holds; the provider only adds cache-first TMDB reads.
 struct WaitCardContext {
-    var movie: RadarrMovieDetail? = nil
-    var series: SonarrSeriesDetail? = nil
-    var album: LidarrAlbumDetail? = nil
+    var movie: ArrMovie? = nil
+    var series: ArrSeries? = nil
+    var album: ArrAlbum? = nil
     var seriesYear: Int? = nil
     var cast: [CastMember] = []
     var directors: [CastMember] = []
@@ -35,9 +34,7 @@ struct WaitCardContext {
     }
 }
 
-/// Composes stories from templates. Every fact comes from the records in hand
-/// or a cache-first TMDB read; a missing fact means a missing story, never an
-/// error or a blank.
+/// A missing fact means a missing story, never an error or a blank.
 enum WaitStoryProvider {
     /// Stories that need no network, ready on first render.
     static func localStories(_ ctx: WaitCardContext, locale: Locale = .current) -> [WaitStory] {
@@ -68,26 +65,21 @@ enum WaitStoryProvider {
         return stories
     }
 
-    /// Stories from TMDB, shuffled so a long wait on the same title reads
-    /// differently each time.
     static func remoteStories(_ ctx: WaitCardContext, configStore: ConfigStore) async -> [WaitStory] {
-        let key = configStore.tmdbApiKey
-        guard !key.isEmpty, !ctx.title.isEmpty else { return [] }
-        let client = TMDBClient(apiKey: key)
+        guard !configStore.tmdbApiKey.isEmpty, !ctx.title.isEmpty else { return [] }
+        let client = configStore.tmdbClient
         var stories: [WaitStory] = []
         let title = ctx.title
 
         var owned: [Int: String] = [:]
         if ctx.movie != nil, configStore.radarr.isConfigured {
             let library = await LibraryIndex.shared.movies(config: configStore.radarr, revalidate: false)
-            owned = Dictionary(library.compactMap { r in
-                if let id = r.tmdbId, let t = r.title { return (id, t) } else { return nil }
-            }, uniquingKeysWith: { a, _ in a })
+            owned = Dictionary(library.compactMap { r in r.tmdbId.map { ($0, r.title) } }, uniquingKeysWith: { a, _ in a })
         }
 
         if let m = ctx.movie, let id = m.tmdbId, id > 0 {
-            let facts = try? await client.movieFacts(movieId: id)
-            let crew = (try? await client.movieCredits(movieId: id))?.crew ?? []
+            let facts = await Logger.extras.attempt("wait facts") { try await client.movieDetails(movieId: id) }
+            let crew = (await Logger.extras.attempt("wait crew") { try await client.movieCredits(movieId: id) })?.crew ?? []
             let composer = crew.first { $0.job == "Original Music Composer" }
             let writer = crew.first { $0.job == "Screenplay" || $0.job == "Writer" }
             let dop = crew.first { $0.job == "Director of Photography" }
@@ -100,24 +92,24 @@ enum WaitStoryProvider {
                     support = composer.map { L("wait.story.premiereComposer \(years) \($0.name)") } ?? L("wait.story.premiereShort \(years)")
                 }
                 stories.append(WaitStory(sentence: sentence, support: support,
-                                         people: composer.map { [.init(name: $0.name, imageURL: $0.posterURL)] } ?? []))
+                                         people: composer.map { [.init(name: $0.name, imageURL: $0.profileURL)] } ?? []))
             }
             if let writer, let dop {
                 stories.append(WaitStory(sentence: L("wait.story.crew \(writer.name) \(dop.name)"),
                                          support: facts?.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") },
-                                         people: [.init(name: writer.name, imageURL: writer.posterURL), .init(name: dop.name, imageURL: dop.posterURL)]))
+                                         people: [.init(name: writer.name, imageURL: writer.profileURL), .init(name: dop.name, imageURL: dop.profileURL)]))
             } else if let f = facts, let tagline = f.tagline, !tagline.isEmpty {
                 stories.append(WaitStory(sentence: L("wait.story.taglineOnly \(title) \(tagline)"),
                                          support: f.originalTitle.flatMap { $0 == m.title || $0.isEmpty ? nil : L("wait.story.originalTitle \($0)") }))
             }
-            if let picks = try? await client.recommendedMovies(movieId: id), picks.count >= 2 {
+            if let picks = await Logger.extras.attempt("wait recommendations", { try await client.recommendedMovies(movieId: id) }), picks.count >= 2 {
                 let a = picks[0], b = picks[1]
                 let ownedPick = picks.prefix(4).first { owned[$0.id] != nil }
                 stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)"),
                                          support: ownedPick.map { L("wait.story.alsoOwned \($0.title)") }))
             }
-        } else if let s = ctx.series, let id = await seriesTMDBId(s, client: client) {
-            if let f = try? await client.tvFacts(tvId: id), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
+        } else if let s = ctx.series, let id = await client.seriesId(tmdbId: s.tmdbId, tvdbId: s.tvdbId) {
+            if let f = await Logger.extras.attempt("wait series facts", { try await client.tvDetails(tvId: id) }), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
                seasons > 0, let years = yearsAgo(s.year) {
                 let sentence = L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")
                 let support = s.network.map { L("wait.story.network \($0)") } ?? f.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") }
@@ -138,8 +130,8 @@ enum WaitStoryProvider {
 
         for person in people {
             guard let personId = person.tmdbPersonId else { continue }
-            let details = try? await client.personDetails(personId: personId)
-            let credits = try? await client.personMovieCredits(personId: personId)
+            let details = await Logger.extras.attempt("wait person") { try await client.personDetails(personId: personId) }
+            let credits = await Logger.extras.attempt("wait person credits") { try await client.personMovieCredits(personId: personId) }
             let portrait = WaitStory.Person(name: person.name, imageURL: details?.profileURL ?? person.imageURL)
             let others = (credits?.cast ?? []).filter { $0.id != ctx.movie?.tmdbId && ($0.voteCount ?? 0) >= 100 }
             let hit = others.max { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }
@@ -167,7 +159,7 @@ enum WaitStoryProvider {
             if !owned.isEmpty,
                let other = others.filter({ owned[$0.id] != nil }).max(by: { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }),
                let otherTitle = owned[other.id] {
-                let watched = MediaServerIndex.shared.isWatched([.tmdb(other.id)])
+                let watched = MediaServerIndex.shared.isWatched([.tmdbMovie(other.id)])
                 stories.append(WaitStory(sentence: L("wait.story.library \(person.name) \(otherTitle)"),
                                          support: L(watched ? "wait.story.watched" : "wait.story.notWatched"),
                                          people: [portrait]))
@@ -200,12 +192,6 @@ enum WaitStoryProvider {
         return perEpisode ? L("wait.story.episodeRuntime \(length)") : L("wait.story.runtime \(length)")
     }
 
-    private static func seriesTMDBId(_ s: SonarrSeriesDetail, client: TMDBClient) async -> Int? {
-        if let id = s.tmdbId, id > 0 { return id }
-        guard let tvdb = s.tvdbId, tvdb > 0 else { return nil }
-        return try? await client.tvIdFromTVDB(tvdb)
-    }
-
     private static func date(_ s: String) -> Date? {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -216,11 +202,7 @@ enum WaitStoryProvider {
 
 // MARK: - Surface
 
-/// The wait screen for a manual search: the poster, large and tilted, beside
-/// a "Did you know that…" sentence, on a flat ground in the poster's
-/// own colour. Stories come in random order and rotate every few seconds;
-/// click the right side to skip ahead, the left to go back. A spinner sits at
-/// the foot, so the wait itself is never hidden.
+/// The wait screen for a manual search. Click the right side to skip ahead, the left to go back.
 struct WaitStories: View {
     let context: WaitCardContext
     var interval: TimeInterval = 7
@@ -229,48 +211,39 @@ struct WaitStories: View {
     @State private var stories: [WaitStory] = []
     @State private var index = 0
     @State private var forward = true
-    @State private var tint: Color?
 
     var body: some View {
         GeometryReader { proxy in
-            ZStack {
-                ground
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    HStack(alignment: .top, spacing: 18) {
-                        poster
-                        if !stories.isEmpty {
-                            let story = stories[index % stories.count]
-                            StoryText(story: story)
-                                .id(story.id)
-                                .transition(.asymmetric(
-                                    insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                    removal: .opacity))
-                        }
+            VStack(spacing: 28) {
+                HStack(alignment: .top, spacing: 18) {
+                    poster
+                    if !stories.isEmpty {
+                        let story = stories[index % stories.count]
+                        StoryText(story: story)
+                            .id(story.id)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
+                                removal: .opacity))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    Spacer(minLength: 0)
-                    footer
                 }
-                .padding(.horizontal, 18)
-                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                LoadingStateView(label: "wait.releases.heading")
             }
+            .padding(.horizontal, 18)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
             .onTapGesture(coordinateSpace: .local) { point in
                 advance(point.x < proxy.size.width / 3 ? -1 : 1)
             }
         }
-        .environment(\.colorScheme, .dark)
         .task {
             stories = WaitStoryProvider.localStories(context, locale: configStore.currentLocale).shuffled()
-            async let color = PosterTint.color(for: context.posterURL)
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
             // The story on screen stays put; everything after it is reshuffled with the new ones.
             let current = stories.isEmpty ? [] : [stories[index % stories.count]]
             let rest = (stories.filter { !current.contains($0) } + remote).shuffled()
             index = 0
             stories = current + rest
-            tint = await color
         }
         .task(id: index) {
             try? await Task.sleep(for: .seconds(interval))
@@ -287,38 +260,12 @@ struct WaitStories: View {
         }
     }
 
-    /// The poster's colour, pulled down to a ground that white text sits on.
-    private var ground: some View {
-        ZStack {
-            Color(white: 0.08)
-            (tint ?? .clear).opacity(0.55)
-            LinearGradient(colors: [.white.opacity(0.06), .clear, .black.opacity(0.25)],
-                           startPoint: .top, endPoint: .bottom)
-        }
-        .animation(.easeInOut(duration: 0.6), value: tint)
-        .ignoresSafeArea()
-    }
-
     private var poster: some View {
         RemotePoster(url: context.posterURL, apiKey: context.posterApiKey, tier: .card,
                      size: CGSize(width: 112, height: 168), cornerRadius: 8, fallbackSymbol: "film")
-            .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .strokeBorder(.white.opacity(0.22), lineWidth: 1))
             .rotationEffect(.degrees(-3))
-            .shadow(color: .black.opacity(0.5), radius: 18, y: 12)
+            .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
             .padding(.top, 6)
-    }
-
-    private var footer: some View {
-        HStack(spacing: 8) {
-            ProgressView()
-                .controlSize(.small)
-            Text("wait.releases.heading", bundle: .module)
-                .scaledFont(size: 12)
-                .foregroundStyle(.white.opacity(0.6))
-            Spacer()
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 
@@ -329,18 +276,18 @@ private struct StoryText: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("wait.story.lead", bundle: .module)
                 .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.white.opacity(0.55))
+                .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .kerning(0.9)
             Text(markdown(story.sentence))
                 .scaledFont(size: 17, weight: .regular)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
                 .lineSpacing(3)
                 .fixedSize(horizontal: false, vertical: true)
             if let support = story.support {
                 Text(markdown(support))
                     .scaledFont(size: 13)
-                    .foregroundStyle(.white.opacity(0.72))
+                    .foregroundStyle(.secondary)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -350,7 +297,7 @@ private struct StoryText: View {
                         RemotePoster(url: person.imageURL, apiKey: nil, tier: .icon,
                                      size: CGSize(width: 34, height: 34), cornerRadius: 17,
                                      fallbackSymbol: "person.fill")
-                            .overlay(Circle().strokeBorder(.white.opacity(0.75), lineWidth: 1.5))
+                            .overlay(Circle().strokeBorder(.background, lineWidth: 1.5))
                     }
                 }
                 .padding(.top, 2)

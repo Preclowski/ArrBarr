@@ -1,18 +1,10 @@
 import SwiftUI
 
-/// One configurable service's fields (URL / key / login / test / calendar),
-/// plus the Whisparr-only age gate and NSFW filter. Extracted from
-/// `SettingsView` so both platforms share one definition.
 struct ServiceFields: View {
     @Binding var config: ServiceConfig
     let kind: ServiceKind
     var notifyBinding: Binding<Bool>? = nil
-    /// Whisparr-only extras, owned here so both the macOS panes and the iOS
-    /// forms render one uniform `ServiceFields` with no per-platform `#if`:
-    ///   - `ageConfirmedBinding`: 18+ confirmation state. Only gates enabling
-    ///     in App Store builds (`#if APPSTORE`); ignored otherwise.
-    ///   - `nsfwFilterBinding`: the "NSFW filter" (poster blur) toggle, shown
-    ///     once Whisparr is enabled.
+    /// `ageConfirmedBinding` only gates enabling in App Store builds.
     var ageConfirmedBinding: Binding<Bool>? = nil
     var nsfwFilterBinding: Binding<Bool>? = nil
 
@@ -24,7 +16,6 @@ struct ServiceFields: View {
         Binding(
             get: { config.enabled },
             set: { newValue in
-                // App Store: enabling Whisparr requires a one-time 18+ confirm.
                 if AppCapabilities.isAppStore,
                    newValue, kind == .whisparr,
                    let ageConfirmed = ageConfirmedBinding, !ageConfirmed.wrappedValue {
@@ -36,14 +27,8 @@ struct ServiceFields: View {
         )
     }
 
-    /// URLs almost never arrive clean. A copy out of a terminal or a
-    /// docker-compose line drags whitespace or a newline along; a copy out of
-    /// the arr's own address bar drags its `#/…` hash route along. Both make
-    /// `URL(string:)` return nil, which flips `ServiceConfig.isConfigured` to
-    /// false — and `QueueAggregator` deliberately swallows `.notConfigured`,
-    /// so the arr then contributes nothing with no error surfaced anywhere.
-    /// Sanitising on assignment (rather than validating on submit) keeps that
-    /// failure mode from ever existing.
+    /// Sanitised on assignment: whitespace or an arr `#/…` route makes `URL(string:)`
+    /// nil, and `QueueAggregator` silently swallows the resulting `.notConfigured`.
     private var baseURLBinding: Binding<String> {
         Binding(
             get: { config.baseURL },
@@ -51,12 +36,11 @@ struct ServiceFields: View {
         )
     }
 
-    private static func sanitizedBaseURL(_ raw: String) -> String {
+    /// Internal, not private: Settings' Prowlarr page has no `ServiceKind`
+    /// and so builds its own URL binding, but must sanitise identically.
+    static func sanitizedBaseURL(_ raw: String) -> String {
         var url = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        // "http://host:8989/#/activity/queue" → "http://host:8989". The arrs
-        // are hash-routed SPAs, so every URL the user can see in their browser
-        // carries a fragment we have to drop — along with the "/" in front of
-        // it, which would otherwise leave a stray trailing slash.
+        // The arrs are hash-routed SPAs; drop the fragment and the "/" before it.
         if let hash = url.firstIndex(of: "#") {
             url = String(url[..<hash])
             if url.hasSuffix("/") { url = String(url.dropLast()) }
@@ -71,7 +55,7 @@ struct ServiceFields: View {
         case failure(String)
     }
 
-    public var body: some View {
+    var body: some View {
         Toggle(isOn: enableBinding) { Text("settings.enabled.button", bundle: .module) }
             .alert(Text("settings.adultContent.button", bundle: .module), isPresented: $showAgeGate) {
                 Button(role: .cancel) { } label: { Text("common.cancel.button", bundle: .module) }
@@ -101,10 +85,8 @@ struct ServiceFields: View {
             }
 
             if kind.requiresLogin {
-                // qBittorrent 5.x accepts either a username/password login or
-                // an API key. We surface that on one field pair: leaving the
-                // login blank switches the client into API-key mode, where the
-                // "password" field carries the key (see QbittorrentClient).
+                // qBittorrent 5.x: a blank login switches to API-key mode, where the
+                // "password" field carries the key.
                 let isQbit = kind == .qbittorrent
                 TextField(text: $config.username, prompt: Text("settings.admin.label", bundle: .module)) {
                     if isQbit {
@@ -124,9 +106,6 @@ struct ServiceFields: View {
                 .passwordField()
             }
 
-            // Passive "this won't work yet" hint — enabled but missing URL or
-            // (for arrs/SABnzbd) the API key. Shown until the user completes
-            // it, independent of whether they've pressed Test Connection.
             if let reason = incompleteReason, testState == .idle {
                 Label {
                     Text(verbatim: reason)
@@ -166,11 +145,9 @@ struct ServiceFields: View {
                 if testState != .idle && testState != .testing { testState = .idle }
             }
 
-            // Calendar subscription (arrs only). Opens the arr's iCal feed as
-            // `webcal://` → Apple Calendar's "Subscribe to calendar" flow.
+            // Opens the arr's iCal feed as `webcal://` → Apple Calendar's subscribe flow.
             if let calURL = CalendarFeed.subscriptionURL(kind: kind, config: config) {
-                // Plain Form-row action (no GlassButtonStyle — that nested a
-                // pill inside the already-tappable row).
+                // No GlassButtonStyle: that nested a pill inside the tappable row.
                 Button {
                     openURL(calURL)
                 } label: {
@@ -181,15 +158,12 @@ struct ServiceFields: View {
                     .foregroundStyle(.secondary)
             }
 
-            // Whisparr-only: NSFW filter (poster blur), defaulting on.
             if kind == .whisparr, let nsfw = nsfwFilterBinding {
                 Toggle(isOn: nsfw) { Text("settings.nsfwFilter.button", bundle: .module) }
             }
         }
     }
 
-    /// Non-nil when the service is enabled but can't work yet — drives the
-    /// inline warning. URL must be valid; arrs / SABnzbd additionally need a key.
     private var incompleteReason: String? {
         guard config.enabled else { return nil }
         if !config.isConfigured {
@@ -211,8 +185,6 @@ struct ServiceFields: View {
                 await MainActor.run {
                     testState = .success(result)
                     ConnectionHealth.shared.forceOK(.arr(kind), detail: result)
-                    // Kick a queue refresh so a just-entered key clears the
-                    // stale "missing API key" banner right away.
                     AppMessages.post(AppMessages.ConfigValidated())
                 }
             } catch {

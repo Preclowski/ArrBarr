@@ -1,36 +1,24 @@
 import SwiftUI
 
-/// Detail-surface upgrade diff — one row per dimension (Quality / Size /
-/// Score) with values shown laterally as `OLD → NEW (+Δ)`. Used inside
-/// DetailView's download section so the arrows stack into a vertical
-/// column the eye can scan, and each row fits on a single line.
-///
-/// The list surface uses the plain inline spec (no diff) because list
-/// rows don't have horizontal room for three lateral comparisons.
-public struct UpgradeDiffTable: View {
+/// Detail-surface spec grid, one row per dimension as `OLD → NEW (+Δ)`.
+/// List rows use the plain inline spec: no room for lateral comparisons.
+struct UpgradeDiffTable: View {
     let newQuality: String?
     let newSize: Int64?
     let newScore: Int
     let oldQuality: String?
     let oldSize: Int64?
     let oldScore: Int?
-    /// Custom format tag sets — render below the spec rows as a single
-    /// unified chip strip (kept neutral, added green, removed red).
-    /// Empty lists hide the row entirely.
+    /// Rendered as one chip strip: kept neutral, added green, removed red.
     let newFormats: [String]
     let oldFormats: [String]
-    /// Release / on-disk filenames — render as a "Plik" row with both
-    /// values stacked (filenames are too long for a lateral arrow).
-    /// nil hides the row.
+    /// Stacked rather than lateral: filenames are too long for an arrow row.
     let newFilename: String?
     let oldFilename: String?
-    /// Where the grab came from. Rendered as the last row of the grid so it
-    /// picks up the same label column and 3pt row rhythm as the spec rows —
-    /// as a free-standing line above the grid it read as an outlier.
     let indexer: String?
     let tint: Color
 
-    public init(
+    init(
         newQuality: String?,
         newSize: Int64?,
         newScore: Int,
@@ -58,12 +46,7 @@ public struct UpgradeDiffTable: View {
         self.tint = tint
     }
 
-    public var body: some View {
-        // No old metadata to compare against (a fresh "new" download,
-        // not an upgrade) → render the same labelled grid but as a
-        // plain spec: labels + values only, no OLD column, no arrows,
-        // no deltas. The user still reads Jakość / Rozmiar / Score in
-        // the aligned grid they expect from the upgrade surface.
+    var body: some View {
         if hasAnyOld {
             diffBody
         } else {
@@ -71,8 +54,6 @@ public struct UpgradeDiffTable: View {
         }
     }
 
-    /// Whether any "old" value is present — gates the diff vs plain
-    /// layout. A pure-new download has none of these populated.
     private var hasAnyOld: Bool {
         (oldQuality.map { !$0.isEmpty } ?? false)
             || (oldSize ?? 0) > 0
@@ -82,9 +63,7 @@ public struct UpgradeDiffTable: View {
     }
 
     private var diffBody: some View {
-        // Grid keeps the `→` arrow column aligned across rows — easier
-        // to scan than three independent HStacks where each row's
-        // arrow lands at a different X.
+        // A Grid keeps the arrow column aligned across rows.
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
             if let nq = newQuality, !nq.isEmpty {
                 GridRow {
@@ -113,9 +92,6 @@ public struct UpgradeDiffTable: View {
                 let delta = nScore - oScore
                 GridRow {
                     label("queue.score.button")
-                    // Dedicated score cells: a negative score reads red on
-                    // either side (matching the tooltip diff + queue list),
-                    // not the neutral grey/primary every other value uses.
                     oldCell(oldScore != nil ? ScoreLabel.text(oScore) : nil)
                     arrowCell(showArrow: oldScore != nil && delta != 0)
                     newCell(ScoreLabel.text(nScore))
@@ -123,10 +99,6 @@ public struct UpgradeDiffTable: View {
                               sign: delta)
                 }
             }
-            // Formaty — single chip strip showing the union of old +
-            // new tags. Kept tags neutral, added green, removed red so
-            // the user reads the full diff in one strip instead of two
-            // chip rows.
             if !newFormats.isEmpty || !oldFormats.isEmpty {
                 GridRow {
                     label("common.customFormats.button")
@@ -134,9 +106,6 @@ public struct UpgradeDiffTable: View {
                         .gridCellColumns(4)
                 }
             }
-            // Plik — NEW filename above, OLD below dimmed. Stacked,
-            // not lateral, because release names are too long for
-            // side-by-side reading on a popover-width surface.
             if newFilename != nil || oldFilename != nil {
                 GridRow {
                     label("queue.file.button")
@@ -148,10 +117,6 @@ public struct UpgradeDiffTable: View {
         }
     }
 
-    /// Plain spec layout for non-upgrade downloads — two columns
-    /// (label + value), no OLD cell / arrow / delta. Same labels and
-    /// row ordering as the diff so the surface reads consistently
-    /// whether or not there's something to compare against.
     private var plainBody: some View {
         Grid(alignment: .leadingFirstTextBaseline, horizontalSpacing: 8, verticalSpacing: 3) {
             if let nq = newQuality, !nq.isEmpty {
@@ -169,9 +134,7 @@ public struct UpgradeDiffTable: View {
             if newScore != 0 {
                 GridRow {
                     label("queue.score.button")
-                    // Plain spec has no delta column competing for the colour,
-                    // so the score keeps ScoreLabel's sign rule (green
-                    // positive / red negative) — same as the queue list.
+                    // No delta column here, so the score keeps ScoreLabel's sign colour.
                     ScoreLabel(score: newScore, size: 11, weight: .semibold)
                         .gridColumnAlignment(.leading)
                 }
@@ -200,9 +163,7 @@ public struct UpgradeDiffTable: View {
         }
     }
 
-    /// Last grid row — the indexer the release was grabbed from. `columns`
-    /// spans the value across the diff layout's OLD / arrow / NEW / delta
-    /// cells; the plain layout only has one value column.
+    /// `columns` spans the diff layout's OLD / arrow / NEW / delta cells.
     @ViewBuilder
     private func indexerRow(columns: Int) -> some View {
         if let indexer, !indexer.isEmpty {
@@ -219,9 +180,6 @@ public struct UpgradeDiffTable: View {
     private func formatChipsCell() -> some View {
         let newSet = Set(newFormats)
         let oldSet = Set(oldFormats)
-        // Order: NEW formats in their incoming order first (so the
-        // user reads what they're GETTING), then any OLD-only ones
-        // pinned at the end as removals.
         let removed = oldFormats.filter { !newSet.contains($0) }
         TooltipFlowLayout(spacing: 4) {
             ForEach(newFormats, id: \.self) { f in
@@ -229,9 +187,7 @@ public struct UpgradeDiffTable: View {
                 TagChip(text: f, color: isAdded ? .green : .primary)
             }
             ForEach(removed, id: \.self) { f in
-                // Removed chips get an explicit "−" prefix so the
-                // user reads them as removals even without colour
-                // context (colour-blind mode, low contrast).
+                // "−" prefix so removals read without colour.
                 TagChip(text: "− \(f)", color: .red)
             }
         }
@@ -254,10 +210,6 @@ public struct UpgradeDiffTable: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(2)
                         .truncationMode(.middle)
-                    // Arrow sits at the trailing edge of the OLD line
-                    // and points up to the NEW line above. Tail at
-                    // bottom-right, head pointing up-left — reads as
-                    // "this OLD got upgraded to the NEW above".
                     Image(systemName: "arrow.up.left")
                         .scaledFont(size: 9, weight: .semibold)
                         .foregroundStyle(.tertiary)
@@ -312,13 +264,8 @@ public struct UpgradeDiffTable: View {
             .gridColumnAlignment(.leading)
     }
 
-    /// The change between the two cells on its row. The ONLY coloured value
-    /// in the table: the old and new scores go through the plain `oldCell` /
-    /// `newCell` like every other dimension, because tinting a side by its
-    /// own sign competes with the delta for the same meaning.
-    ///
-    /// `sign` is any value whose signum matches the change — the raw delta
-    /// works, and the byte row passes its own comparison through.
+    /// The only coloured value in the table: tinting a side by its own sign would compete with the delta.
+    /// `sign` is anything whose signum matches the change.
     @ViewBuilder
     private func deltaCell(text: String?, sign: Int) -> some View {
         if let text {
@@ -332,13 +279,10 @@ public struct UpgradeDiffTable: View {
         }
     }
 
-    /// "66,29 GB" — full precision for absolute values where the
-    /// number itself matters.
     private func formatBytes(_ bytes: Int64) -> String {
         ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
     }
 
-    /// "+39 GB" / "-1,2 GB" — compact delta for the (+Δ) column.
     private func formatBytesDelta(_ bytes: Int64) -> String {
         let sign = bytes >= 0 ? "+" : "−"
         let abs = Swift.abs(bytes)
@@ -352,6 +296,4 @@ public struct UpgradeDiffTable: View {
         return "\(sign)\(Int(mb.rounded())) MB"
     }
 
-    /// "+4656" / "-120" — signed integer, matches ScoreLabel format
-    /// without needing the chip chrome.
 }

@@ -51,9 +51,7 @@ public struct TMDBService: Sendable {
     public func tvCredits(id: Int) -> Resource<TMDBCredits> {
         json(plan("tvCredits", path: "/tv/{id}/aggregate_credits", values: ["id": String(id)]), tags: [tvTag(id)], freshness: .archival)
     }
-    /// One episode's record — the only place TMDB carries a per-EPISODE score
-    /// (`vote_average`). The series' own rating says nothing about the episode
-    /// on screen, and Sonarr/TVDB ship no episode rating at all.
+    /// The only per-episode score anywhere (`vote_average`); Sonarr/TVDB ship none.
     public func tvEpisode(id: Int, season: Int, episode: Int) -> Resource<TMDBEpisode> {
         json(plan("tvEpisode", path: "/tv/{id}/season/{season}/episode/{episode}",
                   values: ["id": String(id), "season": String(season), "episode": String(episode)]),
@@ -77,8 +75,10 @@ public struct TMDBService: Sendable {
         })
     }
 
-    public func person(id: Int) -> Resource<TMDBPersonDetails> {
-        json(plan("personDetails", path: "/person/{id}", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)
+    /// `language` overrides the account's; an empty biography in the user's language is retried in English.
+    public func person(id: Int, language: String? = nil) -> Resource<TMDBPersonDetails> {
+        json(plan("personDetails", path: "/person/{id}", values: ["id": String(id)], query: language.map { [("language", $0)] } ?? []),
+             tags: [personTag(id)], freshness: .archival)
     }
     public func personMovieCredits(id: Int) -> Resource<TMDBPersonCredits<TMDBMovieSummary>> {
         json(plan("personMovieCredits", path: "/person/{id}/movie_credits", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)
@@ -96,11 +96,16 @@ public struct TMDBService: Sendable {
         return json(plan("discoverTV", path: "/discover/tv", query: query), tags: [.collection(.lookup, instance)], freshness: .warm)
     }
 
-    /// `image.tmdb.org` never carries a credential.
-    public func artwork(path: String?, kind: ArtworkReference.Kind) -> ArtworkReference? {
+    /// A CDN url at any size (`/t/p/<size>/<file>`, as the arrs hand them out), so it can be re-sized.
+    public static func artwork(cdnURL url: URL, kind: ArtworkReference.Kind) -> ArtworkReference? {
+        let parts = url.path.split(separator: "/", omittingEmptySubsequences: false)
+        guard url.host == imageBase.host, parts.count >= 5, parts[1] == "t", parts[2] == "p" else { return nil }
+        return ArtworkReference(url: url, sizing: .tmdbCDN(path: "/" + parts[4...].joined(separator: "/")), kind: kind)
+    }
+
+    public static func imageURL(path: String?, size: String) -> URL? {
         guard let path, !path.isEmpty else { return nil }
-        let normalized = path.hasPrefix("/") ? path : "/" + path
-        return ArtworkReference(url: Self.imageBase.appendingPathComponent("t/p/original" + normalized), sizing: .tmdbCDN(path: normalized), kind: kind)
+        return URL(string: "t/p/\(size)\(path.hasPrefix("/") ? path : "/" + path)", relativeTo: imageBase)?.absoluteURL
     }
 
     /// v4 read access tokens are JWTs; v3 keys are 32 hex characters.

@@ -1,18 +1,10 @@
 import Foundation
 
-/// Order-preserving concurrent map with a concurrency cap.
-///
-/// The quiz and suggestion flows resolve dozens of model picks through arr
-/// lookups; done one-by-one that is 60 sequential LAN round-trips before the
-/// first card can show. Done all-at-once it dogpiles a Radarr that is also
-/// serving its own UI. A small window keeps the wall-clock at
-/// ~(count / width) round-trips without either extreme.
+/// Order-preserving concurrent map with a cap: sequential lookups delay the first card by dozens of LAN
+/// round trips, all at once dogpiles a Radarr serving its own UI.
 enum ParallelResolve {
 
-    /// Runs `transform` over `items` with at most `width` in flight, returning
-    /// results in the input order. Failures are the transform's business —
-    /// return nil (and `compactMap` after) rather than throwing, matching how
-    /// the pick-resolution loops already swallow individual lookup misses.
+    /// Failures are the transform's business: return nil rather than throw.
     static func orderedMap<In: Sendable, Out: Sendable>(
         _ items: [In],
         width: Int,

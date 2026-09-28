@@ -4,10 +4,8 @@ import AppIntents
 import UserNotifications
 import WidgetKit
 
-/// The Info.plist has to advertise landscape for the system to ever rotate us,
-/// so the actual portrait lock lives here: every screen stays portrait, and a
-/// playing trailer is the single exception. `TrailerSession` flips the flag and
-/// asks for a re-read when a clip starts or stops.
+/// The Info.plist must advertise landscape for rotation to work at all, so the portrait lock lives here;
+/// a playing trailer (`TrailerSession`) is the one exception.
 final class OrientationGate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      supportedInterfaceOrientationsFor window: UIWindow?) -> UIInterfaceOrientationMask {
@@ -21,16 +19,12 @@ struct ArrBarriOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
-        // Apply the chosen in-app language to the process before the first
-        // localized lookup, so model-layer String(localized:) (download statuses,
-        // notifications, history) matches the UI instead of the system language.
+        // Before the first localized lookup, so model-layer `String(localized:)` matches the in-app language.
         ConfigStore.applyAppLanguageToProcess()
         #if APPSTORE
         AppCapabilities.configure(isAppStore: true)
         #endif
-        // iOS has no AppDelegate, so wire notifications here: a delegate that
-        // shows in-foreground banners + handles Pause/Resume/Remove/Open
-        // action taps, the action categories, and authorization.
+        // iOS has no AppDelegate, so notifications are wired here.
         UNUserNotificationCenter.current().delegate = ArrNotificationDelegate.shared
         NotificationActions.register()
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
@@ -45,15 +39,8 @@ struct ArrBarriOSApp: App {
     var body: some Scene {
         WindowGroup {
             iOSAppRoot()
-                // Drop poster/portrait files unused for 30+ days — the disk
-                // cache lives in Caches/ (OS-purgeable) so it never fills the
-                // disk, but this trims the long tail. macOS does the same in
-                // its AppDelegate.
                 .task { await AppCaches.purgeExpired() }
-                // QA / screenshot hook: launch with env ARRBARR_DEMO_SUITE=1 to
-                // enter demo mode without the Settings toggle (iOS can't relaunch
-                // itself). Mirrors the in-app toggle exactly — persist the flag,
-                // repoint ConfigStore to the demo suite, seed configs.
+                // Launch with ARRBARR_DEMO_SUITE=1 to enter demo mode (iOS can't relaunch itself).
                 .task {
                     if ProcessInfo.processInfo.environment["ARRBARR_DEMO_SUITE"] == "1",
                        !DemoMode.isActive {
@@ -61,15 +48,10 @@ struct ArrBarriOSApp: App {
                         ConfigStore.shared.useDemoStore(true)
                         DemoMode.seedConfigsIfNeeded(ConfigStore.shared)
                     }
-                    // Keep the widget's demo mirror in sync on every launch —
-                    // `useDemoStore` covers live toggles, but booting straight
-                    // into a persisted demo state must also update the mirror.
+                    // `useDemoStore` covers live toggles, not booting into a persisted demo state.
                     WidgetDataStore.setDemoActive(DemoMode.isActive)
                     WidgetCenter.shared.reloadAllTimelines()
                 }
-                // Widget deep links (arrbarr://). Phase 1 only emits
-                // `.library`, which simply foregrounds the app onto its
-                // default view; later phases route to specific destinations.
                 .onOpenURL { url in
                     switch WidgetDeepLink(url: url) {
                     case .library:
@@ -79,9 +61,7 @@ struct ArrBarriOSApp: App {
                     }
                 }
         }
-        // When the app backgrounds, refresh widget timelines so any config or
-        // demo-mode change the user just made is reflected on the home screen
-        // (the group suite is already in sync; this just nudges WidgetKit).
+        // Nudge WidgetKit so config or demo changes show on the home screen.
         .onChange(of: scenePhase) { _, phase in
             if phase == .background {
                 WidgetCenter.shared.reloadAllTimelines()
@@ -90,9 +70,7 @@ struct ArrBarriOSApp: App {
     }
 }
 
-/// Ready-made Siri / Shortcuts / Spotlight phrases. Mirrors the macOS
-/// provider. `\(.applicationName)` is required by Apple in zero-config
-/// phrases. Lives in the app target for App Intents metadata discovery.
+/// `\(.applicationName)` is required in zero-config phrases; lives in the app target for App Intents discovery.
 struct ArrBarrAppShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(

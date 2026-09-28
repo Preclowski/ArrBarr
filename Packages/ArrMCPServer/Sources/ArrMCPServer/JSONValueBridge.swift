@@ -1,6 +1,7 @@
 import ArrCore
 import MCP
 import Foundation
+import MediaKit
 
 /// Converts between ArrCore's schema-less `JSONValue` and the MCP SDK's `Value`.
 /// `JSONValue.number(Double)` maps to `Value.double`; `Value.int` folds back to

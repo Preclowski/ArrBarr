@@ -21,9 +21,6 @@ public struct ServarrService: Sendable {
     private var entityTag: (Int) -> InvalidationTag { { .entity(instance, profile.entityKind, $0) } }
     private func tag(_ c: CollectionName) -> InvalidationTag { .collection(c, instance) }
 
-    /// Whisparr v2 exposes none of the movie vocabulary; the method fails at construction, before any request.
-    private var movieVocabularyAvailable: Bool { instance.kind != .whisparr || capabilities.has(.whisparrV3, instance) }
-
     // MARK: - Resources
 
     public func status() -> Resource<ArrSystemStatus> {
@@ -149,23 +146,22 @@ public struct ServarrService: Sendable {
     }
 
     /// Volatile with a 60 s TTL: indexers are queried on every miss.
-    public func releases(entityID: Int) -> Resource<[ArrRelease]> {
-        let key = profile.kind == .sonarr ? "episodeId" : profile.kind == .lidarr ? "albumId" : "movieId"
-        return .json(plan("fetchReleases", path: "/release", query: [(key, String(entityID))], timeout: .seconds(120)), tags: [], freshness: .volatile, ttl: .seconds(60))
+    public func releases(_ target: ReleaseTarget) -> Resource<[ArrRelease]> {
+        .json(plan("fetchReleases", path: "/release", query: target.query, timeout: .seconds(120)), tags: [], freshness: .volatile, ttl: .seconds(60))
     }
 
     // MARK: - Commands
 
-    private func command(_ name: String, invalidates: Set<InvalidationTag>, optimistic: PendingEffect? = nil, tracking: Command.Tracking? = nil,
+    private func command(_ name: String, invalidates: Set<InvalidationTag>, effects: [PendingEffect] = [], tracking: Command.Tracking? = nil,
                          run: @escaping @Sendable (CommandContext) async throws -> CommandReceipt) -> Command {
-        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: invalidates, optimistic: optimistic, tracking: tracking, run: run)
+        Command(name: OperationID(instance.kind, name), instance: instance, invalidates: invalidates, effects: effects, tracking: tracking, run: run)
     }
 
-    public func deleteQueueItem(id: Int, removeFromClient: Bool, blocklist: Bool, now: Date) -> Command {
+    public func deleteQueueItem(id: Int, removeFromClient: Bool, blocklist: Bool) -> Command {
         let p = plan("deleteQueueItem", method: "DELETE", path: "/queue/{id}", values: ["id": String(id)],
                      query: [("removeFromClient", String(removeFromClient)), ("blocklist", String(blocklist))])
         return command("deleteQueueItem", invalidates: [tag(.queue), tag(.history)],
-                       optimistic: PendingEffect(elementID: "\(instance)/\(id)", change: .removed, expiresAt: now.addingTimeInterval(30))) { ctx in
+                       effects: [PendingEffect(elementID: String(id), instance: instance, change: .removed)]) { ctx in
             let r = try await ctx.send(p)
             return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: r.body))
         }
@@ -173,11 +169,11 @@ public struct ServarrService: Sendable {
 
     public func grabQueueItem(id: Int) -> Command {
         let p = plan("grabQueueItem", method: "POST", path: "/queue/grab/{id}", values: ["id": String(id)], body: .bytes(Data("{}".utf8), contentType: "application/json"))
-        return command("grabQueueItem", invalidates: [tag(.queue)]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
+        return command("grabQueueItem", invalidates: [tag(.queue)],
+                       effects: [PendingEffect(elementID: String(id), instance: instance, change: .status("downloading"))]) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 
-    /// The arr's own indexer definitions — how a release's `indexerId` is
-    /// turned into something a human recognises.
+    /// Turns a release's `indexerId` into a name a human recognises.
     public func indexers() -> Resource<[ArrIndexerDefinition]> {
         .json(plan("indexers", path: "/indexer"), tags: [tag(.profiles)], freshness: .reference, ttl: .seconds(3600))
     }
@@ -204,14 +200,6 @@ public struct ServarrService: Sendable {
         case let .artist(id): body = ["name": .string("ArtistSearch"), "artistId": .number(Double(id))]; operation = "searchArtist"; tags.insert(entityTag(id))
         }
         return postCommand(operation: operation, body: body, invalidates: tags)
-    }
-
-    public func command(named name: String, body extra: [String: JSONValue] = [:], entityID: Int? = nil) -> Command {
-        var body = extra
-        body["name"] = .string(name)
-        var tags: Set<InvalidationTag> = [tag(.commands)]
-        if let entityID { tags.insert(entityTag(entityID)) }
-        return postCommand(operation: "postCommand", body: body, invalidates: tags)
     }
 
     private func postCommand(operation: String, body: [String: JSONValue], invalidates: Set<InvalidationTag>) -> Command {
@@ -311,15 +299,22 @@ public struct ServarrService: Sendable {
         }
     }
 
-    public func update(entityID: Int, moveFiles: Bool = false, edit: @escaping @Sendable (inout ArrRecordEnvelope<JSONValue>) -> Void) -> Command {
+    public func settings(entityID: Int) -> Resource<ArrRecordSettings> {
+        .json(plan("fetchLibraryRecord", path: "/\(profile.entityNoun)/{id}", values: ["id": String(entityID)]), tags: [entityTag(entityID)], freshness: .volatile)
+    }
+
+    /// Writes the non-nil fields over the current record; a changed root folder moves the files along.
+    public func updateSettings(entityID: Int, _ settings: ArrRecordSettings) -> Command {
         let service = self
         let noun = profile.entityNoun
         return command("updateLibraryRecord", invalidates: [entityTag(entityID), tag(.library), tag(.calendar)]) { ctx in
-            let get = service.plan("updateLibraryRecord", path: "/\(noun)/{id}", values: ["id": String(entityID)])
-            var envelope = try await ctx.decode(ArrRecordEnvelope<JSONValue>.self, from: try await ctx.send(get), operation: get.operation)
-            edit(&envelope)
+            let get = service.plan("fetchLibraryRecord", path: "/\(noun)/{id}", values: ["id": String(entityID)])
+            var envelope = try await ctx.decode(ArrRecordEnvelope<ArrRecordSettings>.self, from: try await ctx.send(get), operation: get.operation)
+            let movedPath = settings.movedPath(from: envelope.known)
+            envelope.known.merge(settings)
+            if let movedPath { envelope.known.path = movedPath }
             let put = service.plan("updateLibraryRecord", method: "PUT", path: "/\(noun)/{id}", values: ["id": String(entityID)],
-                                   query: [("moveFiles", String(moveFiles))], body: try RequestBuilder.json(envelope))
+                                   query: [("moveFiles", String(movedPath != nil))], body: try RequestBuilder.json(envelope))
             let r = try await ctx.send(put)
             return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: r.body))
         }
@@ -347,19 +342,6 @@ public struct ServarrService: Sendable {
     }
 
     // MARK: - Artwork and identity
-
-    public func artwork(for images: [ArrImage]?, kind: ArtworkReference.Kind) -> ArtworkReference? {
-        let coverTypes: [String] = switch kind {
-        case .poster: ["poster", "cover"]
-        case .fanart: ["fanart", "background"]
-        case .banner: ["banner"]
-        default: ["poster"]
-        }
-        guard let url = images?.url(coverTypes: coverTypes) else { return nil }
-        return ArtworkReference(url: url, kind: kind)
-    }
-
-    public var supportsMovieVocabulary: Bool { movieVocabularyAvailable }
 
     private var harvestMovie: @Sendable (ArrMovie) -> [Crosswalk] {
         let instance = self.instance
@@ -396,5 +378,19 @@ public struct ServarrService: Sendable {
 
     static func day(_ date: Date) -> String {
         date.formatted(Date.ISO8601FormatStyle(dateSeparator: .dash).year().month().day())
+    }
+}
+
+/// What an interactive search runs for: the `/release` query of each arr.
+public enum ReleaseTarget: Hashable, Sendable {
+    case movie(Int), episode(Int), album(Int), season(seriesID: Int, season: Int)
+
+    var query: [(String, String)] {
+        switch self {
+        case let .movie(id): [("movieId", String(id))]
+        case let .episode(id): [("episodeId", String(id))]
+        case let .album(id): [("albumId", String(id))]
+        case let .season(seriesID, season): [("seriesId", String(seriesID)), ("seasonNumber", String(season))]
+        }
     }
 }

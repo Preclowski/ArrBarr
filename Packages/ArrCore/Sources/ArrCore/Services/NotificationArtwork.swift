@@ -9,64 +9,26 @@ import AppKit
 import UIKit
 #endif
 
-/// The thumbnail a queue notification carries.
-///
-/// This exists so the banner can stop *spelling* which arr the event came from.
-/// The arr's name was taking a whole line of a three-line banner to say
-/// something a picture says instantly — and the picture it can say it with is
-/// the poster of the thing being downloaded, which is far more useful than the
-/// service name anyway.
-///
-/// Two tiers, in order:
-///  1. The title's own poster.
-///  2. The arr's mark on its brand colour — different per service, so a Radarr
-///     grab and a Lidarr grab are still tellable apart at a glance.
-///
-/// The poster is fetched rather than only read from cache, but it never gets
-/// to hold the banner hostage. `prefetch` starts the download the moment the
-/// coalescer first hears about an item — which for an episodic arr is a whole
-/// grouping window (5 s) before the banner is due — and `attachment` then waits
-/// only `waitBudget` for that in-flight fetch to land. Whatever arrives late
-/// still ends up on disk, so the next grab for the same title is instant; the
-/// banner it missed simply carries the mark.
-@MainActor
+/// Queue notification thumbnail: the title's poster, else the arr's mark on its brand colour.
+/// `prefetch` starts the fetch early; `attachment` waits at most `waitBudget`, and late posters still land on disk.
 enum NotificationArtwork {
-    /// How long a banner may wait on artwork that hasn't arrived yet.
-    ///
-    /// Under the 5 s episodic hold, so a series grab that started its fetch at
-    /// `enqueue` is never delayed by this at all — the wait is real only for
-    /// the leading-edge arrs (Radarr, Lidarr), whose banner fires the instant
-    /// the grab is seen. Four seconds of "no poster yet" is worth spending
-    /// there: the notification still reads as just-now, and the alternative is
-    /// a mark on every first-time title.
+    /// Under the 5 s episodic hold, so it only delays leading-edge arrs (Radarr, Lidarr),
+    /// where a few seconds beats a mark on every first-time title.
     private static let waitBudget: TimeInterval = 4
-    /// Longest edge of the generated brand tile. 256 px covers the banner
-    /// thumbnail at @2x with room to spare, and the tile is drawn once per
-    /// service per launch.
+    /// Covers the banner thumbnail at @2x; drawn once per service per launch.
     private static let tileSize = 256
 
-    /// Rendered brand tiles, keyed by service. The PNG bytes are reused; the
-    /// *file* is not, because `UNUserNotificationCenter` takes ownership of an
-    /// attachment's file and moves it into its own store.
+    /// Bytes are reused, files are not: `UNUserNotificationCenter` moves an attachment's file into its own store.
     private static var tileCache: [QueueItem.Source: Data] = [:]
 
-    /// Posters currently being downloaded for a pending banner, so the same
-    /// artwork is never requested twice.
     private static var inFlight: Set<URL> = []
 
-    /// Start pulling this item's poster now. Called when the coalescer first
-    /// sees a grab, which is the earliest moment we know a banner is coming —
-    /// and for an episodic arr, a full grouping window before it is due.
-    ///
-    /// Safe to call repeatedly for the same title: a cached poster starts
-    /// nothing, and a download already running is not started twice.
+    /// For an episodic arr this runs a full grouping window before the banner is due. Idempotent.
     static func prefetch(_ item: QueueItem, apiKey: String?) {
         guard let url = item.posterURL else { return }
         startFetch(url, apiKey: apiKey)
     }
 
-    /// Attachment for one queue item — its poster if we have it or can get it
-    /// inside `waitBudget`, else the arr's mark.
     static func attachment(for item: QueueItem, apiKey: String?) async -> UNNotificationAttachment? {
         if let url = item.posterURL {
             var data = cachedPoster(url)
@@ -85,39 +47,28 @@ enum NotificationArtwork {
         }
     }
 
-    /// Attachment for something that isn't one title — a mixed batch, an arr
-    /// health problem. Always the service mark.
     static func attachment(for source: QueueItem.Source) -> UNNotificationAttachment? {
         markAttachment(for: source)
     }
 
     // MARK: - Poster
 
-    /// `.icon` first: it is the durable tier the library index keeps warm, so
-    /// it is the one that is actually populated when a grab lands for a title
-    /// the user has never opened. `.card` is the consolation prize from having
-    /// browsed the title's detail view.
+    /// `.icon` first: the library index keeps it warm, so it exists for titles never opened.
     private static func cachedPoster(_ url: URL) -> Data? {
         PosterStore.storedData(for: url, tier: .icon)
             ?? PosterStore.storedData(for: url, tier: .card)
     }
 
-    /// Give the download until the budget runs out, then give up on it.
-    ///
-    /// Watches the *cache* rather than awaiting the fetch task, and that is the
-    /// point: running out of budget must abandon the wait without abandoning
-    /// the download. A poster that lands a second too late still lands on disk,
-    /// so the next grab for that title has it instantly — where cancelling the
-    /// fetch would leave the title without artwork forever.
+    /// Polls the cache instead of awaiting the fetch, so giving up on the wait doesn't cancel
+    /// the download and the next grab for the title has its poster.
     private static func awaitPoster(_ url: URL, apiKey: String?) async -> Data? {
         startFetch(url, apiKey: apiKey)
         let deadline = Date().addingTimeInterval(waitBudget)
         while Date() < deadline {
-            try? await Task.sleep(nanoseconds: 150_000_000)
+            // `sleep` returns at once when cancelled, so without this the loop spins until the deadline.
+            guard (try? await Task.sleep(nanoseconds: 150_000_000)) != nil else { return nil }
             if let data = cachedPoster(url) { return data }
-            // The fetch finished without producing anything — a 404 on the
-            // arr's MediaCover, a poster the title simply doesn't have. No
-            // point sitting out the rest of the budget for it.
+            // The fetch ended with nothing (e.g. a MediaCover 404); don't sit out the budget.
             if !inFlight.contains(url) { return nil }
         }
         return nil
@@ -125,12 +76,8 @@ enum NotificationArtwork {
 
     private static func posterAttachment(_ data: Data) -> UNNotificationAttachment? {
         guard let file = writeTemp(data, ext: "jpg") else { return nil }
-        // A poster is 2:3 and the banner thumbnail is square, so without a
-        // clipping rect the system picks the crop for us. Centred rather than
-        // top-anchored on purpose: Apple documents this rect as "the unit
-        // coordinate space" without saying which corner the origin is in, and
-        // a vertically centred window is the same rectangle under either
-        // reading. An off-centre crop would land upside down half the time.
+        // Centred crop of the 2:3 poster for the square thumbnail: Apple doesn't document the
+        // rect's origin corner, and a centred window is the same under either reading.
         let crop = CGRect(x: 0, y: 1.0 / 6.0, width: 1, height: 2.0 / 3.0)
         let options: [String: Any] = [
             UNNotificationAttachmentOptionsThumbnailClippingRectKey:
@@ -155,13 +102,8 @@ enum NotificationArtwork {
         return try? UNNotificationAttachment(identifier: "", url: file, options: nil)
     }
 
-    /// The arr's own mark, knocked out of its brand colour.
-    ///
-    /// The marks in `ServiceIcons.xcassets` are template cuts — one black path
-    /// on transparency — so they are used here as a *mask* rather than drawn:
-    /// clip to the mark, fill with ink. That also means the ink can follow the
-    /// background instead of being fixed white, which matters because two of
-    /// the four brand colours are light enough that white on them is unreadable.
+    /// The template marks are used as a mask so the ink can follow the background:
+    /// white is unreadable on two of the brand colours.
     private static func renderTile(for source: QueueItem.Source) -> Data? {
         let side = tileSize
         guard let context = CGContext(
@@ -195,12 +137,7 @@ enum NotificationArtwork {
         return out as Data
     }
 
-    /// The service mark from `ServiceIcons.xcassets`, rasterised at `side`.
-    ///
-    /// nil under `swift test` and that is expected: SwiftPM copies the asset
-    /// catalog into the bundle without compiling it, so no asset name resolves
-    /// outside an Xcode build. The caller degrades to a plain brand-coloured
-    /// tile rather than to no attachment.
+    /// nil when the asset doesn't resolve; the caller falls back to a plain brand-coloured tile.
     private static func markImage(named name: String, side: Int) -> CGImage? {
         #if os(macOS)
         guard let image = Bundle.module.image(forResource: name)?.copy() as? NSImage
@@ -220,9 +157,7 @@ enum NotificationArtwork {
         #endif
     }
 
-    /// Each arr's accent, taken from its own web UI. Approximations of somebody
-    /// else's brand rather than exact values — worth correcting if any of them
-    /// looks off next to the real thing.
+    /// Approximated from each arr's web UI.
     private static func brandColor(for source: QueueItem.Source) -> CGColor {
         switch source {
         case .radarr:   return rgb(0xFF, 0xC2, 0x30)
@@ -232,8 +167,7 @@ enum NotificationArtwork {
         }
     }
 
-    /// Near-black on a light brand colour, white on a dark one. Radarr's yellow
-    /// and Sonarr's cyan are both far too light to carry white type.
+    /// Radarr's yellow and Sonarr's cyan are too light to carry white.
     private static func inkColor(on background: CGColor) -> CGColor {
         let c = background.components ?? [0, 0, 0, 1]
         guard c.count >= 3 else { return rgb(0xFF, 0xFF, 0xFF) }
@@ -248,9 +182,7 @@ enum NotificationArtwork {
 
     // MARK: - Files
 
-    /// A throwaway copy for the notification centre to take. It moves the file
-    /// into its own attachment store on `add()`, so each notification needs its
-    /// own — handing it the cache's file would empty the cache.
+    /// Each notification needs its own copy: `add()` moves the file into the attachment store.
     private static func writeTemp(_ data: Data, ext: String) -> URL? {
         let dir = FileManager.default.temporaryDirectory
             .appendingPathComponent("notification-artwork", isDirectory: true)

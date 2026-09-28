@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// The one file-state rule behind the Library tab, the detail heroes and the
@@ -8,14 +9,14 @@ import Foundation
 @Suite("Library file state")
 struct LibraryFileStateTests {
 
-    private static func series(_ json: String) throws -> SonarrLibraryRecord {
-        try JSONDecoder().decode(SonarrLibraryRecord.self, from: Data(json.utf8))
+    private static func series(_ json: String) throws -> ArrSeries {
+        try JSONDecoder().decode(ArrSeries.self, from: Data(json.utf8))
     }
 
     @Test("Series counts are summed from the season statistics")
     func seriesCountsSumSeasons() throws {
         let rec = try Self.series(#"""
-        {"id": 7, "monitored": true,
+        {"id": 7, "title": "Big Buck Bunny", "monitored": true,
          "statistics": {"episodeCount": 99, "episodeFileCount": 99},
          "seasons": [
            {"seasonNumber": 1, "statistics": {"episodeCount": 10, "episodeFileCount": 10}},
@@ -30,7 +31,7 @@ struct LibraryFileStateTests {
     @Test("A complete series is downloaded")
     func completeSeriesIsDownloaded() throws {
         let rec = try Self.series(#"""
-        {"id": 3, "monitored": true,
+        {"id": 3, "title": "Big Buck Bunny", "monitored": true,
          "seasons": [{"seasonNumber": 1, "statistics": {"episodeCount": 6, "episodeFileCount": 6}}]}
         """#)
         #expect(LibraryEntry.FileState.series(monitored: true, counts: rec.episodeFileCounts) == .complete)

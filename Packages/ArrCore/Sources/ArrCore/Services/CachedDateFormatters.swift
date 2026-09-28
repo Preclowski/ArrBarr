@@ -1,35 +1,17 @@
 import Foundation
 
-/// Date formatters, built once per configuration instead of per call.
-///
-/// Foundation date formatters are expensive to *create* — each one spins up an
-/// ICU formatter, ~50 µs — and cheap to *use*. That distinction doesn't matter
-/// on a decoding path, and matters enormously in a SwiftUI body: a formatter
-/// built inside a row's computed property is rebuilt for every row on every
-/// layout pass. The same shape cost a third of the main thread in the season
-/// view before `parseArrDate` was given the same treatment (see
-/// `ArrDateParser`).
-///
-/// Keyed by locale as well as by format, because several call sites take an
-/// explicit locale so their labels follow a live language switch — a single
-/// shared formatter would freeze the language of whichever locale asked first.
-///
-/// The returned formatters are shared and must only be *used*, never
-/// reconfigured. Formatting itself is thread-safe (Foundation guarantees it for
-/// `DateFormatter` and friends); only the construction below is serialized.
+/// Creating a formatter costs ~50 µs; in a SwiftUI row body that is paid per row per layout pass.
+/// Keyed by locale for live language switches. Shared: only use them, never reconfigure.
 nonisolated enum CachedDateFormatters {
     private static let lock = NSLock()
     private nonisolated(unsafe) static var dateFormatters: [String: DateFormatter] = [:]
     private nonisolated(unsafe) static var relativeFormatters: [String: RelativeDateTimeFormatter] = [:]
 
-    /// A fixed pattern ("yyyy"). Locale-sensitive on purpose: the call sites
-    /// that use this render a year for display, and a non-Gregorian calendar
-    /// should keep rendering its own.
+    /// Locale-sensitive on purpose: a non-Gregorian calendar should keep rendering its own year.
     static func format(_ format: String, locale: Locale = .current) -> DateFormatter {
         formatter(key: "f:\(format)|\(locale.identifier)", locale: locale) { $0.dateFormat = format }
     }
 
-    /// Date/time styles — the `.medium`/`.short` pairs used across rows.
     static func styles(date: DateFormatter.Style,
                        time: DateFormatter.Style,
                        locale: Locale = .current) -> DateFormatter {
@@ -39,8 +21,6 @@ nonisolated enum CachedDateFormatters {
         }
     }
 
-    /// A localized template ("dMMM") — the order and separators come from the
-    /// locale, which is the whole point of `setLocalizedDateFormatFromTemplate`.
     static func template(_ template: String, locale: Locale = .current) -> DateFormatter {
         formatter(key: "t:\(template)|\(locale.identifier)", locale: locale) {
             $0.setLocalizedDateFormatFromTemplate(template)

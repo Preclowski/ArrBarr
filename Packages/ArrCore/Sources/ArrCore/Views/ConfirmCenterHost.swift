@@ -1,12 +1,8 @@
 import SwiftUI
 
 public extension View {
-    /// Renders whatever `ConfirmCenter` is holding — and tells it that a
-    /// surface is on screen to do the rendering.
-    ///
-    /// That second half matters on macOS: a context menu closes the menu-bar
-    /// panel before its item ever fires, and with no host left `ConfirmCenter`
-    /// answers with a native alert instead of dropping the action.
+    /// Also registers a host: a macOS context menu closes the panel before its item
+    /// fires, and with no host `ConfirmCenter` falls back to a native alert.
     func confirmCenterHost() -> some View { modifier(ConfirmCenterHost()) }
 }
 
@@ -20,15 +16,11 @@ private struct ConfirmCenterHost: ViewModifier {
     }
 
     #if os(macOS)
-    /// The app's own alert: `.alert` / `.confirmationDialog` don't render
-    /// inside a `MenuBarExtra` panel at all.
+    /// `.alert` / `.confirmationDialog` don't render inside a `MenuBarExtra` panel.
     private func presented(_ content: Content) -> some View {
         content
-            // An alert owns the surface while it is up. The scrim is only the
-            // visible half of that: without these, the rows underneath still
-            // took clicks, still lit their hover affordances, and still opened
-            // their long-hover tooltips — which, being floating windows, came
-            // up ON TOP of the alert asking about them.
+            // Without these, rows under the scrim still took clicks and opened their
+            // tooltips, which as floating windows came up on top of the alert.
             .allowsHitTesting(center.pending == nil)
             .disabled(center.pending != nil)
             .accessibilityHidden(center.pending != nil)
@@ -41,7 +33,9 @@ private struct ConfirmCenterHost: ViewModifier {
                         confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
                         cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
                         destructive: pending.isDestructive,
+                        suppressionLabelKey: pending.suppressionLabel.map { LocalizedStringKey($0) },
                         onConfirm: { center.confirm() },
+                        onSuppress: pending.onSuppress,
                         onCancel: { center.cancel() }
                     )
                 }
@@ -49,7 +43,6 @@ private struct ConfirmCenterHost: ViewModifier {
             .animation(.smooth(duration: 0.18), value: center.pending?.id)
     }
     #else
-    /// iOS has a real window and a real alert; use it.
     private func presented(_ content: Content) -> some View {
         content.alert(
             Text(LocalizedStringKey(center.pending?.title ?? ""), bundle: .module),
@@ -63,6 +56,12 @@ private struct ConfirmCenterHost: ViewModifier {
                 center.confirm()
             } label: {
                 Text(LocalizedStringKey(pending.confirmLabel), bundle: .module)
+            }
+            // iOS alerts hold no checkbox: "don't show again" is its own answer.
+            if let suppression = pending.suppressionLabel {
+                Button { center.confirm(suppressing: true) } label: {
+                    Text(LocalizedStringKey(suppression), bundle: .module)
+                }
             }
             Button(role: .cancel) { center.cancel() } label: {
                 Text(LocalizedStringKey(pending.cancelLabel), bundle: .module)

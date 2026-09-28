@@ -1,10 +1,7 @@
 import SwiftUI
+import MediaKit
 
-/// Settings → Status: a glanceable server dashboard, one page deep in Settings.
-/// Rolls up connection health for every configured service, arr `/health`
-/// warnings, live queue activity, and disk space across root mounts — the
-/// "is my homelab OK?" glance. Read-only: it observes the shared health/queue
-/// singletons and owns only the `/diskspace` fetch (`ServerStatusModel`).
+/// Read-only: observes the shared health/queue singletons and owns only the `/diskspace` fetch.
 struct ServerStatusView: View {
     @State private var status = ServerStatusModel()
 
@@ -53,9 +50,7 @@ struct ServerStatusView: View {
             serviceIcon(service)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 1) {
-                // "Plex", not "Media server": the row sits next to Radarr and
-                // Sonarr, which name themselves, and the connected server is
-                // the thing whose health this is.
+                // "Plex", not "Media server": the arrs beside it name themselves.
                 Text(verbatim: Self.rowTitle(service))
                 if let detail = Self.detailText(snapshot.state) {
                     Text(verbatim: detail)
@@ -85,14 +80,13 @@ struct ServerStatusView: View {
             case .tmdb:   brandMark("brand-tmdb")
             case .mediaServer:
                 ServiceIcon(mediaServer: ConfigStore.shared.mediaServer.kind, size: 16)
+            case .prowlarr: ServiceIcon(prowlarr: 16)
             case .arr:    EmptyView()
             }
         }
     }
 
-    /// Brand mark from `ServiceIcons.xcassets`, sized like the arr icons beside
-    /// it and inheriting the same foreground — dimming it to `.secondary` made
-    /// OpenAI and TMDB read as a lesser class of service than the arrs.
+    /// Same foreground as the arr icons; `.secondary` made OpenAI and TMDB read as lesser services.
     private func brandMark(_ name: String) -> some View {
         Image(name, bundle: .module)
             .renderingMode(.template)
@@ -112,8 +106,7 @@ struct ServerStatusView: View {
         }
     }
 
-    /// Warning + error count from the arr's `/health` records (nil for
-    /// non-arr services, which don't report health warnings).
+    /// nil for non-arr services, which don't report health warnings.
     private func warningCount(_ service: MonitoredService) -> Int? {
         guard let source = Self.arrSource(service) else { return nil }
         return QueueViewModel.shared.health.records(for: source)
@@ -140,33 +133,41 @@ struct ServerStatusView: View {
                     diskRow(disk)
                 }
             }
+            ForEach(status.failures, id: \.kind) { failure in
+                Label {
+                    Text("status.diskSpaceFailed \(failure.kind.displayName) \(failure.message)", bundle: .module)
+                        .foregroundStyle(.secondary)
+                } icon: {
+                    Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(.orange)
+                }
+            }
         } header: {
             Text("status.storage.header", bundle: .module)
         }
     }
 
-    private func diskRow(_ disk: DiskSpace) -> some View {
+    private func diskRow(_ disk: ArrDiskSpace) -> some View {
         let hasLabel = !(disk.label ?? "").isEmpty
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "internaldrive")
                     .foregroundStyle(.secondary)
                     .font(.caption)
-                Text(verbatim: hasLabel ? disk.label! : disk.path)
+                Text(verbatim: hasLabel ? disk.label! : disk.mountPath)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 Text(String(
                     format: String(localized: "status.freeOfTotal.label", bundle: .module),
-                    Self.bytes(disk.freeSpace),
-                    Self.bytes(disk.totalSpace)
+                    Self.bytes(disk.free),
+                    Self.bytes(disk.capacity)
                 ))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
             }
-            usageBar(fraction: disk.usedFraction, tint: Self.usageTint(free: disk.freeSpace, total: disk.totalSpace))
+            usageBar(fraction: disk.usedFraction, tint: Self.usageTint(free: disk.free, total: disk.capacity))
             if hasLabel {
-                Text(verbatim: disk.path)
+                Text(verbatim: disk.mountPath)
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
@@ -241,7 +242,7 @@ struct ServerStatusView: View {
         }
     }
 
-    private func warningRow(source: QueueItem.Source, record: ArrHealthRecord) -> some View {
+    private func warningRow(source: QueueItem.Source, record: ArrHealth) -> some View {
         let isError = record.type?.lowercased() == "error"
         return HStack(alignment: .top, spacing: 10) {
             Image(systemName: isError ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
@@ -293,11 +294,7 @@ struct ServerStatusView: View {
 
     // MARK: - Data helpers
 
-    /// Every configured monitored service, in display order: arrs, then
-    /// download clients, then the AI services.
-    /// Display name for a status row. Everything names itself except the media
-    /// server, whose `displayName` has to stay generic (the enum case carries
-    /// no kind — there is only ever one connection, and it lives in config).
+    /// The media server's `displayName` stays generic: there is only ever one connection, kept in config.
     private static func rowTitle(_ service: MonitoredService) -> String {
         guard case .mediaServer = service else { return service.displayName }
         return ConfigStore.shared.mediaServer.kind.displayName
@@ -308,16 +305,13 @@ struct ServerStatusView: View {
         return MonitoredService.allCases.filter { $0.isConfigured(in: store) }
     }
 
-    /// Queue items still in flight across every arr.
     private static func activeItems() -> [QueueItem] {
         QueueViewModel.shared.queues.values
             .flatMap { $0 }
             .filter { $0.status != .completed }
     }
 
-    /// Actionable `/health` records (warning + error) across every arr, each
-    /// tagged with its source for the row label.
-    private static func warningItems() -> [(source: QueueItem.Source, record: ArrHealthRecord)] {
+    private static func warningItems() -> [(source: QueueItem.Source, record: ArrHealth)] {
         let health = QueueViewModel.shared.health
         return QueueItem.Source.allCases.flatMap { source in
             health.records(for: source)

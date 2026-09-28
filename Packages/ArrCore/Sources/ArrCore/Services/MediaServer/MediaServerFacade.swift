@@ -29,60 +29,61 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         return MediaServerHandshake(versionLine: identity.version.map { "\(name) \($0)" } ?? name, userId: config.kind == .plex ? nil : service.userID)
     }
 
-    func libraryIndex() async throws -> [MediaServerEntry] {
+    /// The store and instance this config reads through, for a projection that follows the store's revisions.
+    func scope() async throws -> (store: ResourceStore, instance: InstanceID) {
+        let (gateway, service) = try await context()
+        return (gateway.store, service.instance)
+    }
+
+    /// Every movie and series with provider ids, play state and a token-free artwork reference; `fetchedAt` is the oldest section's.
+    func libraryIndex(policy: ReadPolicy) async throws -> (entries: [MediaServerEntry], fetchedAt: Date) {
         let (gateway, service) = try await context()
         // Plex indexes per section; Jellyfin/Emby answer one recursive query for every library.
         let sections: [String] = config.kind == .plex
-            ? try await gateway.store.read(service.libraries()).value.filter { $0.kind == .movie || $0.kind == .series }.map(\.key)
+            ? try await gateway.store.read(service.libraries(), policy: policy).value.filter { $0.kind == .movie || $0.kind == .series }.map(\.key)
             : [""]
         var entries: [MediaServerEntry] = []
+        var fetchedAt = Date()
         for section in sections {
-            let rows = try await gateway.store.read(service.libraryIndex(section: section)).value
-            for row in rows {
-                let keys = row.ids.compactMap(Self.externalKey)
+            let fetched = try await gateway.store.read(service.libraryIndex(section: section), policy: policy)
+            fetchedAt = min(fetchedAt, fetched.fetchedAt)
+            for row in fetched.value {
+                let keys = row.ids.compactMap { Self.externalKey($0, kind: row.kind) }
                 guard !keys.isEmpty else { continue }
-                let poster = service.artwork(for: row, baseURL: baseURL)?.url
-                entries.append(MediaServerEntry(itemId: row.itemID, posterURL: poster, externalKeys: keys, watched: row.watched))
+                entries.append(MediaServerEntry(itemId: row.itemID, poster: service.artwork(for: row, baseURL: baseURL), externalKeys: keys, watched: row.watched))
             }
         }
-        return entries
+        return (entries, fetchedAt)
     }
 
-    func libraries() async throws -> [ArrCore.MediaServerLibrary] {
+    func libraries() async throws -> [MediaServerLibrary] {
         let (gateway, service) = try await context()
-        return try await gateway.store.read(service.libraries()).value.map { library in
-            let kind: ArrCore.MediaServerLibrary.Kind = switch library.kind {
-            case .movie: .movies
-            case .series: .series
-            default: .other
-            }
-            return ArrCore.MediaServerLibrary(id: library.key, name: library.title.isEmpty ? library.key : library.title, kind: kind)
-        }
+        return try await gateway.store.read(service.libraries()).value
     }
 
     func scanLibrary(id: String) async throws {
         let (gateway, service) = try await context()
-        _ = try await gateway.store.run(service.scanLibrary(section: id))
+        try await gateway.run(service.scanLibrary(section: id))
     }
 
     func emptyTrash(libraryId: String) async throws {
         guard config.kind == .plex else { throw MediaServerError.trashUnsupported(server: config.kind.displayName) }
         let (gateway, service) = try await context()
-        _ = try await gateway.store.run(service.emptyTrash(section: libraryId))
+        try await gateway.run(service.emptyTrash(section: libraryId))
     }
 
-    func nowPlaying() async throws -> [ArrCore.MediaServerSession] {
+    func nowPlaying() async throws -> [MediaServerSession] {
         let (gateway, service) = try await context()
-        let sessions = try service.decodeSessions(try await gateway.kit.pipeline.send(service.sessionsPlan()))
-        return sessions.map { s in
-            ArrCore.MediaServerSession(title: s.parentTitle ?? s.title, subtitle: s.parentTitle == nil ? nil : s.title, user: s.user,
-                                       device: s.device, isTranscoding: s.isTranscoding, progress: s.progress)
-        }
+        return try await gateway.store.read(service.sessions()).value
     }
 
     func recentlyWatched(limit: Int) async throws -> [MediaServerWatch] {
+        try await recentlyWatched(limit: limit, policy: .cacheFirst)
+    }
+
+    func recentlyWatched(limit: Int, policy: ReadPolicy) async throws -> [MediaServerWatch] {
         let (gateway, service) = try await context()
-        return try await gateway.store.read(service.watchHistory(limit: limit)).value.compactMap { row in
+        return try await gateway.store.read(service.watchHistory(limit: limit), policy: policy).value.compactMap { row in
             guard !row.title.isEmpty else { return nil }
             return MediaServerWatch(title: row.title, year: nil, kind: row.kind == .movie ? .movie : .show,
                                     watchedAt: row.viewedAt, seriesItemId: row.seriesItemID,
@@ -90,28 +91,35 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         }
     }
 
-    func seasonPosters(seriesItemId: String) async throws -> [Int: URL] {
+    /// Season number → season artwork for one series item; seasons without their own artwork are absent.
+    func seasonPosters(seriesItemId: String) async throws -> [Int: ArtworkReference] {
         let (gateway, service) = try await context()
         let map = try await gateway.store.read(service.seasonArtwork(item: seriesItemId)).value
-        var out: [Int: URL] = [:]
+        var out: [Int: ArtworkReference] = [:]
         for (number, value) in map {
             guard let season = Int(number) else { continue }
             if config.kind == .plex {
-                out[season] = baseURL.appendingPathComponent(value)
+                out[season] = ArtworkReference(url: baseURL.appendingPathComponent(value), headers: ["X-Plex-Token": .credential(service.instance)],
+                                               sizing: .plexTranscode(photoPath: value), kind: .poster)
             } else {
                 let parts = value.split(separator: "|", maxSplits: 1).map(String.init)
                 guard parts.count == 2, var components = URLComponents(url: baseURL.appendingPathComponent("/Items/\(parts[0])/Images/Primary"), resolvingAgainstBaseURL: false) else { continue }
                 components.queryItems = [URLQueryItem(name: "tag", value: parts[1])]
-                if let url = components.url { out[season] = url }
+                guard let url = components.url else { continue }
+                let header = config.kind == .jellyfin ? "Authorization" : "X-Emby-Token"
+                out[season] = ArtworkReference(url: url, headers: [header: .credential(service.instance)],
+                                               sizing: .jellyfinFill(itemID: parts[0], tag: parts[1]), kind: .poster)
             }
         }
         return out
     }
 
-    private static func externalKey(_ id: MediaID) -> MediaServerExternalKey? {
+    private static func externalKey(_ id: MediaID, kind: MediaKind) -> MediaServerExternalKey? {
         switch id.namespace {
-        case .tmdbMovie, .tmdbSeries: return id.intValue.map { .tmdb($0) }
-        case .tvdb: return id.intValue.map { .tvdb($0) }
+        case .tmdbMovie: return id.intValue.map { .tmdbMovie($0) }
+        case .tmdbSeries: return id.intValue.map { .tmdbSeries($0) }
+        // A movie's TVDB id numbers TVDB's movie records, which overlap its series ids; the arrs only ask TVDB for series.
+        case .tvdb: return kind == .series ? id.intValue.map { .tvdb($0) } : nil
         case .imdb: return .imdb(id.value)
         default: return nil
         }

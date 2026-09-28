@@ -11,10 +11,8 @@ public protocol KeyValueSyncing: AnyObject {
 
 extension NSUbiquitousKeyValueStore: KeyValueSyncing {}
 
-/// Mirrors the `SyncedKeys` allowlist between UserDefaults (local source of
-/// truth) and iCloud KVS. Compiled in all builds for testability; only started
-/// (`start()`) by the app under `#if APPSTORE`.
-@MainActor
+/// Mirrors the `SyncedKeys` allowlist between UserDefaults (source of truth) and
+/// iCloud KVS. Compiled everywhere for tests; started only under `#if APPSTORE`.
 public final class KVSyncCoordinator: ObservableObject {
     private let defaults: UserDefaults
     private let kv: KeyValueSyncing
@@ -22,32 +20,20 @@ public final class KVSyncCoordinator: ObservableObject {
     private var isApplyingRemote = false
     private var observers: [NSObjectProtocol] = []
 
-    /// Timestamp of the last successful push or pull. `nil` until first sync.
     @Published public private(set) var lastSyncDate: Date?
-    /// Human-readable description of the last sync failure, or `nil` if healthy.
     @Published public private(set) var lastError: String?
-    /// Whether the coordinator is currently observing and mirroring changes.
     @Published public private(set) var isRunning: Bool = false
 
-    /// Whether this device is signed into iCloud (Keychain/KVS can replicate).
-    /// Stored + `@Published` so the settings UI refreshes live; updated on
-    /// `start()`/`stop()` and whenever the iCloud account changes (see the
-    /// `NSUbiquityIdentityDidChange` observer registered in `init`).
+    /// Stored and `@Published` so Settings refreshes live on iCloud sign-in/out.
     @Published public private(set) var accountAvailable: Bool
 
-    /// Reads the current iCloud account presence. Injectable so tests can drive
-    /// sign-in/out without a real iCloud account.
+    /// Injectable so tests can drive sign-in/out.
     private let identityCheck: @Sendable () -> Bool
 
-    /// "It didn't sync to my other Mac" is unanswerable from the UI, which
-    /// shows a timestamp and nothing about what moved or why it stopped. Keys
-    /// are logged by name — they are our own allowlisted setting names
-    /// (`SyncedKeys`), never values, so nothing here is the user's data.
+    /// Keys are logged by name only: allowlisted setting names, never values.
     private static let log = Logger(category: "KVSync")
 
-    /// Lifetime-long observer of iCloud sign-in/out, kept OUT of `observers`
-    /// (which `start()`/`stop()` manage) so `accountAvailable` stays current
-    /// regardless of `isRunning`. Removed only in `deinit`.
+    /// Outside `observers` so `accountAvailable` stays current regardless of `isRunning`.
     private var identityObserver: NSObjectProtocol?
 
     public init(defaults: UserDefaults, kv: KeyValueSyncing, reload: @escaping () -> Void,
@@ -58,9 +44,7 @@ public final class KVSyncCoordinator: ObservableObject {
         self.reload = reload
         self.identityCheck = identityCheck
         self.accountAvailable = identityCheck()
-        // Always observe account changes (even while sync is paused) so the
-        // settings banner reflects sign-in/out the moment it happens. The
-        // notification can arrive on any thread, so hop to the main actor.
+        // The notification can arrive on any thread.
         identityObserver = NotificationCenter.default.addObserver(
             forName: .NSUbiquityIdentityDidChange, object: nil, queue: .main
         ) { [weak self] _ in
@@ -68,8 +52,6 @@ public final class KVSyncCoordinator: ObservableObject {
         }
     }
 
-    /// Begin observing inbound KVS changes and outbound UserDefaults changes,
-    /// and do an initial two-way reconcile (pull remote, then push local).
     public func start() {
         refreshAccountAvailability()
         let kvObs = NotificationCenter.default.addObserver(
@@ -82,8 +64,7 @@ public final class KVSyncCoordinator: ObservableObject {
             MainActor.assumeIsolated {
                 guard let self else { return }
                 if reason == NSUbiquitousKeyValueStoreQuotaViolationChange {
-                    // The only failure iCloud reports to us at all, and it
-                    // stops sync dead until the user frees space.
+                    // The only failure iCloud reports; sync stops until the user frees space.
                     Self.log.error("inbound change rejected: iCloud KVS quota exceeded")
                     self.lastError = String(localized: "settings.icloudStorageIsFull.tooltip", bundle: .module)
                 } else {
@@ -112,7 +93,7 @@ public final class KVSyncCoordinator: ObservableObject {
         )
     }
 
-    /// Stop observing and mirroring. Existing KVS/Keychain data is left intact.
+    /// Existing KVS/Keychain data is left intact.
     public func stop() {
         refreshAccountAvailability()
         observers.forEach { NotificationCenter.default.removeObserver($0) }
@@ -125,7 +106,6 @@ public final class KVSyncCoordinator: ObservableObject {
         accountAvailable = identityCheck()
     }
 
-    /// Idempotently start or stop syncing to match the user's toggle.
     public func setEnabled(_ enabled: Bool) {
         if enabled {
             guard !isRunning else { return }
@@ -136,15 +116,10 @@ public final class KVSyncCoordinator: ObservableObject {
         }
     }
 
-    /// Copy every allowlisted key present in UserDefaults into KVS.
     public func pushAllToKV() {
         for key in SyncedKeys.all {
             if let value = defaults.object(forKey: key) {
-                // Skip keys whose KVS value already matches. Re-pushing an
-                // identical value posts an inbound change on other devices,
-                // which (if their suppression flag has already reset) can
-                // re-push it back: a sync loop that also burns KVS quota.
-                // Equality short-circuits the bounce.
+                // Re-pushing an identical value bounces between devices and burns KVS quota.
                 if !Self.kvEqual(kv.object(forKey: key), value) {
                     kv.set(value, forKey: key)
                 }
@@ -153,17 +128,14 @@ public final class KVSyncCoordinator: ObservableObject {
         if accountAvailable { lastSyncDate = Date() }
     }
 
-    /// Value equality for the property-list types stored in UserDefaults / KVS
-    /// (String, NSNumber, Data, Array, Dictionary). Used to suppress redundant
-    /// pushes that would otherwise bounce between devices.
+    /// Plist-type equality, used to suppress pushes that would bounce between devices.
     private static func kvEqual(_ a: Any?, _ b: Any?) -> Bool {
         if a == nil, b == nil { return true }
         guard let a, let b else { return false }
         return (a as AnyObject).isEqual(b)
     }
 
-    /// Apply the given inbound KVS keys (allowlist-filtered) into UserDefaults,
-    /// then trigger one reload. Outbound observation is suppressed meanwhile.
+    /// Outbound observation is suppressed while applying.
     public func applyFromKV(keys: [String]) {
         isApplyingRemote = true
         var applied: [String] = []
@@ -173,16 +145,12 @@ public final class KVSyncCoordinator: ObservableObject {
                 applied.append(key)
             }
         }
-        // Names only, never values — and `.debug`, because an active sync
-        // fires this on every remote edit.
         if !applied.isEmpty {
             Self.log.debug("applied \(applied.count, privacy: .public) inbound keys: \(applied.joined(separator: ", "), privacy: .public)")
         }
         reload()
-        // Reset on a later main-queue tick so the asynchronous outbound
-        // `didChangeNotification` observer (queue: .main, enqueued by the
-        // `defaults.set` calls above) still sees `isApplyingRemote == true`
-        // and skips the redundant re-push of the value we just applied.
+        // Reset on a later tick: the outbound observer (queue: .main) must still
+        // see `isApplyingRemote == true` for the sets above.
         DispatchQueue.main.async { [weak self] in self?.isApplyingRemote = false }
     }
 
@@ -199,18 +167,12 @@ public final class KVSyncCoordinator: ObservableObject {
     }
 }
 
-@MainActor
 extension KVSyncCoordinator {
     private static var _shared: KVSyncCoordinator?
 
-    /// The process-wide coordinator, if one has been created. Read-only access
-    /// for UI (status display) and for `ConfigStore`'s toggle sink.
     public static var shared: KVSyncCoordinator? { _shared }
 
-    /// Create, retain, and (if iCloud sync is enabled) start the process-wide
-    /// coordinator bound to the real App Group suite and the live iCloud KVS.
-    /// Idempotent. No-op if the group suite is unavailable. Call only under
-    /// `#if APPSTORE`.
+    /// Idempotent; no-op without the App Group suite. Call only under `#if APPSTORE`.
     @discardableResult
     public static func startShared() -> KVSyncCoordinator? {
         if let existing = _shared { return existing }
@@ -220,20 +182,15 @@ extension KVSyncCoordinator {
             kv: NSUbiquitousKeyValueStore.default,
             reload: {
                 ConfigStore.shared.reloadFromDefaults()
-                // The queue's two settings are on the allow-list but no longer
-                // live on ConfigStore — without this an inbound iCloud change
-                // to grouping or collapse state sat in the suite unread until
-                // the next launch.
+                // The queue's synced settings live on QueueUIState, not ConfigStore.
                 QueueUIState.shared.reloadFromDefaults()
             })
         _shared = coord
         if KeychainSecretStore.syncEnabled(in: group) {
             coord.start()
         } else {
-            // Sync is off: re-stamp existing Keychain secrets as
-            // non-synchronizable at launch so the "off = don't replicate"
-            // guarantee holds even if the flag was turned off on another device
-            // (the in-app toggle already does this; this covers cold starts).
+            // Re-stamp Keychain secrets non-synchronizable on cold start, in case sync
+            // was turned off on another device.
             KeychainSecretStore().reapplySyncAttribute(for: SecretKey.syncable)
         }
         return coord

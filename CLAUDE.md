@@ -81,8 +81,9 @@ Settings draft — never construct a client. Reads go through `ResourceStore`
 policies (`cacheFirst`, `staleWhileRevalidate`, `mustRevalidate`); writes are
 `Command`s that declare invalidation tags. Realtime is `EventHub` over
 `SignalRSource`. Fixtures are packed one JSON per kind by `Tools/fixtures/pack_fixtures.py`;
-re-record only through `MediaKitRecording` (reads only, allow-list) and run
-`Tools/fixtures/anonymize_fixtures.py --check` before committing. Package tests:
+re-record only with `(cd Packages/MediaKit && swift run mediakit-record <instances.json> <scratch-dir>)`
+(`MediaKitRecording`: reads only, allow-list), keep the raw recording in the scratchpad, and run
+`Tools/fixtures/anonymize_fixtures.py --check` before packing and committing. Package tests:
 `(cd Packages/MediaKit && swift test)`. ArrCore compiles with
 `.defaultIsolation(MainActor.self)`: wire models, helpers and facades are `nonisolated`.
 
@@ -126,7 +127,7 @@ fastest via SwiftPM:
 ## Key Patterns
 
 - **Localization**: catalog is `ArrCore/Resources/Localizable.xcstrings`
-  (en/de/es/fr/pl). In views use `Text("Key", bundle: .module)`; in
+  (en/de/es/fr/nl/pl). In views use `Text("Key", bundle: .module)`; in
   models/services use `String(localized: "Key", bundle: .module)`. Never inline
   user-facing literals. (The old `loc("…")` helper is gone.)
 - **Shared singletons** cross target boundaries: `ConfigStore.shared`,
@@ -138,6 +139,9 @@ fastest via SwiftPM:
   `--demo` only unlocks Developer options) or `ARRBARR_DEMO_SUITE=1` (iOS).
   Every demo answer comes from MediaKit's bundled fixtures through
   `FixtureTransport`; `DemoMocks` only keeps the chat persona and people search.
+  Demo instances are seeded configured (demo URL, key `demo`, qBittorrent and
+  SABnzbd included), so views gate them like a real profile — no
+  `DemoMode.isActive` exemptions in view code.
 - **MCP server**: `MCPServerController` (actor, NIO HTTP host, bearer auth, tool
   whitelist) is started/stopped from `AppDelegate.wireMCPServer` based on
   `ConfigStore`. swift-log (server + NIO) is bridged into `os.Logger` via
@@ -168,8 +172,8 @@ fastest via SwiftPM:
   `ServiceKind`). `MediaServerIndex` is a lock-guarded snapshot — not an actor —
   so poster resolution stays synchronous; it supplies artwork overrides, the
   Quiz's watch history, and the `media_server_*` tools. Control-gated.
-- **Season grouping**: `QueueGroup` wraps multiple `QueueItem`s; `.real` packs
-  share a downloadId, `.virtual` bundles have independent progress.
+- **Season grouping**: only Sonarr season packs (rows sharing one downloadId)
+  collapse into a `QueueGroup`; separate episodes of a series stay separate rows.
 - **Custom progress bars**: `GeometryReader` + `RoundedRectangle`, not
   `ProgressView` — SwiftUI's linear `ProgressView` ignores `.frame(height:)`.
 - **Tooltip popovers**: `.popover(isPresented:, arrowEdge: .trailing)` steals

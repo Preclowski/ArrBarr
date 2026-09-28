@@ -1,26 +1,20 @@
 import SwiftUI
 
-/// Apple-native back button — bare chevron, no pill, no fill. Matches
-/// what macOS Settings.app and iOS NavigationStack ship: just the
-/// glyph in accent / secondary color, hit-target padded but not
-/// outlined. Apple's HIG explicitly doesn't put a capsule around nav
-/// back; we dropped ours to stop looking handcrafted.
-public struct FloatingBackButton: View {
+/// Bare chevron, no pill: the HIG doesn't put a capsule around nav back.
+struct FloatingBackButton: View {
     let action: () -> Void
     @State private var isHovering = false
 
-    public init(action: @escaping () -> Void) {
+    init(action: @escaping () -> Void) {
         self.action = action
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Image(systemName: "chevron.left")
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(isHovering ? Color.primary : Color.secondary)
-                // Generous hit target without a visible pill: tap goes
-                // through anywhere in the 28×28 padded area but only
-                // the glyph itself paints.
+                // The whole 28×28 area takes the tap; only the glyph paints.
                 .frame(width: 28, height: 28)
                 .contentShape(Rectangle())
         }

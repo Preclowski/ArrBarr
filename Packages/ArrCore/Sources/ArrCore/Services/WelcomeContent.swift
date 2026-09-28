@@ -1,22 +1,9 @@
 import Foundation
 
-/// Decides what (if anything) the welcome window should show on launch.
-///
-/// Two variants of the same UI:
-///   - `.firstRun`              — user has never seen any welcome screen
-///   - `.whatsNew(version)`     — user has seen welcome before, but a newer
-///                                version of welcome content was published
-///                                AND that version has entries to show
-///
-/// Force-show for testing or "Show welcome screen" button in Settings:
-///   - Launch arg:    --show-welcome
-///   - Env var:       ARRBARR_SHOW_WELCOME=1
-///   - UserDefaults:  defaults write pl.incred.ArrBarr ArrBarrShowWelcome -bool true
-///                    (one-shot — cleared after the welcome window opens so
-///                    it doesn't loop on every launch)
+/// Force-show: `--show-welcome`, `ARRBARR_SHOW_WELCOME=1`, or the one-shot `ArrBarrShowWelcome` default
+/// (cleared once the window opens so it doesn't loop).
 nonisolated public enum WelcomeContent {
-    /// Bump when shipping a release with features worth re-introducing.
-    /// Must have a matching entry (with at least one item) in `whatsNewEntries`.
+    /// Must have a matching non-empty entry in `whatsNewEntries`.
     public static let currentVersion = "0.10.0"
 
     public enum Variant: Equatable {
@@ -28,12 +15,7 @@ nonisolated public enum WelcomeContent {
         let id: String
         let titleKey: String
         let bodyKey: String
-        /// Optional secondary action button that appears under the body.
         let cta: CTA?
-        /// Whether the hero illustration sits above or below the text.
-        /// Detailed/wide illustrations (mock menu bar, settings rows) read
-        /// better as a "preview" under the explanation; symbol-style heroes
-        /// look better above.
         let illustrationPosition: IllustrationPosition
 
         enum IllustrationPosition: Equatable {
@@ -110,10 +92,7 @@ nonisolated public enum WelcomeContent {
         ),
     ]
 
-    /// Per-version entries describing what's new. Add entries here when bumping
-    /// `currentVersion`. If the entry list for `currentVersion` is empty (or
-    /// missing), the welcome window is skipped on update — only first-run users
-    /// will see the welcome screen.
+    /// An empty or missing entry for `currentVersion` skips the window on update.
     static let whatsNewEntries: [String: [WelcomePage]] = [
         "0.9.0": [
             WelcomePage(
@@ -143,19 +122,13 @@ nonisolated public enum WelcomeContent {
 
     // MARK: - Decision
 
-    /// Pure decision function — used by `variant(seen:defaults:)` in production
-    /// and directly by tests so we don't have to mutate static state.
     static func decide(
         seen: String?,
         current: String,
         entries: [String: [WelcomePage]],
         forceShow: Bool
     ) -> Variant? {
-        // Force-show always returns firstRun — that's the broader "tour"
-        // content, and it's what users actually want to re-view from Settings
-        // or from `--show-welcome` while testing. Returning users seeing
-        // version-specific changes is handled by the normal upgrade path
-        // below (no force flag).
+        // Force-show returns the broader first-run tour.
         if forceShow {
             return .firstRun
         }
@@ -168,8 +141,7 @@ nonisolated public enum WelcomeContent {
         return nil
     }
 
-    /// Production entry point. Reads the force-show flag and (if set) consumes
-    /// the one-shot UserDefaults variant so we don't loop.
+    /// Consumes the one-shot UserDefaults flag so we don't loop.
     public static func variant(seen: String?, defaults: UserDefaults = .standard) -> Variant? {
         let force = shouldForceShow(defaults: defaults)
         let result = decide(

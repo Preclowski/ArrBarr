@@ -1,8 +1,6 @@
 import Foundation
 
-/// Resolves quiz picks with a bounded fan-out and hands the deck its cards as
-/// they land, in pick order, instead of after the last lookup. Picks can be fed
-/// while the model is still streaming them; `finish` waits for the rest.
+/// Bounded fan-out that hands the deck cards in pick order as they land, not after the last lookup.
 actor QuizDeckPipeline {
 
     typealias Pick = (title: String, year: Int?, tmdbId: Int?)
@@ -46,8 +44,7 @@ actor QuizDeckPipeline {
         self.resolve = resolve
     }
 
-    /// `all` is the whole pick list as known so far; only the tail beyond what
-    /// was already fed is new.
+    /// Only the tail beyond what was already fed is new.
     func feed(_ all: [Pick], isFinal: Bool = false) {
         guard !cancelled else { return }
         if all.count > picks.count { picks.append(contentsOf: all[picks.count...]) }
@@ -116,8 +113,7 @@ actor QuizDeckPipeline {
         return true
     }
 
-    /// Chained so batches reach the deck in release order even though each
-    /// hop to the main actor suspends.
+    /// Chained so batches reach the deck in order even though each main-actor hop suspends.
     private func enqueueDelivery(_ batch: [DiscoverItem]) {
         guard setup.delivers else { return }
         let previous = deliveryTail

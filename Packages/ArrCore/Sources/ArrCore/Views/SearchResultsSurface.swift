@@ -1,32 +1,14 @@
 import SwiftUI
+import MediaKit
 
-/// The one search-results surface, shared by the Queue tab, the Library tab
-/// and both platforms.
-///
-/// Section order: local hits → people rows → primary "Starring X" → one
-/// merged, relevance-sorted block of library + add-new lookup rows → secondary
-/// "Starring X" → settled-empty state.
-///
-/// `localHits` is the ONLY thing the hosts differ in: the Queue tab hands in
-/// its live download rows, the Library tab the browsed library's matches. They
-/// arrive already filtered and ordered by the host, render at full opacity
-/// (they are recomputed per keystroke, so they are never stale), and the
-/// lookup rows below them are deduped against them.
-///
-/// Narrowing is `searchVM.scope` and nothing else: lookup results for an
-/// unconfigured arr are already empty, and `SearchScope.allows` gates the
-/// clients before a request is made.
+/// The one search-results surface for the Queue and Library tabs on both
+/// platforms; hosts differ only in `localHits`, which lookup rows are deduped against.
 struct SearchResultsSurface: View {
     var searchVM: SearchViewModel
-    /// Host-supplied local context, already filtered and ordered.
     var localHits: [LocalHit]
-    /// Tap on a live queue row (drills into detail). Defaulted: a host with no
-    /// queue rows of its own (the Library tab) supplies no local `.queue` hits,
-    /// so this is never called there.
+    /// Never called by hosts without queue rows (the Library tab).
     var onSelectQueueItem: (QueueItem) -> Void = { _ in }
-    /// Tap on an add-new (not-in-library) result.
     let onSelectAddResult: (SearchResult) -> Void
-    /// Tap on a person row / "Starring X" — host pushes the person view.
     var onSelectPerson: (PersonRef) -> Void = { _ in }
 
     var body: some View {
@@ -35,24 +17,17 @@ struct SearchResultsSurface: View {
                 results: allLookupResults, localHits: localHits),
             input: searchVM.parsedInput
         )
-        // Refining a query ("matrix" → "matrix 2") keeps the previous rows up
-        // while the new lookups run — deliberately, so typing doesn't flicker
-        // list ↔ spinner. See `lookupReloadDim` for what those stale rows
-        // wear meanwhile.
+        // Keep the previous rows while refining so typing doesn't flicker to a spinner.
         let reloading = searchVM.isSearching && !lookupRows.isEmpty
 
         VStack(alignment: .leading, spacing: 0) {
-            // Lazy: a broad query over a big library can hand us hundreds of
-            // local hits, and an eager stack builds every row before the first
-            // one is on screen.
+            // Lazy: a broad query can yield hundreds of local hits.
             LazyVStack(spacing: 2) {
                 ForEach(localHits) { hit in
                     localRow(hit)
                 }
             }
-            // People rows (people scope / `person:` prefix) sit above the
-            // titles — in that mode the arr clients are gated off, so
-            // `lookupRows` is empty and these are the whole result.
+            // In people mode the arr clients are gated off, so these are the whole result.
             if !searchVM.peopleResults.isEmpty {
                 VStack(spacing: 2) {
                     ForEach(searchVM.peopleResults) { person in
@@ -61,10 +36,8 @@ struct SearchResultsSurface: View {
                 }
             }
             VStack(alignment: .leading, spacing: 0) {
-                // "Starring X" — an all-scope person match and their top
-                // titles. A full-name query ("rhea seehorn") means the person
-                // IS the result, so that section leads; a single-token match
-                // ("hanks") stays a footnote under the titles it annotates.
+                // A full-name query means the person is the answer, so it leads; a single
+                // token stays a footnote under the titles.
                 if let starring = searchVM.starring, starring.isPrimary {
                     starringSection(starring)
                 }
@@ -77,9 +50,7 @@ struct SearchResultsSurface: View {
             }
             .lookupReloadDim(reloading)
 
-            // Settled empty search: every bucket came back empty and the
-            // lookups are done. Without this the surface is just blank rows
-            // of nothing, which reads as "still loading" or "broken".
+            // Without it a settled empty search reads as loading or broken.
             if showsEmptyState {
                 SearchLookupEmptyState(errorMessage: searchVM.errorMessage)
             }
@@ -91,8 +62,7 @@ struct SearchResultsSurface: View {
             + searchVM.lidarrResults + searchVM.whisparrResults
     }
 
-    /// Owned → the detail; addable → the add panel. `DetailRequest.tap` owns
-    /// the Lidarr artist-vs-album branch.
+    /// `DetailRequest.tap` owns the Lidarr artist-vs-album branch.
     private func route(_ r: SearchResult) {
         if r.inLibraryArrId != nil {
             DetailRequest.tap(r)
@@ -101,9 +71,7 @@ struct SearchResultsSurface: View {
         }
     }
 
-    /// A queue hit keeps its download chrome (progress, actions — it doesn't
-    /// flatten into a search row); a library hit is an owned title and wears
-    /// the same row every other owned result does, routed the same way.
+    /// A queue hit keeps its download chrome; a library hit wears the owned-title row.
     @ViewBuilder
     private func localRow(_ hit: LocalHit) -> some View {
         switch hit {
@@ -116,10 +84,7 @@ struct SearchResultsSurface: View {
         }
     }
 
-    /// True when the query has settled with nothing to show in ANY bucket —
-    /// no local hits, no lookup rows, no people. Requires a live query (an
-    /// empty field legitimately shows nothing) and no in-flight search (that
-    /// case is the host's loading indicator).
+    /// An in-flight search is the host's loading indicator, not empty.
     private var showsEmptyState: Bool {
         guard searchVM.isActive, !searchVM.isSearching else { return false }
         guard !searchVM.hasResults, searchVM.starring == nil else { return false }
@@ -149,10 +114,7 @@ struct SearchResultsSurface: View {
     @ViewBuilder
     private func starringSection(_ section: SearchViewModel.StarringSection) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            // Leading the results, the person gets the same full-weight row the
-            // People scope uses — the muted "Starring X" caption is sized to
-            // annotate titles above it, and reads as a footer when it's the
-            // answer to the query.
+            // Leading the results, the person gets the full People row; the caption reads as a footer.
             if section.isPrimary {
                 personRow(section.person)
             } else {

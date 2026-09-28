@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Reads a `discover_in_quiz` argument string that is still being streamed:
 /// the top-level scalars seen so far plus every `items` element that has
@@ -77,9 +78,8 @@ nonisolated enum QuizArgumentsScanner {
         return nil
     }
 
-    /// Last index of the value starting at `start`, or nil if it has not
-    /// finished arriving. A bare literal only counts once its terminator shows
-    /// up — `20` may still become `2024`.
+    /// Nil until the value has finished arriving: a bare literal needs its
+    /// terminator, since `20` may still become `2024`.
     private static func valueEnd(_ b: [UInt8], _ start: Int) -> Int? {
         switch b[start] {
         case UInt8(ascii: "\""):

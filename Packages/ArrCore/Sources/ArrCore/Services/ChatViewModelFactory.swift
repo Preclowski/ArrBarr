@@ -1,8 +1,8 @@
 import Foundation
+import MediaKit
 
-@MainActor
-public enum ChatViewModelFactory {
-    public static func makePlaceholder() -> ChatViewModel {
+enum ChatViewModelFactory {
+    static func makePlaceholder() -> ChatViewModel {
         ChatViewModel(
             provider: UnavailableLLMProvider(),
             tools: [],
@@ -10,7 +10,7 @@ public enum ChatViewModelFactory {
         )
     }
 
-    public static func make(
+    static func make(
         sonarr: ServiceConfig,
         radarr: ServiceConfig,
         lidarr: ServiceConfig = .empty,
@@ -31,15 +31,11 @@ public enum ChatViewModelFactory {
             mediaServer: mediaServer
         )
 
-        // Warm the library snapshot in the background: the first quiz /
-        // library call then hits a fresh cache instead of paying the heaviest
-        // fetch, and the system prompt's library-size line (LibraryStats) is
-        // populated before the first turn rather than after it.
-        if !DemoMode.isActive {
-            Task.detached(priority: .utility) {
-                if radarr.isConfigured { _ = await LibraryIndex.shared.movies(config: radarr) }
-                if sonarr.isConfigured { _ = await LibraryIndex.shared.series(config: sonarr) }
-            }
+        // Warm the library snapshot so the first quiz call hits the cache and the prompt's
+        // library-size line is populated before the first turn.
+        Task.detached(priority: .utility) {
+            if radarr.isConfigured { _ = await LibraryIndex.shared.movies(config: radarr) }
+            if sonarr.isConfigured { _ = await LibraryIndex.shared.series(config: sonarr) }
         }
 
         let tmdbEnabled = !tmdbApiKey.isEmpty
@@ -57,12 +53,8 @@ public enum ChatViewModelFactory {
             try await backend.callTool(name: name, arguments: args)
         }
 
-        // The FM path drives tool execution from inside its own
-        // `DynamicMCPTool.call`, so the destructive-tool gate has to
-        // reach back into the view-model from there. ChatViewModel
-        // doesn't exist yet at this point, so we capture a `weak`
-        // reference through a holder that gets back-filled after the
-        // VM is constructed.
+        // The FM path runs tools inside `DynamicMCPTool.call`, so the gate reaches back into a view
+        // model that doesn't exist yet: captured weakly and back-filled after construction.
         var vmRef: ChatViewModel? = nil
         let confirm: @Sendable (ToolCall) async -> JSONValue? = { [weak vmRef] call in
             guard let vm = vmRef else { return nil }
@@ -70,14 +62,7 @@ public enum ChatViewModelFactory {
         }
 
         let provider: LLMProvider
-        // Demo mode: short-circuit the provider switch before either real
-        // backend (OpenAI / FoundationModels) is consulted. The OpenAI
-        // path would fail without a key; the FM path would either be
-        // unavailable on older OSes or hit the real on-device model,
-        // which can't see our canned arrs anyway. DemoChatProvider
-        // returns pre-executed `suggest_titles`-shaped results so the
-        // existing chat pipeline renders rich cards without any other
-        // changes downstream.
+        // Demo short-circuits both real backends: OpenAI needs a key and the on-device model can't see the canned arrs.
         if DemoMode.isActive {
             provider = DemoChatProvider()
             let vm = ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke)
@@ -109,9 +94,7 @@ public enum ChatViewModelFactory {
         return vm
     }
 
-    /// Maps the app's language setting to an English language name for the
-    /// system prompt (e.g. "pl" → "Polish"). For "system", resolves the OS's
-    /// current preferred language; falls back gracefully when unknown.
+    /// The system prompt wants an English language name ("pl" → "Polish").
     nonisolated static func replyLanguageName(appLanguage: String) -> String {
         let english = Locale(identifier: "en")
         if appLanguage == "system" {

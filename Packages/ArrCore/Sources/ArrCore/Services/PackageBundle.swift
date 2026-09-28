@@ -1,11 +1,7 @@
 import Foundation
 
-/// Public handle for the ArrCore Swift package's resource bundle.
-///
-/// `Bundle.module` is synthesized as `internal` so the app target (which
-/// imports ArrCore) can't reach it. App-target code that needs to look
-/// up a string from ArrCore's `Localizable.xcstrings` — menu titles,
-/// alert text, window titles — uses this accessor instead.
+/// `Bundle.module` is synthesized `internal`, so app targets reach ArrCore's
+/// string catalog through this.
 public extension Bundle {
     nonisolated static let arrCore: Bundle = .module
 }

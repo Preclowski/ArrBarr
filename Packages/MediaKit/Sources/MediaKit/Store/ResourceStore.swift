@@ -29,8 +29,6 @@ public actor ResourceStore {
     private var nextWaiter: UInt64 = 0
     private var revalidations: [ResourceKey: Task<Void, Never>] = [:]
     private var commandTrackers: [Int: Task<Void, Never>] = [:]
-    private let sweepEvery: Duration = .seconds(6 * 3600)
-    private var lastSweep: Date?
     var probe: CapabilityProbe?
     var capabilities = CapabilityIndex()
     /// Forces every read to this policy; a test process sets `.mustRevalidate` so stubs answer each request.
@@ -49,8 +47,6 @@ public actor ResourceStore {
         self.probe = probe
         self.capabilities = capabilities
     }
-
-    public func start() async {}
 
     // MARK: - Reads
 
@@ -97,14 +93,13 @@ public actor ResourceStore {
         }
     }
 
-    /// cached → revalidated → one element per matching invalidation or commit.
     public nonisolated func observe<V>(_ resource: Resource<V>, maxAge: Duration? = nil,
                                        priority: RequestPriority = .interactive) -> AsyncStream<Fetched<V>> {
         AsyncStream { continuation in
             let task = Task {
                 var last: (fetchedAt: Date, isStale: Bool)?
                 let tags = resource.tags
-                let observations = Observations { [revision] in tags.reduce(UInt64(0)) { $0 &+ revision.tick(for: $1) } }
+                let observations = Observations { [revision] in revision.tick(for: tags) }
                 if let first = try? await self.read(resource, policy: .staleWhileRevalidate, maxAge: maxAge, priority: priority) {
                     last = (first.fetchedAt, first.isStale)
                     continuation.yield(first)
@@ -180,7 +175,7 @@ public actor ResourceStore {
         commandTrackers[commandID]?.cancel()
         commandTrackers[commandID] = Task { [clock, pipeline] in
             let deadline = clock.now.addingTimeInterval(timeout.seconds)
-            let api = instance.kind == .lidarr ? "/api/v1" : "/api/v3"
+            let api = ServarrProfile.profile(for: instance.kind)?.apiBase ?? "/api/v3"
             while clock.now < deadline, !Task.isCancelled {
                 try? await clock.sleep(for: .seconds(3))
                 let plan = RequestPlan(instance: instance, operation: "commandStatus", pathTemplate: "\(api)/command/{id}",
@@ -223,7 +218,6 @@ public actor ResourceStore {
 
     public func sweep() async {
         guard let database else { return }
-        lastSweep = clock.now
         memory.remove { $0.staleAt.addingTimeInterval($0.freshness.retention.seconds) < self.clock.now }
         if let report = try? await database.sweep(now: clock.now, cap: database.location.diskCap, retention: { $0.retention }),
            report.expired + report.evicted > 0 {
@@ -231,16 +225,10 @@ public actor ResourceStore {
         }
     }
 
-    public func purge(_ freshness: FreshnessClass) async {
-        memory.remove { $0.freshness == freshness }
-        try? await database?.delete(freshness: freshness)
-        revision.bump([])
-    }
-
     public func purgeAll() async {
         memory.removeAll()
         try? await database?.delete(freshness: nil)
-        revision.bump([])
+        revision.bumpEverything()
     }
 
     public func statistics() async -> StoreStatistics {
@@ -248,16 +236,6 @@ public actor ResourceStore {
         s.memoryEntries = memory.rows.count
         s.memoryBytes = memory.bytes
         return s
-    }
-
-    /// Write-through for the widget's refresher and for tests; bypasses the network.
-    public func seed<V>(_ resource: Resource<V>, value: V, fetchedAt: Date? = nil) async throws {
-        let payload = try WireCodec.encoder.encode(value)
-        let fingerprint = pipeline.registry.fingerprint(resource.key.instance) ?? Fingerprint(rawValue: "")
-        let at = fetchedAt ?? clock.now
-        commit(CommittedRow(payload: payload, fetchedAt: at, staleAt: at.addingTimeInterval(resource.freshness.retention.seconds), tags: resource.tags),
-               for: resource, fingerprint: fingerprint)
-        await database?.flush()
     }
 
     // MARK: - Internals
@@ -305,7 +283,7 @@ public actor ResourceStore {
                 let payload = try await Self.encodeOffActor(value)
                 let now = clock.now
                 if let harvest = resource.harvest { await self.identity?.record(harvest(value)) }
-                return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.freshness.retention.seconds), tags: resource.tags)
+                return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.validFor.seconds), tags: resource.tags)
             }
             inFlight[slot] = InFlight(task: task, waiters: [waiter])
         }
@@ -332,8 +310,6 @@ public actor ResourceStore {
             inFlight[slot] = entry
         }
     }
-
-    private var committed: Set<ResourceKey> = []
 
     private func commit<V>(_ row: CommittedRow, for resource: Resource<V>, fingerprint: Fingerprint, slot: String? = nil) {
         let entry = StoredEntry(key: resource.key, fingerprint: fingerprint, freshness: resource.freshness, payload: row.payload,

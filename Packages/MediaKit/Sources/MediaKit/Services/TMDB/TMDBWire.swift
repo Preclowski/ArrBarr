@@ -10,6 +10,10 @@ public struct TMDBPerson: Codable, Sendable, Equatable, Hashable, Identifiable {
     public let job: String?
     public let department: String?
     public let order: Int?
+    /// TV `aggregate_credits`: the characters played, one per stint.
+    public let roles: [Role]?
+
+    public struct Role: Codable, Sendable, Equatable, Hashable { public let character: String?; public let episodeCount: Int? }
 }
 
 public struct TMDBPersonDetails: Codable, Sendable, Equatable, Hashable {
@@ -96,6 +100,18 @@ public struct TMDBDetails: Codable, Sendable, Equatable, Hashable {
     public let id: Int
     public let title: String?
     public let name: String?
+    public let originalTitle: String?
+    public let originalName: String?
+    public let tagline: String?
+    public let status: String?
+    public let imdbId: String?
+    public let budget: Int?
+    public let revenue: Int?
+    public let numberOfSeasons: Int?
+    public let numberOfEpisodes: Int?
+    public let lastEpisodeToAir: Airing?
+    public let nextEpisodeToAir: Airing?
+    public let seasons: [Airing]?
     public let productionCountries: [Country]?
     public let originCountry: [String]?
     public let createdBy: [TMDBPerson]?
@@ -107,12 +123,16 @@ public struct TMDBDetails: Codable, Sendable, Equatable, Hashable {
     public let voteAverage: Double?
     public let voteCount: Int?
     public struct Genre: Codable, Sendable, Equatable, Hashable { public let id: Int; public let name: String }
+    /// An episode or a season: when it aired and which season it belongs to.
+    public struct Airing: Codable, Sendable, Equatable, Hashable { public let airDate: String?; public let seasonNumber: Int? }
 
-    /// Production countries first for movies, origin country first for series.
+    /// Production countries first for movies, origin country first for series; uppercased, without repeats.
     public func countryCodes(preferOrigin: Bool) -> [String] {
         let production = (productionCountries ?? []).compactMap(\.iso31661)
         let origin = originCountry ?? []
-        return (preferOrigin ? [origin, production] : [production, origin]).first { !$0.isEmpty } ?? []
+        let picked = (preferOrigin ? [origin, production] : [production, origin]).first { !$0.isEmpty } ?? []
+        var seen = Set<String>()
+        return picked.map { $0.uppercased() }.filter { !$0.isEmpty && seen.insert($0).inserted }
     }
 }
 

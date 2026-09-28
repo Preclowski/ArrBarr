@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Contextual illustration shown at the top of the paywall. Picks a stylized,
-/// static mock that matches the feature the user just tried to use. Built only
-/// from existing tokens/symbols — no live data, no new assets.
+/// Static illustration matching the gated feature; no live data.
 struct PaywallHero: View {
     let feature: ProFeature
 
@@ -19,8 +17,6 @@ struct PaywallHero: View {
 
 // MARK: - Shared card chrome
 
-/// Rounded glass card with a small header row (icon + label + lock) that every
-/// hero shares, so the four illustrations read as one family.
 private struct HeroCard<Content: View>: View {
     let symbol: String
     let titleKey: LocalizedStringKey
@@ -46,8 +42,6 @@ private struct HeroCard<Content: View>: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        // Glass brings its own rim, so the hand-drawn hairline that used to
-        // sit on the material is gone with it.
         .glassEffect(.regular, in: .rect(cornerRadius: Tokens.Radius.panel, style: .continuous))
     }
 }
@@ -148,8 +142,6 @@ private struct AddTitlePaywallHero: View {
 
 // MARK: - Media server
 
-/// Three server names under a "watched" tick — the two things the integration
-/// actually buys the user: a choice of server, and play state coming back.
 private struct MediaServerPaywallHero: View {
     private let servers: [(String, String)] = [
         ("Plex", "play.rectangle.fill"),

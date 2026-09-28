@@ -1,12 +1,6 @@
 import SwiftUI
 
-/// The person card the chat shows for a name query, and above a filmography.
-///
-/// Deliberately minimal — headshot, name, department, life dates. No bio, no
-/// links, no credits: this is a signpost to `PersonView`, which already renders
-/// all of that properly, and a chat bubble is the wrong place to duplicate it.
-/// Full width rather than a poster-sized tile, because a person is the *subject*
-/// of the answer here, not one of a dozen options in a rail.
+/// Deliberately minimal — a signpost to `PersonView`, which renders bio, links and credits properly.
 struct ChatPersonCardView: View {
     let person: ChatPerson
 
@@ -53,9 +47,7 @@ struct ChatPersonCardView: View {
         .animation(.easeOut(duration: 0.12), value: hovering)
     }
 
-    /// "Acting · 1966" — department and life dates, whichever of them TMDB
-    /// actually knows. Search rows carry no dates, so this is often just the
-    /// department, and that is fine.
+    /// Search rows carry no dates, so this is often just the department.
     private var subtitle: String? {
         let bits = [person.knownForDepartment?.localizedDepartment, person.lifespan].compactMap { $0 }
         return bits.isEmpty ? nil : bits.joined(separator: " · ")
@@ -63,9 +55,7 @@ struct ChatPersonCardView: View {
 }
 
 private extension String {
-    /// TMDB departments arrive as fixed English tokens ("Acting", "Directing").
-    /// Map the handful that actually show up; anything else passes through
-    /// verbatim rather than being dropped.
+    /// TMDB departments are fixed English tokens; unmapped ones pass through verbatim.
     var localizedDepartment: String {
         switch self {
         case "Acting":     return String(localized: "person.department.acting", bundle: .module)

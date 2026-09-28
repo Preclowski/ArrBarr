@@ -50,9 +50,11 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       draft, tests) becomes its own instance ordinal via `ServiceGateway.adopt`.
 - [x] Tests: `QueueUnificationTests`, `SeasonPackArtworkTests`, `LidarrWireDecodingTests` on
       `ArrCompositions`; stub suites keep global `URLProtocol` registration (a test process
-      routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override).
-- [ ] Later: `LibraryIndex`/`LibraryViewModel` as store consumers (today they call the facades
-      with `mustRevalidate` and keep their own snapshot).
+      routes through `URLSession.shared`, `.memory` database, `mustRevalidate` override; migrated off
+      global registration in Wave 6).
+- [x] `LibraryIndex`/`LibraryViewModel` as store consumers: `LibraryIndex` is stateless over the store
+      (`cacheFirst`, versions are the store revision of `c:library@i`, so each test gateway is isolated);
+      the per-source slots, in-flight table and redundant add/import invalidations are gone.
 
 ## Wave 3 — tools, MCP, settings, health, intents, widget
 
@@ -61,16 +63,36 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       (`DownloadClients.swift`, `MediaServerFacade.swift`); their HTTP-level tests retired,
       add-request shapes covered in MediaKit `DownloadAddShapeTests`. `DownloadProgressService`
       and the phase-0 recorder test deleted (parity now uses `MediaKitRecording`).
-- [ ] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory`; `PosterStore` consumes
-      `ArtworkReference` + `kit.artworkHeaders` (today the facade feeds the old index).
-- [ ] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`.
-- [ ] Widget: `MediaKit(role: .snapshotReader)` on the group container database.
-- [ ] `SpotlightIndexer` as a store consumer.
+- [x] `MediaServerIndex` → `Snapshot` over `libraryIndex`/`watchHistory` (first build reads the stored
+      rows with `staleWhileRevalidate`, so a cold start has the last-known index); `PosterStore` consumes
+      `ArtworkReference` + `kit.artworkHeaders`. `MediaServerPosterAccess` deleted.
+- [x] Media server artwork follow-ups (2026-09-27): the index announces a changed poster map
+      (`Snapshot` `didRebuild`) and the queue recomposes; Spotlight and the poster sampler use the
+      override; `PosterStore.supersede` deletes the arr copy once the media server's is stored; keys
+      split `tmdbMovie`/`tmdbSeries` and movie TVDB ids are dropped (12 cross-kind collisions on a real library).
+- [x] `ConnectionHealthMonitor` → `HostGovernor.health` + `EventHub.lastEventAt`: the monitor keeps its
+      probes; `ServiceGateway.breakerChanges()`/`hostHealth(of:)` feed `ConnectionHealth`, which shows a
+      service down while its host's breaker is open (worse of recorded and governor). (Corrected
+      2026-09-27: `lastEventAt` has no caller in the app; the realtime-quiet check never used it. The
+      streams read push liveness through `noteAlive` instead.)
+- [x] Widget: `MediaKit(role: .snapshotReader)` on the group container database. (Deviation from spec §9.3,
+      noted 2026-09-27: the reader is not read-only — it can still fetch through the cache-first facades — and
+      there is no widget refresher role; it was deleted unused.) (2026-09-27) The widget already
+      read the shared group database through the cache-first facades; an app extension now runs the stack as
+      `.snapshotReader` (no capability probes, no sweep of the app's rows, 2 MB memory tier) and opens no hubs.
+- [x] `SpotlightIndexer` as a store consumer (reads through `LibraryIndex`).
 
 ## Wave 4 — QueueViewModel on LiveStream
 
-- [ ] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`;
-      `systemDidWake` → `events.wakeAll()` + `governor.noteWake`.
+- [x] Replace the timers/debounce/burst logic with `liveQueue` + `liveProgress` + `EventHub`
+      (corrected 2026-09-27: `liveProgress` is read on demand by `QueueAggregator`, never pumped, so it keeps
+      no checkpoint; the queue's §6.3 snapshots are one combined `Snapshot`, not two);
+      `systemDidWake` → `events.wakeAll()` + `governor.noteWake`. (2026-09-27) One queue stream per arr, owned
+      by `ServiceGateway` and replayed across demo rebuilds; `QueueViewModel` commits each stream revision once
+      (`latest(source:)`), sets foreground/background on panel open/close, and keeps only the calendar and health
+      clocks. `LiveStream` gained per-instance keep-last-good, mid-cycle push/refresh handling, the background
+      push floor and fresh-tick skipping; `EventHub` drops unchanged-count queue pushes while hidden.
+      Measured: 45 requests in the first 60 s (queue 3 per arr, progress 4 per client), first load 387 ms.
 
 ## Wave 5 — demo
 
@@ -88,10 +110,23 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] `HTTPClient`, `RealtimeUpdates`, `DownloadProgressService`, the per-arr queue/calendar/
       history wire records and the old client HTTP paths are gone; the client type names remain
       as facades (consumers unchanged). `ConnectionHealthMonitor` stays (it schedules probes,
-      not HTTP). `CoalescingCache` and `TitleMetadataStore` stay (in-memory caches over
-      MediaKit-backed calls; candidates for a later pass).
-- [ ] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`
-      (today they run through the shared session with global registration).
+      not HTTP). (2026-09-27) `CoalescingCache` is gone: the cast, trailer, country and episode
+      rating providers and `SeriesIdentityResolver` read through the store, whose TMDB rows are
+      archival; `TitleMetadataStore` had already been removed.
+- [x] Migrate the remaining `URLProtocol` stub suites to `ScriptedTransport`/`FixtureTransport`:
+      eight suites answer through a test `ScriptedTransport` on a fresh gateway per test
+      (`.gateway(_:)` suite trait over `ServiceGateway.override`, `ServiceGateway(transport:)`);
+      no suite registers a global stub. `OpenAIProviderTests` already used an ephemeral session.
+      (2026-09-27) The LibraryViewModel/SeriesIdentityResolver full-run flakes are not reproducible:
+      `LibraryIndex` now reads through the store and holds no slot; ~45 full runs today, one resolver
+      failure on a cold build under load, none in 30 runs since.
+- [x] Add flow on typed payloads: `SearchClient` adds (movie, series, scene, artist) run
+      `ServarrService.add(ArrAddPayload)` through the store; `ArrAddPayload` gained top-level
+      `monitor` and `foreignId`; the untyped `ArrAPIClient.post` is gone. `AddRequestBodyTests`
+      pins each whole body.
+- [x] Data cache purge: `AppCaches.purgeExpired()` also sweeps the resource store
+      (`ServiceGateway.sweepDataCache()`); `ServiceGateway.purgeDataCache()` → `purgeAll()`.
+      Not in the UI: Settings' button clears images only and Developer options has no cache control.
 - [x] `.defaultIsolation(MainActor.self)` in `Packages/ArrCore/Package.swift`. Wire models, the
       helper enums, the facades, the lock-guarded stores and the statics inside actors are
       `nonisolated`; MainActor default arguments (`ConfigStore.shared`) dropped; `MediaServerIndex`
@@ -104,10 +139,14 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 
 - [x] Criterion 18: views and view-models take facades from `ConfigStore` (`radarrClient`, `arrClient(for:)`,
       `tmdbClient`, `mediaServerClient`) or `ServiceHandles` for drafts; `grep "Client("` in Views/ViewModels = 0.
+      (Corrected 2026-09-27: the view-models still built saved-config handles — `SearchViewModel` with a
+      config-signature workaround among them. Fixed in the cleanup plan's Phase C: search reads the live config;
+      `LibraryViewModel` and `ServerStatusModel` go through the one `ServiceHandles` factory.)
 - [x] Criterion 19: `LocalToolBackendFixtureTests` runs all 28 tools on the bundled fixtures through
       `ServiceGateway.override` (task-local), a demo gateway with placeholder origins.
 - [x] Criterion 21: Developer options → "MediaKit telemetry" shows `TelemetryRecorder.report()`.
-- [x] Criterion 24: explicit `@MainActor` on Views/ViewModels types removed (default isolation).
+- [x] Criterion 24: explicit `@MainActor` on Views/ViewModels types removed (default isolation). (Checked
+      2026-09-27: no type-level annotation left; `Task { @MainActor in }` closures remain and are harmless.)
 - [x] `ServiceGateway.reconcileRegistry()` serialises reconciles; two adopters racing produced a second
       concurrent `MediaStack.reconcile` that dropped an in-flight read (flaky `lidarrSearchFormatted`).
 - [x] Dead `SeriesIdentityResolver` session override removed.
@@ -118,8 +157,9 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
       documented exclusions; `anonymize_fixtures.py --check` clean; error presenter on catalogue keys
       (`MediaKitErrorCatalogTests`); `DiscoveryTests`; report:
       `docs/superpowers/baseline/2026-09-15-mediakit-phase6-report.md`.
-- [ ] Per-screen request counters: `log show` is empty in this environment; the owner reads the telemetry
-      report from Developer options.
+- [x] Criterion 27 (2026-09-27, `log show`): first queue load 1287 / 1218 ms after process start;
+      44 / 37 requests in the first 60 s (DEBUG `Gateway` notice). Per-screen counters need UI navigation and stay
+      owner-read in Developer options → "MediaKit telemetry".
 
 ## Phase 7 — API 26 UI (macOS)
 
@@ -127,5 +167,5 @@ Approach: the old client types (`RadarrClient`, `SonarrClient`, `LidarrClient`, 
 - [x] `GlassEffectContainer` around the popover islands; queue selection bar as `safeAreaBar` with
       `.scrollEdgeEffectStyle(.soft, for: .top)`.
 - [ ] `Observations` for `ConfigStore` consumers (37 views on an `ObservableObject`; separate change).
-- [ ] Markdown via `Text(.init(markdown:))`: swift-markdown stays for GFM tables, nothing to remove.
+- [x] ~~Markdown via `Text(.init(markdown:))`~~ won't do: swift-markdown stays for GFM tables, nothing to remove.
 - [ ] Criterion 28 (Spotlight intents with parameters, queue snippet, `@Generable` results).

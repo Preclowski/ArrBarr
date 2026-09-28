@@ -1,20 +1,12 @@
 import SwiftUI
 
-/// Full-width glass pause/resume CTA shared by the movie detail
-/// (`DetailView`) and the episode detail (`EpisodeDetailOverlay`). Both used
-/// to carry a ~95% identical copy of this button; the only real difference
-/// was that the movie path runs async work (pause/resume + queue refresh)
-/// and wants an in-flight spinner, while the episode path fires a sync
-/// closure. Modelling `action` as `async` covers both: a sync body simply
-/// returns immediately, so no spinner flashes.
+/// Shared by `DetailView` and `EpisodeDetailOverlay`. `action` is async so the movie path gets a spinner;
+/// a sync body returns at once, so none flashes.
 struct PauseResumeButton: View {
     let isPaused: Bool
-    /// Progress fill behind the glass (callers pass `1` where a real
-    /// percentage isn't meaningful, e.g. Sonarr season packs).
+    /// Callers pass `1` where a real percentage isn't meaningful (Sonarr season packs).
     let progress: Double
     let tint: Color
-    /// Tap handler. While it runs the button shows a spinner and disables
-    /// itself — for sync work it just returns instantly.
     let action: () async -> Void
 
     @State private var inFlight = false
@@ -39,9 +31,7 @@ struct PauseResumeButton: View {
             }
         } label: {
             HStack(spacing: 6) {
-                // Only the glyph swaps for the in-flight spinner — the label stays
-                // put so the button keeps its size/text while loading, then updates
-                // in place once the action lands.
+                // Only the glyph swaps for the spinner, so the button keeps its size.
                 if inFlight {
                     ProgressView()
                         .controlSize(.small)
@@ -56,24 +46,18 @@ struct PauseResumeButton: View {
                         diameter: Self.labelSize + 2
                     )
                 }
-                // Short verbs ("Resume"/"Pause", not "Resume download") — the
-                // CTA strip fits three capsules, long labels truncated.
+                // Short verbs: the CTA strip fits three capsules.
                 Text(isPaused
                         ? String(localized: "queue.resume.button", bundle: .module)
                         : String(localized: "queue.pause.button", bundle: .module))
                     .scaledFont(size: Self.labelSize, weight: .semibold)
             }
-            // The tint colours the label itself: on translucent glass a solid
-            // white label had nothing to sit on, and the status colour is the
-            // whole signal here.
+            // On translucent glass a white label has nothing to sit on; the status colour is the signal.
             .foregroundStyle(tint)
             .frame(maxWidth: .infinity)
             .padding(.vertical, Self.vPadding)
         }
-        // Translucent tinted glass, not the filled prominent one: the strip
-        // sits over artwork and a solid capsule read as a slab. Status tint
-        // distinguishes paused vs active; progress reads off the ring around
-        // the glyph, not a capsule fill.
+        // Translucent glass, not the filled prominent style: a solid capsule over artwork reads as a slab.
         .modifier(GlassTintedButtonStyle())
         .tint(tint)
         .disabled(inFlight)

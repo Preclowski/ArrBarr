@@ -1,15 +1,7 @@
 import SwiftUI
 
-/// Shared anatomy for the two capsule-search surfaces — the Queue tab's
-/// global search and the Library tab's lookup section. One home so the
-/// pieces can't drift apart, same reasoning as `DetailSectionHeader`.
-
-/// The capsule's leading slot: magnifying glass that swaps to a spinner
-/// while lookups run. A fixed-size ZStack on purpose — swapping via
-/// if/else shifts the TextField by ~1pt because ProgressView and the SF
-/// magnifyingglass don't render at identical intrinsic widths. Both layers
-/// always exist; only opacity changes, so the layout doesn't twitch while
-/// typing.
+/// Both layers always exist and only opacity changes: ProgressView and the
+/// magnifier differ in intrinsic width, so an if/else shifts the field.
 struct SearchFieldLeadingIcon: View {
     let spinning: Bool
 
@@ -28,9 +20,7 @@ struct SearchFieldLeadingIcon: View {
     }
 }
 
-/// Settled empty search: every lookup came back and there is nothing to
-/// show. An error state is NOT an empty state — when a lookup failed the
-/// message says so instead of pretending there are no hits.
+/// A failed lookup says so rather than pretending there are no hits.
 struct SearchLookupEmptyState: View {
     let errorMessage: String?
 
@@ -62,11 +52,8 @@ struct SearchLookupEmptyState: View {
     }
 }
 
-/// Re-search treatment for lookup rows that answer a superseded query:
-/// fade them and float a spinner over their top edge. No layout shift, no
-/// list ↔ spinner flicker, and the re-search always reads as "these are
-/// being replaced" — a loader appended under the rows would land below
-/// the fold instead.
+/// Fades superseded rows under a spinner: no layout shift, and a loader below
+/// the rows would land below the fold.
 private struct LookupReloadDim: ViewModifier {
     let reloading: Bool
 

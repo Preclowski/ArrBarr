@@ -1,46 +1,29 @@
 import SwiftUI
 
-/// Resume widget shown in chat after a `discover_in_quiz` tool call —
-/// stacked-poster deck visual that telegraphs "you have a Quiz session
-/// in progress, tap to come back". Picks count overlays as a chip so
-/// the user reads it without leaving the chat.
-///
-/// Tap on the deck posts `AppMessages.OpenDiscoverQuiz` with `append: true`
-/// and an empty items list — the receiver (`PopoverContentView`)
-/// interprets that as "reopen the overlay without disturbing the
-/// current session" and flips `showDiscoverOverlay = true`.
-public struct QuizResumeCard: View {
+/// Chat widget after a `discover_in_quiz` call. Tapping posts `OpenDiscoverQuiz` with no items
+/// and `append: true`, which reopens the overlay without touching the session.
+struct QuizResumeCard: View {
     let mood: String
     let posterURLs: [URL]
-    /// Direct singleton ref — chat-message-bubble context doesn't
-    /// always propagate `@EnvironmentObject` reliably across the
-    /// `ChatTabContent` / `RichToolResultView` boundary; sticking to
-    /// the shared instance avoids a "No ObservableObject found" trap.
+    /// The shared instance: `@EnvironmentObject` doesn't reliably reach chat bubbles.
     private var discoverViewModel = DiscoverViewModel.shared
 
-    public init(mood: String, posterURLs: [URL]) {
+    init(mood: String, posterURLs: [URL]) {
         self.mood = mood
         self.posterURLs = posterURLs
     }
 
-    /// Live count of matched items in the current Quiz session.
     private var pickedCount: Int {
         discoverViewModel.sessionMatched.count
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: resumeQuiz) {
             VStack(alignment: .leading, spacing: 8) {
                 deckHeader
 
-                // Stacked poster deck — top three posters offset and
-                // rotated slightly so the eye reads "this is a swipe
-                // deck", not a single card. Empty posters list falls
-                // back to a single placeholder so the card still has
-                // a visual anchor.
                 deck
 
-                // Bottom row — mood blurb + picks chip.
                 HStack(spacing: 6) {
                     if !mood.isEmpty {
                         Text(verbatim: "“\(mood)”")
@@ -86,8 +69,6 @@ public struct QuizResumeCard: View {
     private var deck: some View {
         let visible = Array(posterURLs.prefix(4))
         ZStack(alignment: .leading) {
-            // Render back-to-front so the topmost poster is the last
-            // child in the ZStack (paints over the deeper ones).
             ForEach(Array(visible.enumerated().reversed()), id: \.offset) { idx, url in
                 posterCard(url: url, index: idx)
             }
@@ -100,9 +81,6 @@ public struct QuizResumeCard: View {
 
     @ViewBuilder
     private func posterCard(url: URL, index: Int) -> some View {
-        // Each card offsets +18pt horizontally and gets a small
-        // counter-rotation — fanned-deck look without overlapping
-        // text below.
         let xOffset = CGFloat(index) * 18
         let rotation: Double = [(-3.0), 1.5, -1.0, 2.5][min(index, 3)]
         RemotePoster(
@@ -135,9 +113,6 @@ public struct QuizResumeCard: View {
 
     @ViewBuilder
     private var pickedChip: some View {
-        // "Wybrane: N" pill — only renders when the user has matched
-        // at least one item. Otherwise the card reads "Quiz: tap to
-        // resume" without a noisy zero count.
         if pickedCount > 0 {
             HStack(spacing: 3) {
                 Image(systemName: "checkmark.circle.fill")
@@ -156,7 +131,6 @@ public struct QuizResumeCard: View {
     }
 
     private func resumeQuiz() {
-        // Empty items + append: the host's handler skips seeding (`extend(items: [])` is a no-op) and just shows the overlay.
         AppMessages.post(AppMessages.OpenDiscoverQuiz(items: [], append: true))
     }
 }

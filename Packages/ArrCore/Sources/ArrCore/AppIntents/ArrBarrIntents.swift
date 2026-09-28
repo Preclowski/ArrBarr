@@ -3,10 +3,8 @@ import Foundation
 
 // MARK: - App Intents (Siri / Shortcuts / Spotlight)
 //
-// Read-only Phase-1 intents. They reuse the chat assistant's LocalToolBackend
-// for data, but format CONCISE, spoken-friendly summaries (top few items) —
-// the raw tool text is dense LLM output and reads as a wall of characters in
-// Siri. Live in ArrCore so both app targets get them.
+// Spoken summaries over LocalToolBackend: the raw tool text is dense LLM output
+// that reads as a wall of characters in Siri.
 
 @available(macOS 13.0, iOS 16.0, *)
 enum ArrIntentSupport {
@@ -26,15 +24,18 @@ enum ArrIntentSupport {
         )
     }
 
+    /// nil when the servers didn't answer: Siri must not turn an outage into "nothing is downloading".
     private static func call(_ name: String) async -> ToolCallOutput? {
         let backend = await MainActor.run { makeBackend() }
         return try? await backend.callTool(name: name, arguments: .object([:]))
     }
 
+    private static var unreachable: String { String(localized: "intents.unreachable", bundle: .module) }
+
     /// e.g. "3 downloads. Ran at 100%, The Next Karate Kid at 80%, and 1 more."
     static func queueSummary() async -> String {
-        guard case .downloadQueue(let items)? = await call("list_download_queue")?.rich,
-              !items.isEmpty else {
+        guard let output = await call("list_download_queue") else { return unreachable }
+        guard case .downloadQueue(let items)? = output.rich, !items.isEmpty else {
             return String(localized: "Nothing is downloading right now.", bundle: .module)
         }
         let top = items.prefix(3).map {
@@ -55,12 +56,11 @@ enum ArrIntentSupport {
 
     /// e.g. "Coming up: Severance S2E3 tomorrow, Dune in 3 days."
     static func upcomingSummary() async -> String {
-        guard case .calendar(let items)? = await call("get_calendar")?.rich else {
+        guard let output = await call("get_calendar") else { return unreachable }
+        guard case .calendar(let items)? = output.rich else {
             return String(localized: "Nothing is coming up soon.", bundle: .module)
         }
-        // Only FUTURE releases — the feed can include past-dated entries
-        // (e.g. a monitored movie's old cinema date), which produced the
-        // nonsensical "coming up … 5 years ago".
+        // The feed can include past-dated entries (an old cinema date).
         let now = Date()
         let startOfToday = Calendar.current.startOfDay(for: now)
         let future = items
@@ -88,31 +88,13 @@ enum ArrIntentSupport {
         return s + "."
     }
 
-    /// Current queue items (real download rows).
     static func queueItems() async -> [QueueItem] {
         guard case .downloadQueue(let items)? = await call("list_download_queue")?.rich else { return [] }
         return items
     }
 
-    /// Mirrors QueueRowView.canControl — pause/resume needs a configured
-    /// download client for the item's protocol.
-    @MainActor
-    static func canControl(_ item: QueueItem, _ cs: ConfigStore) -> Bool {
-        switch item.downloadProtocol {
-        case .usenet:
-            return (cs.sabnzbd.isConfigured && !cs.sabnzbd.apiKey.isEmpty) || cs.nzbget.isConfigured
-        case .torrent:
-            return cs.qbittorrent.isConfigured || cs.transmission.isConfigured
-                || cs.rtorrent.isConfigured || cs.deluge.isConfigured
-        case .unknown:
-            return false
-        }
-    }
-
-    /// Per-service one-liners, dropping the LLM detail bullets + section
-    /// headers so Siri gets a clean summary.
     static func healthSummary() async -> String {
-        let text = await call("health")?.text ?? ""
+        guard let text = await call("health")?.text else { return unreachable }
         guard !text.isEmpty else { return String(localized: "No services are configured.", bundle: .module) }
         let lines = text
             .split(separator: "\n")
@@ -154,9 +136,7 @@ public struct ShowUpcomingIntent: AppIntent {
 
 // MARK: - Action intents
 //
-// NOT added to AppShortcutsProvider (no zero-config Siri phrases) — they're
-// available as actions in the Shortcuts app for the user to wire up manually.
-// Keeps destructive/state-changing actions off "Hey Siri" by default.
+// Not in AppShortcutsProvider, so state-changing actions stay off "Hey Siri".
 
 @available(macOS 13.0, iOS 16.0, *)
 public struct PauseAllDownloadsIntent: AppIntent {
@@ -167,7 +147,7 @@ public struct PauseAllDownloadsIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .downloading && ArrIntentSupport.canControl($0, ConfigStore.shared) }
+            items.filter { $0.status == .downloading && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
         }
         for item in targets { await QueueViewModel.shared.pause(item) }
         let msg = targets.isEmpty
@@ -187,7 +167,7 @@ public struct ResumeAllDownloadsIntent: AppIntent {
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .paused && ArrIntentSupport.canControl($0, ConfigStore.shared) }
+            items.filter { $0.status == .paused && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
         }
         for item in targets { await QueueViewModel.shared.resume(item) }
         let msg = targets.isEmpty
@@ -202,9 +182,7 @@ public struct ResumeAllDownloadsIntent: AppIntent {
 public struct SearchToAddIntent: AppIntent {
     public static var title: LocalizedStringResource = "Search to add"
     public static var description = IntentDescription("Search Sonarr/Radarr and open ArrBarr at the results to add something.")
-    // Bring the app forward; iOS shows the search surface. (On the macOS
-    // menu-bar app the popover can't be opened programmatically, so the query
-    // is staged for the next time the popover opens.)
+    // The macOS popover can't be opened programmatically; the query waits for its next open.
     public static var openAppWhenRun: Bool = true
 
     @Parameter(title: "Search")
@@ -215,8 +193,7 @@ public struct SearchToAddIntent: AppIntent {
 
     public func perform() async throws -> some IntentResult {
         let q = query
-        // Small delay so the (possibly cold-launched) search surface is mounted
-        // and listening before we post.
+        // Lets a cold-launched search surface mount and listen before the post.
         Task { @MainActor in
             try? await Task.sleep(nanoseconds: 400_000_000)
             AppMessages.post(AppMessages.SearchQuery(query: q))

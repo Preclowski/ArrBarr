@@ -8,14 +8,9 @@ import AppKit
 #endif
 
 // MARK: - Notification action buttons (shared)
-//
-// Pause / Resume / Remove / Open straight from a grab notification. macOS
-// wires this in its AppDelegate; this shared helper lets iOS register the same
-// categories and handle the responses (iOS has no app delegate of its own).
-// Identifiers come from NotificationCoalescer so both platforms stay in sync.
+// macOS wires these in its AppDelegate; iOS has none, so it registers and handles them here.
 public enum NotificationActions {
 
-    /// Build the action categories (same set the macOS AppDelegate uses).
     public static func categories() -> [UNNotificationCategory] {
         let open = UNNotificationAction(
             identifier: NotificationCoalescer.openActionIdentifier,
@@ -51,7 +46,7 @@ public enum NotificationActions {
         UNUserNotificationCenter.current().setNotificationCategories(Set(categories()))
     }
 
-    /// Run a tapped action. Values are pre-extracted (Sendable) by the delegate.
+    /// Values are pre-extracted (Sendable) by the delegate.
     @MainActor
     public static func handle(action: String, source: String?, arrQueueId: Int?, baseURL: String?) async {
         switch action {
@@ -95,8 +90,6 @@ public enum NotificationActions {
     }
 }
 
-/// UNUserNotificationCenter delegate for iOS (macOS uses its AppDelegate).
-/// Shows banners in-foreground and routes action taps to `NotificationActions`.
 public final class ArrNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
     public static let shared = ArrNotificationDelegate()
 
@@ -109,8 +102,7 @@ public final class ArrNotificationDelegate: NSObject, UNUserNotificationCenterDe
     public func userNotificationCenter(_ center: UNUserNotificationCenter,
                                        didReceive response: UNNotificationResponse,
                                        withCompletionHandler completionHandler: @escaping () -> Void) {
-        // Extract Sendable values before hopping actors (UNNotificationResponse
-        // / userInfo aren't Sendable).
+        // UNNotificationResponse / userInfo aren't Sendable; extract before hopping actors.
         let action = response.actionIdentifier
         let info = response.notification.request.content.userInfo
         let source = info[NotificationCoalescer.userInfoSourceKey] as? String

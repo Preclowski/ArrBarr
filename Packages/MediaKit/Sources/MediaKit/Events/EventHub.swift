@@ -1,8 +1,11 @@
 import Foundation
 import os
 
-public protocol LiveStreamPushTarget: Sendable {
+public protocol LiveStreamPushTarget: AnyObject, Sendable {
+    /// Something changed for this instance: refetch.
     func notePush(_ instance: InstanceID, at: Date) async
+    /// The instance's hub spoke, whether or not it asked for anything; keeps push coverage alive.
+    func noteAlive(_ instance: InstanceID, at: Date) async
 }
 
 /// Coalesces pushes per instance in a burst window, then invalidates the store and nudges the live streams.
@@ -19,13 +22,15 @@ public actor EventHub {
     private let clock: any MediaClock
     private let telemetry: any TelemetrySink
     private let log: any LogSink
-    private let cadence: Cadence
+    private var cadence: Cadence
     private var sources: [InstanceID: (source: SignalRSource, pump: Task<Void, Never>)] = [:]
     private var streams: [any LiveStreamPushTarget] = []
     private var lastCounts: [InstanceID: QueueCounts] = [:]
     private var pendingTags: [InstanceID: Set<InvalidationTag>] = [:]
     private var flushTasks: [InstanceID: Task<Void, Never>] = [:]
     private var lastFlush: [InstanceID: Date] = [:]
+    /// The counts that were true when the queue was last flushed, per instance.
+    private var countsAtFlush: [InstanceID: QueueCounts] = [:]
     private var subscribers: [UUID: AsyncStream<DataEvent>.Continuation] = [:]
     private let lastEvent = OSAllocatedUnfairLock<[InstanceID: Date]>(initialState: [:])
     private var foreground = true
@@ -49,15 +54,16 @@ public actor EventHub {
         await entry.source.stop()
     }
 
-    public func register(_ stream: any LiveStreamPushTarget) { streams.append(stream) }
+    public func register(_ stream: any LiveStreamPushTarget) {
+        guard !streams.contains(where: { $0 === stream }) else { return }
+        streams.append(stream)
+    }
 
     public func setForeground(_ value: Bool) { foreground = value }
 
-    /// Force a reconnect on every source and emit `.woke`; the governor and streams do the rest.
+    /// Force a reconnect on every source; the governor and streams do the rest.
     public func wakeAll() async {
         for (_, entry) in sources { await entry.source.forceReconnect() }
-        let event = DataEvent.woke(clock.now)
-        for c in subscribers.values { c.yield(event) }
     }
 
     public func events() -> AsyncStream<DataEvent> {
@@ -75,11 +81,17 @@ public actor EventHub {
     /// Entry for events from any source, including tests.
     public func ingest(_ event: DataEvent) async {
         for c in subscribers.values { c.yield(event) }
-        guard let instance = event.instance else { return }
+        let instance = event.instance
         let now = clock.now
         lastEvent.withLock { $0[instance] = now }
-        let tags = tagMap.tags(for: event, lastCounts: lastCounts[instance])
+        for stream in streams { await stream.noteAlive(instance, at: now) }
+        var tags = tagMap.tags(for: event, lastCounts: lastCounts[instance])
         if case let .queueStatus(_, counts) = event { lastCounts[instance] = counts }
+        // Servarr rebroadcasts the queue on a timer with no diff. With nothing on screen, counts unchanged since the
+        // last flush say the refetch would return what is held; on screen, progress moves without moving a count.
+        if case .queueChanged = event, !foreground, let counts = lastCounts[instance], countsAtFlush[instance] == counts {
+            tags.remove(.collection(.queue, instance))
+        }
         guard !tags.isEmpty else { return }
         pendingTags[instance, default: []].formUnion(tags)
         guard flushTasks[instance] == nil else { return }
@@ -96,6 +108,7 @@ public actor EventHub {
         flushTasks[instance] = nil
         guard let tags = pendingTags.removeValue(forKey: instance), !tags.isEmpty else { return }
         lastFlush[instance] = clock.now
+        if tags.contains(.collection(.queue, instance)) { countsAtFlush[instance] = lastCounts[instance] }
         await store.invalidate(tags, reason: .event)
         for stream in streams { await stream.notePush(instance, at: clock.now) }
     }

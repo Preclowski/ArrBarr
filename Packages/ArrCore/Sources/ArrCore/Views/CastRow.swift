@@ -1,15 +1,14 @@
+import os
 import SwiftUI
+import MediaKit
 
-/// Source-neutral cast member for the detail cast strip. Movies map from
-/// Radarr's `/credit` (no TMDB key needed); series map from TMDB credits.
+/// Movies map from Radarr's `/credit` (no TMDB key needed); series from TMDB credits.
 nonisolated public struct CastMember: Identifiable, Equatable, Sendable {
     public let id: String
     public let name: String
     public let role: String?
     public let imageURL: URL?
-    /// TMDB person id — both providers already carry it (Radarr credits ship
-    /// `personTmdbId`, TMDB credits their own id), so the tile can deep-link
-    /// to the person's TMDB page with no extra API calls. nil = plain tile.
+    /// Both providers carry it, so a tile can open the person with no extra call. nil = inert tile.
     public let tmdbPersonId: Int?
 
     public init(id: String, name: String, role: String?, imageURL: URL?, tmdbPersonId: Int? = nil) {
@@ -21,16 +20,10 @@ nonisolated public struct CastMember: Identifiable, Equatable, Sendable {
     }
 }
 
-/// Horizontally-scrolling cast strip for detail surfaces — circular headshot
-/// + name + character per person. Movie cast comes from Radarr (`/credit`),
-/// series cast from TMDB; both normalise to `CastMember`.
 struct CastRow: View {
     let cast: [CastMember]
-    /// Cap — providers return dozens; the first ~16 are the headline cast.
     var limit: Int = 16
-    /// Tapping a head opens the in-app person view. When nil (no host to push
-    /// into) heads are inert. Replaces the old open-TMDB-in-browser behaviour —
-    /// the external links live in the person view now.
+    /// nil (no host to push into) leaves heads inert.
     var onTapPerson: ((CastMember) -> Void)? = nil
 
     var body: some View {
@@ -48,20 +41,11 @@ struct CastRow: View {
     }
 }
 
-/// One head+name+role tile. Opens the in-app person view when a tap handler is
-/// wired and the person has a TMDB id; inert otherwise. On macOS a 600ms hover
-/// reveals a rich tooltip (bio / age / birthplace) fetched lazily through
-/// `PersonStore` — the hover gate means sweeping the cursor across the strip
-/// doesn't fire a fetch per head.
-/// "Directed by NAME" / "Created by NAME" — the byline that sits above a
-/// synopsis. Lives here rather than inside `MediaHeaderCard` because the Quiz
-/// card shows the same credit in the same slot, and two copies of a two-line
-/// layout is how the two surfaces drifted apart everywhere else.
+/// Shared with the Quiz card, which shows the same credit in the same slot.
 struct DirectedByLine: View {
     let people: [CastMember]
     var labelKey: LocalizedStringKey = "detail.directedBy.label"
-    /// Tappable names when the host can push a person view; plain text in the
-    /// Quiz deck, where a card is a swipe target, not a page of links.
+    /// Plain text in the Quiz deck, where a card is a swipe target.
     var onTapPerson: ((CastMember) -> Void)? = nil
 
     var body: some View {
@@ -81,9 +65,7 @@ struct DirectedByLine: View {
         }
     }
 
-    /// One credited name. Tappable (→ their filmography) when the host wired a
-    /// handler and the credit carries a TMDB id; plain text otherwise — an
-    /// id-less credit has no page to open.
+    /// An id-less credit has no page to open, so it stays plain text.
     @ViewBuilder
     private func creditName(_ person: CastMember) -> some View {
         if let onTapPerson, person.tmdbPersonId != nil {
@@ -112,15 +94,13 @@ struct DirectedByLine: View {
     }
 }
 
+/// The 600 ms hover gate keeps a sweep across the strip from fetching per head.
 private struct CastTile: View {
     let person: CastMember
     var onTapPerson: ((CastMember) -> Void)?
     @EnvironmentObject private var configStore: ConfigStore
 
     #if os(macOS)
-    @State private var isHovering = false
-    @State private var showTooltip = false
-    @State private var hoverTask: Task<Void, Never>?
     #endif
 
     private var tile: some View {
@@ -155,25 +135,10 @@ private struct CastTile: View {
             }
             .buttonStyle(.plain)
             #if os(macOS)
-            // The anchor owns ONLY `showTooltip`; the tooltip loads its own
-            // details. Keeping the async fetch out of the anchor is what stops
-            // the first-hover flicker — a `details` update here would re-render
-            // the anchor and blink the popover's `isPresented` binding.
             .onHover { hovering in
                 if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                isHovering = hovering
-                hoverTask?.cancel()
-                if hovering {
-                    hoverTask = Task { @MainActor in
-                        try? await Task.sleep(nanoseconds: 600_000_000)
-                        guard !Task.isCancelled, isHovering else { return }
-                        showTooltip = true
-                    }
-                } else {
-                    showTooltip = false
-                }
             }
-            .tooltipPopover(isPresented: $showTooltip, arrowEdge: .top) {
+            .hoverTooltip(arrowEdge: .top) {
                 CastTooltip(person: person, tmdbKey: configStore.tmdbApiKey)
             }
             #else
@@ -186,15 +151,10 @@ private struct CastTile: View {
 }
 
 #if os(macOS)
-/// Hover card for a cast head. Instant layer (headshot, name, role) plus a
-/// lazily-fetched layer (age · birthplace, biography). One TMDB call, cached
-/// in `PersonStore`.
 private struct CastTooltip: View {
     let person: CastMember
     let tmdbKey: String
-    /// Loaded HERE, not by the anchor — see the anchor's onHover note. This
-    /// re-renders only the popover content when the fetch lands, so the
-    /// anchor's `isPresented` binding never blinks.
+    /// Loaded here, not in the anchor, so the anchor's `isPresented` never blinks.
     @State private var details: TMDBPersonDetails?
     @State private var loaded = false
 
@@ -226,15 +186,11 @@ private struct CastTooltip: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        // FIXED size — the async details (age · birthplace + bio) land after
-        // the popover is already up, and letting the card grow to fit them made
-        // NSPopover re-lay-out, which read as a flicker. A fixed box absorbs the
-        // fill-in with no resize; the header sits top-left and the detail lines
-        // populate the reserved space.
+        // Fixed size: growing to fit the late details made NSPopover re-lay-out, which flickers.
         .frame(width: 320, height: 148, alignment: .topLeading)
         .task {
             guard !loaded, let id = person.tmdbPersonId else { return }
-            details = await PersonStore.shared.details(personId: id, tmdbKey: tmdbKey)
+            details = await Logger.extras.attempt("cast tooltip") { try await People.details(personId: id, tmdbKey: tmdbKey) } ?? nil
             loaded = true
         }
     }
@@ -255,7 +211,6 @@ private struct CastTooltip: View {
 // MARK: - Mapping helpers
 
 nonisolated extension CastMember {
-    /// Radarr `/credit` → cast members (cast only, ordered, headshots).
     static func from(radarrCredits credits: [ArrCredit]) -> [CastMember] {
         credits
             .filter { ($0.type ?? "").lowercased() == "cast" }
@@ -272,19 +227,15 @@ nonisolated extension CastMember {
             }
     }
 
-    /// TMDB credits → cast members (used for series, which have no Radarr-style
-    /// `/credit` endpoint).
-    static func from(tmdbCast cast: [TMDBCreditPerson]) -> [CastMember] {
+    /// Series have no Radarr-style `/credit` endpoint.
+    static func from(tmdbCast cast: [TMDBPerson]) -> [CastMember] {
         cast.map { p in
             CastMember(id: "tmdb-\(p.id)", name: p.name, role: p.characterName,
-                       imageURL: p.posterURL, tmdbPersonId: p.id)
+                       imageURL: p.profileURL, tmdbPersonId: p.id)
         }
     }
 
-    /// Radarr `/credit` → the directing crew. Radarr mirrors TMDB's crew rows,
-    /// so the same department/job tokens apply. A co-directed film lists both,
-    /// in Radarr's order; the same person credited twice (director + writer)
-    /// appears once.
+    /// Radarr mirrors TMDB's crew rows; a person credited twice appears once.
     static func directors(radarrCredits credits: [ArrCredit]) -> [CastMember] {
         dedupe(credits
             .filter { ($0.type ?? "").lowercased() == "crew" && isDirecting(department: $0.department, job: $0.job) }
@@ -300,45 +251,36 @@ nonisolated extension CastMember {
             })
     }
 
-    /// TMDB movie crew → the directing credits.
-    static func directors(tmdbCrew crew: [TMDBCreditPerson]) -> [CastMember] {
+    static func directors(tmdbCrew crew: [TMDBPerson]) -> [CastMember] {
         dedupe(crew
             .filter { isDirecting(department: $0.department, job: $0.job) }
             .map { p in
                 CastMember(id: "dir-tmdb-\(p.id)", name: p.name, role: jobLabel(p.job),
-                           imageURL: p.posterURL, tmdbPersonId: p.id)
+                           imageURL: p.profileURL, tmdbPersonId: p.id)
             })
     }
 
-    /// TMDB `created_by` → the series' creators. They carry no job field —
-    /// being listed IS the credit — so the tile shows the bare name under the
-    /// "Created by" header.
-    static func from(tmdbCreators creators: [TMDBCreditPerson]) -> [CastMember] {
+    /// `created_by` carries no job field; being listed is the credit.
+    static func from(tmdbCreators creators: [TMDBPerson]) -> [CastMember] {
         dedupe(creators.map { p in
             CastMember(id: "creator-tmdb-\(p.id)", name: p.name, role: nil,
-                       imageURL: p.posterURL, tmdbPersonId: p.id)
+                       imageURL: p.profileURL, tmdbPersonId: p.id)
         })
     }
 
-    /// A crew row counts as directing when TMDB's fixed job token says so —
-    /// the department alone would also drag in assistant directors, script
-    /// supervisors and the rest of the Directing department.
+    /// The job token, not the department, which would include assistant directors and script supervisors.
     private static func isDirecting(department: String?, job: String?) -> Bool {
         guard department == nil || department == TMDBDepartment.directing else { return false }
         return job == TMDBDepartment.directorJob || job == TMDBDepartment.coDirectorJob
     }
 
-    /// The plain "Director" job is what the section header already says, so it
-    /// stays off the tile; anything else (a co-director variant) is worth
-    /// showing. TMDB job tokens are fixed English and not in the catalog.
+    /// Plain "Director" repeats the header, so only variants show. TMDB job tokens are fixed English.
     private static func jobLabel(_ job: String?) -> String? {
         guard let job, !job.isEmpty, job != TMDBDepartment.directorJob else { return nil }
         return job
     }
 
-    /// One tile per person — a director credited twice on the same title
-    /// (Radarr repeats the row per job variant) would otherwise duplicate the
-    /// head and break ForEach identity.
+    /// Radarr repeats the row per job variant, which would duplicate the head and break ForEach identity.
     private static func dedupe(_ members: [CastMember]) -> [CastMember] {
         var seen = Set<String>()
         return members.filter { seen.insert($0.tmdbPersonId.map(String.init) ?? $0.name).inserted }

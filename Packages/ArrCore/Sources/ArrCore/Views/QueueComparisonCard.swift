@@ -1,14 +1,6 @@
 import SwiftUI
 
-/// Chat card for a single download-queue item.
-///
-/// - **Upgrade rows** render a side-by-side comparison: the current library
-///   file (left) vs the incoming release (right), with improved dimensions
-///   highlighted in green and dropped custom formats struck through.
-/// - **Plain rows** render a compact status + progress strip.
-///
-/// The LLM writes the "why it's better" narrative above this card from the
-/// tool's text output; this view is the at-a-glance visual.
+/// Chat card for one queue item: a side-by-side file comparison for upgrades, a status strip otherwise.
 struct QueueComparisonCard: View {
     let item: QueueItem
 
@@ -47,10 +39,6 @@ struct QueueComparisonCard: View {
                 ServiceIcon(source: item.source, size: 10)
                     .foregroundStyle(.secondary)
                 if item.isUpgrade {
-                    // Use the shared badge so the chat diff's "Upgrade"
-                    // label matches the indigo pill used on queue rows,
-                    // tooltips and detail surfaces — was a one-off green
-                    // capsule that read as a different element.
                     MediaBadgeCluster(isUpgrade: true)
                 }
                 Spacer(minLength: 0)

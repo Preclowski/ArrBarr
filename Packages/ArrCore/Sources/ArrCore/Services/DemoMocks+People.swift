@@ -1,13 +1,9 @@
 import Foundation
+import MediaKit
 
-/// Demo-mode people fixtures — the person view, cast-head taps and People
-/// search work offline against the same curated open-movie world as the rest
-/// of demo mode. Served from the SAME store paths as live data: `PersonStore`
-/// and `SearchViewModel.fetchPeople` branch here when `DemoMode.isActive`.
 extension DemoMocks {
 
-    /// Synthetic TMDB person ids, far outside any real range so a demo id can
-    /// never collide with live data after a mode switch.
+    /// Far outside any real range, so a demo id never collides with live data after a mode switch.
     enum DemoPerson: Int, CaseIterable {
         case derekDeLint = 990_001   // Tears of Steel lead
         case jamesRich   = 990_002   // Pioneer One lead
@@ -59,41 +55,36 @@ extension DemoMocks {
 
     // MARK: - Fixtures
 
+    /// TMDB's own JSON, decoded like a live answer: MediaKit's records only decode.
+    private static func tmdb<T: Decodable>(_ json: String) -> T {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        return try! decoder.decode(T.self, from: Data(json.utf8))
+    }
+
     private static var demoPeople: [TMDBPerson] {
-        [
-            TMDBPerson(id: DemoPerson.derekDeLint.rawValue, name: "Derek de Lint",
-                       knownForDepartment: "Acting",
-                       profilePath: "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg", popularity: 12),
-            TMDBPerson(id: DemoPerson.jamesRich.rawValue, name: "James Rich",
-                       knownForDepartment: "Acting",
-                       profilePath: "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg", popularity: 10),
-            TMDBPerson(id: DemoPerson.colinLevy.rawValue, name: "Colin Levy",
-                       knownForDepartment: "Directing",
-                       profilePath: nil, popularity: 9),
-        ]
+        tmdb(#"""
+        [{"id": 990001, "name": "Derek de Lint", "known_for_department": "Acting",
+          "profile_path": "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg", "popularity": 12},
+         {"id": 990002, "name": "James Rich", "known_for_department": "Acting",
+          "profile_path": "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg", "popularity": 10},
+         {"id": 990003, "name": "Colin Levy", "known_for_department": "Directing", "popularity": 9}]
+        """#)
     }
 
     private static var demoPersonDetails: [TMDBPersonDetails] {
-        [
-            TMDBPersonDetails(
-                id: DemoPerson.derekDeLint.rawValue, name: "Derek de Lint",
-                biography: "Dutch actor with a four-decade career across European and American film and television; in the demo library he anchors the Blender Foundation's live-action VFX film Tears of Steel as Old Thom.",
-                birthday: "1950-07-17", deathday: nil,
-                placeOfBirth: "The Hague, Netherlands",
-                profilePath: "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg",
-                imdbId: nil, knownForDepartment: "Acting"),
-            TMDBPersonDetails(
-                id: DemoPerson.jamesRich.rawValue, name: "James Rich",
-                biography: "Lead of Pioneer One, the BitTorrent-distributed, crowd-funded drama that proved a series could find its audience entirely outside broadcast television.",
-                birthday: nil, deathday: nil, placeOfBirth: nil,
-                profilePath: "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg",
-                imdbId: nil, knownForDepartment: "Acting"),
-            TMDBPersonDetails(
-                id: DemoPerson.colinLevy.rawValue, name: "Colin Levy",
-                biography: "Director of the Blender Foundation's open movie Sintel; the demo credits him with story duty on Big Buck Bunny too, so a person can wear more than one role hat.",
-                birthday: nil, deathday: nil, placeOfBirth: nil,
-                profilePath: nil, imdbId: nil, knownForDepartment: "Directing"),
-        ]
+        tmdb(#"""
+        [{"id": 990001, "name": "Derek de Lint",
+          "biography": "Dutch actor with a four-decade career across European and American film and television; in the demo library he anchors the Blender Foundation's live-action VFX film Tears of Steel as Old Thom.",
+          "birthday": "1950-07-17", "place_of_birth": "The Hague, Netherlands",
+          "profile_path": "/8fRRmh8EYZBlUtu1Wlop0j22QcP.jpg", "known_for_department": "Acting"},
+         {"id": 990002, "name": "James Rich",
+          "biography": "Lead of Pioneer One, the BitTorrent-distributed, crowd-funded drama that proved a series could find its audience entirely outside broadcast television.",
+          "profile_path": "/oF7kZnQ0HgqXVCPFmU1t03quHr2.jpg", "known_for_department": "Acting"},
+         {"id": 990003, "name": "Colin Levy",
+          "biography": "Director of the Blender Foundation's open movie Sintel; the demo credits him with story duty on Big Buck Bunny too, so a person can wear more than one role hat.",
+          "known_for_department": "Directing"}]
+        """#)
     }
 
     private static var roleActor: String { String(localized: "person.role.actor", bundle: .module) }
@@ -115,8 +106,7 @@ extension DemoMocks {
         )
     }
 
-    /// `id: 0` mirrors the real TMDB path — a series row carries its TMDB id,
-    /// not a tvdbId, until something resolves it.
+    /// `id: 0` like the real TMDB path: a series row has no tvdbId until something resolves it.
     private static func demoSeriesRow(
         tmdbTVId: Int, title: String, year: Int, rating: Double,
         seed: String, role: String, ownedId: Int?

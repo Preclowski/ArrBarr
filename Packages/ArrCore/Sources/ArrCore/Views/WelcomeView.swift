@@ -5,9 +5,7 @@ public struct WelcomeView: View {
     let onDismiss: () -> Void
     let onAddService: () -> Void
     let onTryDemo: () -> Void
-    /// Called when the user clicks the final "Done" button — closes the
-    /// welcome window AND opens the popover so the tour ends by showing the
-    /// thing the user just learned about.
+    /// Also opens the popover, so the tour ends on the thing it just explained.
     let onFinish: () -> Void
 
     public init(
@@ -37,10 +35,7 @@ public struct WelcomeView: View {
 
     private var isLastPage: Bool { pageIndex >= pages.count - 1 }
 
-    /// True if the current page has a custom illustration to render. Used to
-    /// skip the spacer scaffolding for pages that show only text + CTA — those
-    /// would otherwise have their text pushed off-center by empty spacers
-    /// wrapping an EmptyView.
+    /// Text-only pages skip the spacers, which would push their text off-centre.
     private var hasIllustration: Bool {
         switch current.id {
         case "menubar", "tonight", "customize": return true
@@ -55,11 +50,7 @@ public struct WelcomeView: View {
             if pages.count > 1 { pageDots.padding(.bottom, 6) }
             footer
         }
-        // Fill whatever the NSHostingView gives us instead of a fixed frame —
-        // the window's `setContentSize` is the source of truth. With a fixed
-        // .frame(width:height:), any pixel of the hosting view beyond our
-        // 400×440 box would show NSWindow's own background colour, which
-        // reads as a lighter band under the action buttons.
+        // Not a fixed frame: any pixel beyond it shows NSWindow's background as a lighter band.
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.platformWindowBackground)
         .overlay(alignment: .topTrailing) {
@@ -68,9 +59,7 @@ public struct WelcomeView: View {
                 .padding(.trailing, 10)
         }
         .overlay(alignment: .leading) {
-            // `.opacity(0)` hides the arrow from the eye but NOT from the
-            // accessibility tree — without the matching `accessibilityHidden`
-            // VoiceOver offers a "Previous" button that can't be pressed.
+            // `.opacity(0)` doesn't hide it from VoiceOver, hence `accessibilityHidden`.
             edgeArrow(direction: .previous)
                 .padding(.leading, 6)
                 .opacity(pageIndex > 0 ? 1 : 0)
@@ -84,10 +73,8 @@ public struct WelcomeView: View {
                 .allowsHitTesting(!isLastPage)
                 .accessibilityHidden(isLastPage)
         }
-        // The window has .fullSizeContentView with a transparent titlebar, but
-        // NSHostingController still reserves safe-area inset for the title-bar
-        // region. Ignoring it lets our content (and the X close button) sit at
-        // the actual top of the window instead of being pushed down ~28pt.
+        // NSHostingController reserves a title-bar inset even with a transparent
+        // full-size titlebar; ignoring it saves ~28pt.
         .ignoresSafeArea()
         .environment(\.locale, configStore.currentLocale)
     }
@@ -131,9 +118,6 @@ public struct WelcomeView: View {
             }
 
             if hasIllustration && current.illustrationPosition == .below {
-                // Flexible spacer pushes the illustration toward the visual
-                // centre of the window so it's the focal point rather than a
-                // footnote under the text.
                 Spacer(minLength: 18)
                 heroIllustration
                 Spacer(minLength: 12)
@@ -148,11 +132,6 @@ public struct WelcomeView: View {
     }
 
     // MARK: - Hero illustrations
-    //
-    // Only pages that have a real custom illustration render anything here.
-    // Pages without one (e.g. Connect, Star) intentionally have no hero —
-    // the title + body + CTA stand on their own, which keeps the window
-    // free of generic "icon in a circle" placeholders.
 
     @ViewBuilder
     private var heroIllustration: some View {
@@ -164,10 +143,7 @@ public struct WelcomeView: View {
             default:          EmptyView()
             }
         }
-        // Mock chrome, not content: fake menu-bar clock, fake show titles,
-        // fake toggles. VoiceOver reading "ArrBarr, File, View, 9:41, Pioneer
-        // One…" would sound like real library data. The page title and body
-        // above already say what the picture shows.
+        // Mock chrome with fake titles would sound like real library data to VoiceOver.
         .accessibilityHidden(true)
     }
 
@@ -181,8 +157,6 @@ public struct WelcomeView: View {
                     withAnimation(.easeInOut(duration: 0.22)) { pageIndex = i }
                 }
                 .help(Text(String(format: String(localized: "common.pageLld.label", bundle: .module), i + 1)))
-                // A bare Capsule has nothing to announce — name the page it
-                // jumps to and mark the one we're on as selected.
                 .accessibilityLabel(Text(String(format: String(localized: "common.pageLld.label", bundle: .module), i + 1)))
                 .accessibilityAddTraits(i == pageIndex ? .isSelected : [])
             }
@@ -274,10 +248,7 @@ private struct PageDot: View {
 
     @State private var hovering = false
 
-    /// Hover only brightens the dot — it doesn't change width — so neighbours
-    /// don't reflow on every mouse move. The active dot animates from a 7pt
-    /// circle to an 18pt pill (Apple's pattern) when its state changes; that
-    /// width change happens at most once per click, never on hover.
+    /// Hover only brightens, so neighbours don't reflow on every mouse move.
     private var width: CGFloat { isActive ? 18 : 7 }
 
     private var fillColor: Color {
@@ -286,7 +257,7 @@ private struct PageDot: View {
         return Color.secondary.opacity(0.32)
     }
 
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Capsule()
                 .fill(fillColor)
@@ -310,10 +281,7 @@ private struct EdgeArrowButton: View {
 
     @State private var hovering = false
 
-    /// Bare chevron, no background. Sits on a tall transparent hit area so
-    /// it's easy to click but invisible until you hover. Color goes from
-    /// nearly-invisible tertiary to primary on hover.
-    public var body: some View {
+    var body: some View {
         Button(action: action) {
             Image(systemName: direction == .previous ? "chevron.left" : "chevron.right")
                 .scaledFont(size: 18, weight: .medium)
@@ -335,12 +303,8 @@ private struct EdgeArrowButton: View {
 // MARK: - Custom illustrations
 
 private struct MenuBarIllustration: View {
-    /// Mock display with a menu bar strip up top and a small popover
-    /// "preview" hanging from the ArrBarr status item — exactly what the
-    /// app actually does when you click its menu-bar icon.
-    public var body: some View {
+    var body: some View {
         ZStack(alignment: .top) {
-            // Background "screen" card
             RoundedRectangle(cornerRadius: Tokens.Radius.panel)
                 .fill(
                     LinearGradient(
@@ -358,7 +322,6 @@ private struct MenuBarIllustration: View {
                 )
                 .frame(width: 260, height: 130)
 
-            // Menu bar strip
             menuBarStrip
                 .padding(.horizontal, 9)
                 .padding(.vertical, 4)
@@ -369,7 +332,6 @@ private struct MenuBarIllustration: View {
                           bottomTrailingRadius: 0, topTrailingRadius: 10)
                 )
 
-            // Popover sketch hanging from the status item
             popoverSketch
                 .frame(width: 110, height: 90)
                 .offset(x: 70, y: 18)
@@ -410,14 +372,12 @@ private struct MenuBarIllustration: View {
 
     private var popoverSketch: some View {
         VStack(spacing: 0) {
-            // Tail / arrow pointing up to the status item
             Triangle()
                 .fill(Color.platformWindowBackground)
                 .overlay(Triangle().stroke(Color.secondary.opacity(0.30), lineWidth: 0.5))
                 .frame(width: 10, height: 5)
                 .offset(y: 0.5)
 
-            // Popover body — abstract row stack
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(0..<3, id: \.self) { i in
                     HStack(spacing: 5) {
@@ -453,7 +413,6 @@ private struct MenuBarIllustration: View {
     }
 }
 
-/// Small downward-pointing triangle used as the popover tail.
 private struct Triangle: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
@@ -466,11 +425,8 @@ private struct Triangle: Shape {
 }
 
 private struct TonightIllustration: View {
-    /// Mirrors the real Tonight banner from PopoverContentView: a "Tonight"
-    /// header row with the moon icon and count badge, followed by upcoming
-    /// rows that match UpcomingRowView's layout (small poster, title +
-    /// subtitle, time + release-type on the right).
-    public var body: some View {
+    /// Mirrors the real Tonight banner and UpcomingRowView's layout.
+    var body: some View {
         VStack(spacing: 0) {
             tonightHeader
                 .padding(.horizontal, 10)
@@ -481,14 +437,14 @@ private struct TonightIllustration: View {
                 title: "Pioneer One",
                 subtitle: "S01E03 · Endurance",
                 timeLabel: "9:41 PM",
-                releaseType: "Airing"
+                releaseType: "upcoming.type.airing"
             )
             upcomingRow(
                 posterColor: .purple.opacity(0.55),
                 title: "Sintel",
                 subtitle: nil,
                 timeLabel: "11:30 PM",
-                releaseType: "Digital"
+                releaseType: "upcoming.type.digital"
             )
         }
         .frame(width: 260)
@@ -526,10 +482,9 @@ private struct TonightIllustration: View {
         title: String,
         subtitle: String?,
         timeLabel: String,
-        releaseType: String
+        releaseType: LocalizedStringKey
     ) -> some View {
         HStack(spacing: 8) {
-            // Mini poster — same 24x36 ratio as UpcomingRowView
             RoundedRectangle(cornerRadius: 2)
                 .fill(
                     LinearGradient(
@@ -557,7 +512,7 @@ private struct TonightIllustration: View {
                 Text(timeLabel)
                     .scaledFont(size: 9, weight: .medium)
                     .foregroundStyle(.secondary)
-                Text(releaseType)
+                Text(releaseType, bundle: .module)
                     .scaledFont(size: 8, weight: .medium)
                     .foregroundStyle(.tertiary)
             }
@@ -581,7 +536,7 @@ private struct CustomizeIllustration: View {
         Row(id: 2, symbol: "server.rack",             label: Text(verbatim: "Lidarr"), on: false),
     ]
 
-    public var body: some View {
+    var body: some View {
         VStack(spacing: 5) {
             ForEach(rows) { row in
                 HStack(spacing: 8) {

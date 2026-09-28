@@ -1,11 +1,12 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 @Suite("PersonRelevance")
 struct PersonRelevanceTests {
     private func person(_ name: String, popularity: Double, dept: String = "Acting") throws -> TMDBPerson {
-        try JSONDecoder().decode(TMDBPerson.self, from: Data(#"""
+        try tmdbDecoder.decode(TMDBPerson.self, from: Data(#"""
         {"id": \#(abs(name.hashValue % 100000)), "name": "\#(name)",
          "popularity": \#(popularity), "known_for_department": "\#(dept)"}
         """#.utf8))

@@ -1,11 +1,9 @@
 import Foundation
 
-/// The explicit opt-in allowlist of UserDefaults keys mirrored across devices
-/// via iCloud KVS. Secrets are NOT here — they sync via iCloud Keychain. Keys
-/// not listed (platform-specific prefs, MCP server, one-shot/migration flags)
-/// stay device-local.
-public enum SyncedKeys {
-    public static let all: Set<String> = {
+/// UserDefaults keys mirrored via iCloud KVS; anything unlisted stays device-local.
+/// Secrets sync via iCloud Keychain instead.
+enum SyncedKeys {
+    static let all: Set<String> = {
         var keys: Set<String> = [
             "ArrBarr.notifyRadarr", "ArrBarr.notifySonarr", "ArrBarr.notifyLidarr",
             "ArrBarr.notificationSoundName",
@@ -16,7 +14,7 @@ public enum SyncedKeys {
             "ArrBarr.tonightVisibleCount",
             "ArrBarr.aiEnabled", "ArrBarr.chatProvider", "ArrBarr.openai",
             "ArrBarr.collapsedArrs", "ArrBarr.queueTitleGrouping",
-            "ArrBarr.mediaServer",
+            "ArrBarr.mediaServer", "ArrBarr.prowlarr",
         ]
         for kind in ServiceKind.allCases {
             keys.insert("ArrBarr.config.\(kind.rawValue)")
@@ -24,5 +22,5 @@ public enum SyncedKeys {
         return keys
     }()
 
-    public static func isSynced(_ key: String) -> Bool { all.contains(key) }
+    static func isSynced(_ key: String) -> Bool { all.contains(key) }
 }

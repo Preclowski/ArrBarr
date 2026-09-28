@@ -1,39 +1,18 @@
 import Foundation
+import MediaKit
 
-/// LLMProvider used when `DemoMode.isActive` is true. Real providers
-/// (OpenAI / FoundationModels) require credentials or on-device model
-/// availability — neither is reliable in a demo context. Instead of
-/// failing or stalling, we hand the chat pipeline a pre-executed
-/// `suggest_titles`-shaped tool result populated from canned data so
-/// every prompt yields the rich-card UX a demo viewer expects.
-///
-/// Strategy notes (vs the alternatives):
-///   - Intercepting at the `ChatViewModel.send` level would couple the
-///     VM to demo-mode awareness; the VM stays provider-agnostic this
-///     way.
-///   - Stubbing the existing providers would still require wiring a
-///     fake `invokeTool` to produce the rich result; that's strictly
-///     more code and more types-to-modify than a fresh provider.
-///   - A bespoke provider plugs into the existing factory switch,
-///     reuses `LLMResponse(toolResults:)` (the "pre-executed" path the
-///     FoundationModels provider already takes), and the rest of the
-///     pipeline — tool-message rendering, RichToolResultView — is
-///     completely unchanged.
-public struct DemoChatProvider: LLMProvider {
-    public init() {}
-    public var isAvailable: Bool { true }
+/// Demo chat: real providers need credentials or an on-device model, so this answers
+/// with pre-executed `suggest_titles`-shaped results from canned data.
+struct DemoChatProvider: LLMProvider {
+    init() {}
+    var isAvailable: Bool { true }
 
-    public func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
-        // A tiny artificial latency so the "thinking" indicator gets a
-        // moment on-screen — without it, replies feel instant in a way
-        // that reads as canned. 600ms is short enough to stay snappy.
+    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+        // A short delay so the "thinking" indicator shows; instant replies read as canned.
         try? await Task.sleep(nanoseconds: 600_000_000)
 
         let lowered = prompt.lowercased()
-        // Keyword routing: anything that smells like TV picks series,
-        // anything that smells like film picks movies, otherwise we
-        // alternate per-call using the history length so back-to-back
-        // prompts in the same chat show both kinds.
+        // No keyword match alternates by history length, so back-to-back prompts show both kinds.
         let kind: SuggestionKind = {
             if Self.containsAny(lowered, words: ["series", "show", "tv", "season", "episode", "serial", "serie"]) {
                 return .series
@@ -44,17 +23,12 @@ public struct DemoChatProvider: LLMProvider {
             return (history.filter { $0.role == .assistant }.count % 2 == 0) ? .movie : .series
         }()
 
-        // The quiz CTA (and any prompt that says quiz/swipe) must open the
-        // real swipe deck, exactly like the live provider routing through
-        // `discover_in_quiz` — answering with a suggestion list here read
-        // as "demo has no quiz".
+        // Quiz prompts open the real deck, as `discover_in_quiz` does live.
         if Self.containsAny(lowered, words: ["quiz", "swipe"]) {
             return await Self.quizResponse(kind: kind)
         }
 
-        // Deterministic selection from the canned pool — same prompt
-        // always yields the same picks, but different prompts shuffle
-        // the order so the demo doesn't feel static across turns.
+        // Deterministic per prompt, but different prompts shuffle the order.
         let picks = Self.pick(kind: kind, prompt: prompt)
 
         let text = Self.summary(kind: kind, count: picks.count)
@@ -101,9 +75,7 @@ public struct DemoChatProvider: LLMProvider {
 
     // MARK: - Quiz deck
 
-    /// Opens the Discover deck with the whole demo pool, mirroring
-    /// `LocalToolBackend.assembleDeck`: post `AppMessages.OpenDiscoverQuiz`,
-    /// answer with the `.discoverSession` resume card.
+    /// Mirrors `LocalToolBackend.assembleDeck`.
     private static func quizResponse(kind: SuggestionKind) async -> LLMResponse {
         let pool = (kind == .series) ? seriesPool : moviePool
         let items = pool.map { result in
@@ -131,7 +103,7 @@ public struct DemoChatProvider: LLMProvider {
         )
     }
 
-    /// "Why this card" hooks, keyed by pool title — localized at use.
+    /// Keyed by pool title, localized at use.
     private static let quizReasonKeys: [String: String] = [
         "Big Buck Bunny": "demo.quizReason.bigbuckbunny",
         "Sintel": "demo.quizReason.sintel",
@@ -145,10 +117,7 @@ public struct DemoChatProvider: LLMProvider {
 
     // MARK: - Canned content
 
-    /// Deterministically pick 4 items from the canned pool. We hash the
-    /// prompt to choose a starting offset, then take a contiguous slice
-    /// — gives variety across prompts without ever returning fewer than
-    /// the pool's worth of variety on repeats.
+    /// A prompt hash picks the starting offset of a contiguous slice.
     private static func pick(kind: SuggestionKind, prompt: String) -> [SearchResult] {
         let pool = (kind == .series) ? seriesPool : moviePool
         guard !pool.isEmpty else { return [] }
@@ -157,13 +126,8 @@ public struct DemoChatProvider: LLMProvider {
         return (0..<count).map { i in pool[(offset + i) % pool.count] }
     }
 
-    // Suggestion cards reuse the demo universe's real artwork — the same
-    // Wikipedia / Cover Art Archive sources the queue and library fixtures
-    // use — so chat and quiz shots render actual covers without a TMDB key
-    // (flat placeholder tiles read as broken in marketing screenshots).
-    // Queue titles (Big Buck Bunny, Sintel, Tears of Steel) join the
-    // discovery-only Blender shorts; the series pool is the demo search
-    // pool verbatim.
+    // The same real artwork the queue and library fixtures use, so screenshots show actual
+    // covers without a TMDB key.
     private static let moviePool: [SearchResult] = [
         SearchResult(
             externalId: 10001, foreignId: "10001",

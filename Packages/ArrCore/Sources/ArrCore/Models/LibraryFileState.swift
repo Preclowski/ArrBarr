@@ -1,22 +1,18 @@
 import Foundation
+import MediaKit
 
 // MARK: - File state
 //
-// The one mapping from arr payloads to "how much of this is on disk". The
-// Library tab, the detail heroes and the ownership chip on search / Quiz /
-// filmography rows all resolve through here. They used to carry three copies
-// with two different series formulas, so the same show could read complete in
-// one place and partial in the next.
+// The one mapping from arr payloads to "how much of this is on disk", so the Library tab, detail heroes
+// and ownership chips can't disagree.
 
-/// Files on disk vs episodes expected, summed from Sonarr's per-season
-/// statistics — the arr's own numbers. Counting the episode list instead would
-/// call every ongoing series half-missing, since unaired episodes are in it too.
-nonisolated public struct EpisodeFileCounts: Equatable, Sendable {
-    public let have: Int
-    public let total: Int
+/// Summed from Sonarr's per-season statistics: counting the episode list would call every ongoing
+/// series half-missing, since unaired episodes are in it.
+nonisolated struct EpisodeFileCounts: Equatable, Sendable {
+    let have: Int
+    let total: Int
 
-    /// Every counted episode has a file.
-    public var isComplete: Bool { total > 0 && have >= total }
+    var isComplete: Bool { total > 0 && have >= total }
 
     init(have: Int, total: Int) {
         self.have = have
@@ -30,10 +26,7 @@ nonisolated public struct EpisodeFileCounts: Equatable, Sendable {
 }
 
 nonisolated extension LibraryEntry.FileState {
-    /// Precedence: complete first — what's on disk is the answer even when the
-    /// arr stopped monitoring it — then unmonitored, partial, and finally
-    /// missing vs nothing-grabbable-yet. `monitored == nil` means "not known
-    /// yet" (a detail payload still loading), not unmonitored.
+    /// Complete wins even when unmonitored. `monitored == nil` means not known yet, not unmonitored.
     static func resolve(monitored: Bool?, complete: Bool, partial: Bool, available: Bool = true) -> Self {
         if complete { return .complete }
         if monitored == false { return .unmonitored }
@@ -53,15 +46,7 @@ nonisolated extension LibraryEntry.FileState {
     }
 }
 
-nonisolated extension SonarrLibraryRecord {
-    var episodeFileCounts: EpisodeFileCounts {
-        EpisodeFileCounts(seasons: (seasons ?? []).map {
-            (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
-        })
-    }
-}
-
-nonisolated extension SonarrSeriesDetail {
+nonisolated extension ArrSeries {
     var episodeFileCounts: EpisodeFileCounts {
         EpisodeFileCounts(seasons: (seasons ?? []).map {
             (have: $0.statistics?.episodeFileCount, total: $0.statistics?.episodeCount)
@@ -71,36 +56,25 @@ nonisolated extension SonarrSeriesDetail {
 
 // MARK: - Ownership
 
-/// A title's match in the user's library: which arr record it is, and whether
-/// its files are on disk. What an ownership chip needs — "Downloaded" or
-/// "library" — without a request of its own.
-///
-/// `isDownloaded` is about the disk, not the monitored flag: an unmonitored
-/// film with a file is still downloaded.
-nonisolated public struct LibraryOwnership: Equatable, Sendable {
-    public let arrId: Int
-    public let isDownloaded: Bool
+/// `isDownloaded` is about the disk, not the monitored flag: an unmonitored film with a file is downloaded.
+nonisolated struct LibraryOwnership: Equatable, Sendable {
+    let arrId: Int
+    let isDownloaded: Bool
 }
 
-nonisolated extension RadarrLibraryRecord {
+nonisolated extension ArrMovie {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
     }
 }
 
-nonisolated extension SonarrLibraryRecord {
+nonisolated extension ArrSeries {
     var ownership: LibraryOwnership? {
         id.map { LibraryOwnership(arrId: $0, isDownloaded: episodeFileCounts.isComplete) }
     }
 }
 
-nonisolated extension WhisparrLibraryRecord {
-    var ownership: LibraryOwnership? {
-        id.map { LibraryOwnership(arrId: $0, isDownloaded: hasFile == true) }
-    }
-}
-
-nonisolated extension LidarrLibraryRecord {
+nonisolated extension ArrArtist {
     var ownership: LibraryOwnership? {
         id.map { id in
             let total = statistics?.trackCount ?? 0

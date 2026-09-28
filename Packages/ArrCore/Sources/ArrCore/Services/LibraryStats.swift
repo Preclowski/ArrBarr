@@ -1,11 +1,7 @@
 import Foundation
 
-/// Lock-guarded snapshot of the library's SIZE, fed by `LibraryIndex` on
-/// every fetch. Exists so the system prompt can carry "3021 movies, 214
-/// series" synchronously at request time — the size decides the agent's
-/// whole discovery strategy (a big collection owns the canon, so guessing
-/// obvious titles wastes a full round of lookups plus an LLM turn), and an
-/// actor hop has no place inside prompt assembly.
+/// Lock-guarded so the system prompt can carry library size synchronously: the size decides the agent's
+/// discovery strategy, and an actor hop has no place inside prompt assembly.
 nonisolated public final class LibraryStats: @unchecked Sendable {
 
     public static let shared = LibraryStats()
@@ -36,9 +32,7 @@ nonisolated public final class LibraryStats: @unchecked Sendable {
         _seriesCount = count
     }
 
-    /// The system-prompt block. Nil until a library has been fetched at
-    /// least once this session — an absent line costs nothing, and lying
-    /// with zeros would push the model toward exactly the wrong strategy.
+    /// Nil until a library has been fetched: zeros would push the model toward the wrong strategy.
     public func promptBlock() -> String? {
         lock.lock(); defer { lock.unlock() }
         guard _movieCount != nil || _seriesCount != nil else { return nil }

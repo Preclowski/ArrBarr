@@ -1,6 +1,7 @@
 import Testing
 import ArrCore
 import MCP
+import MediaKit
 @testable import ArrMCPServer
 
 @Test func jsonValueToMCPValue_roundtripsScalars() {

@@ -15,14 +15,8 @@ nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
         self.password = password
     }
 
-    /// Cache key for "is this still the same server?".
-    ///
-    /// Anything caching per-server state (`LibraryIndex`'s snapshot,
-    /// `SeriesIdentityResolver`'s resolutions and its `tmdb:` capability
-    /// probe) has to notice when the user re-points a service, and must do it
-    /// identically — two definitions drifting apart would mean one cache
-    /// serving another server's data. The key length stands in for the key
-    /// itself so the value never lands in a log or a cache dump.
+    /// Every per-server cache must detect a re-pointed service the same way. The key length stands in
+    /// for the key so the value never lands in a log or cache dump.
     public var identityFingerprint: String { "\(baseURL)|\(apiKey.count)" }
 
     public var isConfigured: Bool {
@@ -34,21 +28,10 @@ nonisolated public struct ServiceConfig: Codable, Equatable, Sendable {
         return true
     }
 
-    /// Arr visibility gate (Radarr/Sonarr/Lidarr/Whisparr — every caller of
-    /// this is an arr, and they all need an API key). An arr that's enabled
-    /// with a URL but no key is treated as NOT visible: it would only emit a
-    /// "missing API key" error in the queue. Settings surfaces that error
-    /// instead. Demo mode runs on mocks, so the URL/key fields stay blank and
-    /// we render as long as `enabled`.
-    public var isVisible: Bool {
-        DemoMode.isActive ? enabled : (isConfigured && !apiKey.isEmpty)
-    }
+    /// An enabled arr with a URL but no key is not visible: it would only emit "missing API key" in the queue.
+    public var isVisible: Bool { isConfigured && !apiKey.isEmpty }
 
-    /// Should this service be live in the stack? The arrs (and SABnzbd) are
-    /// gated on their API key — `isVisible`. The password-based download
-    /// clients (qBittorrent, Transmission, Deluge, rTorrent) HAVE no API key,
-    /// so gating them on one left every one of them permanently reported as
-    /// "not configured" no matter what the user typed in Settings.
+    /// The arrs and SABnzbd are gated on their API key; the password-based clients have none.
     public func isUsable(as kind: ServiceKind) -> Bool {
         kind.requiresApiKey ? isVisible : isConfigured
     }
@@ -84,9 +67,7 @@ nonisolated public enum ServiceKind: String, CaseIterable, Identifiable, Sendabl
 
     public var requiresLogin: Bool {
         switch self {
-        // qBittorrent's WebUI API authenticates with username/password via
-        // `/api/v2/auth/login` (returns a SID session cookie) — it has no
-        // API key. Same login shape as the other download clients.
+        // qBittorrent authenticates with username/password (SID cookie); it has no API key.
         case .qbittorrent, .nzbget, .transmission, .rtorrent, .deluge: return true
         default: return false
         }

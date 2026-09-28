@@ -3,7 +3,7 @@ import os
 
 /// One assembled data layer: kernel, store, services and streams behind a single value the app owns.
 public final class MediaStack: Sendable {
-    public enum Role: Sendable { case app, widgetRefresher, snapshotReader }
+    public enum Role: Sendable { case app, snapshotReader }
 
     public struct Configuration: Sendable {
         public var role: Role = .app
@@ -36,7 +36,6 @@ public final class MediaStack: Sendable {
     public let store: ResourceStore
     public let capabilities = CapabilityIndex()
     public let probe: CapabilityProbe
-    public let engine: CompositionEngine
     public let events: EventHub
     public let discovery: Discovery
     public var subject: MessageSubject { store.subject }
@@ -57,7 +56,6 @@ public final class MediaStack: Sendable {
                               center: c.center, memoryBudget: c.role == .app ? 8 << 20 : 2 << 20)
         probe = CapabilityProbe(store: store, index: capabilities, database: database, clock: c.clock, log: c.log)
         if let override = c.readPolicyOverride { Task { [store] in await store.setPolicyOverride(override) } }
-        engine = CompositionEngine(store: store, identity: identity, capabilities: capabilities, clock: c.clock, telemetry: c.telemetry)
         events = EventHub(store: store, clock: c.clock, telemetry: c.telemetry, log: c.log)
         discovery = Discovery(log: c.log)
     }
@@ -137,21 +135,13 @@ public final class MediaStack: Sendable {
 
     public func liveProgress(instances: [InstanceID]) -> LiveStream<DownloadTask> {
         let kit = self
-        return LiveStream(id: .progress, instances: instances, policy: .progress, pipeline: pipeline, database: database, clock: configuration.clock,
+        // Read on demand, never pumped: no interval to run, and no checkpoint anyone would load.
+        return LiveStream(id: .progress, instances: instances, policy: LivePolicy(), pipeline: pipeline, database: nil, clock: configuration.clock,
                           telemetry: configuration.telemetry, log: configuration.log, elementID: \.id, fetch: { instance, scope, pipeline in
             guard let service = kit.download(instance) else { return [] }
             let ids: Set<String> = if case let .ids(set) = scope { set } else { [] }
             return try await service.fetchTasks(ids: ids, pipeline: pipeline)
         }, isActive: { tasks in tasks.contains { $0.state == .downloading } })
-    }
-
-    public func liveSessions(instance: InstanceID) -> LiveStream<MediaServerSession> {
-        let kit = self
-        return LiveStream(id: .sessions, instances: [instance], policy: .sessions, pipeline: pipeline, database: database, clock: configuration.clock,
-                          telemetry: configuration.telemetry, log: configuration.log, elementID: \.itemID, fetch: { instance, _, pipeline in
-            guard let service = kit.mediaServer(instance) else { return [] }
-            return try service.decodeSessions(try await pipeline.send(service.sessionsPlan()))
-        })
     }
 
     public func realtime(for instance: InstanceID) -> SignalRSource {

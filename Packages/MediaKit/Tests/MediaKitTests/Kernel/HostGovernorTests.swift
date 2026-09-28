@@ -84,6 +84,26 @@ import Testing
         _ = try await g.enter(host, kind: .radarr, priority: .interactive)
     }
 
+    @Test(arguments: [2, 6])
+    func hundredDistinctReadsNeverExceedTheHostLimit(limit: Int) async throws {
+        var limits = HostGovernor.Limits()
+        limits.maxConcurrent = limit
+        limits.reservedSessionSlots = 0
+        let kit = try await TestKit(limits: limits)
+        kit.transport.delay = .milliseconds(20)
+        kit.transport.fallback = { _ in ScriptedTransport.Answer(status: 200, body: Data("[]".utf8)) }
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for id in 0..<100 {
+                let r = Resource<[Row]>.json(kit.plan("fetchMovie", path: "/api/v3/movie", query: [RequestPlan.QueryItem("id", String(id))]),
+                                             tags: [.collection(.library, TestKit.radarr)], freshness: .live)
+                group.addTask { _ = try await kit.store.read(r) }
+            }
+            try await group.waitForAll()
+        }
+        #expect(kit.transport.count == 100)
+        #expect(kit.transport.maxInFlight == limit)
+    }
+
     @Test func wakeHalfOpensDownHosts() async throws {
         let (g, clock, _) = governor()
         for _ in 0..<3 {

@@ -1,35 +1,24 @@
 import Foundation
 import Observation
 
-/// Hosts the chat view-model at a scope above the tab bar so the conversation
-/// survives Queue ↔ Upcoming ↔ Chat switches. SwiftUI's `@State` holder can't be
-/// reassigned, so we wrap the VM in a holder that rebuilds it when the AI
-/// configuration actually changes.
+/// Holds the chat VM above the tab bar so the conversation survives tab switches,
+/// rebuilding it only when the AI configuration changes.
 @Observable
-public final class ChatViewModelHolder {
-    public private(set) var vm: ChatViewModel
-    /// Internal bookkeeping — not view state, so keep it out of observation.
+final class ChatViewModelHolder {
+    private(set) var vm: ChatViewModel
     @ObservationIgnored private var lastSignature: String = ""
 
-    public init() {
+    init() {
         self.vm = ChatViewModelFactory.makePlaceholder()
     }
 
-    /// Rebuild the underlying VM if (and only if) the relevant config bits changed.
-    /// No-op when the signature matches the last build — preserves message history.
-    public func reconfigure(store: ConfigStore) {
+    /// No-op when the signature matches, which preserves message history.
+    func reconfigure(store: ConfigStore) {
         let next = Self.signature(store: store)
         guard next != lastSignature else { return }
         lastSignature = next
-        // Resolve any confirmation gate BEFORE dropping the VM. The old one may
-        // be holding a CheckedContinuation for a destructive tool the user
-        // hasn't answered yet (edit an arr / download-client / OpenAI field in
-        // Settings with a confirm card up and you land exactly here), and a
-        // continuation that is deallocated unresumed hangs its tool call
-        // forever — provider session and all — plus logs a leaked-continuation
-        // warning. `clear()` refuses outright in that state; here we can't
-        // refuse (the config the VM was built from is already gone), so cancel
-        // is the honest reading: the user walked away from the card.
+        // The old VM may hold an unanswered confirm continuation; dropping it
+        // unresumed hangs the tool call forever, so cancel first.
         vm.cancelPending()
         vm = ChatViewModelFactory.make(
             sonarr: store.sonarr,
@@ -53,7 +42,7 @@ public final class ChatViewModelHolder {
         )
     }
 
-    public static func signature(store: ConfigStore) -> String {
+    static func signature(store: ConfigStore) -> String {
         [
             store.sonarr.baseURL, store.sonarr.apiKey, "\(store.sonarr.enabled)",
             store.radarr.baseURL, store.radarr.apiKey, "\(store.radarr.enabled)",
@@ -61,34 +50,22 @@ public final class ChatViewModelHolder {
             store.whisparr.baseURL, store.whisparr.apiKey, "\(store.whisparr.enabled)",
             "\(store.aiKnowsAboutWhisparr)",
             store.tmdbApiKey,
-            // Download-client connection bits — changing any should rebuild
-            // the backend so `health` probes the current endpoints.
             store.qbittorrent.baseURL, store.qbittorrent.apiKey, "\(store.qbittorrent.enabled)",
             store.transmission.baseURL, store.transmission.apiKey, "\(store.transmission.enabled)",
             store.nzbget.baseURL, store.nzbget.apiKey, "\(store.nzbget.enabled)",
             store.sabnzbd.baseURL, store.sabnzbd.apiKey, "\(store.sabnzbd.enabled)",
             store.rtorrent.baseURL, store.rtorrent.apiKey, "\(store.rtorrent.enabled)",
             store.deluge.baseURL, store.deluge.apiKey, "\(store.deluge.enabled)",
-            // Media server — a changed server / URL / token must rebuild the
-            // backend so the `media_server_*` tools stop talking to the old one.
             store.mediaServer.kind.rawValue, store.mediaServer.baseURL,
             store.mediaServer.token, "\(store.mediaServer.enabled)",
             store.chatProvider.rawValue,
             store.openai.baseURL, store.openai.apiKey, store.openai.model,
-            // Both are branch inputs of `ChatViewModelFactory.make`: demo swaps in
-            // DemoChatProvider, `aiEnabled` decides the chat exists at all. Without
-            // them, toggling demo while running rebuilds only if the two profiles
-            // happen to disagree on some field above — and two empty profiles don't,
-            // so the chat keeps its pre-demo (usually unavailable) provider.
-            // `DemoMode.isActive` lives in UserDefaults.standard, which SwiftUI can't
-            // observe: this is only re-read when ConfigStore publishes something. Safe
-            // because both toggles go through `useDemoStore` → `applyValues`, which
-            // always publishes — a caller that flips the flag alone would not rebuild.
+            // Branch inputs of `ChatViewModelFactory.make`. `DemoMode.isActive` isn't observable;
+            // it's re-read only because `useDemoStore` → `applyValues` always publishes.
             "\(DemoMode.isActive)",
             "\(store.aiEnabled)",
-            // appLanguage is intentionally NOT part of the signature: changing
-            // the app language already requires a restart to take effect, and
-            // on restart the VM is rebuilt fresh with the new value anyway.
+            // The OpenAI prompt's fallback reply language; the UI switches live, so the chat must too.
+            store.appLanguage,
         ].joined(separator: "|")
     }
 }

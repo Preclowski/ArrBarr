@@ -1,24 +1,17 @@
 import Foundation
 import SwiftUI
+import os
+import MediaKit
 
-/// Pure helpers used by `DetailView`'s per-arr sections. Lifted out as free
-/// functions so the per-arr `*Content` view-builders don't have to be members
-/// of `DetailView` just to reach `configStore`. Each takes `(item, configStore)`
-/// (plus per-call extras like an images array) and computes a stateless answer.
-
-/// Poster auth key for the source's configured arr. Returns the api key for
-/// whichever arr `item.source` points at, regardless of whether the poster
-/// actually requires auth — callers gate on `item.posterRequiresAuth`.
+/// Callers gate on `item.posterRequiresAuth`.
 func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
-    configStore.serviceConfig(for: item.source).apiKey
+    configStore.config(for: item.source).apiKey
 }
 
-/// Deep-link to the arr's web UI for this item, if we know a slug. Path
-/// differs per arr — Sonarr uses `/series/`, Lidarr `/album/`, Radarr +
-/// Whisparr both use `/movie/` (Whisparr is a Radarr fork).
+/// Whisparr is a Radarr fork, so it shares `/movie/`.
 func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
     guard let slug = item.contentSlug else { return nil }
-    let cfg = configStore.serviceConfig(for: item.source)
+    let cfg = configStore.config(for: item.source)
     let path: String = switch item.source {
     case .radarr, .whisparr: "/movie/\(slug)"
     case .sonarr:            "/series/\(slug)"
@@ -27,25 +20,18 @@ func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
     return URL(string: cfg.baseURL)?.appendingPathComponent(path)
 }
 
-/// Resolve a poster URL from an arr's `images` array against its base URL.
-/// Falls back to `item.posterURL` (set when the source had no images list)
-/// is the caller's job — this only resolves the images side.
-///
-/// `mediaServerKeys` lets the connected media server's artwork win over the
-/// arr's — callers that have the title's provider ids pass them, the rest get
-/// the previous behaviour.
+/// Falling back to `item.posterURL` is the caller's job. `mediaServerKeys`
+/// lets the media server's artwork win.
 func arrPosterURL(images: [ArrImage]?, for item: QueueItem,
                   in configStore: ConfigStore,
                   mediaServerKeys: [MediaServerExternalKey] = []) -> URL? {
-    let baseURL = configStore.serviceConfig(for: item.source).baseURL
+    let baseURL = configStore.config(for: item.source).baseURL
     return images?.posterURL(baseURL: baseURL, coverTypes: ["poster", "cover"],
                              mediaServerKeys: mediaServerKeys).0
 }
 
 // MARK: - Modal form primitives
 
-/// One switch row in a modal card (edit / delete) — the same chrome the
-/// pickers beside it use, so a card of mixed controls reads as one form.
 struct ModalFormToggle: View {
     let label: LocalizedStringKey
     @Binding var isOn: Bool
@@ -56,9 +42,7 @@ struct ModalFormToggle: View {
                 .scaledFont(size: 11)
                 .foregroundStyle(.secondary)
             Spacer()
-            // `.labelsHidden()` strips the switch from the accessibility
-            // tree too — restore a name so it doesn't announce as an
-            // anonymous "off" (same fix as MCPSettingsPane's tool rows).
+            // `.labelsHidden()` also strips the accessibility name.
             Toggle("", isOn: $isOn)
                 .labelsHidden()
                 .toggleStyle(.switch)
@@ -71,37 +55,80 @@ struct ModalFormToggle: View {
     }
 }
 
+// MARK: - Search feedback
+
+/// A search button's outcome. The arr only confirms it accepted the command, so `queued` is as far as it goes;
+/// `failed` carries the reason the command was refused or never arrived.
+enum SearchFeedback: Equatable {
+    case idle, sending, queued, failed(String)
+
+    var isSending: Bool { self == .sending }
+
+    private static let log = Logger(category: "Search")
+
+    /// Sends `action` once at a time, then shows the outcome briefly.
+    @MainActor
+    static func run(_ feedback: Binding<SearchFeedback>, _ action: @escaping () async throws -> Void) {
+        guard !feedback.wrappedValue.isSending else { return }
+        feedback.wrappedValue = .sending
+        Task {
+            let shown: Duration
+            do {
+                try await action()
+                feedback.wrappedValue = .queued
+                shown = .seconds(1.6)
+            } catch {
+                log.error("search command failed: \(error.localizedDescription, privacy: .public)")
+                feedback.wrappedValue = .failed(error.userFacingMessage)
+                shown = .seconds(4)
+            }
+            try? await Task.sleep(for: shown)
+            feedback.wrappedValue = .idle
+        }
+    }
+}
+
+/// Spinner, checkmark or warning in a row's trailing slot; nothing while idle.
+struct SearchFeedbackIcon: View {
+    let feedback: SearchFeedback
+    var size: CGFloat = 10
+
+    var body: some View {
+        switch feedback {
+        case .idle:
+            EmptyView()
+        case .sending:
+            ProgressView().controlSize(.small)
+        case .queued:
+            Image(systemName: "checkmark")
+                .scaledFont(size: size, weight: .semibold)
+                .foregroundStyle(.secondary)
+        case let .failed(reason):
+            Image(systemName: "exclamationmark.triangle.fill")
+                .scaledFont(size: size, weight: .semibold)
+                .foregroundStyle(.orange)
+                .help(Text(verbatim: reason))
+                .accessibilityLabel(Text(verbatim: reason))
+        }
+    }
+}
+
 // MARK: - Row search context menu
 
-/// Right-click (macOS) / long-press (iOS) twin of `HeaderSearchMenu`: the same
-/// Automatic / Manual choice, on the row that owns it, so a season or episode
-/// can be searched without first drilling into its screen for the header glyph.
-///
-/// The sweep choreography lives here rather than in each row — the row only
-/// owns the two flags so it can put the spinner / checkmark wherever its own
-/// layout has room.
+/// Right-click / long-press twin of `HeaderSearchMenu`, so a row can be searched in place.
 struct RowSearchContextMenu: ViewModifier {
-    @Binding var inFlight: Bool
-    @Binding var didQueue: Bool
-    let onAutomatic: () async -> Void
+    @Binding var feedback: SearchFeedback
+    let onAutomatic: () async throws -> Void
     let onManual: () -> Void
 
     func body(content: Content) -> some View {
         content.contextMenu {
             Button {
-                guard !inFlight else { return }
-                Task {
-                    inFlight = true
-                    await onAutomatic()
-                    inFlight = false
-                    didQueue = true
-                    try? await Task.sleep(nanoseconds: 1_600_000_000)
-                    didQueue = false
-                }
+                SearchFeedback.run($feedback, onAutomatic)
             } label: {
                 Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
             }
-            .disabled(inFlight)
+            .disabled(feedback.isSending)
             Button(action: onManual) {
                 Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
             }
@@ -109,49 +136,25 @@ struct RowSearchContextMenu: ViewModifier {
     }
 }
 
-/// `RowSearchContextMenu` for rows whose host may or may not own a search path
-/// — with either closure missing there is no menu at all, rather than one with
-/// a dead item in it.
+/// With either closure missing there is no menu, rather than a dead item.
 struct OptionalRowSearchMenu: ViewModifier {
-    @Binding var inFlight: Bool
-    @Binding var didQueue: Bool
-    let onAutomatic: (() async -> Void)?
+    @Binding var feedback: SearchFeedback
+    let onAutomatic: (() async throws -> Void)?
     let onManual: (() -> Void)?
 
     func body(content: Content) -> some View {
         if let onAutomatic, let onManual {
-            content.rowSearchContextMenu(inFlight: $inFlight, didQueue: $didQueue,
-                                         onAutomatic: onAutomatic, onManual: onManual)
+            content.modifier(RowSearchContextMenu(feedback: $feedback, onAutomatic: onAutomatic, onManual: onManual))
         } else {
             content
         }
     }
 }
 
-extension View {
-    /// Attaches the Automatic / Manual search menu to a list row. Both flags are
-    /// the row's own state; it renders them (spinner, then a brief checkmark).
-    func rowSearchContextMenu(
-        inFlight: Binding<Bool>,
-        didQueue: Binding<Bool>,
-        onAutomatic: @escaping () async -> Void,
-        onManual: @escaping () -> Void
-    ) -> some View {
-        modifier(RowSearchContextMenu(inFlight: inFlight, didQueue: didQueue,
-                                      onAutomatic: onAutomatic, onManual: onManual))
-    }
-}
-
 // MARK: - Header search menu
 
-/// Toolbar/header search control: a bare magnifier glyph (sized to sit in
-/// the `[search] [bookmark] [safari] [trash]` cluster) whose tap opens the
-/// native Automatic / Manual menu — the same choice the bottom "Search" CTA
-/// used to offer before it moved up here. Carries the sweep states inline:
-/// spinner while a search runs, a brief checkmark right after queueing one.
 struct HeaderSearchMenu: View {
-    let inFlight: Bool
-    let didQueue: Bool
+    let feedback: SearchFeedback
     let onAutomatic: () -> Void
     let onManual: () -> Void
 
@@ -165,16 +168,12 @@ struct HeaderSearchMenu: View {
             }
         } label: {
             Group {
-                if inFlight {
-                    ProgressView().controlSize(.small)
-                } else if didQueue {
-                    Image(systemName: "checkmark")
-                        .scaledFont(size: 13, weight: .medium)
-                        .foregroundStyle(.secondary)
-                } else {
+                if feedback == .idle {
                     Image(systemName: "magnifyingglass")
                         .scaledFont(size: 14, weight: .medium)
                         .foregroundStyle(.secondary)
+                } else {
+                    SearchFeedbackIcon(feedback: feedback, size: 13)
                 }
             }
             .frame(width: 22, height: 22)
@@ -183,9 +182,9 @@ struct HeaderSearchMenu: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .disabled(inFlight)
+        .disabled(feedback.isSending)
         .help(Text("Search", bundle: .module))
-        .accessibilityLabel(inFlight
+        .accessibilityLabel(feedback.isSending
                             ? Text("detail.searchingForRelease.label", bundle: .module)
                             : Text("Search", bundle: .module))
     }

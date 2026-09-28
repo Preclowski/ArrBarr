@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import MediaKit
 @testable import ArrCore
 
 /// Every catalogue tool runs against the bundled fixtures: the backend is built from the demo profile and every

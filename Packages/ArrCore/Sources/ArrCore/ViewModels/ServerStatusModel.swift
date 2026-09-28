@@ -1,18 +1,17 @@
 import Foundation
+import MediaKit
 
-/// Owns the disk-space fetch behind Settings → Status. Connection health and
-/// queue activity are read straight from their shared singletons
-/// (`ConnectionHealth`, `QueueViewModel`); only `/diskspace` needs its own
-/// fetch, so that's all this model carries.
+/// Settings → Status disk space; health and queue activity come from their shared singletons.
 @Observable
-public final class ServerStatusModel {
-    public private(set) var disks: [DiskSpace] = []
-    public private(set) var isRefreshing = false
-    public private(set) var lastRefresh: Date?
+final class ServerStatusModel {
+    private(set) var disks: [ArrDiskSpace] = []
+    private(set) var isRefreshing = false
+    private(set) var lastRefresh: Date?
+    /// Arrs whose `/diskspace` read failed, with the reason; their mounts are missing, not full.
+    private(set) var failures: [(kind: ServiceKind, message: String)] = []
 
-    public init() {}
+    init() {}
 
-    /// Configured + keyed arrs — the only services that answer `/diskspace`.
     private var targets: [(ServiceKind, ServiceConfig)] {
         let store = ConfigStore.shared
         return [ServiceKind.radarr, .sonarr, .lidarr, .whisparr].compactMap { kind in
@@ -22,56 +21,48 @@ public final class ServerStatusModel {
         }
     }
 
-    public func refresh() async {
+    func refresh() async {
         if isRefreshing { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
-        if DemoMode.isActive {
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            disks = Self.demoDisks
-            lastRefresh = Date()
-            return
-        }
-
-        let fetched = await Self.fetchAll(targets)
+        let (fetched, failed) = await Self.fetchAll(targets)
         disks = Self.dedupe(fetched)
+        failures = failed.sorted { $0.kind.displayName < $1.kind.displayName }
         lastRefresh = Date()
     }
 
-    /// Fetch `/diskspace` from every target concurrently; a failing arr
-    /// contributes nothing rather than aborting the sweep.
-    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> [DiskSpace] {
-        await withTaskGroup(of: [DiskSpace].self) { group in
+    /// A failing arr is reported and skipped rather than aborting the sweep.
+    private static func fetchAll(_ targets: [(ServiceKind, ServiceConfig)]) async -> ([ArrDiskSpace], [(kind: ServiceKind, message: String)]) {
+        await withTaskGroup(of: (ServiceKind, Result<[ArrDiskSpace], any Error>).self) { group in
             for (kind, cfg) in targets {
-                group.addTask { (try? await client(kind, cfg).fetchDiskSpace()) ?? [] }
+                group.addTask {
+                    do { return (kind, .success(try await client(kind, cfg).fetchDiskSpace())) }
+                    catch { return (kind, .failure(error)) }
+                }
             }
-            var all: [DiskSpace] = []
-            for await chunk in group { all += chunk }
-            return all
+            var all: [ArrDiskSpace] = [], failed: [(kind: ServiceKind, message: String)] = []
+            for await (kind, outcome) in group {
+                switch outcome {
+                case let .success(disks): all += disks
+                case let .failure(error): failed.append((kind, error.userFacingMessage))
+                }
+            }
+            return (all, failed)
         }
     }
 
-    /// The four arrs share `ArrAPIClient`, so an existential is enough to call
-    /// the protocol-extension `fetchDiskSpace()`.
     private static func client(_ kind: ServiceKind, _ cfg: ServiceConfig) -> any ArrAPIClient {
         ServiceHandles.arr(QueueItem.Source(rawValue: kind.rawValue) ?? .whisparr, config: cfg)
     }
 
-    /// Different arrs sharing a mount report it identically — collapse by path
-    /// (keeping the largest-capacity read), drop capacity-less mounts, and sort
-    /// fullest-first so the disks that need attention lead.
-    private static func dedupe(_ disks: [DiskSpace]) -> [DiskSpace] {
-        var byPath: [String: DiskSpace] = [:]
+    /// Arrs sharing a mount report it identically: collapse by path, keep the largest capacity, fullest first.
+    private static func dedupe(_ disks: [ArrDiskSpace]) -> [ArrDiskSpace] {
+        var byPath: [String: ArrDiskSpace] = [:]
         for d in disks where d.isMeaningful {
-            if let existing = byPath[d.path], existing.totalSpace >= d.totalSpace { continue }
-            byPath[d.path] = d
+            if let existing = byPath[d.mountPath], existing.capacity >= d.capacity { continue }
+            byPath[d.mountPath] = d
         }
         return byPath.values.sorted { $0.usedFraction > $1.usedFraction }
     }
-
-    private static let demoDisks: [DiskSpace] = [
-        DiskSpace(path: "/data/media", label: "Media", freeSpace: 2_400_000_000_000, totalSpace: 16_000_000_000_000),
-        DiskSpace(path: "/data/downloads", label: "Downloads", freeSpace: 180_000_000_000, totalSpace: 2_000_000_000_000),
-    ]
 }

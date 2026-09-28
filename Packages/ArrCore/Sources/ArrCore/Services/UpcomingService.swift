@@ -1,10 +1,10 @@
 import Foundation
+import os
+import MediaKit
 
-/// Thin, extension-safe entry point for the Up Next widget: fetches each
-/// configured arr's calendar (now → +30 days), merges, keeps future-ish
-/// entries, sorts soonest-first, and trims to a limit. Builds the arr `actor`
-/// clients directly — deliberately avoids `LocalToolBackend`.
+/// The upcoming list outside the app's queue: the Up Next widget and the calendar tool.
 public actor UpcomingService {
+    nonisolated private static let log = Logger(category: "Widget")
     public init() {}
 
     public func upcoming(
@@ -14,11 +14,8 @@ public actor UpcomingService {
         whisparr: ServiceConfig,
         limit: Int = 8
     ) async -> [UpcomingItem] {
-        async let r = Self.fetch(radarr) { try await RadarrClient(config: $0).fetchCalendar() }
-        async let s = Self.fetch(sonarr) { try await SonarrClient(config: $0).fetchCalendar() }
-        async let l = Self.fetch(lidarr) { try await LidarrClient(config: $0).fetchCalendar() }
-        async let w = Self.fetch(whisparr) { try await WhisparrClient(config: $0).fetchCalendar() }
-        let all = await r + s + l + w
+        let targets = [(QueueItem.Source.radarr, radarr), (.sonarr, sonarr), (.lidarr, lidarr), (.whisparr, whisparr)].filter { $0.1.isVisible }
+        let all = await Self.calendars(targets).items
         return Self.curate(all, limit: limit)
     }
 
@@ -28,28 +25,36 @@ public actor UpcomingService {
         var all: [UpcomingItem] = []
         for source in sources {
             let base = ServiceGateway.demoURL(source.serviceKind.instanceKind).absoluteString
-            all += (try? await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base)) ?? []
+            all += await log.attempt("demo calendar") { try await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base) } ?? []
         }
         await gateway.kit.stop()
         return curate(all, limit: limit)
     }
 
-    /// Future-ish (drop entries that aired more than a day ago), soonest-first,
-    /// trimmed to `limit`. Exposed for demo reuse.
-    public static func curate(_ items: [UpcomingItem], limit: Int) -> [UpcomingItem] {
-        let cutoff = Date().addingTimeInterval(-24 * 3600)
-        return items
-            .filter { $0.airDate >= cutoff }
-            .sorted { $0.airDate < $1.airDate }
-            .prefix(limit)
-            .map { $0 }
+    /// Soonest first, from the start of today, trimmed to `limit`.
+    public static func curate(_ items: [UpcomingItem], limit: Int = .max) -> [UpcomingItem] {
+        let startOfToday = Calendar.current.startOfDay(for: Date())
+        return Array(items.filter { $0.airDate >= startOfToday }.sorted { $0.airDate < $1.airDate }.prefix(limit))
     }
 
-    private static func fetch(
-        _ config: ServiceConfig,
-        _ body: @Sendable (ServiceConfig) async throws -> [UpcomingItem]
-    ) async -> [UpcomingItem] {
-        guard config.isVisible else { return [] }
-        return (try? await body(config)) ?? []
+    /// Every target's calendar in parallel; an arr that isn't set up adds nothing, one that fails is named.
+    nonisolated static func calendars(_ targets: [(QueueItem.Source, ServiceConfig)]) async -> (items: [UpcomingItem], failures: [(QueueItem.Source, any Error)]) {
+        await withTaskGroup(of: (QueueItem.Source, Result<[UpcomingItem], any Error>).self) { group in
+            for (source, config) in targets {
+                group.addTask {
+                    do { return (source, .success(try await ServiceHandles.arr(source, config: config).fetchCalendar())) }
+                    catch MediaKitError.notConfigured { return (source, .success([])) }
+                    catch { return (source, .failure(error)) }
+                }
+            }
+            var items: [UpcomingItem] = [], failures: [(QueueItem.Source, any Error)] = []
+            for await (source, outcome) in group {
+                switch outcome {
+                case let .success(rows): items += rows
+                case let .failure(error): failures.append((source, error))
+                }
+            }
+            return (items, failures)
+        }
     }
 }

@@ -1,12 +1,7 @@
 import SwiftUI
 
-/// The macOS floating search bar — one component, both tabs.
-///
-/// Clean glass capsule with the same `.glassyFloatingBar()` chrome as the tab
-/// cluster above, so it reads as the same control surface family. The spinner
-/// is inline in the bar and not only at the bottom of the list: once results
-/// render, a bottom loader sits below the fold and the second search gives the
-/// user no visible feedback at all.
+/// The macOS floating search bar for both tabs. The spinner is inline because a loader
+/// at the bottom of the list sits below the fold once results render.
 struct SearchCapsule: View {
     @Bindable var searchVM: SearchViewModel
     var focused: FocusState<Bool>.Binding
@@ -44,19 +39,12 @@ struct SearchCapsule: View {
         .padding(.vertical, 10)
         .contentShape(Capsule())
         .onTapGesture { focused.wrappedValue = true }
-        // Inverted: the field you type into is the one surface that reads as
-        // the opposite of the app's appearance, so it stops looking like more
-        // chrome and starts looking like an input.
+        // Inverted so the input stops reading as more chrome.
         .glassyFloatingBar(focused: focused.wrappedValue, inverted: true)
     }
 
-    /// Compact menu chip on the trailing edge — narrows which backends the
-    /// query hits, and holds the "In library" toggle. Tinted accent while
-    /// anything narrows the search (a non-`all` scope or library-only), so a
-    /// stuck narrow search is visible at a glance.
-    ///
-    /// `.menuStyle(.button)` + `.buttonStyle(.plain)` is the ONE combination
-    /// that renders a custom SwiftUI label faithfully.
+    /// Tinted while anything narrows the search, so a stuck narrow search is visible.
+    /// `.menuStyle(.button)` + `.buttonStyle(.plain)` is the one combination that renders a custom label faithfully.
     private var scopeMenu: some View {
         let scope = searchVM.scope
         let libraryOnly = searchVM.libraryOnly

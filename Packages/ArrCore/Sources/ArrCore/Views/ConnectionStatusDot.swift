@@ -1,9 +1,6 @@
 import SwiftUI
 
-/// Persistent connection-health dot shown next to a service in Settings.
-/// Green = last healthcheck passed, red = failing, grey = not checked yet
-/// (never green merely because the service is configured). Driven by the
-/// shared `ConnectionHealth` state, so it updates live as probes land.
+/// Grey until a check lands — never green merely because the service is configured.
 struct ConnectionStatusDot: View {
     let service: MonitoredService
 

@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// The collapsible "Needs you" section HEADER, rendered as its own List row by
-/// QueueListView (with each item a SIBLING row) so the chevron lines up with —
-/// and the collapse animation matches — every other section header. Uses the
-/// shared `QueueHeaderRow`, so its chevron / icon slot / padding are byte-for-byte
-/// the arr + Next-week headers.
+/// Its own List row (items are sibling rows) on the shared `QueueHeaderRow`, so chevron and
+/// collapse animation match the other section headers.
 struct NeedsYouHeader: View {
     let count: Int
     let isCollapsed: Bool
@@ -12,9 +9,7 @@ struct NeedsYouHeader: View {
 
     var body: some View {
         QueueHeaderRow(
-            // Grey (.secondary) like the arr ServiceIcons — a section glyph, not
-            // an alarm. Size 11 (not 12): the filled bubble reads heavier than the
-            // arr icons / moon, so it's nudged down to match their weight.
+            // Size 11: the filled bubble reads heavier than the arr icons.
             icon: AnyView(
                 Image(systemName: "exclamationmark.bubble.fill")
                     .scaledFont(size: 11)
@@ -31,7 +26,6 @@ struct NeedsYouHeader: View {
     }
 }
 
-/// A single "Needs you" entry, rendered as its own List row by QueueListView.
 struct NeedsYouRow: View {
     let needs: NeedsYouItem
     var onTap: (() -> Void)? = nil
@@ -39,36 +33,28 @@ struct NeedsYouRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 6) {
-                // No leading severity icon — the title text alone carries the
-                // message.
                 Text(needs.title)
                     .scaledFont(size: 12, weight: .medium)
                     .lineLimit(2)
-                // "×N" when this row collapses several identical entries (e.g. one
-                // manual-import warning per episode of a season pack).
+                // Several identical entries collapsed, e.g. one manual-import warning per episode of a pack.
                 if needs.count > 1 {
                     Text(verbatim: "×\(needs.count)")
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                 }
-                // Drill-in chevron; non-arr connection issues have nowhere to
-                // drill, so no chevron.
                 if needs.service == nil {
                     LinkChevron(size: 9)
                 }
                 Spacer(minLength: 4)
                 sourceChip
             }
-            // Status name for a queue item; empty (hidden) for arr/service issues
-            // whose message is the title.
             if !needs.subtitle.isEmpty {
                 Text(needs.subtitle)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
-            // Cap at 2 lines so a chatty arr doesn't dominate the popover.
             ForEach(Array(needs.detailLines.prefix(2).enumerated()), id: \.offset) { _, line in
                 Text(line)
                     .scaledFont(size: 10)
@@ -77,8 +63,6 @@ struct NeedsYouRow: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        // Indent the content under the section icon (past the chevron column),
-        // matching the "Next week" banner's item indent.
         .padding(.leading, QueueHeaderMetrics.contentIndent)
         .padding(.trailing, Tokens.Spacing.queueRowH)
         .padding(.vertical, 4)
@@ -92,7 +76,6 @@ struct NeedsYouRow: View {
         }
         #endif
         .help(Text("detail.openInBrowser.button", bundle: .module))
-        // Drill-in chevron brightens on row hover.
         .linkRowHover()
     }
 
@@ -120,7 +103,6 @@ struct NeedsYouRow: View {
         } else if let kind = needs.service?.serviceKind {
             ServiceIcon(kind: kind, size: 9)
         } else {
-            // AI services (OpenAI / TMDB) have no brand asset.
             Image(systemName: "sparkles")
                 .scaledFont(size: 9, weight: .semibold)
         }
