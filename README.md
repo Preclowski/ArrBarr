@@ -8,8 +8,8 @@ what's coming up, and pause, resume or delete downloads — without opening a
 single browser tab.
 
 [![Build & Release](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml/badge.svg)](https://github.com/Preclowski/ArrBarr/actions/workflows/release.yml)
-![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
-![iOS 17+](https://img.shields.io/badge/iOS-17%2B-blue)
+![macOS 26+](https://img.shields.io/badge/macOS-26%2B-blue)
+![iOS 26+](https://img.shields.io/badge/iOS-26%2B-blue)
 ![Swift 6](https://img.shields.io/badge/Swift-6-orange)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green)
 
@@ -30,7 +30,7 @@ puts the whole stack behind one menu-bar icon: glance at the queue, catch what's
 airing this week, get pinged when a release lands, and act on it in one click.
 
 It's **100% local** — it talks straight to your servers, with no cloud, no
-account and no telemetry in between. It's **native** (SwiftUI + AppKit, ~58 MB
+account and no telemetry in between. It's **native** (SwiftUI + AppKit, ~40 MB
 installed — not another Electron tab pretending to be an app). And it's **free
 and open source**, with every feature unlocked.
 
@@ -71,6 +71,7 @@ and open source**, with every feature unlocked.
 ## Works with your stack
 
 - **Media managers** — Radarr · Sonarr · Lidarr · Whisparr
+- **Indexers** — Prowlarr
 - **Media servers** — Plex · Jellyfin · Emby
 - **Usenet** — SABnzbd · NZBGet
 - **Torrent** — qBittorrent · Transmission · rTorrent · Deluge
@@ -81,6 +82,8 @@ and open source**, with every feature unlocked.
 > Settings — and its posters can be blurred.
 
 ## Install
+
+Requires macOS 26 (Tahoe). On macOS 14 or 15, use [2.1.0](../../releases/tag/v2.1.0).
 
 ### Homebrew
 
@@ -104,7 +107,7 @@ Applications.
 <details>
 <summary>Build from source</summary>
 
-Requires Xcode 26.4.1 (the version CI pins) and macOS 14+.
+Requires Xcode 26.4.1 or later (CI pins 26.4.1) and macOS 26.
 
 ```bash
 open ArrBarr.xcodeproj   # ⌘B to build, ⌘R to run
@@ -165,8 +168,7 @@ All optional, all off until you flip them on.
 ## Made for macOS
 
 - **Menu bar first** — lives behind one icon; optionally a full Dock app in a
-  detached window. Light and dark follow the system, with Liquid Glass on
-  macOS 26 (Tahoe) and a graceful fallback on macOS 14+.
+  detached window. Light and dark follow the system, with native Liquid Glass.
 - **Siri & Shortcuts** — six App Intents (show queue, show upcoming, pause all,
   resume all, search to add, check arr health) you can run by voice or wire into
   your own Shortcuts.

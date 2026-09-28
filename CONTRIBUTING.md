@@ -5,7 +5,7 @@ issue before a large PR saves everyone time.
 
 ## Getting set up
 
-Requires **Xcode 26.4.1** (the version CI pins) on macOS 14+.
+Requires **Xcode 26.4.1** or later (CI pins 26.4.1) on macOS 26.
 
 ```bash
 git clone https://github.com/Preclowski/ArrBarr.git
