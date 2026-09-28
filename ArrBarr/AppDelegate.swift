@@ -230,7 +230,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // and bridging the rest only duplicated the title and toolbar buttons.
         let hosting = NSHostingController(rootView: view)
         // No titlebar inset: the tab bar shares the traffic lights' row; PopoverContentView insets the leading edge.
-        if #available(macOS 13.3, *) { hosting.safeAreaRegions = [] }
+        hosting.safeAreaRegions = []
         let win = NSWindow(contentViewController: hosting)
         // A non-empty title can still paint over the content header with a hidden titlebar.
         win.title = ""
