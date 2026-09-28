@@ -12,6 +12,9 @@ import os
 final class AppDelegate: NSObject, NSApplicationDelegate {
     var settingsWindow: NSWindow?
     var aboutWindow: NSWindow?
+    #if DEBUG
+    var shelfDebugWindow: NSWindow?
+    #endif
     var welcomeWindow: NSWindow?
     var paywallWindow: NSWindow?
     /// Mixed drops queue as more than one batch — see `enqueueDrops`.
@@ -47,6 +50,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         )
 
         DemoMode.seedConfigsIfNeeded(configStore)
+
+        #if DEBUG
+        if let spec = UserDefaults.standard.string(forKey: "ShelfDebug") {
+            let win = NSWindow(contentViewController: NSHostingController(rootView: ShelfDebugView(spec: spec).environmentObject(configStore)))
+            win.title = "ShelfDebug"
+            win.styleMask = [.titled]
+            win.setFrameTopLeftPoint(NSPoint(x: 60, y: 900))
+            win.makeKeyAndOrderFront(nil)
+            shelfDebugWindow = win
+        }
+        #endif
 
         // `.preferredColorScheme` doesn't reach the menu-bar popover or the hosted windows; `NSApp.appearance` does.
         applyAppearance(configStore.appearance)

@@ -99,10 +99,11 @@ public struct PopoverContentView: View {
     enum Tab: String, CaseIterable {
         case queue = "Queue"
         case library = "Library"
+        case shelf = "Shelf"
         case upcoming = "Upcoming"
         case chat = "Chat"
 
-        var hostsSearch: Bool { self != .chat }
+        var hostsSearch: Bool { self != .chat && self != .shelf }
 
         /// Only the active tab shows its label: four labels ("Nadchodzące", "Warteschlange")
         /// never fit the 400 pt bar.
@@ -110,6 +111,7 @@ public struct PopoverContentView: View {
             switch self {
             case .queue: return "arrow.down.circle"
             case .library: return "books.vertical"
+            case .shelf: return "photo.stack"
             case .upcoming: return "calendar"
             case .chat: return "bubble.left.and.bubble.right"
             }
