@@ -9,6 +9,79 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.0.0] — 2026-09-28
+
+### Added
+
+- Prowlarr as a service: its own Settings page, a status dot, and indexer names
+  on release rows.
+- Hide a queue row from its context menu; "Show hidden" brings it back.
+- Watched marks on queue and library posters, from the media server.
+- The media server's Settings pane lists its libraries, each with Scan.
+- Per-title history in the detail "..." menu.
+- History loads further back as you scroll.
+- History compares an upgrade with the file it replaced.
+- Notifications carry the title's poster.
+- Release list: one sort-and-filter menu, rejected releases hidden until asked
+  for, rejection reasons in plain words.
+- "Open in <indexer>" on a release row.
+- Trailer reel: every clip for the title, the featured one first.
+- Quiz variants: from my library, in cinemas / airing now (needs a TMDB key),
+  hidden gems.
+- The quiz deck fills in while the model is still naming titles.
+- "Did you know" cards while a manual search or a quiz deck loads.
+- Series detail shows the next episode to air.
+- A person's page links to their TMDB profile.
+- Episode and track files show release group and languages, like movie files.
+- Chat's welcome screen rotates through sixteen suggestions.
+- Data cache size and a Clear button in Settings, next to the image cache.
+- Genre names are translated.
+
+### Changed
+
+- Requires macOS 26 and iOS 26.
+- New data layer, MediaKit: one on-disk cache and per-host request limits for
+  every arr, download client, media server and TMDB.
+- The queue refreshes on each arr's live pushes and polls only while that
+  connection is down.
+- A server that keeps failing is backed off and shows as unreachable in Status.
+- The widget reads the app's cache and opens no connections of its own.
+- One search on Queue, Library and Upcoming: same results, scopes and
+  "In library" toggle on every tab.
+- Search results, quiz and chat cards use the media server's poster, like the
+  queue and the library.
+- Every confirmation is one centred alert: Cancel, and a verb that names the
+  action.
+- macOS 26 look: native glass on floating bars, section titles at full contrast.
+- Loading shows the system spinner.
+- The Chat tab hides on macOS, as on iOS, when the chosen AI provider can't run.
+- The library scrolls smoother on large libraries and keeps its position
+  across tab switches.
+
+### Fixed
+
+- A title you just added no longer reads as not owned for minutes.
+- Grabbing a delay-profile release no longer leaves a ghost row or a second
+  banner.
+- Upcoming drops "missing" as soon as a title is imported.
+- An outage no longer empties Needs you or repeats the same health alert.
+- Search buttons say "queued" only when the arr accepted the search, and show
+  its reason when it didn't.
+- Profile, root folder and metadata pickers show the arr's reason instead of an
+  empty list.
+- Siri says it couldn't reach your servers instead of "nothing is downloading".
+- Quiz picks resolve to the title they name, not a namesake.
+- A person's filmography shows what you own now, not what you owned at first
+  open.
+- A series no longer takes the media-server artwork of a movie with the same id.
+- iPhone search follows a server re-pointed in Settings.
+- Chat errors and the connection-test result are translated.
+
+### Security
+
+- An arr's API key goes only to that arr: chat library cards sent it with every
+  poster request, TMDB's image CDN included.
+
 ## [2.1.0] — 2026-08-30
 
 ### Added
