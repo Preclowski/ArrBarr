@@ -301,13 +301,13 @@ jobs:
           # Assert the stanzas exist before rewriting them: a cask that switched
           # to `sha256 :no_check`, or renamed the file, must fail loudly rather
           # than be "updated" to an unchanged file.
-          grep -qE '^[[:space:]]*version "' "$CASK" || { echo "::error::No quoted version stanza in $CASK."; exit 1; }
-          grep -qE '^[[:space:]]*sha256 "'  "$CASK" || { echo "::error::No quoted sha256 stanza in $CASK."; exit 1; }
+          grep -qE '^  version "' "$CASK" || { echo "::error::No top-level quoted version stanza in $CASK."; exit 1; }
+          grep -qE '^  sha256 "'  "$CASK" || { echo "::error::No top-level quoted sha256 stanza in $CASK."; exit 1; }
 
-          # Anchored to the start of the line so a stray quoted string elsewhere
-          # in the cask (livecheck, caveats, zap stanzas) is never clobbered.
-          sed -i '' -E "s|^([[:space:]]*)version \".*\"|\1version \"${VERSION}\"|" "$CASK"
-          sed -i '' -E "s|^([[:space:]]*)sha256 \".*\"|\1sha256 \"${SHA}\"|"      "$CASK"
+          # Top-level stanzas only (two-space indent): the nested `on_sequoia
+          # :or_older` block pins older Macs to the last release that runs there.
+          sed -i '' -E "s|^  version \".*\"|  version \"${VERSION}\"|" "$CASK"
+          sed -i '' -E "s|^  sha256 \".*\"|  sha256 \"${SHA}\"|"      "$CASK"
 
           grep -qF "version \"${VERSION}\"" "$CASK" || { echo "::error::version substitution did not take."; exit 1; }
           grep -qF "sha256 \"${SHA}\"" "$CASK"      || { echo "::error::sha256 substitution did not take."; exit 1; }
