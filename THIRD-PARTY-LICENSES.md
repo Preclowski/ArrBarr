@@ -15,15 +15,15 @@ file changes.
 
 | Component | Version | Upstream | License |
 | --- | --- | --- | --- |
-| SwiftNIO | 2.101.0 | https://github.com/apple/swift-nio | Apache-2.0 (**NOTICE required**) |
-| swift-log | 1.13.2 | https://github.com/apple/swift-log | Apache-2.0 (**NOTICE required**) |
+| SwiftNIO | 2.103.0 | https://github.com/apple/swift-nio | Apache-2.0 (**NOTICE required**) |
+| swift-log | 1.15.1 | https://github.com/apple/swift-log | Apache-2.0 (**NOTICE required**) |
 | MCP Swift SDK | 0.12.1 | https://github.com/modelcontextprotocol/swift-sdk | Apache-2.0 / MIT (in transition) |
 | Swift Markdown | 0.8.0 | https://github.com/swiftlang/swift-markdown | Apache-2.0 with Runtime Library Exception |
-| swift-cmark (cmark-gfm) | 0.8.0 | https://github.com/swiftlang/swift-cmark | BSD-2-Clause + MIT components |
-| EventSource | 1.4.1 | https://github.com/mattt/eventsource | MIT |
-| swift-atomics | 1.3.0 | https://github.com/apple/swift-atomics | Apache-2.0 with Runtime Library Exception |
-| swift-collections | 1.6.0 | https://github.com/apple/swift-collections | Apache-2.0 with Runtime Library Exception |
-| swift-system | 1.6.5 | https://github.com/apple/swift-system | Apache-2.0 with Runtime Library Exception |
+| swift-cmark (cmark-gfm) | 0.9.0 | https://github.com/swiftlang/swift-cmark | BSD-2-Clause + MIT components |
+| EventSource | 1.5.1 | https://github.com/mattt/eventsource | MIT |
+| swift-atomics | 1.3.1 | https://github.com/apple/swift-atomics | Apache-2.0 with Runtime Library Exception |
+| swift-collections | 1.7.1 | https://github.com/apple/swift-collections | Apache-2.0 with Runtime Library Exception |
+| swift-system | 1.8.1 | https://github.com/apple/swift-system | Apache-2.0 with Runtime Library Exception |
 
 swift-atomics, swift-collections and swift-system are transitive dependencies of
 SwiftNIO; swift-cmark is a transitive dependency of Swift Markdown. All nine are
@@ -506,6 +506,33 @@ The MCP project is undergoing a licensing transition from the MIT License to the
 Contributions for which relicensing consent has been obtained are licensed under Apache-2.0. Contributions made by authors who originally licensed their work under the MIT License and who have not yet granted explicit permission to relicense remain licensed under the MIT License.
 
 No rights beyond those granted by the applicable original license are conveyed for such contributions.
+```
+
+The MIT terms that still cover the unconsented contributions, reproduced
+verbatim from the same file:
+
+```
+MIT License
+
+Copyright (c) 2024-2025 Model Context Protocol a Series of LF Projects, LLC.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
 
 ---
