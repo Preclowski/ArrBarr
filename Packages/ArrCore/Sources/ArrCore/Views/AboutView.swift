@@ -7,11 +7,7 @@ public struct AboutView: View {
     public init() {}
 
     private static var version: String {
-        let info = Bundle.main.infoDictionary
-        let short = info?["CFBundleShortVersionString"] as? String ?? "—"
-        let build = info?["CFBundleVersion"] as? String
-        guard let build, build != short else { return short }
-        return "\(short) (\(build))"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
     }
 
     private static var copyright: String {
