@@ -110,7 +110,7 @@ struct UpcomingItemTests {
             subtitle: nil, airDate: Date(), releaseType: "Digital",
             hasFile: false, overview: nil
         )
-        #expect(item.airDateFormatted(locale: englishLocale) == "Today")
+        #expect(item.airDateFormatted(locale: englishLocale) == AppLocalized.string("upcoming.today.button", locale: englishLocale))
     }
 
     @Test("Tomorrow's date formats as 'Tomorrow' in English")
@@ -121,7 +121,7 @@ struct UpcomingItemTests {
             subtitle: "S01E01", airDate: tomorrow, releaseType: "Airing",
             hasFile: false, overview: nil
         )
-        #expect(item.airDateFormatted(locale: englishLocale) == "Tomorrow")
+        #expect(item.airDateFormatted(locale: englishLocale) == AppLocalized.string("upcoming.tomorrow.button", locale: englishLocale))
     }
 
     @Test("Future date is non-empty and not a relative label")
