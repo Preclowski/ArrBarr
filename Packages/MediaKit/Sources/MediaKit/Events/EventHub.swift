@@ -20,8 +20,6 @@ public actor EventHub {
     private let store: ResourceStore
     private let tagMap: EventTagMap
     private let clock: any MediaClock
-    private let telemetry: any TelemetrySink
-    private let log: any LogSink
     private var cadence: Cadence
     private var sources: [InstanceID: (source: SignalRSource, pump: Task<Void, Never>)] = [:]
     private var streams: [any LiveStreamPushTarget] = []
@@ -35,9 +33,8 @@ public actor EventHub {
     private let lastEvent = OSAllocatedUnfairLock<[InstanceID: Date]>(initialState: [:])
     private var foreground = true
 
-    public init(store: ResourceStore, tagMap: EventTagMap = EventTagMap(), cadence: Cadence = Cadence(), clock: any MediaClock,
-                telemetry: any TelemetrySink, log: any LogSink) {
-        self.store = store; self.tagMap = tagMap; self.cadence = cadence; self.clock = clock; self.telemetry = telemetry; self.log = log
+    public init(store: ResourceStore, tagMap: EventTagMap = EventTagMap(), cadence: Cadence = Cadence(), clock: any MediaClock) {
+        self.store = store; self.tagMap = tagMap; self.cadence = cadence; self.clock = clock
     }
 
     public func attach(_ source: SignalRSource, for instance: InstanceID) async {
@@ -76,6 +73,7 @@ public actor EventHub {
 
     private func unsubscribe(_ id: UUID) { subscribers.removeValue(forKey: id) }
 
+    // periphery:ignore
     public nonisolated func lastEventAt(_ instance: InstanceID) -> Date? { lastEvent.withLock { $0[instance] } }
 
     /// Entry for events from any source, including tests.

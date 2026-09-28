@@ -20,7 +20,6 @@ public struct HTTPHeaders: Sendable, Hashable, ExpressibleByDictionaryLiteral {
 
     public var names: [String] { storage.values.map(\.name).sorted() }
     public var dictionary: [String: String] { Dictionary(uniqueKeysWithValues: storage.values.map { ($0.name, $0.value) }) }
-    public var isEmpty: Bool { storage.isEmpty }
 
     public mutating func merge(_ other: HTTPHeaders) {
         for (_, pair) in other.storage { self[pair.name] = pair.value }

@@ -12,13 +12,13 @@ nonisolated public struct LLMTool: Sendable {
     }
 }
 
-nonisolated public struct LLMResponse: Sendable {
-    public let text: String
-    public let toolCalls: [ToolCall]
+nonisolated struct LLMResponse: Sendable {
+    let text: String
+    let toolCalls: [ToolCall]
     /// Non-nil: the provider already executed each call (aligned by index) and the
     /// view-model must not re-execute them. Nil: the view-model owns execution.
-    public let toolResults: [ToolCallOutput]?
-    public init(text: String, toolCalls: [ToolCall] = [], toolResults: [ToolCallOutput]? = nil) {
+    let toolResults: [ToolCallOutput]?
+    init(text: String, toolCalls: [ToolCall] = [], toolResults: [ToolCallOutput]? = nil) {
         self.text = text
         self.toolCalls = toolCalls
         self.toolResults = toolResults
@@ -75,7 +75,7 @@ nonisolated enum SystemPromptComposer {
         """
 }
 
-public protocol LLMProvider: Sendable {
+protocol LLMProvider: Sendable {
     /// Whether the provider is usable at runtime (e.g. Foundation Models requires macOS 26 + AI on).
     var isAvailable: Bool { get }
     /// One round of LLM; the view-model runs the tool-call loop.

@@ -79,7 +79,9 @@ public final class TelemetryRecorder: TelemetrySink, Sendable {
         }
     }
 
+    // periphery:ignore
     public func counters(for host: Host) -> HostCounters { state.withLock { $0.hosts[host] ?? HostCounters() } }
+    // periphery:ignore
     public func cacheCounters(for instance: InstanceID) -> CacheCounters { state.withLock { $0.caches[instance] ?? CacheCounters() } }
 
     /// Counters summed over every host and instance: numbers without names, safe for a public log line.

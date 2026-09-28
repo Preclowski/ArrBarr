@@ -51,7 +51,7 @@ public actor FixtureTransport: Transport, SocketTransport {
             return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
         }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
-            let body = applyState(entry.body, kind: kind, name: name)
+            let body = applyState(entry.body, name: name)
             return HTTPResponse(status: entry.status, headers: HTTPHeaders(entry.headers), body: try encode(body))
         }
         guard isWrite else { throw MediaKitError.fixtureMissing(request.operation) }
@@ -72,6 +72,7 @@ public actor FixtureTransport: Transport, SocketTransport {
         return FixtureSocket(frames: [#"{}"#])
     }
 
+    // periphery:ignore
     public func requestLog() -> [(OperationID, Date)] { log }
 
     // MARK: - Internals
@@ -108,7 +109,7 @@ public actor FixtureTransport: Transport, SocketTransport {
     }
 
     /// Queue rows reflect pause/resume/delete for the process lifetime; commands complete after 3 s of clock time.
-    private func applyState(_ body: JSONValue, kind: InstanceKind, name: String) -> JSONValue {
+    private func applyState(_ body: JSONValue, name: String) -> JSONValue {
         if name.hasPrefix("fetchqueue"), case var .object(o) = body, case let .array(records)? = o["records"] {
             o["records"] = .array(records.compactMap { record in
                 guard let id = record["id"]?.intValue.map(String.init) else { return record }

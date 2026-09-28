@@ -8,7 +8,7 @@ extension AppDelegate {
 
     func wireMCPServer() {
         Task {
-            await mcpController.setStatusHandler { [weak self] status in
+            await mcpController.setStatusHandler { status in
                 Task { @MainActor in MCPServerStatusModel.shared.status = MCPServerStatus(status) }
             }
         }

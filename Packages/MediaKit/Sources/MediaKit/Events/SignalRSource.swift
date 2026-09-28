@@ -12,15 +12,14 @@ public actor SignalRSource {
     public let instance: InstanceID
     private let pipeline: RequestPipeline
     private let clock: any MediaClock
-    private let telemetry: any TelemetrySink
     private let log: any LogSink
     private var continuations: [UUID: AsyncStream<DataEvent>.Continuation] = [:]
     private var loop: Task<Void, Never>?
     private var socket: (any WireSocket)?
     private var deadCycles = 0
 
-    public init(instance: InstanceID, pipeline: RequestPipeline, clock: any MediaClock, telemetry: any TelemetrySink, log: any LogSink) {
-        self.instance = instance; self.pipeline = pipeline; self.clock = clock; self.telemetry = telemetry; self.log = log
+    public init(instance: InstanceID, pipeline: RequestPipeline, clock: any MediaClock, log: any LogSink) {
+        self.instance = instance; self.pipeline = pipeline; self.clock = clock; self.log = log
     }
 
     public func events() -> AsyncStream<DataEvent> {

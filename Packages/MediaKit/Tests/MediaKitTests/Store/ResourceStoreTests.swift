@@ -243,17 +243,4 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         #expect(result.count == 25 && kit.transport.count == 3)
         if case let .success(rows)? = result[13] { #expect(rows.first?.title == "m13") } else { Issue.record("missing 13") }
     }
-
-    @Test func observeEmitsOnInvalidationAndCommit() async throws {
-        let kit = try await TestKit()
-        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"a"}]"#)
-        let r: Resource<[Row]> = kit.resource("fetchQueue")
-        var iterator = kit.store.observe(r).makeAsyncIterator()
-        let first = await iterator.next()
-        #expect(first?.value[0].title == "a")
-        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"b"}]"#)
-        await kit.store.invalidate([.collection(.queue, TestKit.radarr)], reason: .event)
-        let second = await iterator.next()
-        #expect(second?.value[0].title == "b")
-    }
 }

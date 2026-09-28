@@ -31,7 +31,6 @@ struct ArrContext {
     let gateway: ServiceGateway
     let service: ServarrService
     var store: ResourceStore { gateway.store }
-    var instance: InstanceID { service.instance }
 }
 
 extension ArrAPIClient {

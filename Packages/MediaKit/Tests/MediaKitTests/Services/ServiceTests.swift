@@ -54,7 +54,7 @@ import Testing
 
     @Test func tmdbResourcesDecodeFromFixtures() async throws {
         let kit = try await TestKit(instances: Self.all, fixtures: true)
-        let tmdb = TMDBService(capabilities: kit.capabilities)
+        let tmdb = TMDBService()
         let s = kit.store
         _ = try await s.read(tmdb.configuration())
         #expect(try await s.read(tmdb.searchPerson(query: "x")).value.results.count > 0)
@@ -78,7 +78,7 @@ import Testing
 
     @Test func mediaServerAndDownloadClientsDecodeFromFixtures() async throws {
         let kit = try await TestKit(instances: Self.all, fixtures: true)
-        let plex = MediaServerService(instance: InstanceID(.plex), capabilities: kit.capabilities)
+        let plex = MediaServerService(instance: InstanceID(.plex))
         try await step("identity") { _ = try await kit.store.read(plex.identity()) }
         let libraries = try await step("libraries") { try await kit.store.read(plex.libraries()).value }
         #expect(libraries.count > 0)
@@ -111,7 +111,7 @@ import Testing
 }
 
 extension TestKit {
-    func servarr(_ id: InstanceID) -> ServarrService { ServarrService(instance: id, profile: ServarrProfile.profile(for: id.kind)!, capabilities: capabilities) }
+    func servarr(_ id: InstanceID) -> ServarrService { ServarrService(instance: id, profile: ServarrProfile.profile(for: id.kind)!) }
 }
 
 @Suite struct WriteShapeTests {
@@ -253,7 +253,7 @@ enum ProducedOperations {
         let caps = CapabilityIndex()
         var ops: [OperationID] = []
         for kind in [InstanceKind.radarr, .sonarr, .lidarr, .whisparr] {
-            let s = ServarrService(instance: InstanceID(kind), profile: ServarrProfile.profile(for: kind)!, capabilities: caps)
+            let s = ServarrService(instance: InstanceID(kind), profile: ServarrProfile.profile(for: kind)!)
             ops += [s.status().plan, s.health().plan, s.diskSpace().plan, s.queuePlan(), s.calendar(start: Date(), end: Date()).plan, s.history().plan,
                     s.historyFor(entityID: 1).plan, s.movies().plan, s.series().plan, s.artists().plan, s.movie(id: 1).plan, s.seriesDetails(id: 1).plan,
                     s.artist(id: 1).plan, s.album(id: 1).plan, s.episodes(seriesID: 1).plan, s.albums(artistID: 1).plan, s.tracks(albumID: 1).plan,
@@ -281,11 +281,11 @@ enum ProducedOperations {
             ops += [d.add(DownloadPayload(.magnet("m")), category: nil, paused: false).name, d.add(DownloadPayload(.file(Data(), filename: "f")), category: nil, paused: false).name]
         }
         for kind in [InstanceKind.plex, .jellyfin, .emby] {
-            let m = MediaServerService(instance: InstanceID(kind), capabilities: caps, userID: "u")
+            let m = MediaServerService(instance: InstanceID(kind), userID: "u")
             ops += [m.identity().plan, m.libraries().plan, m.libraryIndex(section: "1").plan, m.sessionsPlan(), m.watchHistory().plan, m.seasonArtwork(item: "1").plan, m.users().plan].map(\.operation)
             ops += [m.scanLibrary(section: "1").name, m.emptyTrash(section: "1").name]
         }
-        let t = TMDBService(capabilities: caps)
+        let t = TMDBService()
         ops += [t.configuration().plan, t.searchPerson(query: "").plan, t.movie(id: 1).plan, t.movieCredits(id: 1).plan, t.movieVideos(id: 1).plan, t.movieRecommendations(id: 1).plan,
                 t.tv(id: 1).plan, t.tvCredits(id: 1).plan, t.tvVideos(id: 1).plan, t.tvRecommendations(id: 1).plan, t.tvExternalIDs(id: 1).plan, t.find(tvdbID: 1).plan,
                 t.person(id: 1).plan, t.personMovieCredits(id: 1).plan, t.personTVCredits(id: 1).plan, t.discoverMovies().plan, t.discoverTV().plan].map(\.operation)

@@ -3,11 +3,10 @@ import Foundation
 /// Plex, Jellyfin and Emby behind one vocabulary; the auth placement and the wire shape are the two switches.
 public struct MediaServerService: Sendable {
     public let instance: InstanceID
-    private let capabilities: CapabilityIndex
     public let userID: String?
 
-    public init(instance: InstanceID, capabilities: CapabilityIndex, userID: String? = nil) {
-        self.instance = instance; self.capabilities = capabilities; self.userID = userID
+    public init(instance: InstanceID, userID: String? = nil) {
+        self.instance = instance; self.userID = userID
     }
 
     public var isPlex: Bool { instance.kind == .plex }

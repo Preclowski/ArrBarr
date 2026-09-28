@@ -3,9 +3,8 @@ import Foundation
 public struct SessionToken: Sendable {
     public var headers: HTTPHeaders
     public var query: [RequestPlan.QueryItem]
-    public var generation: Int
-    public init(headers: HTTPHeaders = [:], query: [RequestPlan.QueryItem] = [], generation: Int) {
-        self.headers = headers; self.query = query; self.generation = generation
+    public init(headers: HTTPHeaders = [:], query: [RequestPlan.QueryItem] = []) {
+        self.headers = headers; self.query = query
     }
 }
 
@@ -81,7 +80,7 @@ public actor SessionBroker {
         let token = try await task.value
         guard var updated = cells[instance] else { return false }
         updated.generation += 1
-        updated.token = token.map { var t = $0; t.generation = updated.generation; return t }
+        updated.token = token
         cells[instance] = updated
         if token != nil {
             telemetry.record(.sessionEstablished(instance, generation: updated.generation))

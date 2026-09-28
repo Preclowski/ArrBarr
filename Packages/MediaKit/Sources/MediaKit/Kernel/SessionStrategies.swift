@@ -94,7 +94,7 @@ struct QBittorrentStrategy: SessionStrategy {
         guard response.isSuccess, String(decoding: response.body, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines) == "Ok." else {
             throw MediaKitError.unauthorized(InstanceID(.qbittorrent), status: response.status, serverMessage: RequestBuilder.serverMessage(from: response.body))
         }
-        return SessionToken(generation: 0)
+        return SessionToken()
     }
 }
 
@@ -121,7 +121,7 @@ struct TransmissionStrategy: SessionStrategy {
         guard case let .handshake(header, value)? = rejection else { return nil }
         var headers = HTTPHeaders()
         headers[header] = value
-        return SessionToken(headers: headers, generation: 0)
+        return SessionToken(headers: headers)
     }
 }
 
@@ -153,7 +153,7 @@ struct DelugeStrategy: SessionStrategy {
         guard response.isSuccess, v?["result"]?.boolValue == true else {
             throw MediaKitError.unauthorized(InstanceID(.deluge), status: response.status, serverMessage: v?["error"]?["message"]?.stringValue)
         }
-        return SessionToken(generation: 0)
+        return SessionToken()
     }
 }
 

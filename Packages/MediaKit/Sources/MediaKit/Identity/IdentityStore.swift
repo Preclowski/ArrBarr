@@ -2,11 +2,10 @@ import Foundation
 
 public actor IdentityStore {
     private let database: SQLiteDatabase?
-    private let clock: any MediaClock
     private var edges: [MediaID: [Crosswalk]] = [:]
 
-    public init(database: SQLiteDatabase?, clock: any MediaClock) {
-        self.database = database; self.clock = clock
+    public init(database: SQLiteDatabase?) {
+        self.database = database
     }
 
     /// Pure lookup, no network. Two external ids meet one hop away, through the harvested

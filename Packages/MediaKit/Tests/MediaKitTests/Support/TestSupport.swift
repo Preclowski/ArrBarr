@@ -113,7 +113,7 @@ struct TestKit {
         let log = NoLog()
         clock.autoAdvance = true
         self.fixtures = fixtures ? FixtureTransport(clock: clock) : nil
-        registry = InstanceRegistry(telemetry: telemetry, log: log)
+        registry = InstanceRegistry(log: log)
         governor = HostGovernor(defaults: limits, clock: clock, telemetry: telemetry, log: log)
         sessions = SessionBroker(strategies: SessionStrategies.standard, telemetry: telemetry, log: log)
         var table = credentials ?? [:]
@@ -127,11 +127,11 @@ struct TestKit {
         pipeline = RequestPipeline(transport: wire, sockets: transport, governor: governor, sessions: sessions,
                                    credentials: StaticCredentials(table), registry: registry, telemetry: telemetry, log: log, clock: clock)
         database = try location.map { try SQLiteDatabase(location: $0, log: log) }
-        identity = IdentityStore(database: database, clock: clock)
+        identity = IdentityStore(database: database)
         store = ResourceStore(database: database, pipeline: pipeline, identity: identity, clock: clock, telemetry: telemetry, log: log)
         probe = CapabilityProbe(store: store, index: capabilities, database: database, clock: clock, log: log)
         await store.attach(probe: probe, capabilities: capabilities)
-        await registry.attach(.init(store: store, capabilities: probe, sessions: sessions, identity: identity, subject: store.subject))
+        await registry.attach(.init(store: store, capabilities: probe, sessions: sessions, identity: identity))
         await registry.apply(descriptors)
     }
 

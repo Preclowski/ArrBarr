@@ -152,7 +152,7 @@ nonisolated public struct TMDBClient: Sendable {
         let instance = await gateway.adopt(tmdbKey: apiKey)
         await gateway.ready()
         guard gateway.isConfigured(instance) else { throw MediaKitError.notConfigured(instance) }
-        return (gateway, TMDBService(instance: instance, capabilities: gateway.kit.capabilities))
+        return (gateway, TMDBService(instance: instance))
     }
 
     private func read<V>(policy: ReadPolicy = .cacheFirst, _ make: (TMDBService) -> Resource<V>) async throws -> V {

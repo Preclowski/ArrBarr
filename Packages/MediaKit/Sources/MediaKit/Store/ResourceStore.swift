@@ -83,39 +83,13 @@ public actor ResourceStore {
         do {
             let row = try await fetch(resource, fingerprint: fingerprint, priority: priority)
             return Fetched(value: try Self.stored(V.self, row.payload, operation: resource.key.operation), origin: .network,
-                           fetchedAt: row.fetchedAt, isStale: false, tags: row.tags, degraded: nil)
+                           fetchedAt: row.fetchedAt, isStale: false, degraded: nil)
         } catch let error as MediaKitError {
             if policy != .mustRevalidate, let cached {
                 telemetry.record(.staleServed(resource.key, error))
                 return try decode(resource, cached.entry, origin: cached.origin, isStale: true, degraded: error)
             }
             throw error
-        }
-    }
-
-    public nonisolated func observe<V>(_ resource: Resource<V>, maxAge: Duration? = nil,
-                                       priority: RequestPriority = .interactive) -> AsyncStream<Fetched<V>> {
-        AsyncStream { continuation in
-            let task = Task {
-                var last: (fetchedAt: Date, isStale: Bool)?
-                let tags = resource.tags
-                let observations = Observations { [revision] in revision.tick(for: tags) }
-                if let first = try? await self.read(resource, policy: .staleWhileRevalidate, maxAge: maxAge, priority: priority) {
-                    last = (first.fetchedAt, first.isStale)
-                    continuation.yield(first)
-                }
-                for await _ in observations {
-                    guard !Task.isCancelled else { break }
-                    guard let next = try? await self.read(resource, policy: .cacheFirst, maxAge: maxAge, priority: priority) else { continue }
-                    // A frozen clock (tests) keeps fetchedAt equal across fetches; origin tells a refetch apart.
-                    if next.origin == .network || next.fetchedAt != last?.fetchedAt || next.isStale != last?.isStale {
-                        last = (next.fetchedAt, next.isStale)
-                        continuation.yield(next)
-                    }
-                }
-                continuation.finish()
-            }
-            continuation.onTermination = { _ in task.cancel() }
         }
     }
 
@@ -161,7 +135,7 @@ public actor ResourceStore {
 
     // MARK: - Commands
 
-    public func run(_ command: Command, priority: RequestPriority = .interactive) async throws -> CommandReceipt {
+    public func run(_ command: Command) async throws -> CommandReceipt {
         let context = CommandContext(pipeline: pipeline, probe: probe, capabilities: capabilities, clock: clock)
         let receipt = try await command.run(context)
         await invalidate(command.invalidates, reason: .command)
@@ -203,7 +177,7 @@ public actor ResourceStore {
         telemetry.record(.invalidated(tags, reason))
         if reason != .sweep { log.log(.debug, category: "Store", "invalidate \(tags.count) tags (\(reason.rawValue))") }
         revision.bump(tags)
-        center.post(Invalidated(tags: tags, reason: reason), subject: subject)
+        center.post(Invalidated(tags: tags), subject: subject)
     }
 
     public func invalidate(instance: InstanceID, reason: InvalidationReason) async {
@@ -213,7 +187,7 @@ public actor ResourceStore {
         let tag = InvalidationTag.instance(instance)
         telemetry.record(.invalidated([tag], reason))
         revision.bump([tag])
-        center.post(Invalidated(tags: [tag], reason: reason), subject: subject)
+        center.post(Invalidated(tags: [tag]), subject: subject)
     }
 
     public func sweep() async {
@@ -251,7 +225,7 @@ public actor ResourceStore {
 
     private func decode<V>(_ resource: Resource<V>, _ entry: StoredEntry, origin: CacheOrigin, isStale: Bool, degraded: MediaKitError?) throws -> Fetched<V> {
         do {
-            return Fetched(value: try Self.stored(V.self, entry.payload, operation: resource.key.operation), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, tags: entry.tags, degraded: degraded)
+            return Fetched(value: try Self.stored(V.self, entry.payload, operation: resource.key.operation), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, degraded: degraded)
         } catch {
             memory.remove { $0.key == entry.key }
             throw error
@@ -346,5 +320,6 @@ public actor ResourceStore {
 
 extension SQLiteDatabase {
     /// Runs behind every write already queued on the actor; tests await it before asserting rows.
+    // periphery:ignore
     public func flush() {}
 }

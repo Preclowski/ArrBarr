@@ -43,21 +43,6 @@ public enum MediaKitError: Error, Sendable, Hashable {
         }
     }
 
-    public var host: Host? {
-        switch self {
-        case let .unreachable(h, _), let .breakerOpen(h, _), let .rateLimited(h, _): h
-        default: nil
-        }
-    }
-
-    public var instance: InstanceID? {
-        switch self {
-        case let .notConfigured(i), let .unauthorized(i, _, _), let .rejected(i, _, _),
-             let .serverFault(i, _, _), let .serviceError(i, _, _), let .unsupported(i, _): i
-        default: nil
-        }
-    }
-
     /// Retryable by an idempotent read: the host may come back or the throttle may lift.
     public var isTransient: Bool {
         switch self {

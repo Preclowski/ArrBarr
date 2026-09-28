@@ -5,13 +5,8 @@ public struct Fetched<Value: Sendable>: Sendable {
     public let origin: CacheOrigin
     public let fetchedAt: Date
     public let isStale: Bool
-    public let tags: Set<InvalidationTag>
     /// Set when a stale row was served because the fetch failed.
     public let degraded: MediaKitError?
-
-    public func map<T: Sendable>(_ f: (Value) throws -> T) rethrows -> Fetched<T> {
-        Fetched<T>(value: try f(value), origin: origin, fetchedAt: fetchedAt, isStale: isStale, tags: tags, degraded: degraded)
-    }
 }
 
 public struct Resource<Value: Codable & Sendable>: Sendable {
@@ -95,6 +90,7 @@ public struct PendingEffect: Sendable, Equatable, Codable {
 public struct Command: Sendable {
     public enum Tracking: Sendable { case arrCommand(timeout: Duration) }
 
+    // periphery:ignore
     public let name: OperationID
     public let instance: InstanceID
     public let invalidates: Set<InvalidationTag>

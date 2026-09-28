@@ -4,10 +4,9 @@ import Foundation
 public struct ServarrService: Sendable {
     public let instance: InstanceID
     public let profile: ServarrProfile
-    private let capabilities: CapabilityIndex
 
-    public init(instance: InstanceID, profile: ServarrProfile, capabilities: CapabilityIndex) {
-        self.instance = instance; self.profile = profile; self.capabilities = capabilities
+    public init(instance: InstanceID, profile: ServarrProfile) {
+        self.instance = instance; self.profile = profile
     }
 
     // MARK: - Plans

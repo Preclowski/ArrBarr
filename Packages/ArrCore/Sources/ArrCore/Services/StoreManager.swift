@@ -28,6 +28,7 @@ public final class StoreManager: ObservableObject {
 
     private var backend: PurchaseBackend?
 
+    // periphery:ignore:parameters forTesting
     public init(forTesting: Bool = false) {}
 
     // periphery:ignore

@@ -13,11 +13,11 @@ nonisolated struct MediaServerFacade: MediaServerClient {
         guard gateway.isConfigured(instance) else { throw MediaServerError.notConfigured }
         var userID = config.userId.isEmpty ? nil : config.userId
         if userID == nil, config.kind != .plex {
-            let users = try await gateway.store.read(MediaServerService(instance: instance, capabilities: gateway.kit.capabilities).users()).value
+            let users = try await gateway.store.read(MediaServerService(instance: instance).users()).value
             guard let first = users.first else { throw MediaServerError.noUserResolved }
             userID = first.id
         }
-        return (gateway, MediaServerService(instance: instance, capabilities: gateway.kit.capabilities, userID: userID))
+        return (gateway, MediaServerService(instance: instance, userID: userID))
     }
 
     private var baseURL: URL { URL(string: normalizedBaseURL)! }

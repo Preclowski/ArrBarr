@@ -51,7 +51,6 @@ public final class MessageSubject: Sendable { public init() {} }
 public struct Invalidated: NotificationCenter.AsyncMessage {
     public typealias Subject = MessageSubject
     public let tags: Set<InvalidationTag>
-    public let reason: InvalidationReason
-    public init(tags: Set<InvalidationTag>, reason: InvalidationReason) { self.tags = tags; self.reason = reason }
+    public init(tags: Set<InvalidationTag>) { self.tags = tags }
 }
 

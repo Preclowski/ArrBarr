@@ -42,7 +42,6 @@ actor NIOHTTPHost {
     struct SessionContext {
         let server: Server
         let transport: StatefulHTTPServerTransport
-        let createdAt: Date
         var lastAccessedAt: Date
     }
 
@@ -174,7 +173,7 @@ actor NIOHTTPHost {
             let server = try await serverFactory(sessionID, transport)
             try await server.start(transport: transport)
             sessions[sessionID] = SessionContext(
-                server: server, transport: transport, createdAt: Date(), lastAccessedAt: Date())
+                server: server, transport: transport, lastAccessedAt: Date())
             let response = await transport.handleRequest(request)
             if case .error = response {
                 sessions.removeValue(forKey: sessionID)

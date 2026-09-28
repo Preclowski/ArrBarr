@@ -2,11 +2,10 @@ import Foundation
 
 public struct TMDBService: Sendable {
     public let instance: InstanceID
-    private let capabilities: CapabilityIndex
     public static let imageBase = URL(string: "https://image.tmdb.org")!
 
-    public init(instance: InstanceID = InstanceID(.tmdb), capabilities: CapabilityIndex) {
-        self.instance = instance; self.capabilities = capabilities
+    public init(instance: InstanceID = InstanceID(.tmdb)) {
+        self.instance = instance
     }
 
     /// Auth placement is decided per request from the credential material: `.bearer` for v4 tokens, `api_key` query for v3 keys.

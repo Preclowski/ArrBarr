@@ -1,6 +1,5 @@
 import os
 import SwiftUI
-import MediaKit
 
 #if os(iOS)
 /// `isSearching` is only readable from inside the searchable content, hence the wrapper.

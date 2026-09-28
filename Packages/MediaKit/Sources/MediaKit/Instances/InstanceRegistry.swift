@@ -19,8 +19,6 @@ public actor InstanceRegistry {
     private var descriptors: [InstanceID: InstanceDescriptor] = [:]
     private let snapshot = OSAllocatedUnfairLock<[InstanceID: InstanceDescriptor]>(initialState: [:])
     private var dependents: Dependents?
-    private let center: NotificationCenter
-    private let telemetry: any TelemetrySink
     private let log: any LogSink
 
     struct Dependents {
@@ -28,11 +26,10 @@ public actor InstanceRegistry {
         let capabilities: CapabilityProbe
         let sessions: SessionBroker
         let identity: IdentityStore
-        let subject: MessageSubject
     }
 
-    public init(center: NotificationCenter = .default, telemetry: any TelemetrySink, log: any LogSink) {
-        self.center = center; self.telemetry = telemetry; self.log = log
+    public init(log: any LogSink) {
+        self.log = log
     }
 
     func attach(_ dependents: Dependents) { self.dependents = dependents }

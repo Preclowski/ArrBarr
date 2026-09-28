@@ -82,15 +82,6 @@ public struct MediaID: Hashable, Sendable, Codable, CustomStringConvertible {
 
     public init(namespace: IDNamespace, value: String) { self.namespace = namespace; self.value = value }
 
-    /// Round-trips `description`: the last `:` separates namespace and value.
-    public init?(_ token: String) {
-        guard let split = token.lastIndex(of: ":") else { return nil }
-        guard let ns = IDNamespace(token: String(token[..<split])) else { return nil }
-        let value = String(token[token.index(after: split)...])
-        guard !value.isEmpty else { return nil }
-        self.init(namespace: ns, value: value)
-    }
-
     public var description: String { "\(namespace.token):\(value)" }
 
     public static func tmdbMovie(_ id: Int) -> MediaID { .init(namespace: .tmdbMovie, value: String(id)) }

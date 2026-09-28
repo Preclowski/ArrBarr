@@ -37,7 +37,6 @@ public final class MediaStack: Sendable {
     public let capabilities = CapabilityIndex()
     public let probe: CapabilityProbe
     public let events: EventHub
-    public let discovery: Discovery
     public var subject: MessageSubject { store.subject }
     private let started = OSAllocatedUnfairLock(initialState: false)
     private let sweeper = OSAllocatedUnfairLock<Task<Void, Never>?>(initialState: nil)
@@ -45,26 +44,25 @@ public final class MediaStack: Sendable {
     public init(_ configuration: Configuration) throws {
         self.configuration = configuration
         let c = configuration
-        registry = InstanceRegistry(center: c.center, telemetry: c.telemetry, log: c.log)
+        registry = InstanceRegistry(log: c.log)
         governor = HostGovernor(defaults: c.limits, overrides: c.overrides, clock: c.clock, telemetry: c.telemetry, log: c.log)
         sessions = SessionBroker(strategies: SessionStrategies.standard, telemetry: c.telemetry, log: c.log)
         pipeline = RequestPipeline(transport: c.transport, sockets: c.sockets, governor: governor, sessions: sessions, credentials: c.credentials,
                                    registry: registry, telemetry: c.telemetry, log: c.log, signposts: c.signposts, clock: c.clock)
         database = try c.database.map { try SQLiteDatabase(location: $0, log: c.log) }
-        identity = IdentityStore(database: database, clock: c.clock)
+        identity = IdentityStore(database: database)
         store = ResourceStore(database: database, pipeline: pipeline, identity: identity, clock: c.clock, telemetry: c.telemetry, log: c.log,
                               center: c.center, memoryBudget: c.role == .app ? 8 << 20 : 2 << 20)
         probe = CapabilityProbe(store: store, index: capabilities, database: database, clock: c.clock, log: c.log)
         if let override = c.readPolicyOverride { Task { [store] in await store.setPolicyOverride(override) } }
-        events = EventHub(store: store, clock: c.clock, telemetry: c.telemetry, log: c.log)
-        discovery = Discovery(log: c.log)
+        events = EventHub(store: store, clock: c.clock)
     }
 
     /// Wires the actors, restores persisted capabilities, applies the descriptors and probes every host in the background.
     public func start(instances: [InstanceDescriptor]) async {
         if !started.withLock({ let was = $0; $0 = true; return was }) {
             await store.attach(probe: probe, capabilities: capabilities)
-            await registry.attach(.init(store: store, capabilities: probe, sessions: sessions, identity: identity, subject: subject))
+            await registry.attach(.init(store: store, capabilities: probe, sessions: sessions, identity: identity))
             await probe.restore()
         }
         await registry.apply(instances)
@@ -98,7 +96,7 @@ public final class MediaStack: Sendable {
     // MARK: - Services
 
     public func servarr(_ instance: InstanceID) -> ServarrService? {
-        ServarrProfile.profile(for: instance.kind).map { ServarrService(instance: instance, profile: $0, capabilities: capabilities) }
+        ServarrProfile.profile(for: instance.kind).map { ServarrService(instance: instance, profile: $0) }
     }
 
     public func download(_ instance: InstanceID) -> (any DownloadService)? {
@@ -114,10 +112,10 @@ public final class MediaStack: Sendable {
     }
 
     public func mediaServer(_ instance: InstanceID) -> MediaServerService? {
-        instance.kind.family == .mediaServer ? MediaServerService(instance: instance, capabilities: capabilities, userID: configuration.mediaServerUserID) : nil
+        instance.kind.family == .mediaServer ? MediaServerService(instance: instance, userID: configuration.mediaServerUserID) : nil
     }
 
-    public var tmdb: TMDBService { TMDBService(capabilities: capabilities) }
+    public var tmdb: TMDBService { TMDBService() }
 
     public var prowlarr: ProwlarrService { ProwlarrService() }
 
@@ -145,7 +143,7 @@ public final class MediaStack: Sendable {
     }
 
     public func realtime(for instance: InstanceID) -> SignalRSource {
-        SignalRSource(instance: instance, pipeline: pipeline, clock: configuration.clock, telemetry: configuration.telemetry, log: configuration.log)
+        SignalRSource(instance: instance, pipeline: pipeline, clock: configuration.clock, log: configuration.log)
     }
 
     // MARK: - Artwork

@@ -612,7 +612,7 @@ struct QueueViewModelCalendarInvalidationTests {
         sut.bootstrapCalendarInvalidation()
         let before = fake.upcomingCallCount
         NotificationCenter.default.post(
-            Invalidated(tags: [.collection(.calendar, QueueItem.Source.radarr.instanceID)], reason: .event),
+            Invalidated(tags: [.collection(.calendar, QueueItem.Source.radarr.instanceID)]),
             subject: config.gateway.kit.subject)
         try await waitUntil { fake.upcomingCallCount > before }
     }
@@ -625,9 +625,9 @@ struct QueueViewModelCalendarInvalidationTests {
         let before = fake.upcomingCallCount
         let subject = config.gateway.kit.subject
         NotificationCenter.default.post(
-            Invalidated(tags: [.collection(.queue, QueueItem.Source.radarr.instanceID)], reason: .event), subject: subject)
+            Invalidated(tags: [.collection(.queue, QueueItem.Source.radarr.instanceID)]), subject: subject)
         NotificationCenter.default.post(
-            Invalidated(tags: [.collection(.calendar, QueueItem.Source.sonarr.instanceID)], reason: .event), subject: subject)
+            Invalidated(tags: [.collection(.calendar, QueueItem.Source.sonarr.instanceID)]), subject: subject)
         // Same center, same subscriber: the calendar message cannot be handled before the queue one.
         try await waitUntil { fake.upcomingCallCount > before }
         #expect(fake.upcomingCallCount == before + 1)

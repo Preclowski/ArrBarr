@@ -73,9 +73,9 @@ import Testing
         let kit = try await TestKit()
         kit.transport.answer("realtime.negotiate", json: #"{"connectionId":"abc","connectionToken":"tok"}"#)
         kit.transport.frames = ["{}\u{1E}", #"{"type":1,"target":"receiveMessage","arguments":[{"body":{"action":"sync"},"name":"queue"}]}"# + "\u{1E}"]
-        let hub = EventHub(store: kit.store, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let hub = EventHub(store: kit.store, clock: kit.clock)
         let events = await hub.events()
-        let source = SignalRSource(instance: TestKit.radarr, pipeline: kit.pipeline, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let source = SignalRSource(instance: TestKit.radarr, pipeline: kit.pipeline, clock: kit.clock, log: NoLog())
         await hub.attach(source, for: TestKit.radarr)
         var seen: [DataEvent] = []
         for await event in events {

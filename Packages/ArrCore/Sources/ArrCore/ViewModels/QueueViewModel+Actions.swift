@@ -1,5 +1,4 @@
 import Foundation
-import MediaKit
 
 extension QueueViewModel {
     // MARK: - Actions

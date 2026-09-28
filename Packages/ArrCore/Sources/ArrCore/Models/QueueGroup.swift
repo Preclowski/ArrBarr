@@ -44,9 +44,9 @@ nonisolated public enum QueueTitleGroupingMode: String, CaseIterable, Sendable {
 
 /// Never merges downloads: children are the real entries with their own controls;
 /// the container only adds a collapsible header.
-nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
+nonisolated struct QueueTitleGroup: Identifiable, Equatable {
     /// Survives members joining/leaving, so disclosure state can be keyed on it.
-    public let id: String
+    let id: String
     let entries: [QueueRowEntry]
 
     var representative: QueueItem { entries[0].representativeItem }

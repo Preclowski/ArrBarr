@@ -14,7 +14,7 @@ actor PushRecorder: LiveStreamPushTarget {
 
     @Test func aHiddenPanelIgnoresAQueuePushWhoseCountsHaveNotMovedSinceTheLastFlush() async throws {
         let kit = try await TestKit()
-        let hub = EventHub(store: kit.store, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let hub = EventHub(store: kit.store, clock: kit.clock)
         let recorder = PushRecorder()
         await hub.register(recorder)
         await hub.setForeground(false)
@@ -32,7 +32,7 @@ actor PushRecorder: LiveStreamPushTarget {
 
     @Test func aStreamRegisteredTwiceHearsEachPushOnce() async throws {
         let kit = try await TestKit()
-        let hub = EventHub(store: kit.store, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let hub = EventHub(store: kit.store, clock: kit.clock)
         let recorder = PushRecorder()
         await hub.register(recorder)
         await hub.register(recorder)
@@ -43,7 +43,7 @@ actor PushRecorder: LiveStreamPushTarget {
 
     @Test func everyEventReportsItsInstanceAlive() async throws {
         let kit = try await TestKit()
-        let hub = EventHub(store: kit.store, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let hub = EventHub(store: kit.store, clock: kit.clock)
         let recorder = PushRecorder()
         await hub.register(recorder)
         await hub.ingest(.queueStatus(TestKit.radarr, counts))
@@ -54,7 +54,7 @@ actor PushRecorder: LiveStreamPushTarget {
 
     @Test func aHiddenPanelStillActsOnAQueuePushBeforeAnyCountsArrived() async throws {
         let kit = try await TestKit()
-        let hub = EventHub(store: kit.store, clock: kit.clock, telemetry: kit.telemetry, log: NoLog())
+        let hub = EventHub(store: kit.store, clock: kit.clock)
         let recorder = PushRecorder()
         await hub.register(recorder)
         await hub.setForeground(false)

@@ -4,7 +4,7 @@ import Observation
 import MediaKit
 
 @Observable
-public final class SearchViewModel {
+final class SearchViewModel {
     /// Every search field on every surface binds straight to this; `didSet` is the trigger.
     var query = "" {
         didSet {
@@ -47,13 +47,13 @@ public final class SearchViewModel {
     var peopleResults: [TMDBPerson] = []
     var starring: StarringSection?
 
-    public struct StarringSection: Identifiable, Equatable {
-        public let person: TMDBPerson
-        public let titles: [SearchResult]
+    struct StarringSection: Identifiable, Equatable {
+        let person: TMDBPerson
+        let titles: [SearchResult]
         /// A full-name query: the person is the answer, so the section renders above
         /// the titles, and `titles` may be empty.
-        public var isPrimary: Bool = false
-        public var id: Int { person.id }
+        var isPrimary: Bool = false
+        var id: Int { person.id }
     }
     /// Stays true from the first keystroke until the latest query's fetch returns,
     /// so typing shows one stable loader instead of flickering per keystroke.
