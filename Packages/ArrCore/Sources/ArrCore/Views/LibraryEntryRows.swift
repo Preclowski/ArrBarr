@@ -43,9 +43,29 @@ extension LibraryEntry {
         sizeOnDisk > 0 ? ByteCountFormatter.string(fromByteCount: sizeOnDisk, countStyle: .file) : nil
     }
 
-    func openDetail() {
-        DetailRequest.open(source: source, arrId: arrId, title: title,
+    /// A Lidarr entry is the artist, so it opens the artist surface.
+    var detailTarget: QueueItem {
+        DetailRequest.item(source: source, arrId: arrId, title: title,
                            posterURL: posterURL, posterRequiresAuth: posterRequiresAuth)
+    }
+
+    func openDetail() {
+        DetailRequest.post(detailTarget)
+    }
+
+    func webURL(in configStore: ConfigStore) -> URL? {
+        source == .lidarr
+            ? lidarrArtistWebURL(foreignArtistId: slug, in: configStore)
+            : arrWebURL(source: source, slug: slug, in: configStore)
+    }
+}
+
+extension View {
+    /// The entry's detail "…", minus what only acts (automatic search, delete).
+    func libraryEntryMenu(_ entry: LibraryEntry, configStore: ConfigStore) -> some View {
+        contextMenu {
+            DetailEntryMenuItems(target: entry.detailTarget, webURL: entry.webURL(in: configStore))
+        }
     }
 }
 
@@ -65,17 +85,21 @@ struct LibraryTile: View {
                     blurred: configStore.shouldBlurPoster(for: entry.source),
                     cornerRadius: Tokens.Radius.card
                 ) {
-                    RemotePoster(
-                        url: entry.posterURL,
-                        apiKey: apiKey,
-                        // `.icon`, not `.card`: 288 px covers a ≤160 pt tile at @2x and is already on disk;
-                        // `.card` costs ~180 kB per tile (~400 MB for a 3000-title library).
-                        tier: .icon,
-                        cornerRadius: Tokens.Radius.card,
-                        fallbackSymbol: entry.source.symbol,
-                        fill: true
-                    )
-                    .aspectRatio(entry.posterAspect, contentMode: .fit)
+                    // The tile owns the shape; artwork of any other ratio fills it instead of resizing it.
+                    Color.clear
+                        .aspectRatio(entry.posterAspect, contentMode: .fit)
+                        .overlay {
+                            RemotePoster(
+                                url: entry.posterURL,
+                                apiKey: apiKey,
+                                // `.icon`, not `.card`: 288 px covers a ≤160 pt tile at @2x and is already on disk;
+                                // `.card` costs ~180 kB per tile (~400 MB for a 3000-title library).
+                                tier: .icon,
+                                cornerRadius: Tokens.Radius.card,
+                                fallbackSymbol: entry.source.symbol,
+                                fill: true
+                            )
+                        }
                 }
                 .posterMarks(watched: entry.watched, monitored: entry.isMonitored,
                              cornerRadius: Tokens.Radius.card, ribbonWidth: 10)
@@ -96,6 +120,7 @@ struct LibraryTile: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .libraryEntryMenu(entry, configStore: configStore)
         .libraryTooltip(entry: entry, apiKey: apiKey)
         .accessibilityLabel(Text(verbatim: entry.title))
     }
@@ -150,6 +175,7 @@ struct LibraryListRow: View {
             LibraryStatusChip(entry: entry)
         }
         .opacity(entry.state == .unmonitored ? 0.55 : 1)
+        .libraryEntryMenu(entry, configStore: configStore)
         .libraryTooltip(entry: entry, apiKey: apiKey)
     }
 }

@@ -143,6 +143,20 @@ struct DiscoverViewModelTests {
         #expect(vm.isPresented)
     }
 
+    @Test("Batches still streaming in after Back do not reopen the deck")
+    func streamedBatchesRespectBack() {
+        let vm = freshVM()
+        vm.open(items: [makeItem(1)], append: false)
+        vm.close()
+
+        vm.open(items: [makeItem(2)], append: true)
+        #expect(!vm.isPresented)
+        #expect(vm.sessionTotal == 2)
+
+        vm.open(items: [], append: true)
+        #expect(vm.isPresented, "the resume card still reopens it")
+    }
+
     @Test("An empty message never resets a session, even without the append flag")
     func emptyMessageNeverResetsTheSession() {
         let vm = freshVM()

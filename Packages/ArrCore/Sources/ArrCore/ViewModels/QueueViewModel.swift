@@ -262,9 +262,9 @@ public final class QueueViewModel {
     @MainActor var measuredAt: [QueueItem.Source: Date] = [:]
 
     /// One raw page; pairing and folding run over all loaded pages in `HistoryFeed`.
-    func fetchHistory(for source: QueueItem.Source, page: Int, entityId: Int? = nil) async -> HistoryResult {
+    func fetchHistory(for source: QueueItem.Source, page: Int, scope: HistoryScope? = nil) async -> HistoryResult {
         let pageSize = HistoryFeed.pageSize
-        return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize, entityId: entityId)
+        return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize, scope: scope)
     }
 
     /// Kept for the app's lifetime: the popover rebuilds its History view on every open.
@@ -272,15 +272,15 @@ public final class QueueViewModel {
 
     private struct HistoryFeedKey: Hashable {
         let sources: [QueueItem.Source]
-        let entityId: Int?
+        let scope: HistoryScope?
     }
 
-    /// `entityId` scopes the feed to one library record; nil is the arr-wide feed.
-    func historyFeed(for sources: [QueueItem.Source], entityId: Int? = nil) -> HistoryFeed {
-        let key = HistoryFeedKey(sources: sources, entityId: entityId)
+    /// `scope` narrows the feed to one detail's subject; nil is the arr-wide feed.
+    func historyFeed(for sources: [QueueItem.Source], scope: HistoryScope? = nil) -> HistoryFeed {
+        let key = HistoryFeedKey(sources: sources, scope: scope)
         if let cached = historyFeeds[key] { return cached }
         let feed = HistoryFeed(sources: sources) { [weak self] source, page in
-            await self?.fetchHistory(for: source, page: page, entityId: entityId) ?? HistoryResult(items: [], error: nil)
+            await self?.fetchHistory(for: source, page: page, scope: scope) ?? HistoryResult(items: [], error: nil)
         }
         historyFeeds[key] = feed
         return feed

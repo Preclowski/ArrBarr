@@ -423,7 +423,7 @@
    "file_log_delete_old": true,
    "file_log_enabled": true,
    "file_log_max_size": 65,
-   "file_log_path": "/Open Album 7/qBittorrent/Open Movie 15",
+   "file_log_path": "/The Slip/qBittorrent/Open Movie 15",
    "file_pool_size": 100,
    "hashing_threads": 1,
    "hostname_cache_ttl": 1200,

@@ -148,6 +148,10 @@ struct QueueGroupRowView: View {
                 } label: {
                     Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
                 }
+                // The pack's tap opens the series, so its entries are the series'.
+                Section {
+                    DetailEntryMenuItems(target: rep.seasonContext(), webURL: arrWebURL(for: rep, in: configStore))
+                }
             }
         }
         #if os(macOS)

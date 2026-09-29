@@ -130,9 +130,9 @@ public enum DetailRequest {
 
     private static let log = Logger(category: "Detail")
 
-    public static func post(_ item: QueueItem) {
-        log.notice("open detail: \(item.source.rawValue, privacy: .public) #\(item.entityId ?? 0, privacy: .public)")
-        DetailRouter.shared.open(item)
+    public static func post(_ item: QueueItem, intent: DetailIntent? = nil) {
+        log.notice("open detail: \(item.source.rawValue, privacy: .public) #\(item.entityId ?? 0, privacy: .public) \(intent.map { "\($0)" } ?? "", privacy: .public)")
+        DetailRouter.shared.open(item, intent: intent)
     }
 
     /// Lidarr's search entity is the artist; handing its id to the album-shaped

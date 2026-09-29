@@ -135,6 +135,12 @@ struct QueueTitleGroupRowView: View {
                 } label: {
                     Label { Text("Remove all (\(group.downloadCount))", bundle: .module) } icon: { Image(systemName: "trash") }
                 }
+                // The title's, like the poster tap.
+                if onShowDetail != nil {
+                    Section {
+                        DetailEntryMenuItems(target: rep.seasonContext(), webURL: arrWebURL(for: rep, in: configStore))
+                    }
+                }
             }
         }
         .accessibilityElement(children: .combine)

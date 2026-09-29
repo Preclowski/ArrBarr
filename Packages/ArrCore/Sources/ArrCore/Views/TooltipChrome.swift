@@ -2,6 +2,9 @@ import SwiftUI
 
 // MARK: - Shared tooltip chrome
 
+/// `-ArrBarrNoTooltips YES`: screen recordings, where a hover card would pop up mid-shot.
+private let tooltipsDisabled = UserDefaults.standard.bool(forKey: "ArrBarrNoTooltips")
+
 /// The one long-hover presenter: shows `tooltip` after a dwell, closes on hover-out.
 /// `hovering` mirrors the pointer for rows whose own controls react to it.
 struct HoverTooltip<TooltipContent: View>: ViewModifier {
@@ -24,7 +27,7 @@ struct HoverTooltip<TooltipContent: View>: ViewModifier {
                 isHovering = now
                 hovering?.wrappedValue = now
                 hoverTask?.cancel()
-                if now && enabled && !suppressRowTooltip {
+                if now && enabled && !suppressRowTooltip && !tooltipsDisabled {
                     hoverTask = Task {
                         try? await Task.sleep(for: delay)
                         if !Task.isCancelled && isHovering { showTooltip = true }

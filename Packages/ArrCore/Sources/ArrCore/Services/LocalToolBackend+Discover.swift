@@ -45,7 +45,7 @@ extension LocalToolBackend {
                 quizEarlyPipeline = pipeline
                 if fromTMDB {
                     // The tool call below reports a TMDB failure; the early pipeline just starts empty.
-                    await pipeline.feed((await Logger.extras.attempt("quiz now deck") { try await nowPicks(kind: kind) }) ?? [], isFinal: true)
+                    await pipeline.feed((await Logger.extras.attempt("quiz now deck") { try await nowPicks(kind: kind) }) ?? [])
                     return
                 }
             }
@@ -157,7 +157,7 @@ extension LocalToolBackend {
                 }
                 pipeline = await makeQuizPipeline(kind: kind, libraryMode: libraryMode, append: append)
             }
-            await pipeline.feed(capped, isFinal: true)
+            await pipeline.feed(capped)
             let outcome = await pipeline.finish()
             resolved = outcome.resolved
             delivered = outcome.delivered

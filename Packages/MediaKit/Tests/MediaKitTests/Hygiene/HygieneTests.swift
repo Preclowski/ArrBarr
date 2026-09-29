@@ -71,6 +71,20 @@ import Testing
         #expect(command.status == 201 && String(decoding: command.body, as: UTF8.self).contains("queued"))
     }
 
+    @Test func demoDetailsAnswerForTheRequestedIDAndCalendarsFollowToday() async throws {
+        let anchor = try #require(ISO8601DateFormatter().date(from: "2026-09-15T00:00:00Z"))
+        let transport = FixtureTransport(clock: TestClock(start: anchor.addingTimeInterval(10 * 86_400)))
+        func get(_ path: String, _ template: String, _ op: String) async throws -> JSONValue {
+            let r = try await transport.send(HTTPRequest(method: "GET", url: URL(string: "http://demo\(path)")!, operation: OperationID(stringLiteral: op), pathTemplate: template))
+            return try JSONDecoder().decode(JSONValue.self, from: r.body)
+        }
+        let movies = try await get("/api/v3/movie", "/api/v3/movie", "radarr.fetchAllMovies").arrayValue ?? []
+        let sintel = try #require(movies.first { $0["title"]?.stringValue == "Sintel" }?["id"]?.intValue)
+        #expect(try await get("/api/v3/movie/\(sintel)", "/api/v3/movie/{id}", "radarr.fetchMovieDetails")["title"]?.stringValue == "Sintel")
+        let calendar = try await get("/api/v3/calendar", "/api/v3/calendar", "radarr.fetchCalendar").arrayValue ?? []
+        #expect(calendar.first { $0["title"]?.stringValue == "Sherlock Jr." }?["digitalRelease"]?.stringValue == "2026-09-25T00:00:00Z")
+    }
+
     @Test func aDemoPauseSticksOnTheArrRowTrackingTheDownload() async throws {
         let transport = FixtureTransport(clock: TestClock())
         func queue() async throws -> [JSONValue] {

@@ -54,7 +54,7 @@ private final class FakeAggregator: QueueDataProviding {
         healthCallCount += 1
         return healthResult
     }
-    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult { historyResult }
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, scope: HistoryScope?) async -> HistoryResult { historyResult }
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws {
         performedActions.append((action, item.id))
         if let actionError { throw actionError }

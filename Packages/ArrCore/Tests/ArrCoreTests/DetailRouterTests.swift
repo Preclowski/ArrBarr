@@ -65,4 +65,39 @@ struct DetailRouterTests {
         DetailRequest.open(source: .lidarr, arrId: 3, title: "Kevin MacLeod")
         #expect(DetailRouter.shared.request?.item.isLidarrArtistLookup == true)
     }
+
+    /// A row menu's entry is carried out once: Back from the history must not reopen it, and an
+    /// intent whose detail never loaded must not fire on the next title.
+    @Test func aRowIntentIsHandedOverOnce() {
+        let router = DetailRouter.shared
+        let movie = DetailRequest.syntheticItem(source: .radarr, entityId: 42, title: "Big Buck Bunny")
+        DetailRequest.post(movie, intent: .history)
+        #expect(router.takeIntent(for: movie.id) == .history)
+        #expect(router.takeIntent(for: movie.id) == nil)
+
+        DetailRequest.post(movie, intent: .edit)
+        #expect(router.takeIntent(for: "radarr-7") == nil)
+        #expect(router.takeIntent(for: movie.id) == nil)
+
+        DetailRequest.post(movie, intent: .edit)
+        DetailRequest.post(movie)
+        #expect(router.takeIntent(for: movie.id) == nil)
+    }
+
+    /// A row offers only what the detail it opens has in its "…".
+    @Test func rowsOfferWhatTheirDetailOpens() {
+        let movie = DetailRequest.syntheticItem(source: .radarr, entityId: 1, title: "Sintel")
+        #expect(DetailIntent.supported(by: movie) == [.manualSearch, .edit, .history])
+        let series = DetailRequest.syntheticItem(source: .sonarr, entityId: 2, title: "Pioneer One")
+        #expect(DetailIntent.supported(by: series) == [.edit, .history])
+        let artist = DetailRequest.item(source: .lidarr, arrId: 3, title: "Kevin MacLeod")
+        #expect(DetailIntent.supported(by: artist) == [.edit, .history])
+        let album = DetailRequest.item(source: .lidarr, arrId: 4, title: "Ghosts I-IV", isLidarrAlbum: true)
+        #expect(DetailIntent.supported(by: album) == [.manualSearch, .edit, .history])
+        #if os(macOS)
+        let episode = DetailRequest.syntheticItem(source: .sonarr, entityId: 2, title: "Pioneer One",
+                                                  seasonNumber: 1, episodeNumber: 3)
+        #expect(DetailIntent.supported(by: episode) == [.manualSearch, .history])
+        #endif
+    }
 }

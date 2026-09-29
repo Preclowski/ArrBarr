@@ -28,7 +28,8 @@ import Testing
         #expect(movies.count > 0 && movies.first?.tmdbId != nil)
         #expect(try await kit.store.read(radarr.movie(id: movies[0].id!)).value.title.isEmpty == false)
         #expect(try await kit.store.read(radarr.lookupMovies(term: "bunny")).value.count > 0)
-        #expect(try await kit.store.read(radarr.credits(movieID: 1)).value.count > 0)
+        let charade = try #require(movies.first { $0.title == "Charade" }?.id)
+        #expect(try await kit.store.read(radarr.credits(movieID: charade)).value.count > 0)
         #expect(try await kit.store.read(radarr.alternateTitles()).value.count >= 0)
         let series = try await kit.store.read(sonarr.series()).value
         #expect(series.count > 0 && series.first?.seasons?.isEmpty == false)

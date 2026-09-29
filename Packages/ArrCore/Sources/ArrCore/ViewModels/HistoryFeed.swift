@@ -81,7 +81,10 @@ final class HistoryFeed {
         var rows = startRows
         let target = rows.count + rowsPerBatch
         var pages = 0
-        while rows.count < target, cursors.values.contains(where: { $0.hasMore }), pages < maxPagesPerBatch {
+        // Past the cap only while the batch has added nothing: a narrow scope can page through
+        // empty stretches, and a batch that brings no row leaves the list's end spinner waiting for good.
+        while rows.count < target, cursors.values.contains(where: { $0.hasMore }),
+              pages < maxPagesPerBatch || rows.count == startRows.count {
             for source in sources where cursors[source]?.hasMore == true {
                 var cursor = cursors[source] ?? Cursor()
                 let result = await fetch(source, cursor.nextPage)

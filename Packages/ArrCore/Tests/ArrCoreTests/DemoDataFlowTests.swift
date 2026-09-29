@@ -20,7 +20,7 @@ struct DemoDataFlowTests {
         let base = ServiceGateway.demoURL(source.serviceKind.instanceKind).absoluteString
         let queue = try await ArrQueueLoader.items(source: source, gateway: gateway, baseURL: base)
         let upcoming = try await ArrQueueLoader.upcoming(source: source, gateway: gateway, baseURL: base)
-        let history = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: base, page: 1, pageSize: 20, entityId: nil)
+        let history = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: base, page: 1, pageSize: 20, scope: nil)
         #expect(!queue.isEmpty)
         #expect(!upcoming.isEmpty)
         #expect(!history.items.isEmpty)

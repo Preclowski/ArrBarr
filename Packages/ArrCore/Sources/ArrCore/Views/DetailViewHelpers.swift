@@ -8,16 +8,26 @@ func arrAPIKey(for item: QueueItem, in configStore: ConfigStore) -> String? {
     configStore.config(for: item.source).apiKey
 }
 
-/// Whisparr is a Radarr fork, so it shares `/movie/`.
 func arrWebURL(for item: QueueItem, in configStore: ConfigStore) -> URL? {
-    guard let slug = item.contentSlug else { return nil }
-    let cfg = configStore.config(for: item.source)
-    let path: String = switch item.source {
+    arrWebURL(source: item.source, slug: item.contentSlug, in: configStore)
+}
+
+/// Whisparr is a Radarr fork, so it shares `/movie/`.
+func arrWebURL(source: QueueItem.Source, slug: String?, in configStore: ConfigStore) -> URL? {
+    guard let slug else { return nil }
+    let cfg = configStore.config(for: source)
+    let path: String = switch source {
     case .radarr, .whisparr: "/movie/\(slug)"
     case .sonarr:            "/series/\(slug)"
     case .lidarr:            "/album/\(slug)"
     }
     return URL(string: cfg.baseURL)?.appendingPathComponent(path)
+}
+
+/// An artist lives under its MusicBrainz id; `arrWebURL`'s Lidarr path is the album's.
+func lidarrArtistWebURL(foreignArtistId: String?, in configStore: ConfigStore) -> URL? {
+    guard let foreignArtistId, !foreignArtistId.isEmpty else { return nil }
+    return URL(string: configStore.lidarr.baseURL)?.appendingPathComponent("/artist/\(foreignArtistId)")
 }
 
 /// Falling back to `item.posterURL` is the caller's job. `mediaServerKeys`
@@ -115,7 +125,7 @@ struct SearchFeedbackIcon: View {
 
 // MARK: - Row search context menu
 
-/// Right-click / long-press twin of `HeaderSearchMenu`, so a row can be searched in place.
+/// Right-click / long-press twin of the header menu's search items, so a row can be searched in place.
 struct RowSearchContextMenu: ViewModifier {
     @Binding var feedback: SearchFeedback
     let onAutomatic: () async throws -> Void
@@ -148,44 +158,5 @@ struct OptionalRowSearchMenu: ViewModifier {
         } else {
             content
         }
-    }
-}
-
-// MARK: - Header search menu
-
-struct HeaderSearchMenu: View {
-    let feedback: SearchFeedback
-    let onAutomatic: () -> Void
-    let onManual: () -> Void
-
-    var body: some View {
-        Menu {
-            Button(action: onAutomatic) {
-                Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
-            }
-            Button(action: onManual) {
-                Label { Text("Manual search", bundle: .module) } icon: { Image(systemName: "list.bullet") }
-            }
-        } label: {
-            Group {
-                if feedback == .idle {
-                    Image(systemName: "magnifyingglass")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
-                } else {
-                    SearchFeedbackIcon(feedback: feedback, size: 13)
-                }
-            }
-            .frame(width: 22, height: 22)
-            .contentShape(Rectangle())
-        }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .disabled(feedback.isSending)
-        .help(Text("Search", bundle: .module))
-        .accessibilityLabel(feedback.isSending
-                            ? Text("detail.searchingForRelease.label", bundle: .module)
-                            : Text("Search", bundle: .module))
     }
 }

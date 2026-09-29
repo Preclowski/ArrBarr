@@ -61,6 +61,19 @@ struct HistoryFeedTests {
         #expect(feed.hasMore)
     }
 
+    @Test("A batch that has brought no row pages on past the cap, so a narrow scope never strands the spinner")
+    func emptyStretchPassesTheCap() async {
+        let log = RequestLog()
+        let feed = HistoryFeed(sources: [.radarr], rowsPerBatch: 5, maxPagesPerBatch: 2) { _, page in
+            log.pages.append(page)
+            return HistoryResult(items: page == 4 ? Self.plainPage(page, rows: 1) : [], hasMore: page < 6, error: nil)
+        }
+        await feed.load()
+        #expect(log.pages == [1, 2, 3, 4])
+        #expect(feed.items.count == 1)
+        #expect(feed.hasMore)
+    }
+
     @Test("loadMore appends the next batch and stops when the arr runs out")
     func loadMoreUntilExhausted() async {
         let feed = HistoryFeed(sources: [.radarr], rowsPerBatch: 2) { _, page in

@@ -27,7 +27,6 @@ enum WaitFacts {
 struct WaitFactTicker: View {
     let facts: [WaitFact]
     var interval: TimeInterval = 4
-    var foreground: Color? = nil
 
     @State private var index = 0
 
@@ -35,7 +34,7 @@ struct WaitFactTicker: View {
         if !facts.isEmpty {
             Text(verbatim: facts[index % facts.count].text)
                 .scaledFont(size: 12)
-                .foregroundStyle(foreground ?? Color.secondary)
+                .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
                 .id(index)

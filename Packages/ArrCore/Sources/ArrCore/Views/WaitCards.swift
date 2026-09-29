@@ -7,10 +7,24 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     struct Person: Hashable, Sendable {
         let name: String
         let imageURL: URL?
+        /// The character played; nil for crew, whose card has no "as …" line.
+        var role: String? = nil
+        /// Present → the face opens the person card on hover.
+        var tmdbPersonId: Int? = nil
+
+        init(name: String, imageURL: URL?, role: String? = nil, tmdbPersonId: Int? = nil) {
+            self.name = name; self.imageURL = imageURL; self.role = role; self.tmdbPersonId = tmdbPersonId
+        }
+
+        init(_ member: CastMember, asCrew: Bool = false) {
+            self.init(name: member.name, imageURL: member.imageURL,
+                      role: asCrew ? nil : member.role, tmdbPersonId: member.tmdbPersonId)
+        }
     }
     let sentence: String
-    var support: String? = nil
     var people: [Person] = []
+    /// Covers of the titles the sentence names; they take the fan's side cards.
+    var posters: [URL] = []
     var id: String { sentence }
 }
 
@@ -26,6 +40,8 @@ struct WaitCardContext {
     /// The arr's key when `posterURL` points at the arr itself.
     var posterApiKey: String? = nil
 
+    var poster: WaitPoster { WaitPoster(url: posterURL, apiKey: posterApiKey) }
+
     var title: String {
         movie?.title ?? series?.title ?? album?.title ?? ""
     }
@@ -37,30 +53,20 @@ struct WaitCardContext {
 /// A missing fact means a missing story, never an error or a blank.
 enum WaitStoryProvider {
     /// Stories that need no network, ready on first render.
-    static func localStories(_ ctx: WaitCardContext, locale: Locale = .current) -> [WaitStory] {
+    static func localStories(_ ctx: WaitCardContext) -> [WaitStory] {
         var stories: [WaitStory] = []
         let title = ctx.title
         guard !title.isEmpty else { return [] }
-        let rating = ctx.movie?.ratings?.tmdb?.value ?? ctx.movie?.ratings?.imdb?.value ?? ctx.series?.ratings?.value
-        if let rating, rating > 0 {
-            let score = rating.formatted(.number.precision(.fractionLength(1)))
-            var support: String?
-            if let genres = ctx.movie?.genres ?? ctx.series?.genres, !genres.isEmpty {
-                support = L("wait.story.genres \(genres.prefix(3).map { GenreName.localized($0, locale: locale) }.joined(separator: ", "))")
-            }
-            stories.append(WaitStory(sentence: L("wait.story.rated \(title) \(score)"), support: support))
-        }
         if let years = yearsAgo(ctx.year) {
             let by = ctx.movie?.studio ?? ctx.series?.network ?? ctx.album?.artist?.artistName
             let sentence = by.map { L("wait.story.premiereBy \(title) \(years) \($0)") } ?? L("wait.story.premiere \(title) \(years)")
-            let minutes = ctx.movie?.runtime ?? ctx.series?.runtime ?? ctx.album?.duration.map { $0 / 60_000 }
-            stories.append(WaitStory(sentence: sentence, support: runtime(minutes, perEpisode: ctx.series != nil)))
+            stories.append(WaitStory(sentence: sentence))
         }
         let faces = ctx.cast.filter { $0.imageURL != nil }.prefix(3)
         if faces.count >= 2, let director = ctx.directors.first {
             let names = faces.map { "**\($0.name)**" }.joined(separator: ", ")
             stories.append(WaitStory(sentence: L("wait.story.directedStarring \(director.name) \(names)"),
-                                     people: [.init(name: director.name, imageURL: director.imageURL)] + faces.map { .init(name: $0.name, imageURL: $0.imageURL) }))
+                                     people: [.init(director, asCrew: true)] + faces.map { .init($0) }))
         }
         return stories
     }
@@ -68,6 +74,8 @@ enum WaitStoryProvider {
     static func remoteStories(_ ctx: WaitCardContext, configStore: ConfigStore) async -> [WaitStory] {
         guard !configStore.tmdbApiKey.isEmpty, !ctx.title.isEmpty else { return [] }
         let client = configStore.tmdbClient
+        // TMDB's text in the app's language; a tagline it has no translation for comes back empty and drops out.
+        let language = configStore.currentLocale.identifier(.bcp47)
         var stories: [WaitStory] = []
         let title = ctx.title
 
@@ -78,52 +86,40 @@ enum WaitStoryProvider {
         }
 
         if let m = ctx.movie, let id = m.tmdbId, id > 0 {
-            let facts = await Logger.extras.attempt("wait facts") { try await client.movieDetails(movieId: id) }
+            let facts = await Logger.extras.attempt("wait facts") { try await client.movieDetails(movieId: id, language: language) }
             let crew = (await Logger.extras.attempt("wait crew") { try await client.movieCredits(movieId: id) })?.crew ?? []
-            let composer = crew.first { $0.job == "Original Music Composer" }
             let writer = crew.first { $0.job == "Screenplay" || $0.job == "Writer" }
             let dop = crew.first { $0.job == "Director of Photography" }
 
             if let f = facts, let budget = f.budget, let revenue = f.revenue, budget > 0, revenue > 0 {
                 let money = Decimal.FormatStyle.Currency(code: "USD").notation(.compactName).precision(.significantDigits(2...3))
-                let sentence = L("wait.story.money \(title) \(Decimal(budget).formatted(money)) \(Decimal(revenue).formatted(money))")
-                var support: String?
-                if let years = yearsAgo(m.year) {
-                    support = composer.map { L("wait.story.premiereComposer \(years) \($0.name)") } ?? L("wait.story.premiereShort \(years)")
-                }
-                stories.append(WaitStory(sentence: sentence, support: support,
-                                         people: composer.map { [.init(name: $0.name, imageURL: $0.profileURL)] } ?? []))
+                stories.append(WaitStory(sentence: L("wait.story.money \(title) \(Decimal(budget).formatted(money)) \(Decimal(revenue).formatted(money))")))
             }
             if let writer, let dop {
                 stories.append(WaitStory(sentence: L("wait.story.crew \(writer.name) \(dop.name)"),
-                                         support: facts?.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") },
                                          people: [.init(name: writer.name, imageURL: writer.profileURL), .init(name: dop.name, imageURL: dop.profileURL)]))
             } else if let f = facts, let tagline = f.tagline, !tagline.isEmpty {
-                stories.append(WaitStory(sentence: L("wait.story.taglineOnly \(title) \(tagline)"),
-                                         support: f.originalTitle.flatMap { $0 == m.title || $0.isEmpty ? nil : L("wait.story.originalTitle \($0)") }))
+                stories.append(WaitStory(sentence: L("wait.story.taglineOnly \(title) \(tagline)")))
             }
-            if let picks = await Logger.extras.attempt("wait recommendations", { try await client.recommendedMovies(movieId: id) }), picks.count >= 2 {
+            if let picks = await Logger.extras.attempt("wait recommendations", { try await client.recommendedMovies(movieId: id, language: language) }), picks.count >= 2 {
                 let a = picks[0], b = picks[1]
-                let ownedPick = picks.prefix(4).first { owned[$0.id] != nil }
                 stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)"),
-                                         support: ownedPick.map { L("wait.story.alsoOwned \($0.title)") }))
+                                         posters: [a.posterPath, b.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
             }
         } else if let s = ctx.series, let id = await client.seriesId(tmdbId: s.tmdbId, tvdbId: s.tvdbId) {
-            if let f = await Logger.extras.attempt("wait series facts", { try await client.tvDetails(tvId: id) }), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
+            if let f = await Logger.extras.attempt("wait series facts", { try await client.tvDetails(tvId: id, language: language) }), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
                seasons > 0, let years = yearsAgo(s.year) {
-                let sentence = L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")
-                let support = s.network.map { L("wait.story.network \($0)") } ?? f.tagline.flatMap { $0.isEmpty ? nil : L("wait.story.tagline \($0)") }
-                stories.append(WaitStory(sentence: sentence, support: support))
+                stories.append(WaitStory(sentence: L("wait.story.series \(title) \(Self.seasons(seasons)) \(Self.episodes(episodes)) \(years)")))
             }
         }
 
-        stories += await peopleStories(ctx, client: client, owned: owned)
+        stories += await peopleStories(ctx, client: client, owned: owned, language: language)
         return stories.shuffled()
     }
 
     // MARK: - People
 
-    private static func peopleStories(_ ctx: WaitCardContext, client: TMDBClient, owned: [Int: String]) async -> [WaitStory] {
+    private static func peopleStories(_ ctx: WaitCardContext, client: TMDBClient, owned: [Int: String], language: String) async -> [WaitStory] {
         let people = ctx.cast.filter { ($0.tmdbPersonId ?? 0) > 0 }.prefix(5)
         var stories: [WaitStory] = []
         let today = Calendar.current.dateComponents([.month, .day], from: .now)
@@ -131,13 +127,11 @@ enum WaitStoryProvider {
         for person in people {
             guard let personId = person.tmdbPersonId else { continue }
             let details = await Logger.extras.attempt("wait person") { try await client.personDetails(personId: personId) }
-            let credits = await Logger.extras.attempt("wait person credits") { try await client.personMovieCredits(personId: personId) }
-            let portrait = WaitStory.Person(name: person.name, imageURL: details?.profileURL ?? person.imageURL)
+            let credits = await Logger.extras.attempt("wait person credits") { try await client.personMovieCredits(personId: personId, language: language) }
+            let portrait = WaitStory.Person(name: person.name, imageURL: details?.profileURL ?? person.imageURL,
+                                            role: person.role, tmdbPersonId: personId)
             let others = (credits?.cast ?? []).filter { $0.id != ctx.movie?.tmdbId && ($0.voteCount ?? 0) >= 100 }
             let hit = others.max { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }
-            let hitSupport = hit.map { h in
-                h.year.map { L("wait.story.knownForYear \(h.title) \($0)") } ?? L("wait.story.knownFor \(h.title)")
-            }
 
             var birthdayToday = false
             if let d = details, d.deathday == nil, let birthday = d.birthday, let born = date(birthday) {
@@ -147,22 +141,22 @@ enum WaitStoryProvider {
             if birthdayToday, let age = details?.age {
                 let ageText = Self.age(age)
                 let sentence = person.role.map { L("wait.story.birthdayRole \(person.name) \($0) \(ageText)") } ?? L("wait.story.birthday \(person.name) \(ageText)")
-                stories.append(WaitStory(sentence: sentence, support: hitSupport, people: [portrait]))
+                stories.append(WaitStory(sentence: sentence, people: [portrait]))
             } else if let place = details?.placeOfBirth, !place.isEmpty {
                 let sentence = person.role.map { L("wait.story.bornRole \(person.name) \($0) \(place)") } ?? L("wait.story.born \(person.name) \(place)")
-                stories.append(WaitStory(sentence: sentence, support: hitSupport, people: [portrait]))
+                stories.append(WaitStory(sentence: sentence, people: [portrait]))
             } else if let hit {
                 let sentence = L("wait.story.knownForSentence \(person.name) \(hit.title)")
-                stories.append(WaitStory(sentence: sentence, people: [portrait]))
+                stories.append(WaitStory(sentence: sentence, people: [portrait],
+                                         posters: [hit.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
             }
 
             if !owned.isEmpty,
                let other = others.filter({ owned[$0.id] != nil }).max(by: { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }),
                let otherTitle = owned[other.id] {
-                let watched = MediaServerIndex.shared.isWatched([.tmdbMovie(other.id)])
                 stories.append(WaitStory(sentence: L("wait.story.library \(person.name) \(otherTitle)"),
-                                         support: L(watched ? "wait.story.watched" : "wait.story.notWatched"),
-                                         people: [portrait]))
+                                         people: [portrait],
+                                         posters: [other.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
             }
         }
         return stories
@@ -185,13 +179,6 @@ enum WaitStoryProvider {
         return String(localized: "wait.frag.yearsAgo \(age)", bundle: .module)
     }
 
-    private static func runtime(_ minutes: Int?, perEpisode: Bool) -> String? {
-        guard let minutes, minutes > 0 else { return nil }
-        let length = Duration.seconds(minutes * 60)
-            .formatted(.units(allowed: [.hours, .minutes], width: .abbreviated))
-        return perEpisode ? L("wait.story.episodeRuntime \(length)") : L("wait.story.runtime \(length)")
-    }
-
     private static func date(_ s: String) -> Date? {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
@@ -202,111 +189,22 @@ enum WaitStoryProvider {
 
 // MARK: - Surface
 
-/// The wait screen for a manual search. Click the right side to skip ahead, the left to go back.
+/// The wait screen for a manual search: the title's cover at the centre of the fan, a "Did you know" under it.
 struct WaitStories: View {
     let context: WaitCardContext
-    var interval: TimeInterval = 7
 
     @EnvironmentObject private var configStore: ConfigStore
     @State private var stories: [WaitStory] = []
-    @State private var index = 0
-    @State private var forward = true
 
     var body: some View {
-        GeometryReader { proxy in
-            VStack(spacing: 28) {
-                HStack(alignment: .top, spacing: 18) {
-                    poster
-                    if !stories.isEmpty {
-                        let story = stories[index % stories.count]
-                        StoryText(story: story)
-                            .id(story.id)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: forward ? .trailing : .leading).combined(with: .opacity),
-                                removal: .opacity))
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                LoadingStateView(label: "wait.releases.heading")
-            }
-            .padding(.horizontal, 18)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .onTapGesture(coordinateSpace: .local) { point in
-                advance(point.x < proxy.size.width / 3 ? -1 : 1)
-            }
+        WaitStage(center: context.poster, stories: stories) {
+            LoadingStateView(label: "wait.releases.heading")
         }
         .task {
-            stories = WaitStoryProvider.localStories(context, locale: configStore.currentLocale).shuffled()
+            stories = WaitStoryProvider.localStories(context).shuffled()
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
-            // The story on screen stays put; everything after it is reshuffled with the new ones.
-            let current = stories.isEmpty ? [] : [stories[index % stories.count]]
-            let rest = (stories.filter { !current.contains($0) } + remote).shuffled()
-            index = 0
-            stories = current + rest
+            // The story on screen stays first; everything after it is reshuffled with the new ones.
+            stories = Array(stories.prefix(1)) + (Array(stories.dropFirst()) + remote).shuffled()
         }
-        .task(id: index) {
-            try? await Task.sleep(for: .seconds(interval))
-            guard !Task.isCancelled, stories.count > 1 else { return }
-            advance(1)
-        }
-    }
-
-    private func advance(_ step: Int) {
-        guard stories.count > 1 else { return }
-        forward = step > 0
-        withAnimation(.snappy(duration: 0.4)) {
-            index = (index + step + stories.count) % stories.count
-        }
-    }
-
-    private var poster: some View {
-        RemotePoster(url: context.posterURL, apiKey: context.posterApiKey, tier: .card,
-                     size: CGSize(width: 112, height: 168), cornerRadius: 8, fallbackSymbol: "film")
-            .rotationEffect(.degrees(-3))
-            .shadow(color: .black.opacity(0.35), radius: 14, y: 8)
-            .padding(.top, 6)
-    }
-}
-
-private struct StoryText: View {
-    let story: WaitStory
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("wait.story.lead", bundle: .module)
-                .scaledFont(size: 11, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-                .kerning(0.9)
-            Text(markdown(story.sentence))
-                .scaledFont(size: 17, weight: .regular)
-                .foregroundStyle(.primary)
-                .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
-            if let support = story.support {
-                Text(markdown(support))
-                    .scaledFont(size: 13)
-                    .foregroundStyle(.secondary)
-                    .lineSpacing(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if !story.people.isEmpty {
-                HStack(spacing: -10) {
-                    ForEach(Array(story.people.prefix(4).enumerated()), id: \.offset) { _, person in
-                        RemotePoster(url: person.imageURL, apiKey: nil, tier: .icon,
-                                     size: CGSize(width: 34, height: 34), cornerRadius: 17,
-                                     fallbackSymbol: "person.fill")
-                            .overlay(Circle().strokeBorder(.background, lineWidth: 1.5))
-                    }
-                }
-                .padding(.top, 2)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func markdown(_ s: String) -> AttributedString {
-        (try? AttributedString(markdown: s, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(s)
     }
 }

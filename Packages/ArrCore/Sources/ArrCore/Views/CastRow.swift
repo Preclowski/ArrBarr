@@ -151,7 +151,8 @@ private struct CastTile: View {
 }
 
 #if os(macOS)
-private struct CastTooltip: View {
+/// Also the wait screen's person card, so a face reads the same everywhere.
+struct CastTooltip: View {
     let person: CastMember
     let tmdbKey: String
     /// Loaded here, not in the anchor, so the anchor's `isPresented` never blinks.

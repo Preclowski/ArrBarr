@@ -14,6 +14,7 @@ struct ReleaseListView: View {
     let onBack: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var releases: [ArrRelease] = []
     @State private var loading = true
@@ -33,7 +34,6 @@ struct ReleaseListView: View {
     @State private var showRejected = false
     /// Empty until it loads; the row falls back to the arr's own label meanwhile.
     @State private var indexerNames: [Int: String] = [:]
-    @Environment(\.colorScheme) private var colorScheme
 
     private enum ScopeFilter { case all, packs, episodes }
 
@@ -66,9 +66,7 @@ struct ReleaseListView: View {
                     .lineLimit(1)
                 Spacer(minLength: 0)
                 if !releases.isEmpty {
-                    Text(verbatim: "\(releases.count)")
-                        .scaledFont(size: 11, weight: .medium, monospacedDigit: true)
-                        .foregroundStyle(.tertiary)
+                    viewMenu
                 }
             }
             .padding(.horizontal, 12)
@@ -77,6 +75,9 @@ struct ReleaseListView: View {
             #endif
             content
         }
+        // The wait stage runs under the header too, and the header reads on it.
+        .background { if loading { WaitBackdrop(poster: waitContext.poster) } }
+        .environment(\.colorScheme, loading ? .dark : colorScheme)
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -112,14 +113,10 @@ struct ReleaseListView: View {
         } else if releases.isEmpty {
             statusState(symbol: "magnifyingglass", text: Text("No releases found", bundle: .module))
         } else if visible.isEmpty {
-            // An empty scroll area under a filter bar would read as "the search found nothing".
-            VStack(spacing: 0) {
-                filterBar
-                statusState(symbol: "line.3.horizontal.decrease.circle",
-                            text: Text("Every result is filtered out.", bundle: .module))
-            }
+            // Said outright: an empty list would read as "the search found nothing".
+            statusState(symbol: "line.3.horizontal.decrease.circle",
+                        text: Text("Every result is filtered out.", bundle: .module))
         } else {
-            filterBar
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(visible) { release in
@@ -153,6 +150,7 @@ struct ReleaseListView: View {
                     showGrabConfirm = true
                 }
             )
+            #if os(iOS)
             if isExpanded {
                 ReleaseDetail(release: release, existing: baseline(for: release),
                               indexerName: indexerName(for: release))
@@ -160,40 +158,26 @@ struct ReleaseListView: View {
                     .padding(.top, 2)
                     .padding(.bottom, 12)
             }
+            #endif
         }
         .background(isExpanded ? drawerFill : Color.clear)
         Divider().opacity(0.35)
     }
 
     private var drawerFill: Color {
-        Color.black.opacity(colorScheme == .dark ? 0.28 : 0.06)
-    }
-
-    /// macOS only: iOS carries the same menu in the navigation bar.
-    @ViewBuilder
-    private var filterBar: some View {
-        #if os(macOS)
-        HStack(spacing: 8) {
-            Spacer(minLength: 0)
-            viewMenu
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.primary.opacity(0.04))
-        Divider().opacity(0.5)
-        #endif
+        Color.primary.opacity(0.05)
     }
 
     /// Rejected releases need an override to grab, so they stay hidden until toggled on.
     private var viewMenu: some View {
-        Menu {
+        TrailingMenu {
             Section {
                 Picker(selection: $sort) {
                     ForEach(ReleaseSort.allCases, id: \.self) { $0.title.tag($0) }
                 } label: { Text("Sort", bundle: .module) }
                 .pickerStyle(.inline)
                 .labelsHidden()
-            } header: { Text("Sort", bundle: .module) }
+            }
             Section {
                 if target.isSeasonSearch {
                     Picker(selection: $scope.animation(.easeInOut(duration: 0.15))) {
@@ -208,13 +192,16 @@ struct ReleaseListView: View {
                     Text("release.showRejected \(rejected.count)", bundle: .module)
                 }
                 .disabled(rejected.isEmpty)
-            } header: { Text("release.filter.header", bundle: .module) }
+            }
         } label: {
+            #if os(macOS)
+            HeaderGlyph(systemName: "slider.horizontal.3")
+            #else
             Label { Text("View", bundle: .module) } icon: { Image(systemName: "slider.horizontal.3") }
-                .scaledFont(size: 11, weight: .medium)
+            #endif
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
+        .help(Text("View", bundle: .module))
+        .accessibilityLabel(Text("View", bundle: .module))
     }
 
     private func statusState(symbol: String, text: Text) -> some View {
@@ -342,36 +329,52 @@ private struct ReleaseRow: View {
     let onTap: () -> Void
     let onGrab: () -> Void
 
-    @State private var hovering = false
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: onTap) {
-                VStack(alignment: .leading, spacing: 3) {
-                    titleLine
-                    specLine
-                    reasonLine
-                }
-                .padding(.leading, 14)
-                .padding(.trailing, 8)
-                .padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(Text("Opens the release's details.", bundle: .module))
-            // Outside the expand button, so a click here grabs instead of opening the drawer.
+            #if os(macOS)
+            lines
+            #else
+            Button(action: onTap) { lines }
+                .buttonStyle(.plain)
+                .accessibilityHint(Text("Opens the release's details.", bundle: .module))
+            #endif
+            // Its own control, so reading a row never grabs it.
             grabControl
                 .padding(.trailing, 12)
         }
         #if os(macOS)
-        // Hover previews the same detail with no actions; grabbing stays a deliberate expand.
-        .hoverTooltip(enabled: !isExpanded, delay: .milliseconds(400), hovering: $hovering) {
+        // The hover card is the whole detail; the indexer's page moves to the context menu.
+        .hoverTooltip(delay: .milliseconds(400)) {
             ReleaseDetail(release: release, existing: existing, indexerName: indexerName, showsLink: false)
                 .padding(12)
                 .frame(width: 340)
         }
+        .contextMenu {
+            if let info = release.infoUrl, let url = URL(string: info) {
+                Button { PlatformURLOpener.open(url) } label: {
+                    if let indexerName {
+                        Text("Open in \(indexerName)", bundle: .module)
+                    } else {
+                        Text("Open in browser", bundle: .module)
+                    }
+                }
+            }
+        }
         #endif
+    }
+
+    private var lines: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            titleLine
+            specLine
+            reasonLine
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
     }
 
     private var titleLine: some View {
@@ -381,16 +384,17 @@ private struct ReleaseRow: View {
             }
             // Not dimmed when rejected: the name is what the user scans every row for.
             Text(verbatim: release.shortTitle)
-                .scaledFont(size: 12, weight: .medium)
+                .scaledFont(size: 12)
                 .foregroundStyle(.primary)
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 4)
+            #if os(iOS)
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 .scaledFont(size: 10, weight: .semibold)
-                .foregroundStyle(hovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-                .animation(.easeInOut(duration: 0.12), value: hovering)
+                .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
+            #endif
         }
     }
 
@@ -400,7 +404,7 @@ private struct ReleaseRow: View {
                 TagChip(text: release.protocolLabel, color: release.isTorrent ? .green : .orange)
             }
             Text(verbatim: specs)
-                .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
+                .scaledFont(size: 11, monospacedDigit: true)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .truncationMode(.middle)
@@ -414,21 +418,19 @@ private struct ReleaseRow: View {
             let age = release.ageLabel ?? "—"
             ReleaseLeadCell {
                 Text(verbatim: age)
-                    .scaledFont(size: 10, weight: .medium, monospacedDigit: true)
+                    .scaledFont(size: 11, monospacedDigit: true)
                     .foregroundStyle(.secondary)
                     .accessibilityLabel(Text("Age", bundle: .module))
                     .accessibilityValue(Text(verbatim: age))
             }
-            if release.isRejected {
-                Text(verbatim: rejectionSummary)
-                    .scaledFont(size: 10, weight: .medium)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            } else {
-                HStack(spacing: 5) {
-                    ForEach(reasons, id: \.text) { reason in
+            HStack(spacing: 5) {
+                ForEach(reasons, id: \.text) { reason in
+                    if reason.isFormat {
+                        TagChip(text: reason.text, color: reason.color)
+                            .lineLimit(1)
+                    } else {
                         Text(verbatim: reason.text)
-                            .scaledFont(size: 10, weight: .medium)
+                            .scaledFont(size: 11)
                             .foregroundStyle(reason.color)
                             .lineLimit(1)
                     }
@@ -460,7 +462,7 @@ private struct ReleaseRow: View {
                 .accessibilityLabel(Text("Sending to download client", bundle: .module))
         } else if isGrabbed {
             Label { Text("queue.downloading.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle.fill") }
-                .scaledFont(size: 10, weight: .medium)
+                .scaledFont(size: 11)
                 .foregroundStyle(QueueItem.Status.downloading.tint)
         } else {
             Button(action: onGrab) {
@@ -479,7 +481,7 @@ private struct ReleaseRow: View {
     @ViewBuilder
     private var scoreCell: some View {
         if let score = release.customFormatScore {
-            ScoreLabel(score: score, baseline: existing?.score, size: 10)
+            ScoreLabel(score: score, baseline: existing?.score, size: 11)
         }
     }
 
@@ -496,45 +498,19 @@ private struct ReleaseRow: View {
         return parts.joined(separator: " · ")
     }
 
-    private var reasons: [(text: String, color: Color)] {
-        var out: [(text: String, color: Color)] = []
+    private var reasons: [(text: String, color: Color, isFormat: Bool)] {
+        var out: [(text: String, color: Color, isFormat: Bool)] = []
         let languages = (release.languages ?? []).compactMap(\.name)
         if languages.count > 1 || (languages.first.map { $0 != "English" } ?? false) {
-            out.append((languages.joined(separator: ", "), .secondary))
+            out.append((languages.joined(separator: ", "), .secondary, false))
         }
-        out += release.indexerFlagNames.map { (text: $0, color: Color.green) }
+        out += release.indexerFlagNames.map { (text: $0, color: Color.green, isFormat: false) }
         let baseline = Set(existing?.formats ?? [])
         let formats = (release.customFormats ?? []).compactMap(\.name)
-        out += formats.map { (text: $0, color: existing != nil && !baseline.contains($0) ? Color.green : Color.secondary) }
+        out += formats.map { (text: $0, color: existing != nil && !baseline.contains($0) ? Color.green : Color.primary, isFormat: true) }
         guard out.count > 4 else { return out }
-        return Array(out.prefix(3)) + [(text: "+\(out.count - 3)", color: .secondary)]
+        return Array(out.prefix(3)) + [(text: "+\(out.count - 3)", color: .secondary, isFormat: false)]
     }
-
-    /// The arr's own rejection sentence is a paragraph; on twenty rows it looks broken, not filtered.
-    private var rejectionSummary: String {
-        guard let first = release.rejections?.first else { return "" }
-        let text = first.lowercased()
-        let key: String.LocalizationValue?
-        switch true {
-        case text.contains("in queue"): key = "rejection.inQueue"
-        case text.contains("custom format score"): key = "rejection.lowerScore"
-        case text.contains("not an upgrade"): key = "rejection.notAnUpgrade"
-        case text.contains("already imported"), text.contains("already in"): key = "rejection.alreadyImported"
-        case text.contains("language"): key = "rejection.language"
-        case text.contains("blocklist"), text.contains("blacklist"): key = "rejection.blocklisted"
-        case text.contains("cutoff"): key = "rejection.cutoff"
-        case text.contains("size"): key = "rejection.size"
-        case text.contains("release group"): key = "rejection.releaseGroup"
-        case text.contains("quality"): key = "rejection.quality"
-        default: key = nil
-        }
-        guard let key else {
-            let clause = first.split(whereSeparator: { $0 == "." || $0 == ":" }).first.map(String.init) ?? first
-            return clause.count > 40 ? String(clause.prefix(38)) + "…" : clause
-        }
-        return String(localized: key, bundle: .module)
-    }
-
 }
 
 // MARK: - Detail
@@ -562,7 +538,7 @@ private struct ReleaseDetail: View {
                         label("Score")
                         // Zero is printed: an empty cell next to a label reads as missing data.
                         Text(verbatim: ScoreLabel.text(score))
-                            .scaledFont(size: 10, monospacedDigit: true)
+                            .scaledFont(size: 11, monospacedDigit: true)
                             .foregroundStyle(ScoreLabel.color(score))
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
@@ -609,7 +585,7 @@ private struct ReleaseDetail: View {
 
     private func label(_ key: LocalizedStringKey) -> some View {
         Text(key, bundle: .module)
-            .scaledFont(size: 10)
+            .scaledFont(size: 11)
             .foregroundStyle(.secondary)
             .frame(width: 96, alignment: .leading)
     }
@@ -618,7 +594,7 @@ private struct ReleaseDetail: View {
         HStack(alignment: .top, spacing: 8) {
             label(key)
             Text(verbatim: value)
-                .scaledFont(size: 10)
+                .scaledFont(size: 11)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .fixedSize(horizontal: false, vertical: true)
         }

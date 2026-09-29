@@ -34,13 +34,18 @@ struct EpisodeDetailOverlay: View {
     var mediaServerKeys: [MediaServerExternalKey] = []
     /// The SERIES cast (TMDB has no per-episode credits worth the extra call).
     var cast: [CastMember] = []
-    /// Most `statusMessages` are only actionable in the arr's own UI, so the warning banner links there.
-    let warningActionURL: URL?
+    /// The series in the arr's web UI: "Open in browser", and the warning banners, whose
+    /// `statusMessages` are mostly only actionable there.
+    let seriesWebURL: URL?
     var isLoadingDetails: Bool = false
     /// Passed explicitly: `episode` is the snapshot captured by `.navigationDestination(item:)`,
     /// so reading the flag from it would never change after a toggle.
     var monitored: Bool? = nil
     var onToggleMonitored: ((Bool) async -> Void)? = nil
+    /// The parent reloads its files; nil offers no file delete.
+    var onFileDeleted: (() -> Void)? = nil
+    /// The queue row this opened from, whose context menu may have staged an intent for it.
+    var intentItemID: String? = nil
 
     @ViewBuilder
     private var monitorPosterToggle: some View {
@@ -50,6 +55,7 @@ struct EpisodeDetailOverlay: View {
     }
 
     @State private var searchFeedback: SearchFeedback = .idle
+    @State private var actionState = DetailActionState()
     @State private var ctaPendingDelete = false
     @State private var enlargedPoster: URL?
     /// Own wrapper type: SwiftUI ignores all but the root-most `.navigationDestination` for a type,
@@ -59,8 +65,6 @@ struct EpisodeDetailOverlay: View {
     @State private var personRef: PersonRef?
     @State private var episodeRating: EpisodeRatingProvider.Rating?
     @EnvironmentObject private var configStore: ConfigStore
-    /// The detached NSWindow draws no NavigationStack chevron; without our own back header this is a nav trap.
-    @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     private var hasAired: Bool {
         guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
@@ -92,7 +96,7 @@ struct EpisodeDetailOverlay: View {
         queueItems: [QueueItem] = [],
         onClose: @escaping () -> Void,
         onSearch: ((Int) async throws -> Void)?,
-        warningActionURL: URL? = nil,
+        seriesWebURL: URL? = nil,
         onPauseEpisode: ((QueueItem) async -> Void)? = nil,
         onResumeEpisode: ((QueueItem) async -> Void)? = nil,
         onDeleteEpisode: ((QueueItem) -> Void)? = nil,
@@ -108,7 +112,9 @@ struct EpisodeDetailOverlay: View {
         mediaServerKeys: [MediaServerExternalKey] = [],
         isLoadingDetails: Bool = false,
         monitored: Bool? = nil,
-        onToggleMonitored: ((Bool) async -> Void)? = nil
+        onToggleMonitored: ((Bool) async -> Void)? = nil,
+        onFileDeleted: (() -> Void)? = nil,
+        intentItemID: String? = nil
     ) {
         self.episode = episode
         self.seriesTitle = seriesTitle
@@ -119,7 +125,7 @@ struct EpisodeDetailOverlay: View {
         self.queueItems = queueItems
         self.onClose = onClose
         self.onSearch = onSearch
-        self.warningActionURL = warningActionURL
+        self.seriesWebURL = seriesWebURL
         self.onPauseEpisode = onPauseEpisode
         self.onResumeEpisode = onResumeEpisode
         self.onDeleteEpisode = onDeleteEpisode
@@ -136,6 +142,8 @@ struct EpisodeDetailOverlay: View {
         self.isLoadingDetails = isLoadingDetails
         self.monitored = monitored
         self.onToggleMonitored = onToggleMonitored
+        self.onFileDeleted = onFileDeleted
+        self.intentItemID = intentItemID
     }
 
     var body: some View {
@@ -153,17 +161,7 @@ struct EpisodeDetailOverlay: View {
                     .foregroundStyle(.primary)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                headerSearchMenu
-                if let url = warningActionURL {
-                    Button { PlatformURLOpener.open(url) } label: {
-                        Image(systemName: "safari")
-                            .scaledFont(size: 14, weight: .medium)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(Text("detail.openInBrowser.button", bundle: .module))
-                    .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
-                }
+                headerMenu
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -205,27 +203,14 @@ struct EpisodeDetailOverlay: View {
                             waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL),
                             onBack: { manualSearchTarget = nil })
         }
+        .detailActionsHost($actionState) { _ in onFileDeleted?() }
+        .onDetailIntent(for: intentItemID, ready: !isLoadingDetails) { detailActions.carryOut($0, state: $actionState) }
         #if os(iOS)
         .navigationTitle(navTitleString)
         .navigationBarTitleDisplayMode(.inline)
-        #else
-        .toolbar(.hidden, for: .windowToolbar)
-        #endif
-        // Single `.primaryAction` group: several `.automatic` items get hidden on macOS.
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                #if os(iOS)
-                headerSearchMenu
-                #endif
-                // The toolbar doesn't render in the hand-built detached NSWindow.
-                if !isDetachedWindow, let url = warningActionURL {
-                    Button { PlatformURLOpener.open(url) } label: {
-                        Image(systemName: "safari")
-                    }
-                    .help(Text("detail.openInBrowser.button", bundle: .module))
-                    .accessibilityLabel(Text("detail.openInBrowser.button", bundle: .module))
-                }
-                #if os(iOS)
+                headerMenu
                 // With duplicate downloads each block has its own trash, so a toolbar one would be ambiguous.
                 if queueItems.count == 1, onDeleteEpisode != nil {
                     Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
@@ -236,9 +221,11 @@ struct EpisodeDetailOverlay: View {
                     .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
                     .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
                 }
-                #endif
             }
         }
+        #else
+        .toolbar(.hidden, for: .windowToolbar)
+        #endif
         // `.confirmationDialog` doesn't work inside MenuBarExtra panels (see InlineConfirm.swift).
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
@@ -279,31 +266,28 @@ struct EpisodeDetailOverlay: View {
         }
     }
 
-    /// Aired episodes only. Without an auto-search closure a one-item menu is pointless, so the glyph opens the release list.
-    @ViewBuilder
-    private var headerSearchMenu: some View {
+    private var headerMenu: some View {
+        DetailActionsMenu(actions: detailActions, state: $actionState, feedback: searchFeedback)
+    }
+
+    /// Search once aired; an episode has no record to edit, and delete takes only its file.
+    private var detailActions: DetailActions {
+        var actions = DetailActions(webURL: seriesWebURL)
         if hasAired {
-            if onSearch != nil {
-                HeaderSearchMenu(
-                    feedback: searchFeedback,
-                    onAutomatic: { performSearch() },
-                    onManual: { manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString)) }
-                )
-            } else {
-                Button {
-                    manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString))
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .help(Text("Manual search", bundle: .module))
-                .accessibilityLabel(Text("Manual search", bundle: .module))
-            }
+            actions.search = DetailActions.Search(
+                isSending: searchFeedback.isSending,
+                onAutomatic: onSearch.map { _ in { performSearch() } },
+                onManual: { manualSearchTarget = EpisodeReleaseSearch(target: .episode(episodeId: episode.id, title: navTitleString)) })
         }
+        // id 0 is the queue's pre-fetch stub.
+        guard let seriesId = episode.seriesId, episode.id != 0 else { return actions }
+        let title = "\(seriesTitle) · \(EpisodeCode.string(season: episode.seasonNumber ?? 0, episode: episode.episodeNumber ?? 0))"
+        actions.history = HistoryTarget(source: .sonarr, scope: .episode(seriesId: seriesId, episodeId: episode.id), title: title)
+        if let fileId = episodeFile?.id, onFileDeleted != nil {
+            actions.delete = MediaDeleteRequest(source: .sonarr, target: .episodeFile(id: fileId, seriesId: seriesId), title: title)
+            actions.deleteLabel = "detail.deleteFile.button"
+        }
+        return actions
     }
 
     @ViewBuilder
@@ -514,7 +498,7 @@ struct EpisodeDetailOverlay: View {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,
                     tint: q.status.tint,
-                    actionURL: warningActionURL
+                    actionURL: seriesWebURL
                 )
             }
             ReleaseNameBlock(release: q.releaseName)
@@ -544,7 +528,7 @@ struct EpisodeDetailOverlay: View {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,
                     tint: q.status.tint,
-                    actionURL: warningActionURL
+                    actionURL: seriesWebURL
                 )
             }
         }
@@ -559,7 +543,7 @@ struct EpisodeDetailOverlay: View {
                 QueueStatusMessagesBanner(
                     messages: q.statusMessages,
                     tint: q.status.tint,
-                    actionURL: warningActionURL
+                    actionURL: seriesWebURL
                 )
             }
             if !q.customFormats.isEmpty {
