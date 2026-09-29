@@ -90,10 +90,9 @@ extension ConfigStore {
         self.tonightVisibleCount = value(Keys.tonightVisibleCount, 3)
         self.welcomeSeenVersion = defaults.string(forKey: Keys.welcomeSeenVersion)
         self.aiEnabled = value(Keys.aiEnabled, false)
-        // Coerce to OpenAI where Foundation Models is unsupported: the picker hides that
-        // option, so a stored `.foundationModels` would show OpenAI but resolve to Unavailable.
+        // Coerce to OpenAI only on hardware that can never run Foundation Models: the picker hides that option.
         let storedProvider = ChatProvider(rawValue: value(Keys.chatProvider, "")) ?? .foundationModels
-        self.chatProvider = (storedProvider == .foundationModels && !FoundationModelsAvailability.isSupported)
+        self.chatProvider = (storedProvider == .foundationModels && !FoundationModelsAvailability.isOffered)
             ? .openai
             : storedProvider
         self.openai = decoded(OpenAIConfig.self, forKey: Self.openaiConfigKey) ?? .empty

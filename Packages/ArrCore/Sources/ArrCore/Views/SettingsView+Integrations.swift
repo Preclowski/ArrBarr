@@ -1,4 +1,5 @@
 import SwiftUI
+import FoundationModels
 
 extension SettingsView {
     @ViewBuilder
@@ -10,9 +11,9 @@ extension SettingsView {
             Section {
                 Picker(selection: Bindable(configStore).chatProvider) {
                     ForEach(ChatProvider.allCases.filter {
-                        $0 != .foundationModels || FoundationModelsAvailability.isSupported
+                        $0 != .foundationModels || FoundationModelsAvailability.isOffered
                     }) { p in
-                        Text(p.displayName).tag(p)
+                        (p == .foundationModels ? FoundationModelsAvailability.pickerLabel : Text(p.displayName)).tag(p)
                     }
                 } label: { Text("settings.aiProvider.button", bundle: .module) }
                 if configStore.chatProvider == .openai {
@@ -191,6 +192,20 @@ extension SettingsView {
             ServiceIcon(prowlarr: 12)
                 .accessibilityHidden(true)
             Text(verbatim: "Prowlarr")
+        }
+    }
+}
+
+private extension FoundationModelsAvailability {
+    /// The picker label, naming why the model can't answer yet.
+    static var pickerLabel: Text {
+        switch SystemLanguageModel.default.availability {
+        case .unavailable(.modelNotReady):
+            return Text("settings.aiProvider.appleIntelligence.downloading", bundle: .module)
+        case .unavailable(.appleIntelligenceNotEnabled):
+            return Text("settings.aiProvider.appleIntelligence.off", bundle: .module)
+        default:
+            return Text(ChatProvider.foundationModels.displayName)
         }
     }
 }

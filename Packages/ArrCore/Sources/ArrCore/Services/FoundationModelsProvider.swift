@@ -3,15 +3,23 @@ import Foundation
 import FoundationModels
 import MediaKit
 
-/// Apple Intelligence supported AND enabled, not just a recent-enough OS.
 enum FoundationModelsAvailability {
+    /// Ready to answer: eligible hardware, Apple Intelligence on, model downloaded.
     nonisolated static var isSupported: Bool {
         if case .available = SystemLanguageModel.default.availability { return true }
         return false
     }
+
+    /// Eligible hardware. The model may still be downloading or switched off, which is temporary,
+    /// so a choice of Apple Intelligence is kept rather than swapped for another provider.
+    nonisolated static var isOffered: Bool {
+        if case .unavailable(.deviceNotEligible) = SystemLanguageModel.default.availability { return false }
+        return true
+    }
 }
 
 struct FoundationModelsProvider: LLMProvider {
+    private static let log = Logger(category: "Chat")
 
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     /// Uses the same ConfirmActionCard as the OpenAI path; returns args to proceed, or nil to cancel.
@@ -35,11 +43,21 @@ struct FoundationModelsProvider: LLMProvider {
         history: [ChatMessage]
     ) async throws -> LLMResponse {
         let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
-        let session = LanguageModelSession(tools: toolImpls, transcript: Self.transcript(tools: tools, toolImpls: toolImpls, history: history))
+        func session(_ history: [ChatMessage]) -> LanguageModelSession {
+            LanguageModelSession(tools: toolImpls, transcript: Self.transcript(tools: tools, toolImpls: toolImpls, history: history))
+        }
         // A cancelled turn leaves its tool calls behind; they'd render as stale cards on this one.
         _ = await DynamicMCPToolBox.shared.drainResults()
 
-        let result = try await session.respond(to: prompt)
+        let result: LanguageModelSession.Response<String>
+        do {
+            result = try await session(history).respond(to: prompt)
+        } catch LanguageModelSession.GenerationError.exceededContextWindowSize where !history.isEmpty {
+            // Earlier turns are the only part that can give way; the instructions and tools must fit alone.
+            Self.log.notice("context window full, retrying without earlier turns")
+            _ = await DynamicMCPToolBox.shared.drainResults()
+            result = try await session([]).respond(to: prompt)
+        }
         let (calls, texts, richs) = await DynamicMCPToolBox.shared.drainResults()
         if calls.isEmpty {
             return LLMResponse(text: result.content)
@@ -52,7 +70,7 @@ struct FoundationModelsProvider: LLMProvider {
 
     /// Earlier turns enter as transcript entries: replaying them through `respond(to:)` regenerated every
     /// turn and re-ran its tools.
-    nonisolated private static func transcript(tools: [ToolDefinition], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
+    nonisolated static func transcript(tools: [ToolDefinition], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
         func text(_ content: String) -> [Transcript.Segment] { [.text(.init(content: content))] }
         var entries: [Transcript.Entry] = [.instructions(.init(
             segments: text(instructions(tools: tools)),
@@ -69,18 +87,6 @@ struct FoundationModelsProvider: LLMProvider {
     }
 
     nonisolated private static func instructions(tools: [ToolDefinition]) -> String {
-        // Foundation Models sees one stringified `json` argument per tool, so each schema is spelled out here.
-        let encoder = JSONEncoder()
-        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let toolBlock = tools.map { t -> String in
-            let schemaJSON = (try? String(data: encoder.encode(t.inputSchema), encoding: .utf8)) ?? "{}"
-            return """
-            • Tool: \(t.name)
-              Purpose: \(t.description)
-              Args (JSON): \(schemaJSON)
-            """
-        }.joined(separator: "\n\n")
-
         return """
             You are ArrBarr's in-app assistant for \(SystemPromptComposer.arrsClause(tools: tools)) — and a film, TV and music obsessive at heart.
             \(tools.isEmpty ? "" : (LibraryStats.shared.promptBlock() ?? ""))
@@ -88,18 +94,10 @@ struct FoundationModelsProvider: LLMProvider {
             \(SystemPromptComposer.persona)
             Match the user's language. (This on-device model's output language is bounded by the system Apple Intelligence setting, so there's no point forcing a specific one here.) Keep media titles exactly as the user wrote them.
 
-            Tools you can call. For each tool the `json` argument MUST be a
-            JSON-encoded object matching the schema shown:
-
-            \(toolBlock)
-
             How to call a tool:
-            - Build the JSON object per the schema, then pass it as the
-              tool's `json` argument (e.g. {"query": "Severance"}).
-            - For add-style tools, first run the matching search tool and
-              pass the returned tvdbId/tmdbId; don't guess ids.
-            - If a search returns multiple matches, ask the user which one
-              before calling an add tool.
+            - Build a JSON object per the schema in the tool's description,
+              then pass it as the tool's `json` argument
+              (e.g. {"query": "Severance"}).
             - Questions about what the user ALREADY HAS never go to the
               *_search tools — those find NEW content to add from
               TVDB/TMDB. Route them like this:
@@ -114,7 +112,7 @@ struct FoundationModelsProvider: LLMProvider {
               what was played; check_titles answers both at once.
 
             Otherwise, answer directly without calling a tool.
-            Never invent tool names that are not listed above.
+            Never invent tool names; call only the tools you were given.
 
             \(SystemPromptComposer.formattingClause)
 
@@ -159,7 +157,14 @@ struct DynamicMCPTool: Tool {
     let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
     var name: String { spec.name }
-    var description: String { spec.description }
+    /// The schema rides in the description: the tool definitions already reach the model, the instructions
+    /// needn't repeat them.
+    var description: String {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let schema = (try? String(data: encoder.encode(spec.inputSchema), encoding: .utf8)) ?? "{}"
+        return spec.description + "\nArgs (JSON): " + schema
+    }
 
     @Generable
     struct Arguments {

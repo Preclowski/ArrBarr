@@ -30,14 +30,12 @@ struct ConfigStoreChatTests {
         #expect(s2.aiEnabled == true)
     }
 
-    @Test("defaults: chatProvider foundationModels (or openai when FM unsupported), openai empty")
+    @Test("defaults: chatProvider foundationModels (or openai on ineligible hardware), openai empty")
     func defaultsProvider() {
         let d = freshDefaults()
         let store = ConfigStore(defaults: d, secrets: InMemorySecretStore())
-        // Default is Apple Intelligence, but it's coerced to OpenAI on devices
-        // that don't support Foundation Models so the Settings picker doesn't
-        // visually lie (it hides the unsupported option).
-        let expected: ChatProvider = FoundationModelsAvailability.isSupported ? .foundationModels : .openai
+        // A model still downloading keeps the choice; only ineligible hardware, where the picker hides it, falls back.
+        let expected: ChatProvider = FoundationModelsAvailability.isOffered ? .foundationModels : .openai
         #expect(store.chatProvider == expected)
         #expect(store.openai == .empty)
     }
