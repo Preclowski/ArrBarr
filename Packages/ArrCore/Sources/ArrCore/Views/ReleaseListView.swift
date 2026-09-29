@@ -14,6 +14,7 @@ struct ReleaseListView: View {
     let onBack: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var releases: [ArrRelease] = []
     @State private var loading = true
@@ -71,9 +72,19 @@ struct ReleaseListView: View {
             .padding(.horizontal, 12)
             .padding(.top, 10)
             .padding(.bottom, 4)
+            // On the cover while the indexers answer.
+            .environment(\.colorScheme, loading ? .dark : colorScheme)
             #endif
             content
         }
+        .background {
+            if loading {
+                WaitPosterLayer(poster: waitContext.poster)
+                    .transition(.opacity)
+            }
+        }
+        // The results rise over the cover like a sheet instead of replacing the screen.
+        .animation(.smooth(duration: 0.8), value: loading)
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)
@@ -104,6 +115,7 @@ struct ReleaseListView: View {
         if loading {
             WaitStories(context: waitContext)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .transition(.opacity)
         } else if let loadError {
             statusState(symbol: "exclamationmark.triangle", text: Text(verbatim: loadError))
         } else if releases.isEmpty {
@@ -121,6 +133,7 @@ struct ReleaseListView: View {
                 }
                 .padding(.vertical, 4)
             }
+            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

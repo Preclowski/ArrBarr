@@ -1,38 +1,36 @@
 import SwiftUI
 
+/// The quiz before its first card: a library cover blurred full-bleed where the card will be,
+/// a story where its title will be, Cancel where its buttons will be.
 struct QuizLoadingView: View {
     let phase: DiscoverViewModel.LoadPhase
     let startedAt: Date?
-    /// Covers of the picks resolved so far; the fan shows the newest three.
+    /// Covers of the picks resolved so far; the newest takes over the backdrop.
     let posters: [URL]
     let onCancel: () -> Void
 
     @EnvironmentObject private var configStore: ConfigStore
-    /// Stand-ins from the user's library until the model's picks start landing.
+    /// A stand-in from the user's library until the model's picks start landing.
     @State private var library: [URL] = LibraryPosterSampler.cached ?? []
     @State private var stories: [WaitStory] = []
 
     private static let slowAfter: TimeInterval = 20
 
     var body: some View {
-        let covers = posters.isEmpty ? library : Array(posters.reversed())
-        WaitStage(covers: covers.map { WaitPoster(url: $0) }, slotCount: 3, stories: stories) {
-            VStack(spacing: 10) {
-                LoadingStateView(label: phaseKey)
-                    .contentTransition(.opacity)
-                    .animation(.smooth(duration: 0.2), value: phase)
-                slowHint
-                Button(action: onCancel) {
-                    Text("Cancel", bundle: .module)
-                        .scaledFont(size: 13, weight: .medium)
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 8)
-                        .background(Color.primary.opacity(0.08), in: Capsule())
+        ZStack(alignment: .bottom) {
+            WaitPosterLayer(poster: (posters.last ?? library.first).map { WaitPoster(url: $0) }, blurred: true)
+            WaitStage(stories: stories) {
+                VStack(alignment: .leading, spacing: 6) {
+                    WaitStatusLine(label: phaseKey)
+                        .animation(.smooth(duration: 0.3), value: phase)
+                    slowHint
                 }
-                .buttonStyle(.plain)
             }
+            .padding(.bottom, QuizLayout.cardBottomInset)
+            GlassCircleButton(systemName: "xmark", tint: .secondary, accessibilityKey: "Cancel", action: onCancel)
+                .padding(.bottom, QuizLayout.buttonBottomPadding)
         }
+        .environment(\.colorScheme, .dark)
         .task {
             stories = WaitFacts.watching().shuffled().map { WaitStory(sentence: $0.text) }
             let owned = await WaitFacts.library(configStore: configStore)
@@ -56,7 +54,6 @@ struct QuizLoadingView: View {
                 Text("discover.loading.slow", bundle: .module)
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
             }
         }
     }

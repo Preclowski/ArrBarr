@@ -57,12 +57,18 @@ struct DiscoverTabView: View {
     }
 
     var body: some View {
-        if let phase = viewModel.loadPhase {
-            QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt,
-                            posters: viewModel.loadingPosters, onCancel: onCancelLoading)
-        } else {
-            swipeSurface
+        ZStack {
+            if let phase = viewModel.loadPhase {
+                QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt,
+                                posters: viewModel.loadingPosters, onCancel: onCancelLoading)
+                    .transition(.blurReplace)
+            } else {
+                // The first card comes into focus out of the blurred wait, like a print developing.
+                swipeSurface
+                    .transition(.blurReplace)
+            }
         }
+        .animation(.smooth(duration: 0.9), value: viewModel.loadPhase == nil)
     }
 
     // MARK: - Immersive swipe surface
@@ -305,7 +311,7 @@ struct DiscoverTabView: View {
                     GlassCircleButton(
                         systemName: "arrow.uturn.backward",
                         tint: .secondary,
-                        diameter: Layout.buttonDiameter * 0.72,
+                        diameter: QuizLayout.buttonDiameter * 0.72,
                         accessibilityKey: "discover.undo.button",
                         action: handleUndo
                     )
@@ -315,7 +321,7 @@ struct DiscoverTabView: View {
                 if trailer != nil {
                     GlassCircleButton(
                         assetName: "brand-youtube",
-                        diameter: Layout.buttonDiameter * 0.72,
+                        diameter: QuizLayout.buttonDiameter * 0.72,
                         accessibilityKey: "discover.trailer.button",
                         action: {
                             // Ignore taps aimed at a clip not yet resolved for this card.
@@ -329,7 +335,7 @@ struct DiscoverTabView: View {
             }
             .padding(.horizontal, 20)
         }
-        .padding(.bottom, Layout.buttonBottomPadding)
+        .padding(.bottom, QuizLayout.buttonBottomPadding)
     }
 
     private var centeredVerdictButtons: some View {
@@ -397,7 +403,7 @@ struct DiscoverTabView: View {
                         cardWidth: proxy.size.width,
                         cardHeight: proxy.size.height,
                         dragOffset: dragOffset,
-                        bottomInset: Layout.cardBottomInset,
+                        bottomInset: QuizLayout.cardBottomInset,
                         animationKey: viewModel.current?.dedupKey,
                         gesture: isTop ? dragGesture : nil,
                         onMore: { openCard(for: item) }
@@ -603,7 +609,8 @@ struct DiscoverTabView: View {
 
 // MARK: - Layout constants
 
-private enum Layout {
+/// The quiz's button geometry, shared with its wait screen so Cancel sits where the card's buttons will.
+enum QuizLayout {
     static let buttonDiameter: CGFloat = 62
     /// 24 was tuned for the popover; on a phone it puts the buttons in the home-indicator strip,
     /// which eats touches.
@@ -652,13 +659,13 @@ private struct DiscoverCardStackItem<G: Gesture>: View {
 
 // MARK: - Circular glass button
 
-private struct GlassCircleButton: View {
+struct GlassCircleButton: View {
     /// Ignored when `assetName` is set.
     var systemName: String = ""
     /// Drawn in its own colours — a monochrome YouTube glyph is not the mark.
     var assetName: String?
     var tint: Color = .primary
-    var diameter: CGFloat = Layout.buttonDiameter
+    var diameter: CGFloat = QuizLayout.buttonDiameter
     var extraScale: CGFloat = 0
     let accessibilityKey: LocalizedStringKey
     let action: () -> Void

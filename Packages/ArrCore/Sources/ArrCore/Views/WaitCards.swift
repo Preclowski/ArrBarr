@@ -192,9 +192,10 @@ struct WaitStories: View {
     @State private var stories: [WaitStory] = []
 
     var body: some View {
-        WaitStage(covers: [context.poster], stories: stories) {
-            LoadingStateView(label: "wait.releases.heading")
+        WaitStage(stories: stories) {
+            WaitStatusLine(label: "wait.releases.heading")
         }
+        .padding(.bottom, 24)
         .task {
             stories = WaitStoryProvider.localStories(context).shuffled()
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
