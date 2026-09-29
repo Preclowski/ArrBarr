@@ -54,7 +54,8 @@ public struct AllowList: Sendable {
         if kind == .plex, path.hasSuffix("/refresh") || path.hasSuffix("/emptyTrash") || path.contains("/photo/") { return false }
         if kind == .jellyfin || kind == .emby, path.hasPrefix("/Library/Refresh") || path.contains("/Playing") { return false }
         let query = Dictionary((URLComponents(url: request.url, resolvingAgainstBaseURL: false)?.queryItems ?? []).map { ($0.name, $0.value ?? "") }, uniquingKeysWith: { a, _ in a })
-        if kind == .sabnzbd, query["name"] == "delete" { return false }
+        // Every SABnzbd write is a GET that names its action (`mode=queue&name=pause`); a read names none.
+        if kind == .sabnzbd, query["name"] != nil { return false }
         return rules.contains { rule in
             guard rule.kind == kind, rule.method == request.method else { return false }
             guard path.hasPrefix(rule.pathPrefix) || (rule.pathPrefix.hasSuffix("/") && path == String(rule.pathPrefix.dropLast())) else { return false }

@@ -94,6 +94,7 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
     private var lastFetchAt: Date?
     private var refreshRequested = false
     private var wakeup: CheckedContinuation<Void, Never>?
+    private var sleepToken: UInt64 = 0
     private var lastCheckpoint: Date?
     private var running: (seq: Int, task: Task<Void, Never>)?
     private var queued: Task<Void, Never>?
@@ -123,8 +124,10 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
 
     public func start() async {
         guard pump == nil else { return }
-        await loadSnapshot()
-        pump = Task { await self.run() }
+        // `pump` is set before the first suspension, so an overlapping start can't orphan a second pump.
+        let snapshot = Task { await self.loadSnapshot() }
+        pump = Task { await snapshot.value; await self.run() }
+        await snapshot.value
     }
 
     public func stop() {
@@ -226,17 +229,22 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
         await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in wakeup = c }
     }
 
+    /// A sleeper outliving an early wake would wake some later wait; the token retires it.
     private func sleepOrWake(_ interval: Duration) async {
-        let sleeper = Task { [clock] in try? await clock.sleep(for: interval) }
+        sleepToken &+= 1
+        let token = sleepToken
+        let sleeper = Task { [clock] in
+            guard (try? await clock.sleep(for: interval)) != nil else { return }
+            self.wakeFromSleep(token)
+        }
         await withTaskCancellationHandler {
-            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in
-                wakeup = c
-                Task { _ = await sleeper.value; self.wakeFromSleep() }
-            }
+            await withCheckedContinuation { (c: CheckedContinuation<Void, Never>) in wakeup = c }
         } onCancel: { sleeper.cancel() }
+        sleepToken &+= 1
+        sleeper.cancel()
     }
 
-    private func wakeFromSleep() { wake() }
+    private func wakeFromSleep(_ token: UInt64) { if token == sleepToken { wake() } }
 
     /// Every instance covered by push and no pending effect. On screen an active element also keeps the tick,
     /// since its numbers move without an event; in the background nothing is drawn, so coverage alone decides.

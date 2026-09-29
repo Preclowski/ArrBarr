@@ -16,6 +16,17 @@ import Testing
         #expect(try await db.scalar("SELECT COUNT(*) FROM entries WHERE class = 0") == 0)
     }
 
+    @Test func anUnreadableFileIsMovedAsideAndReplaced() async throws {
+        let dir = Temp.directory()
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let path = dir.appendingPathComponent("mediakit.sqlite")
+        try Data(repeating: 0xAB, count: 4096).write(to: path)
+        let db = try SQLiteDatabase(location: .file(in: dir), log: NoLog())
+        try await db.put([entry()], lastUsed: Date(timeIntervalSince1970: 1_800_000_000))
+        #expect(try await db.entry(key, fingerprint: fingerprint) != nil)
+        #expect(FileManager.default.fileExists(atPath: path.path + ".corrupt"))
+    }
+
     @Test func putReadMarkStaleRoundTrip() async throws {
         let db = try SQLiteDatabase(location: .memory, log: NoLog())
         let tag = InvalidationTag.collection(.queue, InstanceID(.radarr))

@@ -4,10 +4,14 @@ import os
 public actor ResourceStore {
     private struct InFlight {
         let task: Task<CommittedRow, any Error>
+        let instance: InstanceID
+        let tags: Set<InvalidationTag>
         var waiters: Set<UInt64> = []
     }
 
     struct CommittedRow: Sendable {
+        /// The fetched value itself, so the waiters of that fetch don't decode the payload it was just encoded to.
+        let value: any Sendable
         let payload: Data
         let fetchedAt: Date
         let staleAt: Date
@@ -28,7 +32,11 @@ public actor ResourceStore {
     private var inFlight: [String: InFlight] = [:]
     private var nextWaiter: UInt64 = 0
     private var revalidations: [ResourceKey: Task<Void, Never>] = [:]
-    private var commandTrackers: [Int: Task<Void, Never>] = [:]
+    /// Disk writes land in the order they were issued: a row put before an invalidation must not land after it.
+    private var diskQueue: Task<Void, Never>?
+    /// Command ids are per arr: Sonarr's command 42 is not Radarr's.
+    private struct TrackedCommand: Hashable { let instance: InstanceID; let id: Int }
+    private var commandTrackers: [TrackedCommand: Task<Void, Never>] = [:]
     var probe: CapabilityProbe?
     var capabilities = CapabilityIndex()
     /// Forces every read to this policy; a test process sets `.mustRevalidate` so stubs answer each request.
@@ -66,15 +74,15 @@ public actor ResourceStore {
         case .cacheOnly:
             guard let cached else { throw MediaKitError.notConfigured(resource.key.instance) }
             telemetry.record(.cacheHit(resource.key, cached.origin))
-            return try decode(resource, cached.entry, origin: cached.origin, isStale: !fresh, degraded: nil)
+            return try await decode(resource, cached.entry, origin: cached.origin, isStale: !fresh, degraded: nil)
         case .cacheFirst where fresh, .staleWhileRevalidate where fresh:
             telemetry.record(.cacheHit(resource.key, cached!.origin))
-            return try decode(resource, cached!.entry, origin: cached!.origin, isStale: false, degraded: nil)
+            return try await decode(resource, cached!.entry, origin: cached!.origin, isStale: false, degraded: nil)
         case .staleWhileRevalidate where !invalidated:
             if let cached {
                 telemetry.record(.cacheHit(resource.key, cached.origin))
                 scheduleRevalidation(resource)
-                return try decode(resource, cached.entry, origin: cached.origin, isStale: true, degraded: nil)
+                return try await decode(resource, cached.entry, origin: cached.origin, isStale: true, degraded: nil)
             }
         default:
             break
@@ -82,12 +90,14 @@ public actor ResourceStore {
         telemetry.record(.cacheMiss(resource.key))
         do {
             let row = try await fetch(resource, fingerprint: fingerprint, priority: priority)
-            return Fetched(value: try Self.stored(V.self, row.payload, operation: resource.key.operation), origin: .network,
+            let value: V
+            if let fetched = row.value as? V { value = fetched } else { value = try await Self.stored(V.self, row.payload, operation: resource.key.operation) }
+            return Fetched(value: value, origin: .network,
                            fetchedAt: row.fetchedAt, isStale: false, degraded: nil)
         } catch let error as MediaKitError {
             if policy != .mustRevalidate, let cached {
                 telemetry.record(.staleServed(resource.key, error))
-                return try decode(resource, cached.entry, origin: cached.origin, isStale: true, degraded: error)
+                return try await decode(resource, cached.entry, origin: cached.origin, isStale: true, degraded: error)
             }
             throw error
         }
@@ -146,8 +156,9 @@ public actor ResourceStore {
     }
 
     private func track(commandID: Int, instance: InstanceID, invalidates: Set<InvalidationTag>, timeout: Duration) {
-        commandTrackers[commandID]?.cancel()
-        commandTrackers[commandID] = Task { [clock, pipeline] in
+        let key = TrackedCommand(instance: instance, id: commandID)
+        commandTrackers[key]?.cancel()
+        commandTrackers[key] = Task { [clock, pipeline] in
             let deadline = clock.now.addingTimeInterval(timeout.seconds)
             let api = ServarrProfile.profile(for: instance.kind)?.apiBase ?? "/api/v3"
             while clock.now < deadline, !Task.isCancelled {
@@ -161,11 +172,12 @@ public actor ResourceStore {
                     break
                 }
             }
-            self.forgetTracker(commandID)
+            // A cancelled tracker was replaced under the same key; the new one stays.
+            if !Task.isCancelled { self.forgetTracker(key) }
         }
     }
 
-    private func forgetTracker(_ id: Int) { commandTrackers.removeValue(forKey: id) }
+    private func forgetTracker(_ key: TrackedCommand) { commandTrackers.removeValue(forKey: key) }
 
     // MARK: - Invalidation and maintenance
 
@@ -173,7 +185,8 @@ public actor ResourceStore {
         guard !tags.isEmpty else { return }
         let now = clock.now
         memory.markStale(tags: tags, at: now)
-        if let database { _ = try? await database.markStale(tags: tags, at: now) }
+        detachFetches { !$0.tags.isDisjoint(with: tags) }
+        await onDisk { _ = try? await $0.markStale(tags: tags, at: now) }?.value
         telemetry.record(.invalidated(tags, reason))
         if reason != .sweep { log.log(.debug, category: "Store", "invalidate \(tags.count) tags (\(reason.rawValue))") }
         revision.bump(tags)
@@ -183,7 +196,8 @@ public actor ResourceStore {
     public func invalidate(instance: InstanceID, reason: InvalidationReason) async {
         let now = clock.now
         memory.markStale(instance: instance, at: now)
-        if let database { _ = try? await database.markStale(instance: instance, at: now) }
+        detachFetches { $0.instance == instance }
+        await onDisk { _ = try? await $0.markStale(instance: instance, at: now) }?.value
         let tag = InvalidationTag.instance(instance)
         telemetry.record(.invalidated([tag], reason))
         revision.bump([tag])
@@ -201,9 +215,13 @@ public actor ResourceStore {
 
     public func purgeAll() async {
         memory.removeAll()
-        try? await database?.delete(freshness: nil)
+        detachFetches { _ in true }
+        await onDisk { try? await $0.delete(freshness: nil) }?.value
         revision.bumpEverything()
     }
+
+    /// Returns once every disk write issued so far has landed.
+    public func flush() async { await diskQueue?.value }
 
     public func statistics() async -> StoreStatistics {
         var s = (try? await database?.statistics()) ?? StoreStatistics()
@@ -214,6 +232,21 @@ public actor ResourceStore {
 
     // MARK: - Internals
 
+    /// A fetch sent before a write would bring back the pre-write rows as fresh. Its waiters still get them (they
+    /// asked first), but it is no longer joined or committed: the next read starts its own.
+    private func detachFetches(_ affected: (InFlight) -> Bool) {
+        inFlight = inFlight.filter { !affected($0.value) }
+    }
+
+    @discardableResult
+    private func onDisk(_ work: @escaping @Sendable (SQLiteDatabase) async -> Void) -> Task<Void, Never>? {
+        guard let database else { return nil }
+        let previous = diskQueue
+        let task = Task { await previous?.value; await work(database) }
+        diskQueue = task
+        return task
+    }
+
     private func lookup(_ key: ResourceKey, fingerprint: Fingerprint?, now: Date) async -> (entry: StoredEntry, origin: CacheOrigin)? {
         guard let fingerprint else { return nil }
         if let hit = memory.get(key, fingerprint: fingerprint, now: now) { return (hit, .memory) }
@@ -223,17 +256,19 @@ public actor ResourceStore {
         return (row, .disk)
     }
 
-    private func decode<V>(_ resource: Resource<V>, _ entry: StoredEntry, origin: CacheOrigin, isStale: Bool, degraded: MediaKitError?) throws -> Fetched<V> {
+    private func decode<V>(_ resource: Resource<V>, _ entry: StoredEntry, origin: CacheOrigin, isStale: Bool, degraded: MediaKitError?) async throws -> Fetched<V> {
         do {
-            return Fetched(value: try Self.stored(V.self, entry.payload, operation: resource.key.operation), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, degraded: degraded)
+            return Fetched(value: try await Self.stored(V.self, entry.payload, operation: resource.key.operation), origin: origin, fetchedAt: entry.fetchedAt, isStale: isStale, degraded: degraded)
         } catch {
             memory.remove { $0.key == entry.key }
             throw error
         }
     }
 
-    /// Payloads are re-encoded values, not response bytes: `Resource.decode` is for the wire only.
-    private static func stored<V: Decodable>(_ type: V.Type, _ payload: Data, operation: OperationID) throws -> V {
+    /// Payloads are re-encoded values, not response bytes: `Resource.decode` is for the wire only. Off the actor:
+    /// a large library takes tens of milliseconds, which every other read would otherwise queue behind.
+    @concurrent
+    private static func stored<V: Decodable & Sendable>(_ type: V.Type, _ payload: Data, operation: OperationID) async throws -> V {
         do { return try WireCodec.decoder.decode(V.self, from: payload) }
         catch { throw MediaKitError.decoding(operation, detail: "stored payload: " + WireCodec.describe(error)) }
     }
@@ -257,9 +292,9 @@ public actor ResourceStore {
                 let payload = try await Self.encodeOffActor(value)
                 let now = clock.now
                 if let harvest = resource.harvest { await self.identity?.record(harvest(value)) }
-                return CommittedRow(payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.validFor.seconds), tags: resource.tags)
+                return CommittedRow(value: value, payload: payload, fetchedAt: now, staleAt: now.addingTimeInterval(resource.validFor.seconds), tags: resource.tags)
             }
-            inFlight[slot] = InFlight(task: task, waiters: [waiter])
+            inFlight[slot] = InFlight(task: task, instance: key.instance, tags: resource.tags, waiters: [waiter])
         }
         let task = inFlight[slot]!.task
         defer { removeWaiter(slot, waiter) }
@@ -289,8 +324,8 @@ public actor ResourceStore {
         let entry = StoredEntry(key: resource.key, fingerprint: fingerprint, freshness: resource.freshness, payload: row.payload,
                                 fetchedAt: row.fetchedAt, staleAt: row.staleAt, tags: row.tags)
         memory.put(entry, now: row.fetchedAt)
-        if resource.freshness.persists, let database {
-            Task { try? await database.put([entry], lastUsed: row.fetchedAt) }
+        if resource.freshness.persists {
+            onDisk { try? await $0.put([entry], lastUsed: row.fetchedAt) }
         }
         if let slot { inFlight.removeValue(forKey: slot) }
         revision.bump(resource.tags)

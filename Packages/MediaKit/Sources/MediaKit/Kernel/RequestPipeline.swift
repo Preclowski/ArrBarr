@@ -53,9 +53,11 @@ public struct RequestPipeline: Sendable {
                 throw error
             } catch {
                 let failure = MediaKitError.unreachable(host, Self.classify(error))
-                await governor.leave(slot, outcome: .transportFailure(failure))
+                let retrying = plan.retry == .idempotent && attempt < 3
+                // One breaker strike per logical request: a retried read must not trip the host on its own.
+                await governor.leave(slot, outcome: retrying ? .cancelled : .transportFailure(failure))
                 telemetry.record(.failure(plan.operation, host, failure))
-                if plan.retry == .idempotent, attempt < 3 {
+                if retrying {
                     try await backoff(attempt: attempt, retryAfter: nil)
                     continue
                 }
@@ -77,7 +79,8 @@ public struct RequestPipeline: Sendable {
                 if try await recover(plan, rejection: rejection, credentials: credentials, observedGeneration: observedGeneration, used: &handshakeUsed) { continue }
                 throw MediaKitError.unauthorized(plan.instance, status: response.status, serverMessage: RequestBuilder.serverMessage(from: response.body))
             }
-            if response.status == 429 || response.status == 503 {
+            // A bare 503 is one app behind a shared reverse proxy restarting, not the host asking for quiet.
+            if response.status == 429 || (response.status == 503 && response.headers["Retry-After"] != nil) {
                 let delay = Self.retryAfter(response.headers["Retry-After"], now: clock.now) ?? .seconds(30)
                 await governor.leave(slot, outcome: .retryAfter(delay))
                 let error = MediaKitError.rateLimited(host, retryAfter: delay)

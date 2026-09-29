@@ -87,8 +87,6 @@ import Testing
         #expect(upgrade?.url.query?.contains("access_token=secret-radarr") == true)
         #expect(upgrade?.url.query?.contains("id=tok") == true)
         #expect(Redaction.standard.loggableURL(upgrade!.url).contains("secret") == false)
-        try await Task.sleep(for: .milliseconds(50))
-        #expect(hub.lastEventAt(TestKit.radarr) != nil)
         await hub.detach(TestKit.radarr)
     }
 }

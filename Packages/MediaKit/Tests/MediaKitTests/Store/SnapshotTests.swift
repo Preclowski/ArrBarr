@@ -13,11 +13,10 @@ import Testing
         }
         await snapshot.start()
         #expect(builds.value == 1)
-        for _ in 0..<5 {
-            await kit.store.invalidate([tag], reason: .manual)
-            try await Task.sleep(for: .milliseconds(5))
-        }
-        try await Task.sleep(for: .milliseconds(150))
+        // Back to back, so the burst sits inside one settle window however loaded the machine is.
+        for _ in 0..<5 { await kit.store.invalidate([tag], reason: .manual) }
+        try await eventually { builds.value == 2 }
+        try await Task.sleep(for: .milliseconds(100))
         #expect(builds.value == 2)
         snapshot.stop()
     }

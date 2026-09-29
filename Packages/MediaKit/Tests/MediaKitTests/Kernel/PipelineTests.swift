@@ -49,6 +49,24 @@ import Testing
         #expect(kit.transport.count == 1)
     }
 
+    @Test func slowReadIsNotRetriedByDefault() {
+        let search = RequestPlan(instance: TestKit.radarr, operation: "releases", pathTemplate: "/api/v3/release",
+                                 auth: .header("X-Api-Key"), timeout: .seconds(120))
+        #expect(search.retry == .never)
+        #expect(RequestPlan(instance: TestKit.radarr, operation: "queue", pathTemplate: "/api/v3/queue", auth: .header("X-Api-Key")).retry == .idempotent)
+    }
+
+    @Test func bareServiceUnavailableIsAServerFaultNotAThrottle() async throws {
+        let kit = try await TestKit()
+        kit.transport.answer("pause", json: "{}", status: 503)
+        var plan = kit.plan("pause")
+        plan.method = "POST"
+        plan.retry = .never
+        await #expect(throws: MediaKitError.serverFault(TestKit.radarr, status: 503, serverMessage: nil)) {
+            try await kit.pipeline.send(plan)
+        }
+    }
+
     @Test func rejectionCarriesTheServerMessage() async throws {
         let kit = try await TestKit()
         kit.transport.answer("addMovie", json: #"[{"errorMessage":"This movie has already been added"}]"#, status: 400)

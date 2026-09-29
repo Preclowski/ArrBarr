@@ -124,4 +124,16 @@ import Testing
         clock.advance(by: .milliseconds(300))
         _ = try await second.value
     }
+
+    @Test func aQueuedSendIsSpacedToo() async throws {
+        let (g, clock, _) = governor { $0.minimumInterval = .milliseconds(250); $0.maxConcurrent = 1; $0.reservedSessionSlots = 0 }
+        let first = try await g.enter(host, kind: .tmdb, priority: .interactive)
+        let queued = Task { try await g.enter(host, kind: .tmdb, priority: .interactive) }
+        try await Task.sleep(for: .milliseconds(20))
+        await g.leave(first, outcome: .success)
+        try await Task.sleep(for: .milliseconds(20))
+        #expect(clock.pendingSleepers == 1)
+        clock.advance(by: .milliseconds(300))
+        _ = try await queued.value
+    }
 }

@@ -4,9 +4,11 @@ struct SABnzbdService: DownloadService {
     let instance: InstanceID
     init(instance: InstanceID) { self.instance = instance }
 
-    private func api(_ op: String, method: String = "GET", query: [(String, String)], body: HTTPRequest.Body = .none, priority: RequestPriority = .interactive) -> RequestPlan {
+    /// SABnzbd writes are GETs too (`mode=queue&name=pause`), so a write says so instead of inheriting the GET retry.
+    private func api(_ op: String, method: String = "GET", query: [(String, String)], body: HTTPRequest.Body = .none,
+                     priority: RequestPriority = .interactive, write: Bool = false) -> RequestPlan {
         RequestPlan(instance: instance, operation: op, method: method, pathTemplate: "/api", query: (query + [("output", "json")]).map { .init($0.0, $0.1) },
-                    body: body, auth: .querySecret("apikey"), priority: priority, retry: method == "GET" && query.first?.1 != "pause" && query.first?.1 != "resume" ? .idempotent : .never)
+                    body: body, auth: .querySecret("apikey"), priority: priority, retry: write ? .never : nil)
     }
 
     struct Slot: Codable { let nzo_id: String; let filename: String; let status: String; let mb: String?; let mbleft: String?; let percentage: String?; let timeleft: String?; let cat: String? }
@@ -47,7 +49,7 @@ struct SABnzbdService: DownloadService {
         let name = switch action { case .pause: "pause"; case .resume: "resume"; default: "delete" }
         var query = [("mode", "queue"), ("name", name), ("value", ids.joined(separator: ","))]
         if action == .delete { query.append(("del_files", deleteFiles ? "1" : "0")) }
-        let p = api(action.rawValue, query: query)
+        let p = api(action.rawValue, query: query, write: true)
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }
 

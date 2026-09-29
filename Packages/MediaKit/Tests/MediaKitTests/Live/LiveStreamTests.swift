@@ -390,6 +390,20 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         #expect(calls.value == afterStart + 1)
         await s.stop()
     }
+
+    @Test func anEarlyWakeRetiresItsSleeper() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let s = stream(kit) { _, _, _ in [Item(id: UUID().uuidString, status: "queued")] }
+        await s.start()
+        try await eventually { kit.clock.pendingSleepers == 1 }
+        for _ in 0..<10 {
+            await s.notePush(TestKit.radarr, at: kit.clock.now)
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        try await eventually { kit.clock.pendingSleepers <= 1 }
+        await s.stop()
+    }
 }
 
 final class Flag: @unchecked Sendable { var value = false }
