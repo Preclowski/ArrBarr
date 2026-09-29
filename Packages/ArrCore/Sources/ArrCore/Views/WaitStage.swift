@@ -5,10 +5,10 @@ nonisolated struct WaitPoster: Hashable, Sendable {
     var apiKey: String? = nil
 }
 
-/// The shared long-wait screen (quiz deck, manual release search): the cover (a fan when there are
-/// several), one "Did you know" line, the host's status at the foot. No backdrop: the window's glass shows.
+/// The shared long-wait screen (quiz deck, manual release search): one large cover over soft blots
+/// of its colour, one "Did you know" line, the host's status at the foot. No backdrop: the window's glass shows.
 struct WaitStage<Footer: View>: View {
-    /// Newest first; the first is the centre card, up to two more fan out behind it.
+    /// Newest first. Real covers: the first is shown. Stand-ins (`pending`): they take turns.
     let covers: [WaitPoster]
     /// Stand-ins for covers still on their way: dimmed and desaturated, never see-through.
     var pending = false
@@ -17,41 +17,45 @@ struct WaitStage<Footer: View>: View {
     @ViewBuilder var footer: () -> Footer
 
     @State private var index = 0
-    /// What the fan shows; walks toward `covers` one card at a time.
-    @State private var deck: [WaitPoster] = []
-    @State private var lastStep = Date.distantPast
+    @State private var shown: WaitPoster?
+    @State private var lastChange = Date.distantPast
+    @State private var tint: Color?
     /// A person card is open: the story holds still under it.
     @State private var holding = false
-    @State private var breathe = false
 
-    private static var cardSize: CGSize { CGSize(width: 128, height: 192) }
+    /// Picks land several a second; a cover stays at least this long so it reads as a change, not a strobe.
+    private static var hold: TimeInterval { 2 }
+    private static var standInHold: TimeInterval { 4 }
 
     var body: some View {
-        VStack(spacing: 18) {
-            Spacer(minLength: 40)
-            fan
-            ZStack(alignment: .top) {
-                if let story {
-                    WaitStoryText(story: story, holding: $holding)
-                        .id(story.id)
-                        .transition(.opacity)
+        GeometryReader { proxy in
+            let height = min(300, proxy.size.height * 0.5)
+            VStack(spacing: 16) {
+                Spacer(minLength: 20)
+                cover(CGSize(width: height / 1.5, height: height))
+                ZStack(alignment: .top) {
+                    if let story {
+                        WaitStoryText(story: story, holding: $holding)
+                            .id(story.id)
+                            .transition(.opacity)
+                    }
                 }
+                // Room for a long story up front, so the cover doesn't hop as they change.
+                .frame(maxWidth: .infinity, minHeight: 96, alignment: .top)
+                Spacer(minLength: 8)
+                footer()
+                    .padding(.bottom, 16)
             }
-            // Room for a long story up front, so the fan doesn't hop as they change.
-            .frame(maxWidth: .infinity, minHeight: 120, alignment: .top)
-            Spacer(minLength: 12)
-            footer()
-                .padding(.bottom, 20)
+            .padding(.horizontal, 24)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .padding(.horizontal, 24)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear { breathe = true }
         // Late stories (TMDB answers after the first turn) must not swap the line being read.
         .onChange(of: stories.map(\.id)) { old, new in
             guard !old.isEmpty else { return }
             index = new.firstIndex(of: old[index % old.count]) ?? 0
         }
-        .task(id: target) { await follow(target) }
+        .task(id: covers) { await follow() }
+        .task(id: shown) { tint = await PosterTint.color(for: shown?.url) }
         .task(id: "\(index)-\(holding)-\(stories.count)") {
             guard !holding, stories.count > 1 else { return }
             try? await Task.sleep(for: .seconds(interval))
@@ -64,67 +68,79 @@ struct WaitStage<Footer: View>: View {
         stories.isEmpty ? nil : stories[index % stories.count]
     }
 
-    // MARK: - Fan
+    // MARK: - Cover
 
-    /// Picks can land several a second; one step per beat reads as a deck being dealt, not a strobe.
-    private static var beat: TimeInterval { 0.9 }
-
-    private var target: [WaitPoster] {
-        var seen = Set<WaitPoster>()
-        return Array(covers.filter { seen.insert($0).inserted }.prefix(3))
-    }
-
-    /// A new cover is dealt onto the centre and pushes the others out one slot; anything else
-    /// (a cover dropped, the order changed) settles in a single animated step.
-    private func follow(_ target: [WaitPoster]) async {
-        while !Task.isCancelled, deck != target {
-            let wait = Self.beat - Date().timeIntervalSince(lastStep)
-            if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
-            guard !Task.isCancelled else { return }
-            var next = target
-            if let incoming = target.first(where: { !deck.contains($0) }) {
-                // In before it shows, so the card never lands blank and pops its image in later.
-                if let url = incoming.url {
-                    _ = await PosterStore.shared.image(for: url, tier: .card, apiKey: incoming.apiKey)
-                    guard !Task.isCancelled else { return }
+    private func follow() async {
+        var turn = 0
+        while !Task.isCancelled {
+            let candidates = pending ? covers : Array(covers.prefix(1))
+            guard !candidates.isEmpty else { return }
+            let next = candidates[turn % candidates.count]
+            turn += 1
+            if next != shown {
+                let wait = Self.hold - Date().timeIntervalSince(lastChange)
+                if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
+                // In before it shows, so the cover never fades in blank and pops its image later.
+                if let url = next.url {
+                    _ = await PosterStore.shared.image(for: url, tier: .card, apiKey: next.apiKey)
                 }
-                next = Array(([incoming] + deck).prefix(3))
+                guard !Task.isCancelled else { return }
+                lastChange = Date()
+                withAnimation(.easeInOut(duration: 0.9)) { shown = next }
             }
-            lastStep = Date()
-            withAnimation(.spring(response: 0.7, dampingFraction: 0.86)) { deck = next }
+            guard pending, candidates.count > 1 else { return }
+            try? await Task.sleep(for: .seconds(Self.standInHold))
         }
     }
 
-    private var fan: some View {
-        let spread: CGFloat = breathe ? 1 : 0.8
+    private func cover(_ size: CGSize) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
         return ZStack {
-            ForEach(Array(deck.enumerated()), id: \.element) { slot, poster in
-                let direction: CGFloat = slot == 0 ? 0 : (slot == 1 ? -1 : 1)
-                card(poster)
-                    .brightness(slot == 0 ? 0 : -0.28)
-                    .scaleEffect(slot == 0 ? 1 : 0.9)
-                    .rotationEffect(.degrees(Double(direction) * 9 * spread))
-                    .offset(x: direction * 58 * spread, y: slot == 0 ? 0 : 8)
-                    .zIndex(Double(3 - slot))
-                    .transition(.asymmetric(insertion: .scale(scale: 0.85).combined(with: .opacity),
-                                            removal: .scale(scale: 0.9).combined(with: .opacity)))
+            WaitTintBlots(tint: tint ?? .accentColor, size: size)
+                .animation(.easeInOut(duration: 1.2), value: tint)
+            if let shown {
+                // The base stays put under the crossfade, so the glass never shows through mid-change.
+                shape.fill(Color(white: 0.16))
+                    .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
+                    .transition(.opacity)
+                RemotePoster(url: shown.url, apiKey: shown.apiKey, tier: .card,
+                             size: size, cornerRadius: Tokens.Radius.card, fallbackSymbol: "film")
+                    .frame(width: size.width, height: size.height)
+                    .id(shown)
+                    .transition(.opacity)
             }
         }
+        .frame(width: size.width, height: size.height)
         .saturation(pending ? 0.35 : 1)
         .brightness(pending ? -0.15 : 0)
-        .frame(height: Self.cardSize.height + 16)
-        .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: breathe)
         .animation(.smooth(duration: 0.6), value: pending)
         .accessibilityHidden(true)
     }
+}
 
-    private func card(_ poster: WaitPoster) -> some View {
-        RemotePoster(url: poster.url, apiKey: poster.apiKey, tier: .card,
-                     size: Self.cardSize, cornerRadius: Tokens.Radius.card, fallbackSymbol: "film")
-            .frame(width: Self.cardSize.width, height: Self.cardSize.height)
-            // RemotePoster's placeholder is translucent; a card in a fan must hide the one behind it.
-            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
-            .shadow(color: .black.opacity(0.3), radius: 10, y: 5)
+/// Soft blots of the cover's colour drifting under it, like light through tinted glass.
+private struct WaitTintBlots: View {
+    let tint: Color
+    let size: CGSize
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1 / 30)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate
+            ZStack {
+                ForEach(0..<3, id: \.self) { i in
+                    let phase = Double(i) * 2.1
+                    Circle()
+                        .fill(tint)
+                        .hueRotation(.degrees(Double(i - 1) * 30))
+                        .frame(width: size.width * 0.95, height: size.width * 0.95)
+                        .offset(x: cos(t * 0.33 + phase) * size.width * 0.32,
+                                y: sin(t * 0.25 + phase) * size.height * 0.26)
+                }
+            }
+            .blur(radius: 48)
+            .opacity(0.75)
+        }
+        .allowsHitTesting(false)
     }
 }
 
