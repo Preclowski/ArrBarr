@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Unified calendar (all arrs)
 
-    static let calendarTools: [MCPTool] = [
-        MCPTool(
+    static let calendarTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "get_calendar",
             description: """
             Upcoming releases from every configured arr in one list — TV episodes (Sonarr), movies (Radarr), albums (Lidarr), scenes (Whisparr) — already-monitored items, sorted by air date. Surfaces as calendar cards in the chat.
@@ -27,8 +27,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Cross-arr status / diagnostics
 
-    static let healthTools: [MCPTool] = [
-        MCPTool(
+    static let healthTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "health",
             description: """
             Whole-stack health check: every configured arr (Sonarr, Radarr, Lidarr, Whisparr) AND every configured download client (qBittorrent, Transmission, NZBGet, SABnzbd, rTorrent, Deluge). For arrs it returns the bell-icon warnings + errors (disconnected indexers, missing root folders, full disk, stuck queue). For download clients it reports whether ArrBarr can actually reach and authenticate with each one.

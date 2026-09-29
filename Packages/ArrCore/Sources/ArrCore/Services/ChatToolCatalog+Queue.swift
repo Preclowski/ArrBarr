@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Queue
 
-    static let queueTools: [MCPTool] = [
-        MCPTool(
+    static let queueTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "list_download_queue",
             description: """
             List the active download queue across every configured arr — Sonarr, Radarr, Lidarr and Whisparr — covering what is currently downloading, queued, importing, or stalled. Each item shows its status and progress, and which service it belongs to. This is the WHOLE queue: don't tell the user music or a scene isn't downloading because you only looked at TV and movies.

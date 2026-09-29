@@ -89,6 +89,7 @@ public actor LocalToolBackend {
             Self.log.notice("tool \(name, privacy: .public): not in the catalog, refused")
             throw LocalToolError.unknownTool(name)
         }
+        guard case .object = arguments else { throw LocalToolError.malformedArguments(name) }
         // The guards above run first so switched-off tools never prompt.
         guard MCPToolWhitelist.isDestructive(name) else {
             Self.log.debug("tool \(name, privacy: .public): running (read-only)")
@@ -125,45 +126,47 @@ public actor LocalToolBackend {
         }
     }
 
+    /// Keyed by catalog name; a test holds this equal to `ChatToolCatalog.allToolNames`.
+    /// No add tools: the model surfaces cards and the user adds through `SearchAddPanel`.
+    static let handlers: [String: @Sendable (LocalToolBackend, JSONValue) async throws -> ToolCallOutput] = [
+        "sonarr_search":              { try await $0.searchSeries($1) },
+        "radarr_search":              { try await $0.searchMovie($1) },
+        "sonarr_get_series":          { try await $0.listSeries($1) },
+        "radarr_get_movies":          { try await $0.listMovies($1) },
+        "get_calendar":               { try await $0.getCalendar($1) },
+        "lidarr_search":              { try await $0.searchArtist($1) },
+        "lidarr_get_artists":         { try await $0.listArtists($1) },
+        "whisparr_search":            { try await $0.searchScene($1) },
+        "whisparr_get_movies":        { try await $0.listScenes($1) },
+        "tmdb_search_person":         { try await $0.tmdbSearchPerson($1) },
+        "tmdb_discover_movies":       { try await $0.tmdbDiscoverMovies($1) },
+        "tmdb_discover_series":       { try await $0.tmdbDiscoverSeries($1) },
+        "suggest_titles":             { try await $0.suggestTitles($1) },
+        "check_titles":               { try await $0.checkTitles($1) },
+        "discover_in_quiz":           { try await $0.discoverInQuiz($1) },
+        "health":                     { backend, _ in try await backend.healthCheck() },
+        "get_title_details":          { try await $0.getTitleDetails($1) },
+        "custom_formats":             { try await $0.customFormats($1) },
+        "list_download_queue":        { try await $0.listDownloadQueue($1) },
+        "sonarr_monitor_season":      { try await $0.sonarrMonitorSeason($1) },
+        "sonarr_search_episodes":     { try await $0.sonarrSearchEpisodesTool($1) },
+        "radarr_search_movie":        { try await $0.radarrSearchMovieTool($1) },
+        "lidarr_get_artist_albums":   { try await $0.lidarrGetArtistAlbums($1) },
+        "lidarr_monitor_album":       { try await $0.lidarrMonitorAlbum($1) },
+        "lidarr_search_album":        { try await $0.lidarrSearchAlbumTool($1) },
+        "media_server_watch_history": { try await $0.mediaServerWatchHistory($1) },
+        "media_server_now_playing":   { backend, _ in try await backend.mediaServerNowPlaying() },
+        "media_server_scan_library":  { backend, _ in try await backend.mediaServerScanLibrary() },
+    ]
+
     /// Private so `callTool`'s gate is the only way in.
     private func run(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
-        switch name {
-        case "sonarr_search":       return try await searchSeries(arguments)
-        case "radarr_search":       return try await searchMovie(arguments)
-        case "sonarr_get_series":   return try await listSeries(arguments)
-        case "radarr_get_movies":   return try await listMovies(arguments)
-        case "get_calendar":        return try await getCalendar(arguments)
-        // No add tools: the model surfaces cards and the user adds through `SearchAddPanel`.
-        case "lidarr_search":       return try await searchArtist(arguments)
-        case "lidarr_get_artists":  return try await listArtists(arguments)
-        case "whisparr_search":     return try await searchScene(arguments)
-        case "whisparr_get_movies": return try await listScenes(arguments)
-        case "tmdb_search_person":          return try await tmdbSearchPerson(arguments)
-        case "tmdb_person_movie_credits":   return try await tmdbPersonMovieCredits(arguments)
-        case "tmdb_person_tv_credits":      return try await tmdbPersonTVCredits(arguments)
-        case "tmdb_discover_movies":        return try await tmdbDiscoverMovies(arguments)
-        case "tmdb_discover_series":        return try await tmdbDiscoverSeries(arguments)
-        case "suggest_titles":              return try await suggestTitles(arguments)
-        case "check_titles":                return try await checkTitles(arguments)
-        case "discover_in_quiz":            return try await discoverInQuiz(arguments)
-        case "health":                      return try await healthCheck()
-        case "get_title_details":           return try await getTitleDetails(arguments)
-        case "custom_formats":              return try await customFormats(arguments)
-        case "list_download_queue":         return try await listDownloadQueue(arguments)
-        case "sonarr_monitor_season":       return try await sonarrMonitorSeason(arguments)
-        case "sonarr_search_episodes":      return try await sonarrSearchEpisodesTool(arguments)
-        case "radarr_search_movie":         return try await radarrSearchMovieTool(arguments)
-        case "lidarr_get_artist_albums":    return try await lidarrGetArtistAlbums(arguments)
-        case "lidarr_monitor_album":        return try await lidarrMonitorAlbum(arguments)
-        case "lidarr_search_album":         return try await lidarrSearchAlbumTool(arguments)
-        case "media_server_watch_history":  return try await mediaServerWatchHistory(arguments)
-        case "media_server_now_playing":    return try await mediaServerNowPlaying()
-        case "media_server_scan_library":   return try await mediaServerScanLibrary()
-        default:
-            // `.fault`: the catalog advertises a tool this switch never implemented.
+        guard let handler = Self.handlers[name] else {
+            // `.fault`: the catalog advertises a tool nobody implemented.
             Self.log.fault("tool \(name, privacy: .public) is in the catalog but has no implementation")
             throw LocalToolError.unknownTool(name)
         }
+        return try await handler(self, arguments)
     }
 
     // MARK: - Generic helpers — collapse the per-arr handler boilerplate
@@ -365,6 +368,7 @@ public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {
     case confirmationDeclined(String)
     /// No handler bound, or the caller cannot prompt. The tool did not run.
     case confirmationUnavailable(String)
+    case malformedArguments(String)
 
     // Plain English, not the catalog: these go to the LLM / MCP client as tool output.
     public var errorDescription: String? {
@@ -375,6 +379,8 @@ public enum LocalToolError: Error, Equatable, Sendable, LocalizedError {
             return "Tool '\(name)' was cancelled by the user."
         case .confirmationUnavailable(let name):
             return "Tool '\(name)' changes server state and requires confirmation, which was not available. It was not run."
+        case .malformedArguments(let name):
+            return "Arguments for '\(name)' were not a valid JSON object. It was not run; call it again with a JSON object matching its schema."
         }
     }
 }

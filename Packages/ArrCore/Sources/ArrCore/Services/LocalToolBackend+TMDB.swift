@@ -36,7 +36,7 @@ extension LocalToolBackend {
             if !others.isEmpty {
                 head += " Other people share this name: "
                 head += others.map { "\($0.name) (personId: \($0.id))" }.joined(separator: ", ")
-                head += ". If the user meant one of them, call the credits tool with that id."
+                head += ". If the user meant one of them, call again with that personId + credits."
             }
             return ToolCallOutput(text: head + "\n" + credits.text, rich: credits.rich)
         }
@@ -81,14 +81,6 @@ extension LocalToolBackend {
         return ChatPerson(details)
     }
 
-    func tmdbPersonMovieCredits(_ args: JSONValue) async throws -> ToolCallOutput {
-        let personId = Self.intArg(args, key: "personId")
-        guard personId != 0 else {
-            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
-        }
-        return try await movieCreditsOutput(personId: personId)
-    }
-
     func movieCreditsOutput(personId: Int) async throws -> ToolCallOutput {
         let client = tmdbClient
         async let card = personCard(personId)
@@ -102,14 +94,6 @@ extension LocalToolBackend {
         }
         let text = Self.formatTMDBSummary(results, kind: "movie", origin: "personId \(personId)")
         return ToolCallOutput(text: text, rich: Self.creditsRich(person: await card, results: results))
-    }
-
-    func tmdbPersonTVCredits(_ args: JSONValue) async throws -> ToolCallOutput {
-        let personId = Self.intArg(args, key: "personId")
-        guard personId != 0 else {
-            return ToolCallOutput(text: "Need a personId — run tmdb_search_person first.")
-        }
-        return try await tvCreditsOutput(personId: personId)
     }
 
     func tvCreditsOutput(personId: Int) async throws -> ToolCallOutput {

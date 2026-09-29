@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Sonarr
 
-    static let sonarrTools: [MCPTool] = [
-        MCPTool(
+    static let sonarrTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "sonarr_search",
             description: "Search Sonarr's metadata source (TVDB) for a TV series to ADD. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `sonarr_add_*` tool. Briefly explain WHY this set after the call. NOT for questions ABOUT a title ('tell me about X', plot, trivia) — answer those from your own knowledge; reach for check_titles/get_title_details only when their library state matters. SERIES only: anime feature films (Ghibli, Satoshi Kon) are movies → radarr_search. One empty result is the answer — never retry with a rephrasing.",
             inputSchema: .object([
@@ -19,7 +19,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("query")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "sonarr_get_series",
             description: """
             The user's OWN series library — each row carries `seriesId`, genres, rating, per-season monitor state with have/total episode counts (`S1 ✓ 10/10, S2 ✗ 0/10`) and, with a media server connected, whether it was watched. Same genre / startYear / endYear arguments as `tmdb_discover_series`, pointed at their shelf.
@@ -72,7 +72,7 @@ nonisolated extension ChatToolCatalog {
                 ]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "sonarr_monitor_season",
             description: "Flip monitoring on one or MORE whole seasons in a single call. When state=true, ALSO fires a SeasonSearch for each season automatically — there is no opt-out, because chat requests like 'pobierz mi 3 sezon' / 'monitor S3' always mean 'and grab it'. When state=false, no search runs. Pass EVERY season the user named in seasonNumbers — 'pobierz 10 i 11 sezon' → seasonNumbers:[10,11]; do NOT make a separate call per season. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED') and lists exactly which seasons worked; relay that to the user faithfully — do not claim success if the result says PARTIAL or FAILED.",
             inputSchema: .object([
@@ -95,15 +95,15 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("seriesId"), .string("seasonNumbers")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "sonarr_search_episodes",
-            description: "Manual indexer search for one or more specific episodes by id. USE for 'search S3E5 of X', 'try again to grab this episode', 'retry the missing finale'. For whole-season grabs use sonarr_monitor_season with alsoSearch=true. The user sees results in the queue when indexers report back.",
+            description: "Manual indexer search for one or more specific episodes by id. USE for 'search S3E5 of X', 'try again to grab this episode', 'retry the missing finale'. For whole-season grabs use sonarr_monitor_season (state:true searches). The user sees results in the queue when indexers report back.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
                     "episodeIds": .object([
                         "type": .string("array"),
-                        "description": .string("Array of Sonarr episode ids. The chat doesn't always have these — usually used after a missing-episodes flow or after the user pasted them. For 'season X' use sonarr_monitor_season(state:true, alsoSearch:true)."),
+                        "description": .string("Array of Sonarr episode ids. The chat doesn't always have these — usually used after a missing-episodes flow or after the user pasted them. For 'season X' use sonarr_monitor_season(state:true)."),
                         "items": .object(["type": .string("integer")]),
                     ]),
                 ]),
@@ -114,8 +114,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Radarr
 
-    static let radarrTools: [MCPTool] = [
-        MCPTool(
+    static let radarrTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "radarr_search",
             description: "Search Radarr's metadata source (TMDB) for a movie to ADD. Results surface in the chat as tappable cards — the user opens each one and confirms profile / folder / quality in the SearchAddPanel to actually add it. You do NOT add anything yourself; there is no `radarr_add_*` tool. Briefly explain WHY this set after the call. NOT for questions ABOUT a title ('tell me about X', plot, trivia) — answer those from your own knowledge; reach for check_titles/get_title_details only when their library state matters. One empty result is the answer — never retry with a rephrasing.",
             inputSchema: .object([
@@ -129,7 +129,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("query")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "radarr_get_movies",
             description: """
             The user's OWN movie library. Same lens as `tmdb_discover_movies` (identical genre / startYear / endYear arguments) pointed at their shelf instead of at the world — use it whenever the question is "what do I have", "what can I watch tonight", "what unwatched sci-fi is on my shelf".
@@ -178,7 +178,7 @@ nonisolated extension ChatToolCatalog {
                 ]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "radarr_search_movie",
             description: "Force an indexer search for one movie the user ALREADY HAS in Radarr. USE for 'this didn't download, try again', 'spróbuj ściągnąć ponownie', 'try to grab a better quality of X'. NEVER the second step of adding a movie: adding finishes when the USER taps a card from radarr_search and confirms in the add panel — there is no tool for it, and calling this with a not-in-library id (or a tmdbId) does nothing. Returns confirmation text; results land in the queue when indexers respond.",
             inputSchema: .object([
@@ -196,8 +196,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Lidarr
 
-    static let lidarrTools: [MCPTool] = [
-        MCPTool(
+    static let lidarrTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "lidarr_search",
             description: "Search Lidarr's metadata source (MusicBrainz) for a music artist. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `lidarr_add_*` tool.",
             inputSchema: .object([
@@ -211,7 +211,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("query")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "lidarr_get_artists",
             description: "The user's music library. FIRST CHOICE for any question about a musician, band or album — a musician is NOT a tmdb_search_person query, that tool only knows film work. Each row carries `artistId`, which is what lidarr_get_artist_albums needs; there is no other way to get it, so never invent one. `query` filters by name — pass it, an unfiltered list of a whole library is noise.",
             inputSchema: .object([
@@ -224,7 +224,7 @@ nonisolated extension ChatToolCatalog {
                 ]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "lidarr_get_artist_albums",
             description: "List albums for one artist (resolved via lidarr_get_artists). Each entry carries `albumId`, title, type (Album / Single / EP / Live / Compilation / Soundtrack / Other), year, monitor state, and track-file progress. USE for 'which albums of X am I tracking?', 'what's new from X?', 'find albumId for Y'. Output is capped at 40 entries — pass `albumType` (e.g. 'Album') to narrow to studio LPs when an artist has dozens of live/compilation entries cluttering things.",
             inputSchema: .object([
@@ -242,7 +242,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("artistId")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "lidarr_monitor_album",
             description: "Flip monitoring on a single album. When state=true, ALSO fires an AlbumSearch automatically — no opt-out (same reasoning as sonarr_monitor_season). When state=false, no search. The result text REPORTS THE ACTUAL OUTCOME ('OK', 'PARTIAL', or 'FAILED'); relay it faithfully.",
             inputSchema: .object([
@@ -260,9 +260,9 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("albumId")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "lidarr_search_album",
-            description: "Force an AlbumSearch for one album without changing monitoring. USE for 'try again to grab X', 'spróbuj jeszcze raz pobrać Y'. For the 'monitor + grab' combo use lidarr_monitor_album(state:true, alsoSearch:true) instead.",
+            description: "Force an AlbumSearch for one album without changing monitoring. USE for 'try again to grab X', 'spróbuj jeszcze raz pobrać Y'. For the 'monitor + grab' combo use lidarr_monitor_album(state:true) instead.",
             inputSchema: .object([
                 "type": .string("object"),
                 "properties": .object([
@@ -278,8 +278,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Whisparr
 
-    static let whisparrTools: [MCPTool] = [
-        MCPTool(
+    static let whisparrTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "whisparr_search",
             description: "Search Whisparr's adult scene library (StashDB/TPDB) for a scene or performer. Results surface in the chat as tappable cards — the user taps to open SearchAddPanel and confirms profile/folder to add. You do NOT add anything yourself; there is no `whisparr_add_*` tool.",
             inputSchema: .object([
@@ -293,7 +293,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("query")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "whisparr_get_movies",
             description: "List adult scenes currently in the Whisparr library. Use when the user asks about their Whisparr collection.",
             inputSchema: .object([

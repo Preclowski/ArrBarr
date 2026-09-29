@@ -12,7 +12,7 @@ struct ChatViewModelTests {
         var scripted: [LLMResponse] = []
         var callCount = 0
         var received: [(prompt: String, history: [ChatMessage])] = []
-        func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+        func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse {
             defer { callCount += 1 }
             received.append((prompt, history))
             return scripted.removeFirst()
@@ -25,7 +25,7 @@ struct ChatViewModelTests {
         var isAvailable: Bool = true
         let onRespond: @Sendable () async -> LLMResponse
         init(onRespond: @escaping @Sendable () async -> LLMResponse) { self.onRespond = onRespond }
-        func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+        func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse {
             await onRespond()
         }
     }
@@ -43,7 +43,7 @@ struct ChatViewModelTests {
     private func makeVM(provider: FakeProvider, mcp: FakeMCP) -> ChatViewModel {
         ChatViewModel(
             provider: provider,
-            tools: [LLMTool(name: "sonarr_search", description: "", inputSchema: .object([:]))],
+            tools: [ToolDefinition(name: "sonarr_search", description: "", inputSchema: .object([:]))],
             invokeTool: { name, args in try await mcp.call(name: name, arguments: args) }
         )
     }

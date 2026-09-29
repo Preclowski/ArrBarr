@@ -39,7 +39,7 @@ enum ChatViewModelFactory {
         }
 
         let tmdbEnabled = !tmdbApiKey.isEmpty
-        let llmTools = ChatToolCatalog.llmTools(
+        let llmTools = ChatToolCatalog.tools(
             includeSonarr: sonarr.isConfigured,
             includeRadarr: radarr.isConfigured,
             includeLidarr: lidarr.isConfigured,

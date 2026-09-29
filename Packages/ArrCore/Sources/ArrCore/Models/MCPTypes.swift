@@ -3,7 +3,7 @@ import MediaKit
 
 // MARK: - Tool descriptor
 
-nonisolated public struct MCPTool: Decodable, Sendable, Equatable {
+nonisolated public struct ToolDefinition: Decodable, Sendable, Equatable {
     public let name: String
     public let description: String
     public let inputSchema: JSONValue

@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - TMDB shared (person lookup feeds both movie + tv credits)
 
-    static let tmdbSharedTools: [MCPTool] = [
-        MCPTool(
+    static let tmdbSharedTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "tmdb_search_person",
             description: "THE tool for people in FILM and TV — actors, directors, writers. One call does the lot: it resolves a name to a TMDB personId and, with `credits` set, returns that person's filmography in the same response. Hold a personId already (ambiguous earlier search, or a name from a cast list)? Pass `personId` + `credits` instead of `query`. NOT for MUSIC: a musician or band is Lidarr's world — use lidarr_get_artists / lidarr_search, which is where albums live; this tool only knows their acting roles, if any. NEVER use radarr_get_movies or sonarr_get_series for person queries — those library tools carry no cast/crew metadata. Never guess a personId.",
             inputSchema: .object([
@@ -32,8 +32,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - TMDB movies (gated on tmdbEnabled && Radarr configured)
 
-    static let tmdbMovieTools: [MCPTool] = [
-        MCPTool(
+    static let tmdbMovieTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "tmdb_discover_movies",
             description: "Discover movies by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a horror for tonight', 'films from the 90s', 'best sci-fi from the last 5 years'. `radarr_get_movies` takes the same genre / startYear / endYear arguments and answers the same question about the library they already own; reach for that one when the ask is 'what do I have'. Results are marked OWNED (and WATCHED where known) and include tmdbId so taps add to Radarr. Sorted by popularity by default.",
             inputSchema: .object([
@@ -62,8 +62,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - TMDB series (gated on tmdbEnabled && Sonarr configured)
 
-    static let tmdbSeriesTools: [MCPTool] = [
-        MCPTool(
+    static let tmdbSeriesTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "tmdb_discover_series",
             description: "Discover TV series by genre and/or year range — the WORLD, not the user's shelf. Use this for 'suggest a sci-fi series from the 2010s' or 'best comedy shows of the last 3 years'. `sonarr_get_series` takes the same genre / startYear / endYear arguments for the library they already own. Rows the user already owns are marked OWNED — matched on title + year, since TMDB tv ids are not TVDB ids, so a remake sharing a title could in principle be mismarked; `check_titles` is the exact answer when it matters. Sorted by popularity by default.",
             inputSchema: .object([

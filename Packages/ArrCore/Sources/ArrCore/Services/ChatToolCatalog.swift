@@ -13,8 +13,8 @@ nonisolated public enum ChatToolCatalog {
         includeTMDBMovies: Bool = false,
         includeTMDBSeries: Bool = false,
         includeMediaServer: Bool = false
-    ) -> [MCPTool] {
-        var arr: [MCPTool] = []
+    ) -> [ToolDefinition] {
+        var arr: [ToolDefinition] = []
         if includeSonarr { arr.append(contentsOf: sonarrTools) }
         if includeRadarr { arr.append(contentsOf: radarrTools) }
         if includeLidarr { arr.append(contentsOf: lidarrTools) }
@@ -49,27 +49,10 @@ nonisolated public enum ChatToolCatalog {
         return arr
     }
 
-    public static func llmTools(
-        includeSonarr: Bool = true,
-        includeRadarr: Bool = true,
-        includeLidarr: Bool = false,
-        includeWhisparr: Bool = false,
-        includeTMDBMovies: Bool = false,
-        includeTMDBSeries: Bool = false,
-        includeMediaServer: Bool = false
-    ) -> [LLMTool] {
-        tools(includeSonarr: includeSonarr, includeRadarr: includeRadarr,
-              includeLidarr: includeLidarr, includeWhisparr: includeWhisparr,
-              includeTMDBMovies: includeTMDBMovies, includeTMDBSeries: includeTMDBSeries,
-              includeMediaServer: includeMediaServer).map {
-            LLMTool(name: $0.name, description: $0.description, inputSchema: $0.inputSchema)
-        }
-    }
-
     // MARK: - Tool directory (for the Settings → MCP pane)
 
     /// Settings-pane row; `summary` is a human one-liner, separate from the
-    /// LLM-facing `MCPTool.description`.
+    /// LLM-facing `ToolDefinition.description`.
     public struct MCPToolInfo: Identifiable {
         public let name: String
     /// Localization key resolved by the pane.

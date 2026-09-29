@@ -12,7 +12,7 @@ final class ChatViewModel {
     private(set) var turnStartedAt: Date?
 
     private let provider: LLMProvider
-    private let tools: [LLMTool]
+    private let tools: [ToolDefinition]
     private let invokeTool: @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput
     /// Resumed by Confirm (with the args to proceed) or Cancel (nil).
     private var pendingResume: CheckedContinuation<JSONValue?, Never>?
@@ -27,7 +27,7 @@ final class ChatViewModel {
     var providerIsAvailable: Bool { provider.isAvailable }
 
     init(provider: LLMProvider,
-                tools: [LLMTool],
+                tools: [ToolDefinition],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
                 onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
                 onTurnEnded: (@Sendable () -> Void)? = nil,

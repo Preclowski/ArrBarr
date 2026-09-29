@@ -7,8 +7,8 @@ nonisolated extension ChatToolCatalog {
     // For taste-based queries the model picks from its own associations; the tool
     // resolves each through the arr lookup into real, tappable cards.
 
-    static let suggestTools: [MCPTool] = [
-        MCPTool(
+    static let suggestTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "check_titles",
             description: """
             Ask the library about titles you already have in hand: which ones the user owns, whether the file is there, and (with a media server connected) whether they have watched it.
@@ -33,7 +33,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("titles")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "suggest_titles",
             description: """
             Present a curated list of titles you (the model) recommend from your own knowledge, rendered as interactive cards with posters / ratings / in-library state.
@@ -83,7 +83,7 @@ nonisolated extension ChatToolCatalog {
                 "required": .array([.string("kind"), .string("items")]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "discover_in_quiz",
             description: """
             Open the Discover quiz UI seeded with a curated list of titles you (the model) recommend. The user can then swipe to add or skip each one.

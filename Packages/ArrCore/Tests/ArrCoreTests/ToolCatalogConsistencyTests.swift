@@ -9,7 +9,7 @@ import Foundation
 @Suite("Tool catalog consistency")
 struct ToolCatalogConsistencyTests {
 
-    private var allTools: [MCPTool] {
+    private var allTools: [ToolDefinition] {
         ChatToolCatalog.tools(
             includeSonarr: true, includeRadarr: true, includeLidarr: true,
             includeWhisparr: true, includeTMDBMovies: true, includeTMDBSeries: true,
@@ -66,6 +66,11 @@ struct ToolCatalogConsistencyTests {
         // Watch history must not claim the "have I seen <named title>" question:
         // it only holds the recent window and would answer it wrongly.
         #expect(history.contains("check_titles"))
+    }
+
+    @Test("Every catalog tool has exactly one implementation")
+    func everyToolIsImplemented() {
+        #expect(Set(LocalToolBackend.handlers.keys) == Set(ChatToolCatalog.allToolNames))
     }
 
     @Test("Every catalog tool is either read-only or deliberately gated")

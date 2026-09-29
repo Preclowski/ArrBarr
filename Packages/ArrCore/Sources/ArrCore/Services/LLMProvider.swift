@@ -1,17 +1,6 @@
 import Foundation
 import MediaKit
 
-nonisolated public struct LLMTool: Sendable {
-    public let name: String
-    public let description: String
-    public let inputSchema: JSONValue
-    public init(name: String, description: String, inputSchema: JSONValue) {
-        self.name = name
-        self.description = description
-        self.inputSchema = inputSchema
-    }
-}
-
 nonisolated struct LLMResponse: Sendable {
     let text: String
     let toolCalls: [ToolCall]
@@ -29,7 +18,7 @@ nonisolated struct LLMResponse: Sendable {
 /// OpenAI and Foundation Models prompts stay in sync.
 nonisolated enum SystemPromptComposer {
     /// Derived from the gated tool list, so it always matches what's enabled.
-    static func arrsClause(tools: [LLMTool]) -> String {
+    static func arrsClause(tools: [ToolDefinition]) -> String {
         let known: [(prefix: String, label: String)] = [
             ("sonarr_", "Sonarr (TV)"),
             ("radarr_", "Radarr (movies)"),
@@ -73,19 +62,61 @@ nonisolated enum SystemPromptComposer {
         Link the FIRST mention only; with no id at hand, write the name as plain
         text.
         """
+
+    static let persona = """
+        You speak concisely but with real passion for what the user is asking about: a film, a series, a band, an album, a pressing. Music is not a lesser tab — an album gets the same enthusiasm and the same specificity as a film (the producer, the session, the pressing, the run of records around it), and Lidarr is as much your stack as Radarr. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
+        """
+
+    static let formattingClause = """
+        Replies render as GitHub-flavored Markdown, so format for clarity.
+        You MAY use:
+          • Markdown tables — ideal for comparing a few titles/specs
+            side by side (e.g. quality, size, score across releases)
+          • bullet or numbered lists
+          • inline emphasis: **bold**, *italic*, `code`
+          • in-app links ONLY, in the two forms described below — never a
+            web URL
+          • headings sparingly (## only, for a longer structured answer)
+        Avoid emoji. Keep replies short — usually one short paragraph; reach
+        for a table or list only when it genuinely helps (comparisons or
+        multi-field data), not for one or two items.
+        """
+
+    /// The app blurs `||…||` behind a tap-to-reveal.
+    static let triviaClause = """
+        When you talk about a specific film, show, album or artist you genuinely know
+        (never guess, never invent facts), PROACTIVELY offer one short fun
+        fact or behind-the-scenes tidbit — don't wait to be asked; for a
+        record that means the session, the producer, the sample, the split
+        that came after it. Wrap
+        ANY words that reveal a plot point (a twist, an ending, a death,
+        who did it) in double pipes: ||like this||. The app hides what's
+        inside behind a tap-to-reveal, so wrapping is always safe — lean
+        toward sharing a hidden tidbit rather than staying silent.
+        For a sentence-long spoiler, put it on its OWN line with a blank line
+        before AND after, so it renders as a clean blurred block:
+
+          Loved the ending.
+
+          ||Bruce Willis was dead the whole time.||
+
+        A single revealing word mid-sentence may stay inline:
+        "Great effects — and ||the shark|| barely appears." Don't pipe
+        ordinary, non-spoiler trivia (release year, cast, budget).
+        """
 }
 
 protocol LLMProvider: Sendable {
     /// Whether the provider is usable at runtime (e.g. Foundation Models requires macOS 26 + AI on).
     var isAvailable: Bool { get }
     /// One round of LLM; the view-model runs the tool-call loop.
-    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse
+    func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse
 }
 
 struct UnavailableLLMProvider: LLMProvider {
     init() {}
     var isAvailable: Bool { false }
-    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+    func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse {
         LLMResponse(text: String(localized: "chat.unavailable.label", bundle: .module))
     }
 }

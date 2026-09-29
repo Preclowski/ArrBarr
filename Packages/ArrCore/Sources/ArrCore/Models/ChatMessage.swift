@@ -39,3 +39,14 @@ nonisolated public struct ToolCall: Equatable, Sendable {
         self.arguments = arguments
     }
 }
+
+extension JSONValue {
+    /// A model's raw argument string. Anything but an object stays a string so the backend refuses it
+    /// with a message the model can act on, instead of running the tool with no arguments.
+    nonisolated static func toolArguments(_ raw: String) -> JSONValue {
+        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return .object([:]) }
+        guard let value = try? JSONDecoder().decode(JSONValue.self, from: Data(raw.utf8)),
+              case .object = value else { return .string(raw) }
+        return value
+    }
+}

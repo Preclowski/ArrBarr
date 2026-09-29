@@ -7,7 +7,7 @@ struct DemoChatProvider: LLMProvider {
     init() {}
     var isAvailable: Bool { true }
 
-    func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
+    func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse {
         // A short delay so the "thinking" indicator shows; instant replies read as canned.
         try? await Task.sleep(nanoseconds: 600_000_000)
 

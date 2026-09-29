@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Single-title details (+ optional cast)
 
-    static let titleDetailsTools: [MCPTool] = [
-        MCPTool(
+    static let titleDetailsTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "get_title_details",
             description: """
             Fetch full details for ONE movie (Radarr) or series (Sonarr) already in the library: overview/synopsis, year, runtime, genres, rating, status — and OPTIONALLY the cast.
@@ -38,8 +38,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Custom formats (TRaSH-style quality scoring)
 
-    static let customFormatTools: [MCPTool] = [
-        MCPTool(
+    static let customFormatTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "custom_formats",
             description: """
             Inspect the custom formats on Sonarr or Radarr — the named release-matching rules (e.g. 'Bluray Tier 01', 'x265 (HD)', 'Repack/Proper', 'LQ') that drive TRaSH-style quality scoring. TWO MODES:

@@ -4,8 +4,8 @@ nonisolated extension ChatToolCatalog {
 
     // MARK: - Media server (Plex / Jellyfin / Emby)
 
-    static let mediaServerTools: [MCPTool] = [
-        MCPTool(
+    static let mediaServerTools: [ToolDefinition] = [
+        ToolDefinition(
             name: "media_server_watch_history",
             description: """
             What the user has recently FINISHED watching on their media server (Plex / Jellyfin / Emby), newest first. Returns title, year and when it was watched; episodes are reported as their series.
@@ -24,7 +24,7 @@ nonisolated extension ChatToolCatalog {
                 ]),
             ])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "media_server_now_playing",
             description: """
             Active playback sessions on the media server right now: what is playing, which user, on which device, and whether the server is transcoding or direct-playing.
@@ -33,7 +33,7 @@ nonisolated extension ChatToolCatalog {
             """,
             inputSchema: .object(["type": .string("object"), "properties": .object([:])])
         ),
-        MCPTool(
+        ToolDefinition(
             name: "media_server_scan_library",
             description: """
             Ask the media server to rescan its libraries, so a title an arr just imported shows up without waiting for the server's own schedule.

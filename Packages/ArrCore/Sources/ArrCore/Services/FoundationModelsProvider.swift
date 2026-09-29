@@ -31,7 +31,7 @@ struct FoundationModelsProvider: LLMProvider {
     /// not re-execute.
     func respond(
         prompt: String,
-        tools: [LLMTool],
+        tools: [ToolDefinition],
         history: [ChatMessage]
     ) async throws -> LLMResponse {
         let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
@@ -52,7 +52,7 @@ struct FoundationModelsProvider: LLMProvider {
 
     /// Earlier turns enter as transcript entries: replaying them through `respond(to:)` regenerated every
     /// turn and re-ran its tools.
-    nonisolated private static func transcript(tools: [LLMTool], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
+    nonisolated private static func transcript(tools: [ToolDefinition], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
         func text(_ content: String) -> [Transcript.Segment] { [.text(.init(content: content))] }
         var entries: [Transcript.Entry] = [.instructions(.init(
             segments: text(instructions(tools: tools)),
@@ -68,7 +68,7 @@ struct FoundationModelsProvider: LLMProvider {
         return Transcript(entries: entries)
     }
 
-    nonisolated private static func instructions(tools: [LLMTool]) -> String {
+    nonisolated private static func instructions(tools: [ToolDefinition]) -> String {
         // Foundation Models sees one stringified `json` argument per tool, so each schema is spelled out here.
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -85,7 +85,7 @@ struct FoundationModelsProvider: LLMProvider {
             You are ArrBarr's in-app assistant for \(SystemPromptComposer.arrsClause(tools: tools)) — and a film, TV and music obsessive at heart.
             \(tools.isEmpty ? "" : (LibraryStats.shared.promptBlock() ?? ""))
             \(tools.isEmpty ? "" : (TasteProfileStore.shared.promptBlock() ?? ""))
-            You speak concisely but with real passion for what the user is asking about: a film, a series, a band, an album, a pressing. Music is not a lesser tab — an album gets the same enthusiasm and the same specificity as a film (the producer, the session, the pressing, the run of records around it), and Lidarr is as much your stack as Radarr. You run your own homelab on the same *arr stack, so you talk to the user as a fellow self-hoster: when it helps, you share a hard-won tip on quality profiles, custom formats or release groups — never lecturing. Passion shows in your word choice, not your length: keep it short.
+            \(SystemPromptComposer.persona)
             Match the user's language. (This on-device model's output language is bounded by the system Apple Intelligence setting, so there's no point forcing a specific one here.) Keep media titles exactly as the user wrote them.
 
             Tools you can call. For each tool the `json` argument MUST be a
@@ -116,40 +116,11 @@ struct FoundationModelsProvider: LLMProvider {
             Otherwise, answer directly without calling a tool.
             Never invent tool names that are not listed above.
 
-            Replies render as GitHub-flavored Markdown, so format for clarity.
-            You MAY use:
-              • Markdown tables — ideal for comparing a few titles/specs
-                side by side (e.g. quality, size, score across releases)
-              • bullet or numbered lists
-              • inline emphasis: **bold**, *italic*, `code`
-              • in-app links ONLY, in the two forms described below — never a
-                web URL
-              • headings sparingly (## only, for a longer structured answer)
-            Avoid emoji. Keep replies short — usually one short paragraph; reach
-            for a table or list only when it genuinely helps (comparisons or
-            multi-field data), not for one or two items.
+            \(SystemPromptComposer.formattingClause)
 
             \(SystemPromptComposer.linkingClause)
 
-            When you talk about a specific film, show, album or artist you genuinely know
-            (never guess, never invent facts), PROACTIVELY offer one short fun
-            fact or behind-the-scenes tidbit — don't wait to be asked; for a
-            record that means the session, the producer, the sample, the split
-            that came after it. Wrap
-            ANY words that reveal a plot point (a twist, an ending, a death,
-            who did it) in double pipes: ||like this||. The app hides what's
-            inside behind a tap-to-reveal, so wrapping is always safe — lean
-            toward sharing a hidden tidbit rather than staying silent.
-            For a sentence-long spoiler, put it on its OWN line with a blank line
-            before AND after, so it renders as a clean blurred block:
-
-              Loved the ending.
-
-              ||Bruce Willis was dead the whole time.||
-
-            A single revealing word mid-sentence may stay inline:
-            "Great effects — and ||the shark|| barely appears." Don't pipe
-            ordinary, non-spoiler trivia (release year, cast, budget).
+            \(SystemPromptComposer.triviaClause)
             """
     }
 }
@@ -183,7 +154,7 @@ actor DynamicMCPToolBox {
 /// `@Generable` arguments must be known at compile time, so every dynamic tool shares one `json` string field.
 struct DynamicMCPTool: Tool {
 
-    let spec: LLMTool
+    let spec: ToolDefinition
     let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
 
@@ -197,13 +168,7 @@ struct DynamicMCPTool: Tool {
     }
 
     func call(arguments: Arguments) async throws -> String {
-        let argsValue: JSONValue
-        if let data = arguments.json.data(using: .utf8),
-           let decoded = try? JSONDecoder().decode(JSONValue.self, from: data) {
-            argsValue = decoded
-        } else {
-            argsValue = .object([:])
-        }
+        let argsValue = JSONValue.toolArguments(arguments.json)
         let toolCall = ToolCall(name: spec.name, arguments: argsValue)
 
         // Presentation half of the destructive-tool gate; the backend refuses to run an unconfirmed tool.

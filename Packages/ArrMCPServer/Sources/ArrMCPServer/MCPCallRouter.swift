@@ -7,7 +7,7 @@ import MediaKit
 /// One router builds a server per HTTP session; the HTTP host owns `server.start(transport:)`.
 struct MCPCallRouter {
     let backend: LocalToolBackend
-    let catalog: [MCPTool]
+    let catalog: [ToolDefinition]
     let disabled: Set<String>
     let logger: Logger
 

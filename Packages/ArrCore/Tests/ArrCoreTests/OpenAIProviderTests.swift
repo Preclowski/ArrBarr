@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import ArrCore
+import MediaKit
 
 @Suite("OpenAIProvider", .serialized)
 struct OpenAIProviderTests {
@@ -82,7 +83,7 @@ struct OpenAIProviderTests {
         """.data(using: .utf8)!
         let resp = try await provider().respond(
             prompt: "find Severance",
-            tools: [LLMTool(name: "sonarr_search", description: "search sonarr", inputSchema: .object([:]))],
+            tools: [ToolDefinition(name: "sonarr_search", description: "search sonarr", inputSchema: .object([:]))],
             history: []
         )
         #expect(resp.toolCalls.count == 1)
@@ -112,13 +113,47 @@ struct OpenAIProviderTests {
         }
     }
 
+    @Test("an error sent as a stream line after the 200 is thrown, not read as an empty reply")
+    func streamedError() async throws {
+        StubProtocol.reset()
+        StubProtocol.nextResponseBody = Data("""
+        data: {"choices":[{"delta":{"content":"Hel"}}]}
+
+        data: {"error":{"message":"upstream overloaded"}}
+
+        """.utf8)
+        await #expect(throws: OpenAIError.provider("upstream overloaded")) {
+            _ = try await provider().respond(prompt: "x", tools: [], history: [])
+        }
+    }
+
+    @Test("a stream cut at the token limit with nothing usable throws")
+    func truncatedStream() async throws {
+        StubProtocol.reset()
+        StubProtocol.nextResponseBody = Data("""
+        data: {"choices":[{"delta":{},"finish_reason":"length"}]}
+
+        """.utf8)
+        await #expect(throws: OpenAIError.truncated) {
+            _ = try await provider().respond(prompt: "x", tools: [], history: [])
+        }
+    }
+
+    @Test("tool arguments: empty means none, anything but an object stays raw for the backend to refuse")
+    func toolArguments() {
+        #expect(JSONValue.toolArguments("") == .object([:]))
+        #expect(JSONValue.toolArguments(#"{"id":3}"#) == .object(["id": .number(3)]))
+        #expect(JSONValue.toolArguments(#"{"id":3"#) == .string(#"{"id":3"#))
+        #expect(JSONValue.toolArguments("[1]") == .string("[1]"))
+    }
+
     @Test("request body has model, system+user messages, and tool when present")
     func requestShape() async throws {
         StubProtocol.reset()
         StubProtocol.nextResponseBody = #"{"choices":[{"message":{"role":"assistant","content":"ok"}}]}"#.data(using: .utf8)!
         _ = try await provider().respond(
             prompt: "hi",
-            tools: [LLMTool(name: "sonarr_search", description: "search", inputSchema: .object([:]))],
+            tools: [ToolDefinition(name: "sonarr_search", description: "search", inputSchema: .object([:]))],
             history: []
         )
         let body = String(data: StubProtocol.lastBody ?? Data(), encoding: .utf8) ?? ""
@@ -134,8 +169,8 @@ struct OpenAIProviderTests {
     @Test("system prompt names only the arrs whose tools are present")
     func systemPromptArrsAreDynamic() {
         let tools = [
-            LLMTool(name: "radarr_search", description: "", inputSchema: .object([:])),
-            LLMTool(name: "lidarr_search", description: "", inputSchema: .object([:])),
+            ToolDefinition(name: "radarr_search", description: "", inputSchema: .object([:])),
+            ToolDefinition(name: "lidarr_search", description: "", inputSchema: .object([:])),
         ]
         let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "hi", tools: tools, history: [], replyLanguage: "Polish")
         let system = body.messages.first { $0.role == "system" }?.content ?? ""
@@ -149,9 +184,9 @@ struct OpenAIProviderTests {
     @Test("SystemPromptComposer.arrsClause joins present arrs, falls back when none")
     func arrsClause() {
         let all = [
-            LLMTool(name: "sonarr_search", description: "", inputSchema: .object([:])),
-            LLMTool(name: "radarr_search", description: "", inputSchema: .object([:])),
-            LLMTool(name: "whisparr_search", description: "", inputSchema: .object([:])),
+            ToolDefinition(name: "sonarr_search", description: "", inputSchema: .object([:])),
+            ToolDefinition(name: "radarr_search", description: "", inputSchema: .object([:])),
+            ToolDefinition(name: "whisparr_search", description: "", inputSchema: .object([:])),
         ]
         #expect(SystemPromptComposer.arrsClause(tools: all) == "Sonarr (TV), Radarr (movies) and Whisparr (adult content)")
         #expect(SystemPromptComposer.arrsClause(tools: []) == "your self-hosted *arr media stack")
