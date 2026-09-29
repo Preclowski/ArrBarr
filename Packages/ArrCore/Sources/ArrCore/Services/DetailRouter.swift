@@ -1,93 +1,77 @@
 import SwiftUI
 
-/// State with the app's lifetime rather than a one-shot `AppMessages` post, which
-/// hosts not yet listening dropped. A fresh `id` per request lets the same title open twice.
+/// A request that waits for its host: state with the app's lifetime rather than a one-shot post, so a host not
+/// mounted yet (a cold launch, a window still opening) takes it when it appears. The first host to take it
+/// clears it, and one past `lifetime` is never replayed by a host mounting later.
 @Observable
-public final class DetailRouter {
-    public static let shared = DetailRouter()
-
-    public struct Request: Identifiable, Equatable {
+public final class RequestRouter<Value: Sendable> {
+    public struct Request: Identifiable, Sendable {
         public let id = UUID()
-        public let item: QueueItem
+        public let value: Value
+        let sentAt = Date()
     }
 
     public private(set) var request: Request?
-    /// Beside the request, not in it: hosts push `request.item` into details that don't know the router.
-    private var pendingIntent: (itemID: String, intent: DetailIntent)?
+    let lifetime: TimeInterval
 
-    private init() {}
+    public init(lifetime: TimeInterval = 5) { self.lifetime = lifetime }
 
-    public func open(_ item: QueueItem, intent: DetailIntent? = nil) {
-        pendingIntent = intent.map { (item.id, $0) }
-        request = Request(item: item)
-    }
+    /// A fresh `id` per send, so the same title opens twice.
+    public func send(_ value: Value) { request = Request(value: value) }
 
-    /// One-shot: any detail that finishes loading clears it, so an intent whose detail never
-    /// loaded can't fire on a later open.
-    func takeIntent(for itemID: String) -> DetailIntent? {
-        defer { pendingIntent = nil }
-        guard let pendingIntent, pendingIntent.itemID == itemID else { return nil }
-        return pendingIntent.intent
+    fileprivate func take(_ taken: Request) {
+        if request?.id == taken.id { request = nil }
     }
 }
 
-public extension View {
-    /// Off-screen hosts guard on their own "am I the visible tab" flag.
-    func onDetailRequest(perform: @escaping @MainActor (QueueItem) -> Void) -> some View {
-        modifier(DetailRequestObserver(perform: perform))
-    }
+public enum Router {
+    public static let detail = RequestRouter<QueueItem>()
+    public static let searchAdd = RequestRouter<SearchAddRoute>()
+    /// The search-to-add intent or a chat link that resolved to nothing: run this query on the search surface.
+    /// Never stale: the menu-bar panel can't be opened programmatically, so the query waits for its next open.
+    public static let searchQuery = RequestRouter<String>(lifetime: .infinity)
 }
 
-private struct DetailRequestObserver: ViewModifier {
-    private var router: DetailRouter { .shared }
-    let perform: @MainActor (QueueItem) -> Void
-
-    func body(content: Content) -> some View {
-        content.onChange(of: router.request?.id) { _, _ in
-            guard let item = router.request?.item else { return }
-            perform(item)
-        }
-    }
-}
-
-
-/// Same as `DetailRouter`, for the "add this to an arr" panel.
-@Observable
-public final class SearchAddRouter {
-    public static let shared = SearchAddRouter()
-
+public struct SearchAddRoute: Sendable {
     /// What Back honours: chat returns to chat, a quiz card to the deck.
     public enum Origin: Sendable, Equatable { case chat, quiz, search }
+    public let result: SearchResult
+    public let origin: Origin
+}
 
-    public struct Request: Identifiable, Equatable {
-        public let id = UUID()
-        public let result: SearchResult
-        public let origin: Origin
+/// A row menu's entry, beside the detail request rather than in it: hosts push the item into details that
+/// don't know the router. One-shot: any detail that finishes loading clears it, so an intent whose detail
+/// never loaded can't fire on a later open.
+enum DetailIntents {
+    private static var pending: (itemID: String, intent: DetailIntent)?
+
+    static func stage(_ intent: DetailIntent?, for itemID: String) {
+        pending = intent.map { (itemID, $0) }
     }
 
-    public private(set) var request: Request?
-
-    private init() {}
-
-    public func open(_ result: SearchResult, origin: Origin) {
-        request = Request(result: result, origin: origin)
+    static func take(for itemID: String) -> DetailIntent? {
+        defer { pending = nil }
+        guard let pending, pending.itemID == itemID else { return nil }
+        return pending.intent
     }
 }
 
 public extension View {
-    func onSearchAddRequest(perform: @escaping @MainActor (SearchResult, SearchAddRouter.Origin) -> Void) -> some View {
-        modifier(SearchAddRequestObserver(perform: perform))
+    /// `perform` returns false when this host shouldn't take it (a hidden tab); it then waits for one that does.
+    func onRequest<Value>(from router: RequestRouter<Value>, perform: @escaping @MainActor (Value) -> Bool) -> some View {
+        modifier(RequestObserver(router: router, perform: perform))
     }
 }
 
-private struct SearchAddRequestObserver: ViewModifier {
-    private var router: SearchAddRouter { .shared }
-    let perform: @MainActor (SearchResult, SearchAddRouter.Origin) -> Void
+private struct RequestObserver<Value: Sendable>: ViewModifier {
+    let router: RequestRouter<Value>
+    let perform: @MainActor (Value) -> Bool
 
     func body(content: Content) -> some View {
-        content.onChange(of: router.request?.id) { _, _ in
-            guard let request = router.request else { return }
-            perform(request.result, request.origin)
+        content.onChange(of: router.request?.id, initial: true) {
+            guard let request = router.request, Date().timeIntervalSince(request.sentAt) < router.lifetime,
+                  perform(request.value) else { return }
+            router.take(request)
         }
     }
 }

@@ -203,7 +203,7 @@ extension View {
     func onDetailIntent(for itemID: String?, ready: Bool,
                         perform: @escaping (DetailIntent) -> Void) -> some View {
         onChange(of: ready, initial: true) { _, ready in
-            guard ready, let itemID, let intent = DetailRouter.shared.takeIntent(for: itemID) else { return }
+            guard ready, let itemID, let intent = DetailIntents.take(for: itemID) else { return }
             perform(intent)
         }
     }

@@ -64,7 +64,7 @@ enum ChatLinkRouter {
         }
         // Fall back to search with the ref pre-typed rather than a dead tap.
         log.notice("chat link \(incoming.urlString, privacy: .public) resolved to nothing — falling back to search")
-        AppMessages.post(AppMessages.SearchQuery(query: ref.lookupTerm))
+        Router.searchQuery.send(ref.lookupTerm)
     }
 
     /// Sonarr's map is keyed by TVDB id, Radarr's by TMDB id.

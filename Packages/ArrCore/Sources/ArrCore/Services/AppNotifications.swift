@@ -23,12 +23,6 @@ nonisolated public enum AppMessages {
         public let urls: [URL]
         public init(urls: [URL]) { self.urls = urls }
     }
-    /// The search-to-add intent or a chat link that resolved to nothing: run this query on the search surface.
-    public struct SearchQuery: NotificationCenter.AsyncMessage {
-        public typealias Subject = AppMessageBus
-        public let query: String
-        public init(query: String) { self.query = query }
-    }
     /// The `discover_in_quiz` tool or the resume card: open the quiz with these picks (`append` extends a live deck).
     public struct OpenDiscoverQuiz: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus
@@ -132,7 +126,8 @@ public enum DetailRequest {
 
     public static func post(_ item: QueueItem, intent: DetailIntent? = nil) {
         log.notice("open detail: \(item.source.rawValue, privacy: .public) #\(item.entityId ?? 0, privacy: .public) \(intent.map { "\($0)" } ?? "", privacy: .public)")
-        DetailRouter.shared.open(item, intent: intent)
+        DetailIntents.stage(intent, for: item.id)
+        Router.detail.send(item)
     }
 
     /// Lidarr's search entity is the artist; handing its id to the album-shaped
@@ -159,7 +154,7 @@ public enum DetailRequest {
     }
 
     /// In library → DetailView via the arr-internal id; otherwise SearchAddPanel.
-    public static func tap(_ result: SearchResult, addOrigin: SearchAddRouter.Origin = .search) {
+    public static func tap(_ result: SearchResult, addOrigin: SearchAddRoute.Origin = .search) {
         guard let arrId = result.inLibraryArrId else {
             SearchAddRequest.post(result, origin: addOrigin)
             return
@@ -189,7 +184,7 @@ enum PersonRequest {
 }
 
 enum SearchAddRequest {
-    static func post(_ result: SearchResult, origin: SearchAddRouter.Origin = .search) {
-        SearchAddRouter.shared.open(result, origin: origin)
+    static func post(_ result: SearchResult, origin: SearchAddRoute.Origin = .search) {
+        Router.searchAdd.send(SearchAddRoute(result: result, origin: origin))
     }
 }

@@ -187,11 +187,8 @@ public struct SearchToAddIntent: AppIntent {
 
     public func perform() async throws -> some IntentResult {
         let q = query
-        // Lets a cold-launched search surface mount and listen before the post.
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 400_000_000)
-            AppMessages.post(AppMessages.SearchQuery(query: q))
-        }
+        // Waits in the router until the search surface mounts, even on a cold launch.
+        await MainActor.run { Router.searchQuery.send(q) }
         return .result()
     }
 }

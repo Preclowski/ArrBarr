@@ -159,12 +159,13 @@ public struct PopoverContentView: View {
             }
             .background { hiddenShortcuts }
             // The popover can't be opened programmatically, so this stages the query for when it opens.
-            .onMessage(AppMessages.SearchQuery.self) { message in
+            .onRequest(from: Router.searchQuery) { query in
                 selectedTab = .queue
                 // The `didSet` runs the search.
-                searchViewModel.query = message.query
+                searchViewModel.query = query
+                return true
             }
-            .onDetailRequest { item in
+            .onRequest(from: Router.detail) { item in
                 searchResult = nil
                 historySource = nil
                 if detailItem == nil {
@@ -177,6 +178,7 @@ public struct PopoverContentView: View {
                         withAnimation(.smooth(duration: 0.22)) { detailItem = item }
                     }
                 }
+                return true
             }
             .onMessage(AppMessages.OpenPerson.self) { message in
                 searchResult = nil
@@ -184,12 +186,13 @@ public struct PopoverContentView: View {
                 detailItem = nil
                 personRef = message.ref
             }
-            .onSearchAddRequest { result, origin in
+            .onRequest(from: Router.searchAdd) { route in
                 // Back returns to chat only for the chat origin; a quiz card returns to the parked deck.
                 historySource = nil
                 detailItem = nil
-                searchAddFromChat = origin == .chat
-                searchResult = result
+                searchAddFromChat = route.origin == .chat
+                searchResult = route.result
+                return true
             }
             // The deck seeds itself (`DiscoverViewModel.open`); this only clears what it comes up over.
             .onChange(of: discoverViewModel.isPresented) { _, presented in

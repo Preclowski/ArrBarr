@@ -18,7 +18,7 @@ public struct iOSAppRoot: View {
     @State private var chatHolder = ChatViewModelHolder()
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var quizAddResult: SearchResult?
-    /// `DetailRouter` requests reach every listening stack; listeners check this so hidden tabs
+    /// `Router.detail` requests reach every listening stack; listeners check this so hidden tabs
     /// don't push a stale copy.
     @State private var selectedTab: RootTab = .queue
     /// Owned here so a tab switch can close it — only when empty, so a query isn't lost.
@@ -109,7 +109,7 @@ public struct iOSAppRoot: View {
         }
         // macOS hosts the add panel in the popover; here the root must, or the quiz's and chat's
         // add actions do nothing.
-        .onSearchAddRequest { result, _ in quizAddResult = result }
+        .onRequest(from: Router.searchAdd) { route in quizAddResult = route.result; return true }
         // Queue deletes ask through `ConfirmCenter`; without a host the question never shows.
         .confirmCenterHost()
         // Seeded by the `discover_in_quiz` tool or the chat resume card.
@@ -191,11 +191,9 @@ public struct iOSAppRoot: View {
         .onContinueUserActivity(CSSearchableItemActionType) { activity in
             guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
                   let ref = SpotlightIndexer.parse(id) else { return }
-            // Small delay so the cold-launched Queue tab's detail listener is mounted before we post.
-            Task {
-                try? await Task.sleep(nanoseconds: 400_000_000)
-                DetailRequest.post(DetailRequest.syntheticItem(source: ref.source, entityId: ref.id, title: ""))
-            }
+            // The Queue tab takes it once mounted, even on a cold launch.
+            selectedTab = .queue
+            DetailRequest.post(DetailRequest.syntheticItem(source: ref.source, entityId: ref.id, title: ""))
         }
     }
 }
@@ -254,9 +252,10 @@ private struct QueueTab: View {
         }
         // Hidden while editing, like Files and Mail: the bottom action bar needs the room.
         .toolbar(selecting ? .hidden : .visible, for: .tabBar)
-        .onMessage(AppMessages.SearchQuery.self) { message in
+        .onRequest(from: Router.searchQuery) { query in
             searchResult = nil
-            searchVM.query = message.query
+            searchVM.query = query
+            return true
         }
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
@@ -264,9 +263,10 @@ private struct QueueTab: View {
         .navigationDestination(item: $historySource) { source in
             HistoryTab(viewModel: viewModel, initialSource: source)
         }
-        .onDetailRequest { item in
-            guard isActive else { return }
+        .onRequest(from: Router.detail) { item in
+            guard isActive else { return false }
             detailItem = item
+            return true
         }
     }
 
@@ -431,9 +431,10 @@ private struct LibraryTab: View {
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
         // Library tiles post `DetailRequest`; without a listener the tap does nothing.
-        .onDetailRequest { item in
-            guard isActive else { return }
+        .onRequest(from: Router.detail) { item in
+            guard isActive else { return false }
             detailItem = item
+            return true
         }
     }
 }
@@ -481,9 +482,10 @@ private struct UpcomingTab: View {
         .navigationDestination(item: $detailItem) { item in
             DetailView(item: item, onBack: { detailItem = nil }, viewModel: viewModel)
         }
-        .onDetailRequest { item in
-            guard isActive else { return }
+        .onRequest(from: Router.detail) { item in
+            guard isActive else { return false }
             detailItem = item
+            return true
         }
     }
 

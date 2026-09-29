@@ -164,15 +164,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
-    /// The MenuBarExtra panel can't be opened programmatically, so this uses the detached window. A freshly
-    /// built window needs a beat for `PopoverContentView`'s listener to mount before the post lands.
+    /// The MenuBarExtra panel can't be opened programmatically, so this uses the detached window, whose
+    /// `PopoverContentView` takes the request once it mounts.
     private func openSpotlightDetail(source: QueueItem.Source, entityId: Int) {
-        let wasOpen = mainWindow != nil
         openMainWindow()
-        Task { @MainActor in
-            if !wasOpen { try? await Task.sleep(nanoseconds: 450_000_000) }
-            DetailRequest.post(DetailRequest.syntheticItem(source: source, entityId: entityId, title: ""))
-        }
+        DetailRequest.post(DetailRequest.syntheticItem(source: source, entityId: entityId, title: ""))
     }
 
     // MARK: - Detached window (Dock-icon mode)

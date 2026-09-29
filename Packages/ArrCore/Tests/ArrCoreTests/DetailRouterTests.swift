@@ -3,21 +3,21 @@ import Foundation
 @testable import ArrCore
 
 /// The Library, Upcoming and chat surfaces open a detail view by publishing on
-/// `DetailRouter`; the hosts fire on the request's id changing. These pin the
+/// `Router.detail`; the hosts fire on the request's id changing. These pin the
 /// two properties that behaviour rests on — a request lands, and opening the
 /// same title twice is two distinct requests (otherwise a re-tap after Back
 /// would do nothing).
 @MainActor
 struct DetailRouterTests {
     @Test func openPublishesTheItem() {
-        let router = DetailRouter.shared
+        let router = Router.detail
         DetailRequest.open(source: .radarr, arrId: 42, title: "Big Buck Bunny")
-        #expect(router.request?.item.entityId == 42)
-        #expect(router.request?.item.source == .radarr)
+        #expect(router.request?.value.entityId == 42)
+        #expect(router.request?.value.source == .radarr)
     }
 
     @Test func reopeningTheSameTitleIsANewRequest() {
-        let router = DetailRouter.shared
+        let router = Router.detail
         DetailRequest.open(source: .sonarr, arrId: 7, title: "Sintel")
         let first = router.request?.id
         DetailRequest.open(source: .sonarr, arrId: 7, title: "Sintel")
@@ -31,13 +31,13 @@ struct DetailRouterTests {
     @Test func anEpisodeLookupCarriesItsCoordinates() {
         DetailRequest.post(DetailRequest.syntheticItem(
             source: .sonarr, entityId: 12, title: "Sintel", seasonNumber: 2, episodeNumber: 5))
-        let item = DetailRouter.shared.request?.item
+        let item = Router.detail.request?.value
         #expect(item?.seasonNumber == 2)
         #expect(item?.episodeNumber == 5)
         // Two episodes of one series must not share an identity.
         DetailRequest.post(DetailRequest.syntheticItem(
             source: .sonarr, entityId: 12, title: "Sintel", seasonNumber: 2, episodeNumber: 6))
-        #expect(DetailRouter.shared.request?.item.id != item?.id)
+        #expect(Router.detail.request?.value.id != item?.id)
     }
 
     /// The Quiz's "More" on a card that is NOT in the library takes the add
@@ -48,40 +48,39 @@ struct DetailRouterTests {
                                   overview: nil, runtime: nil, genres: [], network: nil, certification: nil,
                                   posterURL: nil, source: .radarr)
         SearchAddRequest.post(result, origin: .quiz)
-        #expect(SearchAddRouter.shared.request?.result.title == "Sintel")
-        #expect(SearchAddRouter.shared.request?.origin == .quiz)
+        #expect(Router.searchAdd.request?.value.result.title == "Sintel")
+        #expect(Router.searchAdd.request?.value.origin == .quiz)
 
         // An owned title still opens the detail instead.
         result.inLibraryArrId = 9
-        let before = SearchAddRouter.shared.request?.id
+        let before = Router.searchAdd.request?.id
         DetailRequest.tap(result, addOrigin: .quiz)
-        #expect(SearchAddRouter.shared.request?.id == before)
-        #expect(DetailRouter.shared.request?.item.entityId == 9)
+        #expect(Router.searchAdd.request?.id == before)
+        #expect(Router.detail.request?.value.entityId == 9)
     }
 
     /// Lidarr's addable entity is the artist, so a bare `open` has to route to
     /// the artist surface rather than treat the id as an album.
     @Test func lidarrOpensTheArtistSurface() {
         DetailRequest.open(source: .lidarr, arrId: 3, title: "Kevin MacLeod")
-        #expect(DetailRouter.shared.request?.item.isLidarrArtistLookup == true)
+        #expect(Router.detail.request?.value.isLidarrArtistLookup == true)
     }
 
     /// A row menu's entry is carried out once: Back from the history must not reopen it, and an
     /// intent whose detail never loaded must not fire on the next title.
     @Test func aRowIntentIsHandedOverOnce() {
-        let router = DetailRouter.shared
         let movie = DetailRequest.syntheticItem(source: .radarr, entityId: 42, title: "Big Buck Bunny")
         DetailRequest.post(movie, intent: .history)
-        #expect(router.takeIntent(for: movie.id) == .history)
-        #expect(router.takeIntent(for: movie.id) == nil)
+        #expect(DetailIntents.take(for: movie.id) == .history)
+        #expect(DetailIntents.take(for: movie.id) == nil)
 
         DetailRequest.post(movie, intent: .edit)
-        #expect(router.takeIntent(for: "radarr-7") == nil)
-        #expect(router.takeIntent(for: movie.id) == nil)
+        #expect(DetailIntents.take(for: "radarr-7") == nil)
+        #expect(DetailIntents.take(for: movie.id) == nil)
 
         DetailRequest.post(movie, intent: .edit)
         DetailRequest.post(movie)
-        #expect(router.takeIntent(for: movie.id) == nil)
+        #expect(DetailIntents.take(for: movie.id) == nil)
     }
 
     /// A row offers only what the detail it opens has in its "…".

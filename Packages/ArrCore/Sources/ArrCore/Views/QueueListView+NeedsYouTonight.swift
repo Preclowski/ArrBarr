@@ -122,7 +122,7 @@ extension QueueListView {
         .padding(.top, 2)
     }
 
-    /// Picked up by the popover's `DetailRouter` observer.
+    /// Picked up by the popover's `Router.detail` observer.
     private func openUpcomingDetail(_ item: UpcomingItem) {
         guard let entityId = item.entityId else { return }
         DetailRequest.post(

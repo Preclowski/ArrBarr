@@ -11,7 +11,7 @@ extension PopoverContentView {
                     HistoryView(
                         source: historySource,
                         viewModel: viewModel,
-                        // Not through `DetailRouter`, whose handler drops the history surface — Back must land here.
+                        // Not through `Router.detail`, whose handler drops the history surface — Back must land here.
                         onOpenDetail: { item in
                             withAnimation(.smooth(duration: 0.22)) { detailItem = item }
                         },
