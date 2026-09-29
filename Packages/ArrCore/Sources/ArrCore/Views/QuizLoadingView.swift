@@ -18,7 +18,7 @@ struct QuizLoadingView: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            WaitPosterLayer(poster: (posters.last ?? library.first).map { WaitPoster(url: $0) }, blurred: true)
+            WaitPosterLayer(poster: (posters.last ?? library.first).map { WaitPoster(url: $0) })
             WaitStage(stories: stories) {
                 VStack(alignment: .leading, spacing: 6) {
                     WaitStatusLine(label: phaseKey)

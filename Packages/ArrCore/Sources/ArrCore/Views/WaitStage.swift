@@ -5,12 +5,10 @@ nonisolated struct WaitPoster: Hashable, Sendable {
     var apiKey: String? = nil
 }
 
-/// A full-bleed cover behind a long wait. Blurred and drifting while it stands in for covers still
-/// on their way (quiz); sharp with a slow push-in when it is the title itself (release search).
-/// Scrimmed like the quiz card, so the text on it reads the same.
+/// A full-bleed cover behind a long wait, blurred and drifting slowly, scrimmed like the quiz card
+/// so the text on it reads the same.
 struct WaitPosterLayer: View {
     let poster: WaitPoster?
-    var blurred = false
 
     private struct Shown {
         let poster: WaitPoster
@@ -18,7 +16,6 @@ struct WaitPosterLayer: View {
     }
 
     @State private var shown: Shown?
-    @State private var drift = false
     @State private var lastChange = Date.distantPast
 
     /// Picks can land several a second; a cover stays at least this long.
@@ -29,25 +26,31 @@ struct WaitPosterLayer: View {
             let size = proxy.size
             ZStack {
                 Color.black
-                ZStack {
-                    if let shown {
-                        Image(platformImage: shown.image)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: size.width, height: size.height)
-                            .id(shown.poster)
-                            // The old cover leaves only once the new one covers it: no dim midpoint.
-                            .transition(.asymmetric(insertion: .opacity,
-                                                    removal: .opacity.animation(.linear(duration: 0.1).delay(1.3))))
+                // Driven by the clock, not an animation: a repeating animation also caught the first
+                // layout pass and grew the cover out of the top-left corner.
+                TimelineView(.animation(minimumInterval: 1 / 20)) { context in
+                    let drift = (1 - cos(context.date.timeIntervalSinceReferenceDate * .pi / 18)) / 2
+                    ZStack {
+                        if let shown {
+                            Image(platformImage: shown.image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: size.width, height: size.height)
+                                .id(shown.poster)
+                                // Fades in while settling back from a closer zoom; the old cover leaves
+                                // only once the new one covers it, so there's no dim midpoint.
+                                .transition(.asymmetric(
+                                    insertion: .opacity.combined(with: .scale(scale: 1.14)),
+                                    removal: .opacity.animation(.linear(duration: 0.1).delay(1.5))))
+                        }
                     }
+                    .frame(width: size.width, height: size.height)
+                    .scaleEffect(1.18 + 0.08 * drift)
+                    .offset(x: -size.width * 0.03 * drift, y: size.height * 0.02 * drift)
                 }
-                // On the container, so the drift carries on across a swap instead of restarting.
-                .scaleEffect(blurred ? (drift ? 1.26 : 1.18) : (drift ? 1.1 : 1.02))
-                .offset(x: drift ? -size.width * 0.03 : 0, y: drift ? size.height * 0.02 : 0)
-                .animation(.easeInOut(duration: blurred ? 18 : 24).repeatForever(autoreverses: true), value: drift)
-                .blur(radius: blurred ? 28 : 0, opaque: true)
-                .saturation(blurred ? 1.25 : 1)
-                if blurred { Color.black.opacity(0.22) }
+                .blur(radius: 28, opaque: true)
+                .saturation(1.25)
+                Color.black.opacity(0.22)
                 scrim(size)
             }
             .frame(width: size.width, height: size.height)
@@ -55,7 +58,6 @@ struct WaitPosterLayer: View {
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
-        .onAppear { drift = true }
         .task(id: poster) { await show(poster) }
     }
 
@@ -79,7 +81,7 @@ struct WaitPosterLayer: View {
         guard let image = await PosterStore.shared.image(for: url, tier: .card, apiKey: poster.apiKey),
               !Task.isCancelled else { return }
         lastChange = Date()
-        withAnimation(.easeInOut(duration: 1.2)) { shown = Shown(poster: poster, image: image) }
+        withAnimation(.easeOut(duration: 1.4)) { shown = Shown(poster: poster, image: image) }
     }
 }
 
