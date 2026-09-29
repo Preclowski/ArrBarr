@@ -38,6 +38,8 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
     /// TMDB for movies, TVDB for series (what Sonarr's calendar embeds). Nil for music.
     public var tmdbId: Int? = nil
     public var tvdbId: Int? = nil
+    /// The arr's web slug: title slug for movies and series, foreign album id for music.
+    public var slug: String? = nil
 
     public init(
         id: String, source: Source, title: String, subtitle: String?,
@@ -51,7 +53,8 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         qualityProfileId: Int? = nil,
         seasonNumber: Int? = nil, episodeNumber: Int? = nil,
         trackCount: Int? = nil,
-        tmdbId: Int? = nil, tvdbId: Int? = nil
+        tmdbId: Int? = nil, tvdbId: Int? = nil,
+        slug: String? = nil
     ) {
         self.id = id; self.source = source; self.title = title; self.subtitle = subtitle
         self.airDate = airDate; self.releaseType = releaseType
@@ -67,6 +70,7 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
         self.seasonNumber = seasonNumber; self.episodeNumber = episodeNumber
         self.trackCount = trackCount
         self.tmdbId = tmdbId; self.tvdbId = tvdbId
+        self.slug = slug
     }
 
     public func airDateCompact(locale: Locale) -> String {

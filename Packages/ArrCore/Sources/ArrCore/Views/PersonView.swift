@@ -364,7 +364,6 @@ private struct PersonFilmographyRow: View {
     private var metadata: [String] {
         var out: [String] = []
         if let role = result.subtitle, !role.isEmpty { out.append(role) }
-        if let r = result.rating { out.append(String(format: "★%.1f", r)) }
         out.append(contentsOf: result.genres.prefix(2))
         return out
     }
@@ -378,7 +377,11 @@ private struct PersonFilmographyRow: View {
             posterFallbackSymbol: result.source.symbol,
             title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
             metadataSegments: metadata,
-            onTap: onTap
+            onTap: onTap,
+            // Filmography scores are TMDB's.
+            metadataBadge: {
+                if let chip = result.rating.flatMap({ RatingChip.tmdb($0) }) { RatingPill(chip: chip) }
+            }
         ) {
             if result.inLibraryArrId != nil {
                 LibraryStateBadge(isDownloaded: result.libraryDownloaded)

@@ -67,7 +67,7 @@ struct UpcomingRowView: View {
             metadataSegments: episodeSegments,
             metadataSegments2: ratingSegments,
             disabled: item.entityId == nil,
-            onTap: openDetail,
+            onTap: { detailTarget.map { DetailRequest.post($0) } },
             metadataBadge2: {
                 if let ratingChip { RatingPill(chip: ratingChip) }
             }
@@ -82,6 +82,14 @@ struct UpcomingRowView: View {
             }
         }
         .upcomingTooltip(item: item)
+        .contextMenu {
+            if let detailTarget {
+                DetailEntryMenuItems(target: detailTarget,
+                                     webURL: arrWebURL(source: item.source, slug: item.slug, in: configStore),
+                                     // An unaired episode has nothing to find; its detail offers no search.
+                                     searchable: item.source != .sonarr || item.airDate <= .now)
+            }
+        }
     }
 
     /// A Lidarr album has no episode, so the line carries the track count: the
@@ -119,30 +127,24 @@ struct UpcomingRowView: View {
         return item.tmdb.flatMap { RatingChip.tmdb($0) }
     }
 
-    private func openDetail() {
-        guard let entityId = item.entityId else { return }
-        // Open the live queue item if one is downloading: a synthetic shell reads
-        // as new with no file. Series match on the episode's own coordinates.
+    /// The live queue item if one is downloading: a synthetic shell reads as new with no file.
+    /// Series match on the episode's own coordinates.
+    private var detailTarget: QueueItem? {
+        guard let entityId = item.entityId else { return nil }
         let live = QueueViewModel.shared.items(for: item.source).first { queued in
             guard queued.entityId == entityId else { return false }
             guard item.source == .sonarr else { return true }
             return queued.seasonNumber == item.seasonNumber
                 && queued.episodeNumber == item.episodeNumber
         }
-        if let live {
-            DetailRequest.post(live)
-            return
-        }
-        DetailRequest.post(
-            DetailRequest.syntheticItem(
-                source: item.source,
-                entityId: entityId,
-                title: item.title,
-                posterURL: item.posterURL,
-                posterRequiresAuth: item.posterRequiresAuth,
-                seasonNumber: item.seasonNumber,
-                episodeNumber: item.episodeNumber
-            )
+        return live ?? DetailRequest.syntheticItem(
+            source: item.source,
+            entityId: entityId,
+            title: item.title,
+            posterURL: item.posterURL,
+            posterRequiresAuth: item.posterRequiresAuth,
+            seasonNumber: item.seasonNumber,
+            episodeNumber: item.episodeNumber
         )
     }
 

@@ -130,15 +130,17 @@ enum DetailMenuLabel {
 /// What a row's context menu asks the detail it opens to go straight into. The detail carries it out
 /// once loaded: manual search frames against the file on disk, a Lidarr album edits its artist.
 public enum DetailIntent: Sendable {
-    case manualSearch, edit, history
+    case automaticSearch, manualSearch, edit, history
+
+    var isSearch: Bool { self == .automaticSearch || self == .manualSearch }
 
     /// Mirrors each detail's `detailActions`, so a row never offers what its detail can't open.
     static func supported(by item: QueueItem) -> [DetailIntent] {
         guard item.entityId != nil else { return [] }
-        if item.opensEpisodeDetail { return [.manualSearch, .history] }
+        if item.opensEpisodeDetail { return [.automaticSearch, .manualSearch, .history] }
         // A series searches per season, an artist has no manual search.
         let manual = item.source != .sonarr && !item.isLidarrArtistLookup
-        return (manual ? [.manualSearch] : []) + [.edit, .history]
+        return [.automaticSearch] + (manual ? [.manualSearch] : []) + [.edit, .history]
     }
 }
 
@@ -154,16 +156,19 @@ extension QueueItem {
     }
 }
 
-/// A row's twin of its detail's "…", cut to edit and the ways into other views; automatic search and
-/// delete stay in the detail. Each entry opens the detail, which then pushes or presents the view.
+/// A row's twin of its detail's "…", minus delete, which stays in the detail. Each entry opens the
+/// detail, which then runs the search or pushes or presents the view.
 struct DetailEntryMenuItems: View {
     let target: QueueItem
     let webURL: URL?
+    /// False for an episode that hasn't aired: its detail offers no search either.
+    var searchable = true
 
     var body: some View {
-        ForEach(DetailIntent.supported(by: target), id: \.self) { intent in
+        ForEach(DetailIntent.supported(by: target).filter { searchable || !$0.isSearch }, id: \.self) { intent in
             Button { DetailRequest.post(target, intent: intent) } label: {
                 switch intent {
+                case .automaticSearch: DetailMenuLabel.automaticSearch
                 case .manualSearch: DetailMenuLabel.manualSearch
                 case .edit: DetailMenuLabel.edit(editLabel)
                 case .history: DetailMenuLabel.history
@@ -185,6 +190,7 @@ extension DetailActions {
     /// Opens what a row menu asked for, if this subject offers it.
     func carryOut(_ intent: DetailIntent, state: Binding<DetailActionState>) {
         switch intent {
+        case .automaticSearch: search?.onAutomatic?()
         case .manualSearch: search?.onManual?()
         case .edit: state.wrappedValue.edit = edit
         case .history: state.wrappedValue.history = history

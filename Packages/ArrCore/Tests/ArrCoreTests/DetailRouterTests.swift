@@ -87,17 +87,17 @@ struct DetailRouterTests {
     /// A row offers only what the detail it opens has in its "…".
     @Test func rowsOfferWhatTheirDetailOpens() {
         let movie = DetailRequest.syntheticItem(source: .radarr, entityId: 1, title: "Sintel")
-        #expect(DetailIntent.supported(by: movie) == [.manualSearch, .edit, .history])
+        #expect(DetailIntent.supported(by: movie) == [.automaticSearch, .manualSearch, .edit, .history])
         let series = DetailRequest.syntheticItem(source: .sonarr, entityId: 2, title: "Pioneer One")
-        #expect(DetailIntent.supported(by: series) == [.edit, .history])
+        #expect(DetailIntent.supported(by: series) == [.automaticSearch, .edit, .history])
         let artist = DetailRequest.item(source: .lidarr, arrId: 3, title: "Kevin MacLeod")
-        #expect(DetailIntent.supported(by: artist) == [.edit, .history])
+        #expect(DetailIntent.supported(by: artist) == [.automaticSearch, .edit, .history])
         let album = DetailRequest.item(source: .lidarr, arrId: 4, title: "Ghosts I-IV", isLidarrAlbum: true)
-        #expect(DetailIntent.supported(by: album) == [.manualSearch, .edit, .history])
+        #expect(DetailIntent.supported(by: album) == [.automaticSearch, .manualSearch, .edit, .history])
         #if os(macOS)
         let episode = DetailRequest.syntheticItem(source: .sonarr, entityId: 2, title: "Pioneer One",
                                                   seasonNumber: 1, episodeNumber: 3)
-        #expect(DetailIntent.supported(by: episode) == [.manualSearch, .history])
+        #expect(DetailIntent.supported(by: episode) == [.automaticSearch, .manualSearch, .history])
         #endif
     }
 }

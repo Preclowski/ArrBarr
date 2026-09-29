@@ -157,7 +157,7 @@ nonisolated enum ArrCompositions {
                 posterURL: poster, posterRequiresAuth: auth, imdb: r.ratings?.imdb?.value, tmdb: r.ratings?.tmdb?.value, runtime: r.runtime,
                 entityId: r.id, genres: r.genres ?? [], certification: r.certification, releaseStatus: r.status,
                 ratingRt: r.ratings?.rottenTomatoes?.value, ratingMetacritic: r.ratings?.metacritic?.value, qualityProfileId: r.qualityProfileId,
-                tmdbId: source == .radarr ? r.tmdbId : nil)
+                tmdbId: source == .radarr ? r.tmdbId : nil, slug: r.titleSlug)
         case .sonarr:
             guard let dateStr = r.airDateUtc, let date = parseArrDate(dateStr) else { return nil }
             let base = r.series?.title ?? unknownTitle
@@ -171,7 +171,8 @@ nonisolated enum ArrCompositions {
                 airDate: date, releaseType: "Airing", hasFile: r.hasFile ?? false, overview: r.overview,
                 posterURL: poster, posterRequiresAuth: auth, imdb: r.series?.ratings?.value, runtime: r.series?.runtime,
                 entityId: r.seriesId, episodeFileId: r.episodeFileId, genres: r.series?.genres ?? [], releaseStatus: r.series?.status,
-                qualityProfileId: r.series?.qualityProfileId, seasonNumber: r.seasonNumber, episodeNumber: r.episodeNumber, tvdbId: r.series?.tvdbId)
+                qualityProfileId: r.series?.qualityProfileId, seasonNumber: r.seasonNumber, episodeNumber: r.episodeNumber, tvdbId: r.series?.tvdbId,
+                slug: r.series?.titleSlug)
         case .lidarr:
             guard let dateStr = r.releaseDate, let date = parseArrDate(dateStr) else { return nil }
             let album = r.title ?? unknownTitle
@@ -180,7 +181,8 @@ nonisolated enum ArrCompositions {
             return UpcomingItem(
                 id: "lidarr-cal-\(r.id)", source: .lidarr, title: r.artist?.artistName.map { "\($0) — \(album)" } ?? album, subtitle: nil,
                 airDate: date, releaseType: "Album", hasFile: tracks > 0 && trackFiles >= tracks, overview: r.overview,
-                posterURL: poster, posterRequiresAuth: auth, entityId: r.id, trackCount: tracks > 0 ? tracks : nil)
+                posterURL: poster, posterRequiresAuth: auth, entityId: r.id, trackCount: tracks > 0 ? tracks : nil,
+                slug: r.foreignAlbumId)
         }
     }
 

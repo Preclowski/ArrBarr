@@ -61,7 +61,7 @@ extension LibraryEntry {
 }
 
 extension View {
-    /// The entry's detail "…", minus what only acts (automatic search, delete).
+    /// The entry's detail "…", minus delete.
     func libraryEntryMenu(_ entry: LibraryEntry, configStore: ConfigStore) -> some View {
         contextMenu {
             DetailEntryMenuItems(target: entry.detailTarget, webURL: entry.webURL(in: configStore))
