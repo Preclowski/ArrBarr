@@ -44,7 +44,7 @@ public actor SQLiteDatabase {
     public nonisolated var unownedExecutor: UnownedSerialExecutor { queue.asUnownedSerialExecutor() }
 
     private let connection: Connection
-    private var db: OpaquePointer? { connection.db }
+    private var db: OpaquePointer { connection.db }
     private var statements: [String: OpaquePointer] {
         get { connection.statements }
         set { connection.statements = newValue }
@@ -58,7 +58,6 @@ public actor SQLiteDatabase {
         self.log = log
         self.readOnlyCache = location.readOnlyCache
         queue = DispatchSerialQueue(label: "pl.incred.mediakit.sqlite", qos: .utility)
-        var handle: OpaquePointer?
         var flags = SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE | SQLITE_OPEN_NOMUTEX
         let path: String
         switch location.kind {
@@ -69,23 +68,54 @@ public actor SQLiteDatabase {
             path = directory.appendingPathComponent(location.fileName).path
             if location.protectFiles { flags |= fileProtectionCompleteUntilFirstUserAuthentication }
         }
-        let isNew = path == ":memory:" || !FileManager.default.fileExists(atPath: path)
-        guard sqlite3_open_v2(path, &handle, flags, nil) == SQLITE_OK, let handle else {
-            let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "open failed"
-            sqlite3_close(handle)
-            throw MediaKitError.persistence(detail: message)
+        let opened: (handle: OpaquePointer, version: Int32)
+        do {
+            opened = try Self.open(path, flags: flags)
+        } catch where path != ":memory:" {
+            // Only a cache: a file that won't open is moved aside, or every launch would run without the disk tier.
+            log.log(.error, category: "Store", "database unreadable, starting a fresh one")
+            Self.moveAside(path)
+            opened = try Self.open(path, flags: flags)
         }
+        let (handle, version) = opened
         connection = Connection(db: handle)
-        sqlite3_busy_timeout(handle, 5000)
-        if isNew { try Self.exec(handle, "PRAGMA auto_vacuum = INCREMENTAL;") }
-        try Self.exec(handle, StoreSchema.pragmas)
-        var version: Int32 = 0
-        try Self.query(handle, "PRAGMA user_version;") { stmt in version = sqlite3_column_int(stmt, 0) }
         if version > StoreSchema.userVersion {
             readOnlyCache = true
             log.log(.notice, category: "Store", "database from a newer build (user_version \(version)); cache read-only")
         } else if version < StoreSchema.userVersion {
             try Self.exec(handle, StoreSchema.v1)
+        }
+    }
+
+    private static func open(_ path: String, flags: Int32) throws -> (handle: OpaquePointer, version: Int32) {
+        let isNew = path == ":memory:" || !FileManager.default.fileExists(atPath: path)
+        var handle: OpaquePointer?
+        guard sqlite3_open_v2(path, &handle, flags, nil) == SQLITE_OK, let handle else {
+            let message = handle.map { String(cString: sqlite3_errmsg($0)) } ?? "open failed"
+            sqlite3_close(handle)
+            throw MediaKitError.persistence(detail: message)
+        }
+        do {
+            sqlite3_busy_timeout(handle, 5000)
+            if isNew { try exec(handle, "PRAGMA auto_vacuum = INCREMENTAL;") }
+            try exec(handle, StoreSchema.pragmas)
+            var version: Int32 = 0
+            try query(handle, "PRAGMA user_version;") { stmt in version = sqlite3_column_int(stmt, 0) }
+            return (handle, version)
+        } catch {
+            sqlite3_close(handle)
+            throw error
+        }
+    }
+
+    /// Replaces the previous casualty, so a file that keeps failing doesn't pile up copies.
+    private static func moveAside(_ path: String) {
+        let files = FileManager.default
+        for suffix in ["", "-wal", "-shm"] {
+            let source = URL(fileURLWithPath: path + suffix)
+            let target = source.appendingPathExtension("corrupt")
+            try? files.removeItem(at: target)
+            try? files.moveItem(at: source, to: target)
         }
     }
 
@@ -197,7 +227,7 @@ public actor SQLiteDatabase {
             defer { reset(stmt) }
             sqlite3_bind_int(stmt, 1, Int32(freshness.rawValue)); try step(stmt)
         } else {
-            try Self.exec(db!, "DELETE FROM entries;")
+            try Self.exec(db, "DELETE FROM entries;")
         }
     }
 
@@ -307,10 +337,10 @@ public actor SQLiteDatabase {
             if try totalBytes() <= cap * 9 / 10 { break }
         }
         var freelist: Int32 = 0, pages: Int32 = 1
-        try Self.query(db!, "PRAGMA freelist_count;") { freelist = sqlite3_column_int($0, 0) }
-        try Self.query(db!, "PRAGMA page_count;") { pages = sqlite3_column_int($0, 0) }
+        try Self.query(db, "PRAGMA freelist_count;") { freelist = sqlite3_column_int($0, 0) }
+        try Self.query(db, "PRAGMA page_count;") { pages = sqlite3_column_int($0, 0) }
         if pages > 0, freelist * 4 > pages {
-            try Self.exec(db!, "PRAGMA incremental_vacuum(64);")
+            try Self.exec(db, "PRAGMA incremental_vacuum(64);")
             report.vacuumed = true
         }
         return report
@@ -319,16 +349,16 @@ public actor SQLiteDatabase {
     public func statistics() throws -> StoreStatistics {
         var s = StoreStatistics()
         s.readOnlyCache = readOnlyCache
-        try Self.query(db!, "SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM entries;") { s.entries = Int(sqlite3_column_int64($0, 0)); s.bytes = Int(sqlite3_column_int64($0, 1)) }
-        try Self.query(db!, "SELECT COUNT(*) FROM crosswalk;") { s.crosswalk = Int(sqlite3_column_int64($0, 0)) }
-        try Self.query(db!, "SELECT COUNT(*) FROM capabilities;") { s.capabilities = Int(sqlite3_column_int64($0, 0)) }
+        try Self.query(db, "SELECT COUNT(*), COALESCE(SUM(bytes), 0) FROM entries;") { s.entries = Int(sqlite3_column_int64($0, 0)); s.bytes = Int(sqlite3_column_int64($0, 1)) }
+        try Self.query(db, "SELECT COUNT(*) FROM crosswalk;") { s.crosswalk = Int(sqlite3_column_int64($0, 0)) }
+        try Self.query(db, "SELECT COUNT(*) FROM capabilities;") { s.capabilities = Int(sqlite3_column_int64($0, 0)) }
         return s
     }
 
     /// Test hook: `SELECT COUNT(*) FROM entries WHERE class = 0` and friends.
     public func scalar(_ sql: String) throws -> Int {
         var value = 0
-        try Self.query(db!, sql) { value = Int(sqlite3_column_int64($0, 0)) }
+        try Self.query(db, sql) { value = Int(sqlite3_column_int64($0, 0)) }
         return value
     }
 
@@ -337,9 +367,9 @@ public actor SQLiteDatabase {
     // MARK: - Plumbing
 
     private func transaction(_ body: () throws -> Void) throws {
-        try Self.exec(db!, "BEGIN IMMEDIATE;")
-        do { try body() } catch { try? Self.exec(db!, "ROLLBACK;"); throw error }
-        try Self.exec(db!, "COMMIT;")
+        try Self.exec(db, "BEGIN IMMEDIATE;")
+        do { try body() } catch { try? Self.exec(db, "ROLLBACK;"); throw error }
+        try Self.exec(db, "COMMIT;")
     }
 
     private func prepare(_ sql: String, cache: Bool = true) throws -> OpaquePointer {

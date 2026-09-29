@@ -17,7 +17,7 @@ struct WatchedCornerBadge: View {
             .help(Text("library.watched.badge", bundle: .module))
     }
 
-    private struct Triangle: Shape {
+    nonisolated private struct Triangle: Shape {
         func path(in rect: CGRect) -> Path {
             var p = Path()
             p.move(to: CGPoint(x: rect.maxX, y: rect.minY))
@@ -46,7 +46,7 @@ struct MonitorRibbon: View {
                                      bundle: .module))
     }
 
-    private struct Ribbon: Shape {
+    nonisolated private struct Ribbon: Shape {
         func path(in rect: CGRect) -> Path {
             var p = Path()
             let notch = rect.height * 0.28

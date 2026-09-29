@@ -1,4 +1,5 @@
 import Testing
+import Synchronization
 import Foundation
 import MediaKit
 @testable import ArrCore
@@ -10,8 +11,10 @@ struct ChatViewModelTests {
         var isAvailable: Bool = true
         var scripted: [LLMResponse] = []
         var callCount = 0
+        var received: [(prompt: String, history: [ChatMessage])] = []
         func respond(prompt: String, tools: [LLMTool], history: [ChatMessage]) async throws -> LLMResponse {
             defer { callCount += 1 }
+            received.append((prompt, history))
             return scripted.removeFirst()
         }
     }
@@ -28,7 +31,7 @@ struct ChatViewModelTests {
     }
 
     /// A fake tool runner — pretends to be MCP.
-    final class FakeMCP {
+    @MainActor final class FakeMCP {
         var callCount = 0
         var responses: [String: String] = [:]
         func call(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
@@ -58,6 +61,35 @@ struct ChatViewModelTests {
         #expect(vm.messages[1].content == "Hi!")
         #expect(vm.isThinking == false)
         #expect(vm.pendingConfirm == nil)
+    }
+
+    @Test("the user's message reaches the provider once per round")
+    func userMessageSentOnce() async throws {
+        let p = FakeProvider()
+        p.scripted = [
+            LLMResponse(text: "", toolCalls: [ToolCall(name: "sonarr_search", arguments: .object([:]))]),
+            LLMResponse(text: "Done"),
+        ]
+        let vm = makeVM(provider: p, mcp: FakeMCP())
+        await vm.send("hello")
+        #expect(p.received.count == 2)
+        #expect(p.received[0].prompt == "hello")
+        #expect(p.received[0].history.isEmpty)
+        #expect(p.received[1].prompt == "")
+        #expect(p.received[1].history.filter { $0.role == .user }.map(\.content) == ["hello"])
+    }
+
+    @Test("clear() tells the backend the conversation ended")
+    func clearResetsBackend() async throws {
+        let p = FakeProvider()
+        p.scripted = [LLMResponse(text: "Hi!")]
+        let cleared = Mutex(false)
+        let vm = ChatViewModel(provider: p, tools: [], invokeTool: { _, _ in ToolCallOutput(text: "") },
+                               onClear: { cleared.withLock { $0 = true } })
+        await vm.send("hello")
+        vm.clear()
+        #expect(vm.messages.isEmpty)
+        #expect(cleared.withLock { $0 })
     }
 
     @Test("provider pre-executed tool results render without re-invoking MCP")
@@ -102,9 +134,9 @@ struct ChatViewModelTests {
 
     @Test("destructive tool gated via awaitConfirm path")
     func destructiveStalls() async throws {
-        var vmCapture: ChatViewModel?
+        let vmCapture = Mutex<ChatViewModel?>(nil)
         let provider = ConfirmingFakeProvider {
-            let confirmedArgs = await vmCapture!.awaitConfirm(
+            let confirmedArgs = await vmCapture.withLock { $0 }!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
             )
             if confirmedArgs != nil {
@@ -122,7 +154,7 @@ struct ChatViewModelTests {
             tools: [],
             invokeTool: { _, _ in ToolCallOutput(text: "") }
         )
-        vmCapture = vm
+        vmCapture.withLock { $0 = vm }
 
         let task = Task { await vm.send("add X") }
         var spins = 0
@@ -141,9 +173,9 @@ struct ChatViewModelTests {
 
     @Test("destructive cancel skips execution")
     func destructiveCancel() async throws {
-        var vmCapture: ChatViewModel?
+        let vmCapture = Mutex<ChatViewModel?>(nil)
         let provider = ConfirmingFakeProvider {
-            let confirmedArgs = await vmCapture!.awaitConfirm(
+            let confirmedArgs = await vmCapture.withLock { $0 }!.awaitConfirm(
                 ToolCall(name: "sonarr_add_series", arguments: .object(["title": .string("X")]))
             )
             if confirmedArgs != nil {
@@ -157,7 +189,7 @@ struct ChatViewModelTests {
             tools: [],
             invokeTool: { _, _ in ToolCallOutput(text: "") }
         )
-        vmCapture = vm
+        vmCapture.withLock { $0 = vm }
 
         let task = Task { await vm.send("add X") }
         var spins = 0

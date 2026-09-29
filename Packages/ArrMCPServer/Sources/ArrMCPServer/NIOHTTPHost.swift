@@ -1,9 +1,9 @@
 import Foundation
 import Logging
 import MCP
-@preconcurrency import NIOCore
-@preconcurrency import NIOPosix
-@preconcurrency import NIOHTTP1
+import NIOCore
+import NIOPosix
+import NIOHTTP1
 
 /// A swift-nio HTTP host fronting the MCP SDK's `StatefulHTTPServerTransport`, adapted
 /// from the SDK's conformance host. Unlike it, `start()` returns once bound.
@@ -27,7 +27,6 @@ actor NIOHTTPHost {
     private let serverFactory: ServerFactory
     private let validationPipeline: (any HTTPRequestValidationPipeline)?
     private var channel: Channel?
-    private var group: MultiThreadedEventLoopGroup?
     private var sessions: [String: SessionContext] = [:]
     private var cleanupTask: Task<Void, Never>?
 
@@ -61,15 +60,12 @@ actor NIOHTTPHost {
 
     /// Binds and starts accepting connections, then returns.
     func start() async throws {
-        // Starting twice would orphan the first group, which never dies (see `stop()`).
-        guard group == nil else { throw MCPError.internalError("MCP HTTP host already started") }
-        let group = MultiThreadedEventLoopGroup(numberOfThreads: System.coreCount)
-        self.group = group
-
+        guard channel == nil else { throw MCPError.internalError("MCP HTTP host already started") }
         do {
             let limiter = ConnectionLimiter(limit: Self.maxConcurrentConnections)
             let readIdleTimeout = Self.readIdleTimeout
-            let bootstrap = ServerBootstrap(group: group)
+            // The process-wide group: a localhost server needs no threads of its own, and restarts create none.
+            let bootstrap = ServerBootstrap(group: MultiThreadedEventLoopGroup.singleton)
                 .serverChannelOption(ChannelOptions.backlog, value: 256)
                 .serverChannelOption(ChannelOptions.socketOption(.so_reuseaddr), value: 1)
                 .childChannelInitializer { channel in
@@ -93,8 +89,7 @@ actor NIOHTTPHost {
                 "host": "\(configuration.host)", "port": "\(configuration.port)",
                 "endpoint": "\(configuration.endpoint)"])
         } catch {
-            // The bind fails routinely (8080 is also qBittorrent's WebUI port), and the
-            // controller drops this host on throw, so the group would leak its threads.
+            // The bind fails routinely (8080 is also qBittorrent's WebUI port).
             await stop()
             throw error
         }
@@ -107,10 +102,6 @@ actor NIOHTTPHost {
         await closeAllSessions()
         try? await channel?.close()
         channel = nil
-        // Mandatory: `MultiThreadedEventLoopGroup.deinit` only asserts, so a dropped
-        // group leaks `System.coreCount` OS threads for the life of the process.
-        try? await group?.shutdownGracefully()
-        group = nil
         if wasBound { logger.notice("MCP HTTP host stopped") }
     }
 
@@ -253,6 +244,8 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
     private var responseInFlight = false
     /// False when over the cap and closed at once, keeping the release exactly-once.
     private var holdsConnectionSlot = false
+    /// Cancelled when the peer goes away, so an abandoned SSE stream doesn't pin its task until the session expires.
+    private var requestTask: Task<Void, Never>?
 
     // All mutable state above is touched only on the channel's event loop
     // (`channelRead` and the `eventLoop.execute` blocks in `writeResponse`).
@@ -269,6 +262,8 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
     }
 
     func channelInactive(context: ChannelHandlerContext) {
+        requestTask?.cancel()
+        requestTask = nil
         if holdsConnectionSlot { holdsConnectionSlot = false; limiter.release() }
         context.fireChannelInactive()
     }
@@ -302,14 +297,14 @@ private final class HTTPHandler: ChannelInboundHandler, @unchecked Sendable {
             responseInFlight = true
             nonisolated(unsafe) let ctx = context
             if state.oversized {
-                Task {
+                requestTask = Task {
                     await self.writeResponse(
                         .error(statusCode: 413, .invalidRequest("Payload Too Large")),
                         version: state.head.version, context: ctx)
                 }
                 return
             }
-            Task { await self.handleRequest(state: state, context: ctx) }
+            requestTask = Task { await self.handleRequest(state: state, context: ctx) }
         }
     }
 

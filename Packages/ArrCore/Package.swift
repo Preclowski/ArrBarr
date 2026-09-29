@@ -40,10 +40,7 @@ let package = Package(
                 .process("Resources"),
             ],
             swiftSettings: [
-                // Match the existing app target's checking level. Tightening
-                // to the 6.0 mode is a separate cleanup — Phase 1 keeps
-                // semantics identical so the macOS app builds unchanged.
-                .swiftLanguageMode(.v5),
+                .swiftLanguageMode(.v6),
                 // Views, view-models and stores are main-actor code; the few off-main pieces say so explicitly.
                 .defaultIsolation(MainActor.self),
             ]
@@ -53,7 +50,7 @@ let package = Package(
             dependencies: ["ArrCore"],
             path: "Tests/ArrCoreTests",
             swiftSettings: [
-                .swiftLanguageMode(.v5),
+                .swiftLanguageMode(.v6),
             ]
         ),
     ]

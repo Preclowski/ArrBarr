@@ -503,6 +503,47 @@
       },
       "comment": "Toggle when adding a download manually — start it in paused state"
     },
+    "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dodaj swoje usługi arr w Ustawieniach — ArrBarr pobiera z każdej kolejkę na żywo, historię i stan."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge deine vorhandenen arr-Dienste in den Einstellungen hinzu – ArrBarr ruft von jedem Warteschlange, Verlauf und Status live ab."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Añade tus servicios arr en Ajustes: ArrBarr consulta en cada uno la cola en directo, el historial y el estado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoutez vos services arr dans les Réglages — ArrBarr récupère en direct la file d'attente, l'historique et l'état de chacun."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voeg je bestaande arr-diensten toe in Instellingen — ArrBarr haalt van elk live de wachtrij, geschiedenis en status op."
+          }
+        }
+      }
+    },
     "Age": {
       "extractionState": "manual",
       "localizations": {
@@ -663,6 +704,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bijna klaar…"
+          }
+        }
+      }
+    },
+    "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr stays out of your Dock and shows active downloads at a glance. **Left-click** the icon to open the popover. **Right-click** for Add, Refresh, Settings — every action also has a keyboard shortcut."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr nie zajmuje miejsca w Docku i pokazuje aktywne pobierania na pierwszy rzut oka. **Kliknij** ikonę, aby otworzyć okienko. **Prawy przycisk** to Dodaj, Odśwież i Ustawienia — każda akcja ma też skrót klawiszowy."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr bleibt aus deinem Dock heraus und zeigt aktive Downloads auf einen Blick. **Linksklick** auf das Symbol öffnet das Popover. **Rechtsklick** für Hinzufügen, Aktualisieren, Einstellungen – jede Aktion hat auch einen Tastaturkurzbefehl."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr no ocupa el Dock y muestra las descargas activas de un vistazo. **Clic izquierdo** en el icono para abrir el panel. **Clic derecho** para Añadir, Actualizar y Ajustes; cada acción tiene también un atajo de teclado."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr reste hors de votre Dock et affiche les téléchargements actifs d'un coup d'œil. **Clic gauche** sur l'icône pour ouvrir le panneau. **Clic droit** pour Ajouter, Actualiser, Réglages — chaque action a aussi un raccourci clavier."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr blijft uit je Dock en toont actieve downloads in één oogopslag. **Klik links** op het pictogram om het venster te openen. **Klik rechts** voor Toevoegen, Vernieuwen en Instellingen — elke actie heeft ook een sneltoets."
           }
         }
       }
@@ -1288,6 +1370,47 @@
         }
       }
     },
+    "Connect Radarr, Sonarr & Lidarr": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect Radarr, Sonarr & Lidarr"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podłącz Radarr, Sonarr i Lidarr"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Radarr, Sonarr und Lidarr verbinden"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conecta Radarr, Sonarr y Lidarr"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connectez Radarr, Sonarr et Lidarr"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Koppel Radarr, Sonarr en Lidarr"
+          }
+        }
+      }
+    },
     "Connect your media server": {
       "extractionState": "manual",
       "localizations": {
@@ -1408,6 +1531,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Server-URL kopiëren"
+          }
+        }
+      }
+    },
+    "Copy the API Key": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the API Key"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skopiuj klucz API"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopiere den API-Schlüssel"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia la clave de API"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiez la clé d'API"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kopieer de API-sleutel"
           }
         }
       }
@@ -2028,6 +2192,47 @@
         }
       }
     },
+    "Enjoying ArrBarr?": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enjoying ArrBarr?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Podoba ci się ArrBarr?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gefällt dir ArrBarr?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Te gusta ArrBarr?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr vous plaît ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bevalt ArrBarr?"
+          }
+        }
+      }
+    },
     "Every result is filtered out.": {
       "extractionState": "manual",
       "localizations": {
@@ -2440,6 +2645,47 @@
         }
       }
     },
+    "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It's free and open-source. A star on GitHub helps other people find it — and means a lot. Thanks for trying it out!"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jest darmowy i open source. Gwiazdka na GitHubie pomaga innym go znaleźć — i wiele znaczy. Dzięki, że go wypróbowujesz!"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es ist kostenlos und Open Source. Ein Stern auf GitHub hilft anderen, es zu finden – und bedeutet viel. Danke fürs Ausprobieren!"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es gratuito y de código abierto. Una estrella en GitHub ayuda a que otros lo encuentren, y significa mucho. ¡Gracias por probarlo!"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il est gratuit et open source. Une étoile sur GitHub aide d'autres personnes à le trouver — et compte beaucoup. Merci de l'essayer !"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het is gratis en open source. Een ster op GitHub helpt anderen het te vinden — en betekent veel. Bedankt voor het proberen!"
+          }
+        }
+      }
+    },
     "Languages": {
       "extractionState": "manual",
       "localizations": {
@@ -2811,6 +3057,47 @@
         }
       }
     },
+    "Lives in your menu bar": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lives in your menu bar"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mieszka w pasku menu"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wohnt in deiner Menüleiste"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vive en tu barra de menús"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vit dans votre barre des menus"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Woont in je menubalk"
+          }
+        }
+      }
+    },
     "Made by 🥨": {
       "extractionState": "manual",
       "localizations": {
@@ -2848,6 +3135,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gemaakt door 🥨"
+          }
+        }
+      }
+    },
+    "Make it yours": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make it yours"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopasuj do siebie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mach es zu deinem"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hazlo tuyo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personnalisez-le"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Maak het van jou"
           }
         }
       }
@@ -3725,6 +4053,47 @@
         }
       }
     },
+    "Open your arr's web UI → Settings → General": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open your arr's web UI → Settings → General"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otwórz interfejs WWW swojego arra → Settings → General"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öffne die Weboberfläche deines arr → Settings → General"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre la interfaz web de tu arr → Settings → General"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrez l'interface web de votre arr → Settings → General"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open de webinterface van je arr → Settings → General"
+          }
+        }
+      }
+    },
     "Pause": {
       "extractionState": "manual",
       "localizations": {
@@ -4214,6 +4583,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Usunąć ten pakiet sezonu?"
+          }
+        }
+      }
+    },
+    "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reorder sections, hide what you don't need, tweak refresh intervals, and pick your language in Settings. Show only what matters to you."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W Ustawieniach zmienisz kolejność sekcji, ukryjesz to, czego nie potrzebujesz, dostroisz odświeżanie i wybierzesz język. Pokazuj tylko to, co dla ciebie ważne."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordne Bereiche neu, blende Unnötiges aus, passe Aktualisierungsintervalle an und wähle deine Sprache in den Einstellungen. Zeig nur, was dir wichtig ist."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reordena secciones, oculta lo que no necesitas, ajusta los intervalos de actualización y elige tu idioma en Ajustes. Muestra solo lo que te importa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réorganisez les sections, masquez ce qui ne sert pas, réglez les intervalles d'actualisation et choisissez votre langue dans les Réglages. N'affichez que l'essentiel."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Herschik secties, verberg wat je niet nodig hebt, pas verversingsintervallen aan en kies je taal in Instellingen. Toon alleen wat voor jou telt."
           }
         }
       }
@@ -4751,6 +5161,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Specifieke afleveringen zoeken"
+          }
+        }
+      }
+    },
+    "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem.": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See what's airing tonight, get notified about new grabs, and surface indexer issues before they become a problem."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zobacz, co leci dziś wieczorem, dostawaj powiadomienia o nowych pobraniach i wyłapuj problemy z indekserami, zanim zaczną przeszkadzać."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sieh, was heute Abend läuft, lass dich über neue Grabs benachrichtigen und erkenne Indexer-Probleme, bevor sie stören."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mira qué se emite esta noche, recibe avisos de nuevas capturas y detecta problemas de indexadores antes de que molesten."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voyez ce qui passe ce soir, soyez prévenu des nouvelles captures et repérez les problèmes d'indexeurs avant qu'ils ne gênent."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zie wat er vanavond uitkomt, krijg meldingen van nieuwe grabs en zie indexerproblemen voordat ze lastig worden."
           }
         }
       }
@@ -5576,6 +6027,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "Hiermee wordt het seizoenspakket uit de client verwijderd."
+          }
+        }
+      }
+    },
+    "Tonight, Needs you, and notifications": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tonight, Needs you, and notifications"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dziś wieczorem, Potrzebuje twojej uwagi i powiadomienia"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heute Abend, Braucht dich und Mitteilungen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esta noche, Requiere tu atención y notificaciones"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce soir, À votre attention et notifications"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vanavond, Heeft jouw aandacht nodig en meldingen"
+          }
+        }
+      }
+    },
+    "Tool call: %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tool call: %@"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wywołanie narzędzia: %@"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Werkzeugaufruf: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Llamada a herramienta: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appel d'outil : %@"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toolaanroep: %@"
           }
         }
       }
@@ -7840,48 +8373,6 @@
         }
       },
       "comment": "Button in common"
-    },
-    "common.clientIsNotConfigured.label": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Client (%@) is not configured"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Klient (%@) nie jest skonfigurowany"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Client (%@) ist nicht konfiguriert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El cliente (%@) no está configurado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le client (%@) n'est pas configuré"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Client (%@) is niet geconfigureerd"
-          }
-        }
-      },
-      "comment": "Label in common"
     },
     "common.connectRadarrSonarrOr.tooltip": {
       "extractionState": "manual",
@@ -14302,6 +14793,88 @@
       },
       "comment": "Error shown when a host does not answer; %@ is the host"
     },
+    "mediakit.error.unreachable.dns": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can't find %@ — check the address"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie można znaleźć %@ — sprawdź adres"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ nicht gefunden – Adresse prüfen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encuentra %@: revisa la dirección"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ introuvable — vérifiez l'adresse"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ niet gevonden — controleer het adres"
+          }
+        }
+      }
+    },
+    "mediakit.error.unreachable.tls": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't connect securely to %@ — check its certificate"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie udało się bezpiecznie połączyć z %@ — sprawdź certyfikat"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keine sichere Verbindung zu %@ – Zertifikat prüfen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo conectar de forma segura a %@: revisa su certificado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion sécurisée à %@ impossible — vérifiez son certificat"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen beveiligde verbinding met %@ — controleer het certificaat"
+          }
+        }
+      }
+    },
     "mediakit.error.breakerOpen": {
       "extractionState": "manual",
       "localizations": {
@@ -15309,6 +15882,47 @@
         }
       },
       "comment": "Button in paywall"
+    },
+    "paywall.hero.addTitle.meta": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Series"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Serial"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Serie"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Serie"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Série"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2010 · Serie"
+          }
+        }
+      }
     },
     "paywall.maybeLater.button": {
       "extractionState": "manual",
@@ -19240,6 +19854,47 @@
       },
       "comment": "Button in queue"
     },
+    "queue.torrentClientNotConfigured.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No torrent download client is configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie skonfigurowano klienta pobierania torrentów"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Torrent-Download-Client konfiguriert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ningún cliente de descargas torrent configurado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun client de téléchargement torrent n'est configuré"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen torrent-downloadclient geconfigureerd"
+          }
+        }
+      }
+    },
     "queue.torrents.button": {
       "extractionState": "manual",
       "localizations": {
@@ -19449,6 +20104,47 @@
         }
       },
       "comment": "Button in queue"
+    },
+    "queue.usenetClientNotConfigured.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Usenet download client is configured"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nie skonfigurowano klienta pobierania Usenet"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kein Usenet-Download-Client konfiguriert"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ningún cliente de descargas Usenet configurado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun client de téléchargement Usenet n'est configuré"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geen Usenet-downloadclient geconfigureerd"
+          }
+        }
+      }
     },
     "queue.warning.button": {
       "extractionState": "manual",
@@ -23417,48 +24113,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alleen fouten"
-          }
-        }
-      }
-    },
-    "settings.failedCheckKeyUrl.button": {
-      "extractionState": "manual",
-      "comment": "Button in settings",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Failed — check key & URL"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Błąd — sprawdź klucz i adres URL"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fehler — Schlüssel & URL prüfen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Error — comprueba la clave y la URL"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Échec — vérifiez la clé et l'URL"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mislukt — controleer sleutel & URL"
           }
         }
       }
@@ -29102,6 +29756,47 @@
         }
       }
     },
+    "upcoming.type.album": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbum"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Album"
+          }
+        }
+      }
+    },
     "upcoming.type.digital": {
       "extractionState": "manual",
       "localizations": {
@@ -29680,6 +30375,47 @@
         }
       }
     },
+    "Paste it here, along with the URL": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste it here, along with the URL"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wklej go tutaj razem z adresem URL"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Füge ihn hier zusammen mit der URL ein"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pégala aquí junto con la URL"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collez-la ici avec l'URL"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plak hem hier, samen met de URL"
+          }
+        }
+      }
+    },
     "Rank": {
       "extractionState": "manual",
       "localizations": {
@@ -29799,6 +30535,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sorteren"
+          }
+        }
+      }
+    },
+    "Star on GitHub": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Star on GitHub"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Daj gwiazdkę na GitHubie"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auf GitHub einen Stern geben"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dar una estrella en GitHub"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre une étoile sur GitHub"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ster geven op GitHub"
           }
         }
       }

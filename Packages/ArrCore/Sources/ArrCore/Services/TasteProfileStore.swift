@@ -14,7 +14,7 @@ nonisolated public final class TasteProfileStore: @unchecked Sendable {
     private var _useInChat: Bool
     private var _userNote: String
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = DemoMode.profileDefaults) {
         self.defaults = defaults
         _useInChat = defaults.object(forKey: Self.useInChatKey) as? Bool ?? true
         _userNote = defaults.string(forKey: Self.userNoteKey) ?? ""

@@ -29,6 +29,9 @@ public actor SessionBroker {
         var generation = 0
         var establishing: Task<SessionToken?, any Error>?
         var credentialGeneration: String?
+        /// qBittorrent bans an IP after five failed logins, and every 403 would retry: a refused login stands
+        /// until the credentials change (which resets the cell) or the app relaunches.
+        var refusedLogin: MediaKitError?
     }
 
     private let strategies: [InstanceKind: any SessionStrategy]
@@ -69,6 +72,7 @@ public actor SessionBroker {
         guard let strategy = strategies[instance.kind] else { return false }
         var cell = cells[instance] ?? Cell()
         if cell.generation > observedGeneration { return true }   // someone already refreshed
+        if let refused = cell.refusedLogin { throw refused }
         if let task = cell.establishing {
             _ = try await task.value
             return cells[instance]?.token != nil
@@ -77,7 +81,11 @@ public actor SessionBroker {
         cell.establishing = task
         cells[instance] = cell
         defer { cells[instance]?.establishing = nil }
-        let token = try await task.value
+        let token: SessionToken?
+        do { token = try await task.value } catch let error as MediaKitError {
+            if case .unauthorized = error { cells[instance]?.refusedLogin = error }
+            throw error
+        }
         guard var updated = cells[instance] else { return false }
         updated.generation += 1
         updated.token = token

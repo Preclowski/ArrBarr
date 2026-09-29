@@ -34,6 +34,20 @@ public struct PendingConfirm: Sendable, Identifiable {
     }
 }
 
+extension PendingConfirm {
+    /// Every download of one title. The count is formatted here: the renderers look `title` up as a key,
+    /// and an interpolated sentence never matches the catalogue's plural entry.
+    static func removeAllDownloads(count: Int, locale: Locale, onConfirm: @escaping @MainActor () -> Void) -> PendingConfirm {
+        PendingConfirm(
+            title: String.localizedStringWithFormat(AppLocalized.string("Remove %lld downloads?", locale: locale), count),
+            message: "This will remove every download of this title from the client.",
+            confirmLabel: "Remove All",
+            isDestructive: true,
+            onConfirm: onConfirm
+        )
+    }
+}
+
 /// State, not an event: macOS tears the MenuBarExtra panel down when a context menu takes focus, so a posted
 /// message would be lost. With no surface left to draw the card, macOS falls back to a native alert.
 public final class ConfirmCenter: ObservableObject {

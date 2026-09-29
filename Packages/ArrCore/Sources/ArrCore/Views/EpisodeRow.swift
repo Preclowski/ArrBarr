@@ -203,7 +203,7 @@ struct EpisodeRow: View {
             ))
         }
         if let runtime = episode.runtime, runtime > 0 {
-            lines.append(TooltipInfoLine(labelKey: "Runtime", value: "\(runtime) min"))
+            lines.append(TooltipInfoLine(labelKey: "Runtime", value: runtime.runtimeText))
         }
         return lines
     }

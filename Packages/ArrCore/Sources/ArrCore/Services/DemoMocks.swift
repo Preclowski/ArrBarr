@@ -36,9 +36,22 @@ nonisolated public enum DemoMode {
 
     public static var demoDefaults: UserDefaults? { UserDefaults(suiteName: demoSuiteName) }
 
+    /// For state kept in `.standard` (quiz signals, taste notes, notification trackers): the demo suite while demo runs.
+    public static var profileDefaults: UserDefaults { isActive ? (demoDefaults ?? .standard) : .standard }
+
     /// Passing the suite name removes only that domain, never `.standard`.
     public static func resetDemoStore() {
         UserDefaults.standard.removePersistentDomain(forName: demoSuiteName)
+    }
+
+    /// iOS can't relaunch, so demo switches live: the profile re-points to the demo suite (demo edits never reach
+    /// the real one) and the gateway swaps its stack.
+    @MainActor
+    public static func switchLive(_ on: Bool) async {
+        UserDefaults.standard.set(on, forKey: key)
+        ConfigStore.shared.useDemoStore(on)
+        if on { seedConfigsIfNeeded(.shared) } else { resetDemoStore() }
+        await QueueViewModel.shared.demoModeChanged(on)
     }
 
     /// Whisparr stays off (opt-in, age gated).

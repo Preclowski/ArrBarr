@@ -4,7 +4,7 @@
 
 **Goal:** Strip the visual composer from the Discover picker, make the tab bar always visible inside Discover, and reduce the source set to LLM-only (plus the Library source for "already own" cross-reference).
 
-**Architecture:** All Discover code lives on the `discover/tab` branch (the existing implementation). This plan operates on that branch. Picker collapses to a single free-form text field bound to `DiscoverViewModel.moodText`; submit triggers `reshuffle()` and pushes the user into the existing `.tinder` stage. The LLM source becomes the sole new-card producer; TMDB Discover sources and the entire suggestion / autocomplete / custom-tag machinery in the VM are deleted.
+**Architecture:** All Discover code lives on the `discover/tab` branch (the existing implementation). This plan operates on that branch. Picker collapses to a single free-form text field bound to `DiscoverViewModel.moodText`; submit triggers `reshuffle()` and pushes the user into the existing `.quiz` stage. The LLM source becomes the sole new-card producer; TMDB Discover sources and the entire suggestion / autocomplete / custom-tag machinery in the VM are deleted.
 
 **Tech Stack:** Swift 5.10 / SwiftUI / SwiftPM (ArrCore package) / XCTest.
 
@@ -35,7 +35,7 @@ Expected: `On branch discover/tab`, clean status.
 | --- | --- | --- |
 | `Packages/ArrCore/Sources/ArrCore/Views/PopoverContentView.swift` | popover host, tab bar | drop `hideTabBarDeepInDiscover` + its guard; drop TMDB source wiring in `configureDiscover` |
 | `Packages/ArrCore/Sources/ArrCore/Views/DiscoverPickerView.swift` | filter picker | full rewrite — single TextField + submit button |
-| `Packages/ArrCore/Sources/ArrCore/Views/DiscoverTabView.swift` | tinder host | simplify `filterSummaryChip` text + `clearAllFilters` |
+| `Packages/ArrCore/Sources/ArrCore/Views/DiscoverTabView.swift` | quiz host | simplify `filterSummaryChip` text + `clearAllFilters` |
 | `Packages/ArrCore/Sources/ArrCore/ViewModels/DiscoverViewModel.swift` | state + orchestration | delete suggestion, custom-tag, person-autocomplete, TMDB-source plumbing; simplify `LLMSource`/`LLMResult` |
 | `Packages/ArrCore/Sources/ArrCore/Services/DiscoverSources.swift` | source factories | delete `tmdbMovies` + `tmdbShows`; simplify `llm` (no person resolution, returns `[DiscoverItem]`) |
 | `Packages/ArrCore/Sources/ArrCore/Services/DiscoverLLMPrompt.swift` | prompt build + parse | drop `SuggestedFilters` + `decade` arg; `Response.suggestions` only |
@@ -71,15 +71,15 @@ pkill -x ArrBarr 2>/dev/null; sleep 0.5 && open build/Build/Products/Debug/ArrBa
 In `PopoverContentView.swift`, find the property at ~line 534 (declared right before `// MARK: - Tab bar`). It looks like:
 
 ```swift
-    /// active tinder session exists (chip-tap path). Both cases have a "<"
+    /// active quiz session exists (chip-tap path). Both cases have a "<"
     /// back arrow the user can use to exit. The .kind stage and fresh
-    /// .filters (no active tinder session) keep the tab bar visible so the
+    /// .filters (no active quiz session) keep the tab bar visible so the
     /// user can bail to another tab without being stranded.
     private var hideTabBarDeepInDiscover: Bool {
         guard selectedTab == .discover else { return false }
-        if discoverViewModel.stage == .tinder { return true }
+        if discoverViewModel.stage == .quiz { return true }
         // .picker stage: only hide if we're editing filters from an
-        // active tinder session (chip-tap path) — fromTinderBackBar shows "<".
+        // active quiz session (chip-tap path) — fromQuizBackBar shows "<".
         if discoverViewModel.current != nil { return true }
         return false
     }
@@ -125,7 +125,7 @@ fix(discover): always show main tab bar
 
 Drops hideTabBarDeepInDiscover. Users were getting stuck inside Discover
 the moment they submitted because the only escape was the floating back
-arrow. Tab bar now stays visible across picker / tinder / matched.
+arrow. Tab bar now stays visible across picker / quiz / matched.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
 EOF
@@ -273,14 +273,14 @@ public enum DiscoverLLMPrompt {
         switch kindHint {
         case .movie:
             lines.append(
-                "You recommend movies for a tinder-style picker. " +
+                "You recommend movies for a swipe-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )
             lines.append("Return only movies — no TV shows.")
         case .show:
             lines.append(
-                "You recommend TV shows for a tinder-style picker. " +
+                "You recommend TV shows for a swipe-style picker. " +
                 "Reply with a single JSON object, no prose, no markdown: " +
                 "{ \"titles\": [ { \"title\": string, \"year\": int|null } ] }."
             )
@@ -800,7 +800,7 @@ import SwiftUI
 /// LLM-only Discover picker. A single multi-line text field bound to
 /// `viewModel.moodText` is the entire input surface. Submit (Enter or
 /// the Discover button) drives the parent's `onSubmit` callback which
-/// flips the VM into `.tinder` and triggers a reshuffle.
+/// flips the VM into `.quiz` and triggers a reshuffle.
 public struct DiscoverPickerView: View {
     @ObservedObject var viewModel: DiscoverViewModel
     let llmAvailable: Bool
@@ -885,7 +885,7 @@ In `Packages/ArrCore/Sources/ArrCore/Views/DiscoverTabView.swift`, around line 4
                     viewModel: viewModel,
                     llmAvailable: llmAvailable,
                     onSubmit: {
-                        withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .tinder }
+                        withAnimation(.smooth(duration: 0.22)) { viewModel.stage = .quiz }
                         Task { await viewModel.reshuffle() }
                     }
                 )
@@ -923,7 +923,7 @@ feat(discover): single text-input picker
 
 Replaces the chip/composer/suggestion-cloud picker with one multiline
 TextField bound to moodText plus a Discover button. Drops tmdbAvailable
-plumbing from the picker + tab view. Submit drives the existing tinder
+plumbing from the picker + tab view. Submit drives the existing quiz
 flow unchanged.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>
@@ -938,7 +938,7 @@ EOF
 **Files:**
 - Modify: `Packages/ArrCore/Sources/ArrCore/Views/DiscoverTabView.swift`
 
-The tinder top bar shows a summary chip that reflects the active filters. With structured filters gone, the chip should show the truncated mood text, and the × should just clear the mood.
+The quiz top bar shows a summary chip that reflects the active filters. With structured filters gone, the chip should show the truncated mood text, and the × should just clear the mood.
 
 - [ ] **Step 1: Simplify `activeFilterSummary`**
 
@@ -978,7 +978,7 @@ git add Packages/ArrCore/Sources/ArrCore/Views/DiscoverTabView.swift
 git commit -m "$(cat <<'EOF'
 refactor(discover): mood-only summary chip + clear
 
-Tinder top bar's filter-summary chip now shows only the truncated
+Quiz top bar's filter-summary chip now shows only the truncated
 mood text; × clears just the mood. Structured filter clears removed
 with the structured filter UI.
 
@@ -1013,9 +1013,9 @@ Verify in the running app:
 
 - Discover tab opens to the new picker — heading text + a focused text field + a disabled Discover button.
 - Typing in the field enables the button.
-- Hitting Enter (or clicking Discover) flips to tinder mode with a card.
-- The main popover tab bar is visible in picker, tinder, AND in the matched (Your picks) view.
-- The tinder top bar shows the truncated prompt as a chip; tapping it returns to the picker with the prompt pre-filled; the × clears the mood.
+- Hitting Enter (or clicking Discover) flips to quiz mode with a card.
+- The main popover tab bar is visible in picker, quiz, AND in the matched (Your picks) view.
+- The quiz top bar shows the truncated prompt as a chip; tapping it returns to the picker with the prompt pre-filled; the × clears the mood.
 - Discover button is disabled when the chat provider is not configured (`llmAvailable == false`).
 
 Report any failures back as a bug to fix before moving on.

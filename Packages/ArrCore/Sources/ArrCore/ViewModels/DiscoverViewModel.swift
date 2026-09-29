@@ -61,7 +61,7 @@ public final class DiscoverViewModel {
     /// For views deep in a chat bubble, where environment objects don't propagate reliably.
     public static let shared = DiscoverViewModel()
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = DemoMode.profileDefaults) {
         self.defaults = defaults
         let stored = defaults.string(forKey: Self.mediaSelectionKey)
             .flatMap { DiscoverMediaSelection(rawValue: $0) }

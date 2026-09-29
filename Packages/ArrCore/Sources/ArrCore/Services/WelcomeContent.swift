@@ -3,13 +3,8 @@ import Foundation
 /// Force-show: `--show-welcome`, `ARRBARR_SHOW_WELCOME=1`, or the one-shot `ArrBarrShowWelcome` default
 /// (cleared once the window opens so it doesn't loop).
 nonisolated public enum WelcomeContent {
-    /// Must have a matching non-empty entry in `whatsNewEntries`.
+    /// Stored once the tour has been seen; any stored value means seen.
     public static let currentVersion = "0.10.0"
-
-    public enum Variant: Equatable {
-        case firstRun
-        case whatsNew(version: String)
-    }
 
     struct WelcomePage: Identifiable, Equatable {
         let id: String
@@ -63,7 +58,7 @@ nonisolated public enum WelcomeContent {
             titleKey: "Connect Radarr, Sonarr & Lidarr",
             bodyKey: "Add your existing arr services in Settings — ArrBarr polls live queue, history, and health from each one.",
             cta: WelcomePage.CTA(
-                titleKey: "Open Settings",
+                titleKey: "common.openSettings.button",
                 symbol: "gearshape.fill",
                 kind: .openSettings
             )
@@ -92,73 +87,18 @@ nonisolated public enum WelcomeContent {
         ),
     ]
 
-    /// An empty or missing entry for `currentVersion` skips the window on update.
-    static let whatsNewEntries: [String: [WelcomePage]] = [
-        "0.9.0": [
-            WelcomePage(
-                id: "welcome",
-                titleKey: "Welcome screen",
-                bodyKey: "ArrBarr now shows a brief intro on first launch and after major updates so you know what's new. Reopen it any time from Settings → General."
-            ),
-        ],
-        "0.10.0": [
-            WelcomePage(
-                id: "ai-chat",
-                titleKey: "Chat with your arrs",
-                bodyKey: "A new Chat tab lets you ask questions in plain language — find a show, check what's coming this week, add a movie. Works with Apple Intelligence (macOS 26+) or any OpenAI-compatible API. Set up under Settings → AI."
-            ),
-            WelcomePage(
-                id: "add-shortcut",
-                titleKey: "Quicker way to add",
-                bodyKey: "The footer is gone. Add new content via the **+** button next to the tabs, or press **⌘N** anywhere in the popover. The **⋯** menu next to it holds Settings, Quit and Open Window — and everything's also in the right-click menu on the menu bar icon."
-            ),
-            WelcomePage(
-                id: "lidarr",
-                titleKey: "Lidarr support",
-                bodyKey: "If you've configured Lidarr, music artists now show up in search results and the AI chat. Add an artist the same way you'd add a series or movie."
-            ),
-        ],
-    ]
-
     // MARK: - Decision
 
-    static func decide(
-        seen: String?,
-        current: String,
-        entries: [String: [WelcomePage]],
-        forceShow: Bool
-    ) -> Variant? {
-        // Force-show returns the broader first-run tour.
-        if forceShow {
-            return .firstRun
-        }
-        if seen == nil {
-            return .firstRun
-        }
-        if seen != current, let items = entries[current], !items.isEmpty {
-            return .whatsNew(version: current)
-        }
-        return nil
+    /// First run, or forced. The per-release "What's new" variant was retired pending a rewrite.
+    static func decide(seen: String?, forceShow: Bool) -> Bool {
+        forceShow || seen == nil
     }
 
     /// Consumes the one-shot UserDefaults flag so we don't loop.
-    public static func variant(seen: String?, defaults: UserDefaults = .standard) -> Variant? {
+    public static func shouldShow(seen: String?, defaults: UserDefaults = .standard) -> Bool {
         let force = shouldForceShow(defaults: defaults)
-        let result = decide(
-            seen: seen,
-            current: currentVersion,
-            entries: whatsNewEntries,
-            forceShow: force
-        )
         if force { consumeForceShowFlag(defaults: defaults) }
-        return result
-    }
-
-    static func pages(for variant: Variant) -> [WelcomePage] {
-        switch variant {
-        case .firstRun: return firstRunPages
-        case .whatsNew(let v): return whatsNewEntries[v] ?? []
-        }
+        return decide(seen: seen, forceShow: force)
     }
 
     // MARK: - Force-show flag

@@ -16,6 +16,7 @@ public actor SignalRSource {
     private var continuations: [UUID: AsyncStream<DataEvent>.Continuation] = [:]
     private var loop: Task<Void, Never>?
     private var socket: (any WireSocket)?
+    private var backoffWait: Task<Void, any Error>?
     private var deadCycles = 0
 
     public init(instance: InstanceID, pipeline: RequestPipeline, clock: any MediaClock, log: any LogSink) {
@@ -44,10 +45,11 @@ public actor SignalRSource {
         socket = nil
     }
 
-    /// Tears the socket down; the loop reconnects with the backoff reset.
+    /// Tears the socket down and cuts any backoff short: a fixed URL shouldn't sit out a cold-cadence wait.
     public func forceReconnect() {
         deadCycles = 0
         socket?.cancel()
+        backoffWait?.cancel()
     }
 
     private func emit(_ event: DataEvent) {
@@ -64,7 +66,7 @@ public actor SignalRSource {
             } catch is CancellationError {
                 return
             } catch {
-                log.log(.debug, category: "Events", "\(instance) realtime cycle ended: \(error is MediaKitError ? (error as! MediaKitError).caseName : "socket")")
+                log.log(.debug, category: "Events", "\(instance) realtime cycle ended: \((error as? MediaKitError)?.caseName ?? "socket")")
             }
             if Task.isCancelled { return }
             let healthy = lived || clock.now.timeIntervalSince(started) >= Self.minimumHealthyLifetime.seconds
@@ -75,8 +77,12 @@ public actor SignalRSource {
                 backoff = min(backoff * 2, .seconds(30))
                 deadCycles += 1
             }
-            let delay = deadCycles >= Self.deadCyclesBeforeCold ? Self.coldCadence : backoff
-            do { try await clock.sleep(for: delay) } catch { return }
+            // Jittered, so several arrs behind one host that went down together don't reconnect in lockstep.
+            let delay = (deadCycles >= Self.deadCyclesBeforeCold ? Self.coldCadence : backoff) * Double.random(in: 0.8...1.2)
+            let wait = Task { [clock] in try await clock.sleep(for: delay) }
+            backoffWait = wait
+            await withTaskCancellationHandler { _ = try? await wait.value } onCancel: { wait.cancel() }
+            backoffWait = nil
         }
     }
 

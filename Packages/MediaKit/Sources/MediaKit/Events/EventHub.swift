@@ -30,7 +30,6 @@ public actor EventHub {
     /// The counts that were true when the queue was last flushed, per instance.
     private var countsAtFlush: [InstanceID: QueueCounts] = [:]
     private var subscribers: [UUID: AsyncStream<DataEvent>.Continuation] = [:]
-    private let lastEvent = OSAllocatedUnfairLock<[InstanceID: Date]>(initialState: [:])
     private var foreground = true
 
     public init(store: ResourceStore, tagMap: EventTagMap = EventTagMap(), cadence: Cadence = Cadence(), clock: any MediaClock) {
@@ -74,14 +73,12 @@ public actor EventHub {
     private func unsubscribe(_ id: UUID) { subscribers.removeValue(forKey: id) }
 
     // periphery:ignore
-    public nonisolated func lastEventAt(_ instance: InstanceID) -> Date? { lastEvent.withLock { $0[instance] } }
 
     /// Entry for events from any source, including tests.
     public func ingest(_ event: DataEvent) async {
         for c in subscribers.values { c.yield(event) }
         let instance = event.instance
         let now = clock.now
-        lastEvent.withLock { $0[instance] = now }
         for stream in streams { await stream.noteAlive(instance, at: now) }
         var tags = tagMap.tags(for: event, lastCounts: lastCounts[instance])
         if case let .queueStatus(_, counts) = event { lastCounts[instance] = counts }

@@ -26,7 +26,7 @@ extension LocalToolBackend {
         do {
             watches = try await client.recentlyWatched(limit: limit)
         } catch {
-            return ToolCallOutput(text: "Couldn't read watch history: \(error.userFacingMessage)")
+            return ToolCallOutput(text: "Couldn't read watch history: \(error.localizedDescription)")
         }
         guard !watches.isEmpty else {
             return ToolCallOutput(text: "Nothing has been watched on \(mediaServer.kind.displayName) yet.")
@@ -57,7 +57,7 @@ extension LocalToolBackend {
         do {
             sessions = try await client.nowPlaying()
         } catch {
-            return ToolCallOutput(text: "Couldn't read active sessions: \(error.userFacingMessage)")
+            return ToolCallOutput(text: "Couldn't read active sessions: \(error.localizedDescription)")
         }
         guard !sessions.isEmpty else {
             return ToolCallOutput(text: "Nothing is playing on \(mediaServer.kind.displayName) right now.")
@@ -84,7 +84,7 @@ extension LocalToolBackend {
         do {
             try await client.scanLibraries()
         } catch {
-            return ToolCallOutput(text: "FAILED: the scan request was rejected — \(error.userFacingMessage)")
+            return ToolCallOutput(text: "FAILED: the scan request was rejected — \(error.localizedDescription)")
         }
         // Doesn't claim the scan finished: every server works through it on its own schedule.
         return ToolCallOutput(

@@ -5,15 +5,14 @@ import Foundation
 @Suite("SecretMigration")
 struct SecretMigrationSuite {
 
-    private func makeDefaults() -> (UserDefaults, String) {
+    private func makeDefaults() -> UserDefaults {
         let name = "test.secretmig.\(UUID().uuidString)"
-        return (UserDefaults(suiteName: name)!, name)
+        return TestDefaults.suite(name)
     }
 
     @Test("Plaintext secrets in defaults move to the secret store and are blanked")
     @MainActor func migratesAndBlanks() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let legacy = ServiceConfig(enabled: true, baseURL: "http://h:7878",
                                    apiKey: "LEGACY-KEY", username: "u", password: "LEGACY-PW")
@@ -33,8 +32,7 @@ struct SecretMigrationSuite {
 
     @Test("Migration is idempotent and a no-op on a secret-less store")
     @MainActor func idempotentNoOp() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let secrets = InMemorySecretStore()
         ConfigStore.migrateSecretsToKeychain(defaults: defaults, secrets: secrets)
         ConfigStore.migrateSecretsToKeychain(defaults: defaults, secrets: secrets)

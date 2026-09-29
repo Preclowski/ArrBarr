@@ -52,33 +52,16 @@ nonisolated public enum WidgetDataStore {
     /// Tests must not touch the real App Group (resolved via containermanagerd, which once stalled a run 15+ min)
     /// or Application Support. Set by a test that inspects the file; otherwise a per-process temp directory.
     nonisolated(unsafe) static var snapshotDirectoryOverrideForTesting: URL?
-    /// `.some(nil)` means "not a test process", cached so the app doesn't rescan bundles on every refresh.
-    private nonisolated(unsafe) static var cachedTestDirectory: URL??
-
-    /// No single marker covers both runners: SwiftPM's `swiftpm-testing-helper` loads no XCTest, sets no env var
-    /// and doesn't list the `.xctest` bundle — only argv names it.
-    private static func isRunningUnderTests() -> Bool {
-        if NSClassFromString("XCTestCase") != nil { return true }
-        let env = ProcessInfo.processInfo.environment
-        if env["XCTestConfigurationFilePath"] != nil || env["XCTestBundlePath"] != nil { return true }
-        if Bundle.allBundles.contains(where: { $0.bundlePath.hasSuffix(".xctest") }) { return true }
-        return ProcessInfo.processInfo.arguments.contains { $0.contains(".xctest") }
-    }
-
-    static func testSnapshotDirectory() -> URL? {
-        if let explicit = snapshotDirectoryOverrideForTesting { return explicit }
-        snapshotLock.lock()
-        defer { snapshotLock.unlock() }
-        if let cached = cachedTestDirectory { return cached }
-        guard Self.isRunningUnderTests() else {
-            cachedTestDirectory = .some(nil)
-            return nil
-        }
+    private static let testDirectory: URL? = {
+        guard TestProcess.isActive else { return nil }
         let dir = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("ArrBarrTestSnapshots-\(ProcessInfo.processInfo.processIdentifier)")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        cachedTestDirectory = dir
         return dir
+    }()
+
+    static func testSnapshotDirectory() -> URL? {
+        snapshotDirectoryOverrideForTesting ?? testDirectory
     }
     #endif
 
@@ -120,7 +103,7 @@ nonisolated public enum WidgetDataStore {
         }
         if let lastError {
             snapshotLog.error(
-                "upcoming snapshot write failed: \(lastError.localizedDescription, privacy: .public)"
+                "upcoming snapshot write failed: \(lastError.logKind, privacy: .public): \(lastError.localizedDescription, privacy: .private)"
             )
         }
     }

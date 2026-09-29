@@ -25,18 +25,11 @@ nonisolated public struct SecretKey: Sendable, Equatable {
     /// Gates a server bound to one machine, so never synced.
     public static let mcpBearer = SecretKey(account: "secret.mcp.bearer", synced: false, deviceOnly: true)
 
-    /// `mcpBearer` is excluded: it is `deviceOnly` and must never replicate.
-    public static let syncable: [SecretKey] = {
-        var keys: [SecretKey] = []
-        for kind in ServiceKind.allCases {
-            keys.append(.apiKey(for: kind))
-            keys.append(.password(for: kind))
-        }
-        keys.append(.openAIKey)
-        keys.append(.tmdbKey)
-        keys.append(.mediaServerToken)
-        return keys
-    }()
+    /// Every secret the app stores; the migration and sync loops all walk this one list.
+    public static let all: [SecretKey] = ServiceKind.allCases.flatMap { [apiKey(for: $0), password(for: $0)] }
+        + [openAIKey, tmdbKey, prowlarrKey, mediaServerToken, mcpBearer]
+
+    public static let syncable: [SecretKey] = all.filter(\.synced)
 }
 
 nonisolated public protocol SecretStore: Sendable {
@@ -67,7 +60,7 @@ nonisolated struct KeychainSecretStore: SecretStore {
     static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
 
     /// Overridable for tests.
-    static var syncEnabledProvider: @Sendable () -> Bool = {
+    @TaskLocal static var syncEnabledProvider: @Sendable () -> Bool = {
         syncEnabled(in: WidgetDataStore.groupDefaults())
     }
 

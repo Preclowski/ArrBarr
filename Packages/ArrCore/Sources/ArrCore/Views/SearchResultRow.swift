@@ -77,11 +77,11 @@ struct SearchResultRow: View {
         let country: String? = CountryProvider.displayNames(countries, locale: locale, limit: 1).first
         let segments: [String?] = [
             result.subtitle.flatMap { $0.isEmpty ? nil : $0 },
-            result.imdb.flatMap { $0 > 0 ? String(format: "IMDb %.1f", $0) : nil },
+            result.imdb.flatMap { $0 > 0 ? "IMDb \($0.ratingText)" : nil },
             result.rottenTomatoes.flatMap { $0 > 0 ? "RT \(Int($0))%" : nil },
             result.metacritic.flatMap { $0 > 0 ? "MC \(Int($0))" : nil },
-            result.imdb == nil ? result.rating.flatMap { $0 > 0 ? String(format: "★%.1f", $0) : nil } : nil,
-            result.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            result.imdb == nil ? result.rating.flatMap { $0 > 0 ? "★\($0.ratingText)" : nil } : nil,
+            result.runtime.flatMap { $0 > 0 ? $0.runtimeText : nil },
             result.certification.flatMap { $0.isEmpty ? nil : $0 },
             country,
         ]
@@ -138,7 +138,7 @@ struct SearchResultTooltip: View {
 
     private var runtimeCertLine: String {
         var parts: [String] = []
-        if let r = result.runtime, r > 0 { parts.append("\(r) min") }
+        if let r = result.runtime, r > 0 { parts.append(r.runtimeText) }
         if let c = result.certification, !c.isEmpty { parts.append(c) }
         parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
         return parts.joined(separator: " · ")

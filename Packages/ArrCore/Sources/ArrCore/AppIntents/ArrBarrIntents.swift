@@ -106,8 +106,8 @@ enum ArrIntentSupport {
 }
 
 public struct ShowDownloadQueueIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Show download queue"
-    public static var description = IntentDescription(
+    public static let title: LocalizedStringResource = "Show download queue"
+    public static let description = IntentDescription(
         "Says what Sonarr and Radarr are currently downloading."
     )
     public init() {}
@@ -119,8 +119,8 @@ public struct ShowDownloadQueueIntent: AppIntent {
 }
 
 public struct ShowUpcomingIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Show upcoming releases"
-    public static var description = IntentDescription(
+    public static let title: LocalizedStringResource = "Show upcoming releases"
+    public static let description = IntentDescription(
         "Says the next upcoming episodes, movies and albums."
     )
     public init() {}
@@ -136,14 +136,14 @@ public struct ShowUpcomingIntent: AppIntent {
 // Not in AppShortcutsProvider, so state-changing actions stay off "Hey Siri".
 
 public struct PauseAllDownloadsIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Pause all downloads"
-    public static var description = IntentDescription("Pauses every active download (where a download client is configured).")
+    public static let title: LocalizedStringResource = "Pause all downloads"
+    public static let description = IntentDescription("Pauses every active download (where a download client is configured).")
     public init() {}
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .downloading && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
+            items.filter { $0.status == .downloading && ConfigStore.shared.canControlDownload($0) }
         }
         for item in targets { await QueueViewModel.shared.pause(item) }
         let msg = targets.isEmpty
@@ -155,14 +155,14 @@ public struct PauseAllDownloadsIntent: AppIntent {
 }
 
 public struct ResumeAllDownloadsIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Resume all downloads"
-    public static var description = IntentDescription("Resumes every paused download (where a download client is configured).")
+    public static let title: LocalizedStringResource = "Resume all downloads"
+    public static let description = IntentDescription("Resumes every paused download (where a download client is configured).")
     public init() {}
 
     public func perform() async throws -> some IntentResult & ProvidesDialog {
         let items = await ArrIntentSupport.queueItems()
         let targets = await MainActor.run {
-            items.filter { $0.status == .paused && ConfigStore.shared.canControlDownload($0.downloadProtocol) }
+            items.filter { $0.status == .paused && ConfigStore.shared.canControlDownload($0) }
         }
         for item in targets { await QueueViewModel.shared.resume(item) }
         let msg = targets.isEmpty
@@ -174,10 +174,10 @@ public struct ResumeAllDownloadsIntent: AppIntent {
 }
 
 public struct SearchToAddIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Search to add"
-    public static var description = IntentDescription("Search Sonarr/Radarr and open ArrBarr at the results to add something.")
+    public static let title: LocalizedStringResource = "Search to add"
+    public static let description = IntentDescription("Search Sonarr/Radarr and open ArrBarr at the results to add something.")
     // The macOS popover can't be opened programmatically; the query waits for its next open.
-    public static var openAppWhenRun: Bool = true
+    public static let openAppWhenRun: Bool = true
 
     @Parameter(title: "Search")
     public var query: String
@@ -197,8 +197,8 @@ public struct SearchToAddIntent: AppIntent {
 }
 
 public struct CheckArrHealthIntent: AppIntent {
-    public static var title: LocalizedStringResource = "Check service health"
-    public static var description = IntentDescription(
+    public static let title: LocalizedStringResource = "Check service health"
+    public static let description = IntentDescription(
         "Reports warnings/errors across your arrs and whether download clients are reachable."
     )
     public init() {}

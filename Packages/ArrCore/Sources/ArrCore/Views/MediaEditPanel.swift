@@ -196,16 +196,7 @@ struct MediaEditPanel: View {
                 Text("detail.edit.button", bundle: .module)
                     .scaledFont(size: 14, weight: .semibold)
                 Spacer(minLength: 0)
-                Button(action: onBack) {
-                    Image(systemName: "xmark")
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .help(Text("Cancel", bundle: .module))
+                PanelCloseButton(action: onBack)
             }
             .padding(.horizontal, 14)
 
@@ -377,7 +368,7 @@ struct MediaEditPanel: View {
         } catch {
             loadError = String(
                 format: String(localized: "Couldn't load details: %@", bundle: .module),
-                error.userFacingMessage
+                error.localizedDescription
             )
         }
     }

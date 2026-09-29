@@ -36,7 +36,7 @@ struct SelectionCircle: View {
             RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                 .fill(.black.opacity(selected ? 0.45 : 0.30))
             Image(systemName: selected ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 20))
+                .scaledFont(size: 20)
                 .foregroundStyle(selected ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.white))
         }
         .contentShape(Rectangle())
@@ -59,7 +59,7 @@ struct QueueRowView: View {
     /// Closures instead of an observed view-model so the row re-renders only when its `item` changes.
     let onPause: () -> Void
     let onResume: () -> Void
-    let onDelete: () -> Void
+    let onDelete: @MainActor () -> Void
     var onShowDetail: (() -> Void)? = nil
     var selectionState: RowSelectionState = .hidden
     @EnvironmentObject var configStore: ConfigStore
@@ -78,7 +78,7 @@ struct QueueRowView: View {
         ))
     }
 
-    private var canControl: Bool { configStore.canControlDownload(item.downloadProtocol) }
+    private var canControl: Bool { configStore.canControlDownload(item) }
 
     private var canPauseResume: Bool {
         item.status == .downloading || item.status == .paused || item.status == .queued

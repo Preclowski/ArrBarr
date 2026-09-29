@@ -48,14 +48,7 @@ struct OfflineIndicator: View {
 
 // MARK: - Environment
 
-private struct QueueOfflineKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
 public extension EnvironmentValues {
     /// Rows hide their mutating controls, which can't succeed without the LAN.
-    var queueOffline: Bool {
-        get { self[QueueOfflineKey.self] }
-        set { self[QueueOfflineKey.self] = newValue }
-    }
+    @Entry var queueOffline: Bool = false
 }

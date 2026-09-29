@@ -17,7 +17,7 @@ struct SuggestionPromptRow: View {
                 // instead of reading as a new row sliding in.
                 ZStack(alignment: .leading) {
                     Text(LocalizedStringKey(titleKey), bundle: .module)
-                        .font(.system(size: 13))
+                        .scaledFont(size: 13)
                         .foregroundStyle(.primary)
                         .id(titleKey)
                         .transition(.opacity)

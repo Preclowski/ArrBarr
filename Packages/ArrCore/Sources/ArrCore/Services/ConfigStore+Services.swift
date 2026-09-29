@@ -4,8 +4,8 @@ import Combine
 extension ConfigStore {
     /// Pause/resume go straight to the download client; only a confirmed `.down` gates,
     /// `.unknown` (not yet probed) stays allowed.
-    public func canControlDownload(_ proto: QueueItem.DownloadProtocol) -> Bool {
-        guard let kind = selectedDownloadClient(for: proto) else { return false }
+    public func canControlDownload(_ item: QueueItem) -> Bool {
+        guard let kind = downloadClient(for: item) else { return false }
         if case .down = ConnectionHealth.shared.state(for: .arr(kind)) { return false }
         return true
     }
@@ -58,23 +58,11 @@ extension ConfigStore {
         Dictionary(uniqueKeysWithValues: ServiceKind.allCases.map { ($0, config(for: $0)) })
     }
 
-    /// Same priority order as `QueueAggregator.performUsenet` / `performTorrent`; this
-    /// client's reachability gates pause/resume, unlike delete, which the arr performs.
-    public func selectedDownloadClient(for proto: QueueItem.DownloadProtocol) -> ServiceKind? {
-        switch proto {
-        case .usenet:
-            if sabnzbd.isConfigured, !sabnzbd.apiKey.isEmpty { return .sabnzbd }
-            if nzbget.isConfigured { return .nzbget }
-            return nil
-        case .torrent:
-            if qbittorrent.isConfigured { return .qbittorrent }
-            if transmission.isConfigured { return .transmission }
-            if rtorrent.isConfigured { return .rtorrent }
-            if deluge.isConfigured { return .deluge }
-            return nil
-        case .unknown:
-            return nil
-        }
+    /// The client pause/resume reach for this row: the one the arr names, among the configured ones. Its
+    /// reachability gates those actions, unlike delete, which the arr performs.
+    public func downloadClient(for item: QueueItem) -> ServiceKind? {
+        let configured = QueueAggregator.candidateKinds(for: item.downloadProtocol).filter { MonitoredService.arr($0).isConfigured(in: self) }
+        return QueueAggregator.route(clientNamed: item.downloadClient, among: configured)
     }
 
 

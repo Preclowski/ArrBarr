@@ -12,33 +12,26 @@ extension AppDelegate {
                 Task { @MainActor in MCPServerStatusModel.shared.status = MCPServerStatus(status) }
             }
         }
-        let cs = configStore
-        let triggers: [AnyPublisher<Void, Never>] = [
-            cs.$mcpEnabled.map { _ in () }.eraseToAnyPublisher(),
-            cs.$mcpHostPort.map { _ in () }.eraseToAnyPublisher(),
-            cs.$mcpRequireAuth.map { _ in () }.eraseToAnyPublisher(),
-            cs.$mcpAuthToken.map { _ in () }.eraseToAnyPublisher(),
-            cs.$mcpDisabledTools.map { _ in () }.eraseToAnyPublisher(),
-            cs.$sonarr.map { _ in () }.eraseToAnyPublisher(),
-            cs.$radarr.map { _ in () }.eraseToAnyPublisher(),
-            cs.$lidarr.map { _ in () }.eraseToAnyPublisher(),
-            cs.$whisparr.map { _ in () }.eraseToAnyPublisher(),
-        ]
-        Publishers.MergeMany(triggers)
+        // Every setting the tools read (arrs, download clients, TMDB, media server) restarts the server;
+        // anything else collapses in `removeDuplicates`.
+        configStore.objectWillChange
             .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
-            .sink { [weak self] in self?.applyMCPConfig() }
+            .prepend(())
+            .map { [weak self] _ in self?.mcpConfig() }
+            .removeDuplicates()
+            .sink { [weak self] config in
+                guard let controller = self?.mcpController else { return }
+                Task { if let config { await controller.restart(with: config) } else { await controller.stop() } }
+            }
             .store(in: &cancellables)
-        applyMCPConfig()
     }
 
-    private func applyMCPConfig() {
+    /// nil = the server should be stopped.
+    private func mcpConfig() -> MCPServerController.Config? {
         let cs = configStore
-        guard cs.mcpEnabled else { Task { await mcpController.stop() }; return }
-        if cs.mcpRequireAuth && cs.mcpAuthToken.isEmpty {
-            // Mint a token rather than start a server whose auth can never pass (the validator fails closed on empty).
-            cs.mcpAuthToken = MCPTokenStore.generate()
-            return
-        }
+        guard cs.mcpEnabled else { return nil }
+        // Mint a token rather than start a server whose auth can never pass (the validator fails closed on empty).
+        if cs.mcpRequireAuth && cs.mcpAuthToken.isEmpty { cs.mcpAuthToken = MCPTokenStore.generate() }
         let inputs = MCPServerController.BackendInputs(
             sonarr: cs.sonarr, radarr: cs.radarr, lidarr: cs.lidarr, whisparr: cs.whisparr,
             aiKnowsAboutWhisparr: cs.aiKnowsAboutWhisparr, tmdbApiKey: cs.tmdbApiKey,
@@ -46,10 +39,9 @@ extension AppDelegate {
                 qbittorrent: cs.qbittorrent, transmission: cs.transmission, nzbget: cs.nzbget,
                 sabnzbd: cs.sabnzbd, rtorrent: cs.rtorrent, deluge: cs.deluge),
             mediaServer: cs.mediaServer)
-        let config = MCPServerController.Config(
+        return MCPServerController.Config(
             hostPort: cs.mcpHostPort, requireAuth: cs.mcpRequireAuth, token: cs.mcpAuthToken,
             disabledTools: cs.mcpDisabledTools, backendInputs: inputs)
-        Task { await mcpController.restart(with: config) }
     }
 }
 

@@ -128,16 +128,7 @@ struct MediaDeletePanel: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
-                Button(action: onCancel) {
-                    Image(systemName: "xmark")
-                        .scaledFont(size: 12, weight: .semibold)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 24, height: 24)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(.cancelAction)
-                .help(Text("Cancel", bundle: .module))
+                PanelCloseButton(action: onCancel)
             }
             .padding(.horizontal, 14)
 
@@ -228,7 +219,7 @@ struct MediaDeletePanel: View {
             onDeleted()
         } catch {
             // The arr puts the real reason in the response body, not the status.
-            deleteError = error.userFacingMessage
+            deleteError = error.localizedDescription
         }
     }
 }

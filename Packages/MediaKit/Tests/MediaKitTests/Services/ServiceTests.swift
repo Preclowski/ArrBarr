@@ -216,6 +216,16 @@ extension TestKit {
         if case let .form(f) = kit.transport.requests[1].body { #expect(f["username"] == "u" && f["password"] == "p") } else { Issue.record("login body") }
     }
 
+    @Test func qbittorrentDoesNotRetryARefusedLogin() async throws {
+        let kit = try await TestKit(instances: [TestKit.qbittorrent], credentials: [TestKit.qbittorrent: Credentials(baseURL: URL(string: "http://qb.fixture.invalid")!, material: .userPassword(user: "u", password: "wrong"), generation: "g")])
+        kit.transport.fallback = { r in
+            r.pathTemplate.hasSuffix("/auth/login") ? ScriptedTransport.Answer(status: 200, body: Data("Fails.".utf8)) : ScriptedTransport.Answer(status: 403, body: Data())
+        }
+        let qb = QBittorrentService(instance: TestKit.qbittorrent, capabilities: kit.capabilities)
+        for _ in 0..<3 { _ = try? await qb.fetchTasks(ids: [], pipeline: kit.pipeline) }
+        #expect(kit.transport.operations.filter { $0 == "login" }.count == 1)
+    }
+
     @Test func rtorrentMulticallRoundTrip() throws {
         let response = """
         <?xml version="1.0"?><methodResponse><params><param><value><array><data>

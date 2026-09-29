@@ -50,10 +50,10 @@ import Testing
         await kit.store.invalidate([.collection(.queue, TestKit.sonarr)], reason: .command)
         kit.transport.delay = .zero
         kit.transport.fallback = { _ in throw URLError(.cannotConnectToHost) }
-        // Three attempts of one retried read open the breaker; the next two sends are skipped.
-        for _ in 0..<3 { _ = try? await kit.pipeline.send(kit.plan("fetchHealth", path: "/api/v3/health")) }
+        // One strike per read, however many attempts it made: three failed reads open the breaker, the next two are skipped.
+        for _ in 0..<5 { _ = try? await kit.pipeline.send(kit.plan("fetchHealth", path: "/api/v3/health")) }
         let report = kit.telemetry.report()
-        #expect(report.contains("radarr.fixture.invalid:8080: requests 4 skipped 2 failures 3 breaker 1 "))
+        #expect(report.contains("radarr.fixture.invalid:8080: requests 10 skipped 2 failures 9 breaker 1 "))
         #expect(report.contains("radarr#0: hits 1 misses 2 stale 0 coalesced 1 invalidated \(before.0 + 1)"))
         #expect(report.contains("sonarr#0: hits 0 misses 0 stale 0 coalesced 0 invalidated \(before.1 + 1)"))
     }
@@ -127,6 +127,9 @@ import Testing
         #expect(req("POST", "/api/v2/auth/login", kind: .qbittorrent) && !req("POST", "/api/v2/torrents/stop", kind: .qbittorrent))
         #expect(req("POST", "/transmission/rpc", rpc: "torrent-get", kind: .transmission) && !req("POST", "/transmission/rpc", rpc: "torrent-stop", kind: .transmission))
         #expect(req("GET", "/api?mode=queue&output=json", kind: .sabnzbd) && !req("GET", "/api?mode=pause", kind: .sabnzbd))
+        for action in ["pause", "resume", "purge", "priority", "delete"] {
+            #expect(!req("GET", "/api?mode=queue&name=\(action)&value=SABnzbd_nzo_1", kind: .sabnzbd))
+        }
         #expect(req("GET", "/3/movie/603", kind: .tmdb) && !req("GET", "/3/authentication/token/new", kind: .tmdb))
         #expect(!req("GET", "/library/sections/1/refresh", kind: .plex))
     }

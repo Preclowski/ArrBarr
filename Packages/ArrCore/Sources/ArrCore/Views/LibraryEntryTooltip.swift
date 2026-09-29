@@ -100,7 +100,7 @@ private struct LibraryEntryTooltip: View {
     private var subtitle: String {
         var parts: [String] = []
         if let runtime = entry.runtime, runtime > 0 {
-            parts.append("\(runtime) min")
+            parts.append(runtime.runtimeText)
         }
         if let cert = entry.certification, !cert.isEmpty {
             parts.append(cert)

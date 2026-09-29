@@ -19,50 +19,24 @@ public struct URLSessionTransport: Transport, SocketTransport {
     }
 
     public func send(_ request: HTTPRequest) async throws -> HTTPResponse {
-        let urlRequest = RequestBuilder.urlRequest(from: request)
-        let task = session.dataTask(with: urlRequest)
-        let box = TaskBox(task)
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<HTTPResponse, any Error>) in
-                let delegate = DataDelegate { result in continuation.resume(with: result) }
-                task.delegate = delegate
-                task.resume()
-            }
-        } onCancel: {
-            box.task.cancel()
+        let (body, response): (Data, URLResponse)
+        do {
+            (body, response) = try await session.data(for: RequestBuilder.urlRequest(from: request))
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
         }
+        guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
+        var headers = HTTPHeaders()
+        for (name, value) in http.allHeaderFields {
+            if let name = name as? String, let value = value as? String { headers[name] = value }
+        }
+        return HTTPResponse(status: http.statusCode, headers: headers, body: body)
     }
 
     public func open(_ request: HTTPRequest) async throws -> any WireSocket {
         let task = session.webSocketTask(with: RequestBuilder.urlRequest(from: request))
         task.resume()
         return URLSessionSocket(task: task)
-    }
-}
-
-private struct TaskBox: @unchecked Sendable { let task: URLSessionTask; init(_ task: URLSessionTask) { self.task = task } }
-
-private final class DataDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
-    private var buffer = Data()
-    private let finish: (Result<HTTPResponse, any Error>) -> Void
-    init(finish: @escaping (Result<HTTPResponse, any Error>) -> Void) { self.finish = finish }
-
-    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) { buffer.append(data) }
-
-    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: (any Error)?) {
-        if let error {
-            if (error as? URLError)?.code == .cancelled { finish(.failure(CancellationError())) } else { finish(.failure(error)) }
-            return
-        }
-        guard let http = task.response as? HTTPURLResponse else {
-            finish(.failure(URLError(.badServerResponse)))
-            return
-        }
-        var headers = HTTPHeaders()
-        for (name, value) in http.allHeaderFields {
-            if let name = name as? String, let value = value as? String { headers[name] = value }
-        }
-        finish(.success(HTTPResponse(status: http.statusCode, headers: headers, body: buffer)))
     }
 }
 

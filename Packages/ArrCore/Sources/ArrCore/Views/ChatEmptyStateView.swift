@@ -39,10 +39,10 @@ struct ChatEmptyStateView: View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("chat.whatToWatchTonight.tooltip", bundle: .module)
-                    .font(.system(size: 22, weight: .semibold))
+                    .scaledFont(size: 22, weight: .semibold)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("chat.empty.subtitle", bundle: .module)
-                    .font(.system(size: 13))
+                    .scaledFont(size: 13)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -56,7 +56,7 @@ struct ChatEmptyStateView: View {
             HStack(spacing: 12) {
                 Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)
                 Text("chat.orAsk.button", bundle: .module)
-                    .font(.system(size: 11))
+                    .scaledFont(size: 11)
                     .foregroundStyle(.tertiary)
                     .tracking(0.5)
                 Rectangle().fill(Color.secondary.opacity(0.15)).frame(height: 0.5)

@@ -7,8 +7,7 @@ import Foundation
 struct ConfigStoreChatTests {
     private func freshDefaults() -> UserDefaults {
         let suite = "ArrBarrTests.\(UUID().uuidString)"
-        let d = UserDefaults(suiteName: suite)!
-        d.removePersistentDomain(forName: suite)
+        let d = TestDefaults.suite(suite)
         return d
     }
 

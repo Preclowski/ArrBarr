@@ -32,10 +32,12 @@ jobs:
   # Tests. The `ArrBarr` scheme has an empty <Testables> section, so
   # `xcodebuild -scheme ArrBarr test` fails with "not currently configured for
   # the test action" no matter what the code does. The real suites live in the
-  # two SwiftPM packages and run far faster there.
+  # SwiftPM packages and run far faster there.
   # ---------------------------------------------------------------------------
   test:
     runs-on: xcode-27
+    # A test parked on a continuation would otherwise hold the runner for the 6 h default.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -118,6 +120,38 @@ jobs:
 
       - name: Test ArrMCPServer
         run: swift test --package-path Packages/ArrMCPServer
+
+      - name: Test MediaKit
+        run: swift test --package-path Packages/MediaKit
+
+      - name: Localization catalogue
+        run: |
+          set -euo pipefail
+          (cd Tools/loc && python3 -m unittest discover -s tests)
+          python3 Tools/loc/lint_missing_keys.py
+          python3 Tools/loc/loc_audit.py Packages/ArrCore/Sources/ArrCore/Resources/Localizable.xcstrings
+
+  # ---------------------------------------------------------------------------
+  # Code the release build never compiles: the iOS app with its widgets, and the
+  # App Store flavour's `#if APPSTORE` paths. Unsigned; nothing is shipped.
+  # ---------------------------------------------------------------------------
+  compile:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          set -euo pipefail
+          sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
+          xcodebuild -downloadComponent MetalToolchain
+
+      - name: Build iOS
+        run: xcodebuild -project ArrBarr.xcodeproj -scheme ArrBarriOS -configuration Debug -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+
+      - name: Build App Store flavour
+        run: xcodebuild -project ArrBarr.xcodeproj -scheme ArrBarr -configuration Release-AppStore CODE_SIGNING_ALLOWED=NO build
 
   # ---------------------------------------------------------------------------
   # Release build. Produces the DMG on release events and hands it to the

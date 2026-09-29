@@ -38,7 +38,7 @@ extension ServiceGateway {
     static func scripted(_ transport: any Transport) async -> ServiceGateway {
         await MainActor.run {
             let hadCurrent = current != nil
-            let store = ConfigStore(defaults: UserDefaults(suiteName: "ArrCoreTests.scripted")!, secrets: InMemorySecretStore())
+            let store = ConfigStore(defaults: TestDefaults.suite("ArrCoreTests.scripted"), secrets: InMemorySecretStore())
             let gateway = ServiceGateway(configStore: store, demo: false, transport: transport)
             // Credentials for adopted configs resolve through the store's gateway.
             store.gateway = gateway

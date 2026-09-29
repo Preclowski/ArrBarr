@@ -1,14 +1,14 @@
 import Foundation
 
 /// A run of chat text, either shown plainly or hidden behind a spoiler.
-enum ChatSpoilerSegment: Equatable, Sendable {
+nonisolated enum ChatSpoilerSegment: Equatable, Sendable {
     case text(String)
     case spoiler(String)
 }
 
 /// `||hidden||` is a spoiler only when the markers hug their body: a false
 /// positive blanks a whole paragraph (e.g. `a || b` in code or tables).
-enum ChatSpoilerMarkup {
+nonisolated enum ChatSpoilerMarkup {
     private static let marker = "||"
 
     static func parse(_ raw: String) -> [ChatSpoilerSegment] {

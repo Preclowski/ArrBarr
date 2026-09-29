@@ -123,11 +123,11 @@ extension SettingsView {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
                 .accessibilityHidden(true)
             TextField(text: $macSearch) { Text("search.search.button", bundle: .module) }
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
             if !macSearch.isEmpty {
                 Button { macSearch = "" } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)

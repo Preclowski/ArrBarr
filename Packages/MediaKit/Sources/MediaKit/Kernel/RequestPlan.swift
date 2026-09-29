@@ -51,7 +51,8 @@ public struct RequestPlan: Sendable, Hashable {
         self.method = method; self.pathTemplate = pathTemplate; self.pathValues = pathValues
         self.query = query; self.headers = headers; self.body = body; self.auth = auth
         self.priority = priority
-        self.retry = retry ?? (method == "GET" ? .idempotent : .never)
+        // A slow read (an indexer search) is retried by the user, not three times over by us.
+        self.retry = retry ?? (method == "GET" && timeout <= .seconds(30) ? .idempotent : .never)
         self.timeout = timeout; self.rpcMethod = rpcMethod
     }
 

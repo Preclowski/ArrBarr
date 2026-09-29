@@ -66,7 +66,8 @@ public enum SpotlightIndexer {
     /// Fire-and-forget, throttled by `reindexThrottle`.
     @MainActor
     public static func reindex(configStore: ConfigStore) {
-        if isReindexing { return }
+        // The system index is shared with the real profile; fixture titles would sit in it for hours.
+        if isReindexing || DemoMode.isActive { return }
         if let last = lastReindex, Date().timeIntervalSince(last) < reindexThrottle { return }
         lastReindex = Date()
         isReindexing = true
@@ -136,7 +137,7 @@ public enum SpotlightIndexer {
             }
         } catch {
             // A click must open something: the arr itself beats a dead hit.
-            log.error("Spotlight hit \(id, privacy: .private) unresolved: \(error.localizedDescription, privacy: .public)")
+            log.error("Spotlight hit \(id, privacy: .private) unresolved: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return URL(string: cfg.baseURL)
         }
         guard let slug, !slug.isEmpty else { return nil }

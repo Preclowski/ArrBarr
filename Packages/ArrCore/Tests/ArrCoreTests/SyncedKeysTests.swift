@@ -14,7 +14,7 @@ struct SyncedKeysSuite {
     @Test("Excludes platform-specific, MCP, and one-shot keys")
     func excludesLocal() {
         for k in ["ArrBarr.foregroundInterval", "ArrBarr.backgroundInterval",
-                  "ArrBarr.fontScale", "ArrBarr.launchAtLogin", "ArrBarr.appLanguage",
+                  "ArrBarr.fontScale", "ArrBarr.appLanguage",
                   "ArrBarr.appearance", "ArrBarr.showIndexerIssues",
                   "ArrBarr.mcpEnabled", "ArrBarr.mcpHostPort",
                   "ArrBarr.welcomeSeenVersion", "ArrBarr.groupMigrationDone",

@@ -18,7 +18,7 @@ struct EpisodeDetailOverlay: View {
     /// Async so the Pause/Resume CTA can show a spinner until the action and its queue refresh complete.
     let onPauseEpisode: ((QueueItem) async -> Void)?
     let onResumeEpisode: ((QueueItem) async -> Void)?
-    let onDeleteEpisode: ((QueueItem) -> Void)?
+    let onDeleteEpisode: (@MainActor (QueueItem) -> Void)?
     /// Set when opened from the queue: tapping the series title pushes the series. `nil` = inert text.
     let onTapSeries: (() -> Void)?
     /// `nil` leaves "Season N" as inert text.
@@ -99,7 +99,7 @@ struct EpisodeDetailOverlay: View {
         seriesWebURL: URL? = nil,
         onPauseEpisode: ((QueueItem) async -> Void)? = nil,
         onResumeEpisode: ((QueueItem) async -> Void)? = nil,
-        onDeleteEpisode: ((QueueItem) -> Void)? = nil,
+        onDeleteEpisode: (@MainActor (QueueItem) -> Void)? = nil,
         onTapSeries: (() -> Void)? = nil,
         onTapSeason: (() -> Void)? = nil,
         seriesYear: Int? = nil,
@@ -493,7 +493,7 @@ struct EpisodeDetailOverlay: View {
                 item: q,
                 onPause: { Task { await onPauseEpisode?(q) } },
                 onResume: { Task { await onResumeEpisode?(q) } },
-                onDelete: onDeleteEpisode.map { del in { del(q) } }
+                onDelete: onDeleteEpisode.map { del -> @MainActor () -> Void in { del(q) } }
             )
             if !q.statusMessages.isEmpty {
                 QueueStatusMessagesBanner(

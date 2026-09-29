@@ -41,8 +41,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     nonisolated static let log = Logger(category: "Lifecycle")
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        registerNotificationCategories()
-        UNUserNotificationCenter.current().delegate = self
+        NotificationActions.register()
+        UNUserNotificationCenter.current().delegate = ArrNotificationDelegate.shared
 
         antiAppNap = ProcessInfo.processInfo.beginActivity(
             options: .userInitiatedAllowingIdleSystemSleep,
@@ -106,7 +106,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if CommandLine.arguments.contains("--clear-intents") {
             Task { @MainActor in
                 await SpotlightIndexer.clearIndex()
-                NSLog("ArrBarr: cleared Spotlight intents index (--clear-intents)")
+                Self.log.notice("cleared the Spotlight index (--clear-intents)")
             }
         } else {
             SpotlightIndexer.reindex(configStore: configStore)

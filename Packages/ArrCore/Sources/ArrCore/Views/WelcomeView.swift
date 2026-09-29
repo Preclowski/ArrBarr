@@ -1,7 +1,6 @@
 import SwiftUI
 
 public struct WelcomeView: View {
-    let variant: WelcomeContent.Variant
     let onDismiss: () -> Void
     let onAddService: () -> Void
     let onTryDemo: () -> Void
@@ -9,13 +8,11 @@ public struct WelcomeView: View {
     let onFinish: () -> Void
 
     public init(
-        variant: WelcomeContent.Variant,
         onDismiss: @escaping () -> Void,
         onAddService: @escaping () -> Void,
         onTryDemo: @escaping () -> Void,
         onFinish: @escaping () -> Void
     ) {
-        self.variant = variant
         self.onDismiss = onDismiss
         self.onAddService = onAddService
         self.onTryDemo = onTryDemo
@@ -25,9 +22,7 @@ public struct WelcomeView: View {
     @EnvironmentObject var configStore: ConfigStore
     @State private var pageIndex: Int = 0
 
-    private var pages: [WelcomeContent.WelcomePage] {
-        WelcomeContent.pages(for: variant)
-    }
+    private var pages: [WelcomeContent.WelcomePage] { WelcomeContent.firstRunPages }
 
     private var current: WelcomeContent.WelcomePage {
         pages[max(0, min(pageIndex, pages.count - 1))]
@@ -89,12 +84,12 @@ public struct WelcomeView: View {
                 Spacer(minLength: 22)
             }
 
-            Text(LocalizedStringKey(current.titleKey))
+            Text(LocalizedStringKey(current.titleKey), bundle: .module)
                 .scaledFont(size: 18, weight: .semibold)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
-            Text(LocalizedStringKey(current.bodyKey))
+            Text(LocalizedStringKey(current.bodyKey), bundle: .module)
                 .scaledFont(size: 12)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -107,7 +102,7 @@ public struct WelcomeView: View {
                     handleCTA(cta)
                 } label: {
                     Label {
-                        Text(LocalizedStringKey(cta.titleKey))
+                        Text(LocalizedStringKey(cta.titleKey), bundle: .module)
                     } icon: {
                         Image(systemName: cta.symbol)
                     }
@@ -199,7 +194,7 @@ public struct WelcomeView: View {
 
     private var footer: some View {
         HStack(spacing: 12) {
-            if case .firstRun = variant, !isLastPage {
+            if !isLastPage {
                 Button(String(localized: "onboarding.tryDemoMode.button", bundle: .module)) { onTryDemo() }
                     #if os(macOS)
                     .buttonStyle(.link)
@@ -292,7 +287,7 @@ private struct EdgeArrowButton: View {
         }
         .buttonStyle(.plain)
         .onHover { hovering = $0 }
-        .help(direction == .previous ? "Previous" : "Next")
+        .help(Text(direction == .previous ? "onboarding.previous.button" : "onboarding.next.button", bundle: .module))
         // Bare chevron: without this the button announces as "chevron left".
         .accessibilityLabel(Text(direction == .previous
                                  ? "onboarding.previous.button"
@@ -413,7 +408,7 @@ private struct MenuBarIllustration: View {
     }
 }
 
-private struct Triangle: Shape {
+nonisolated private struct Triangle: Shape {
     func path(in rect: CGRect) -> Path {
         var p = Path()
         p.move(to: CGPoint(x: rect.midX, y: rect.minY))

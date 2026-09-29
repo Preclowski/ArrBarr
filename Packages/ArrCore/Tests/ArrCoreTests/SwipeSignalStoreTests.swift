@@ -8,8 +8,7 @@ struct SwipeSignalStoreTests {
 
     private func freshStore() -> SwipeSignalStore {
         let suite = "SwipeSignalStoreTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
+        let defaults = TestDefaults.suite(suite)
         return SwipeSignalStore(defaults: defaults)
     }
 
@@ -89,8 +88,7 @@ struct SwipeSignalStoreTests {
     @Test("Signals survive a store reload from the same defaults")
     func persistsAcrossReload() {
         let suite = "SwipeSignalStoreTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
+        let defaults = TestDefaults.suite(suite)
         let t0 = Date(timeIntervalSince1970: 1_000_000)
         let store = SwipeSignalStore(defaults: defaults)
         store.record(key: "tmdb:1", title: "A", kind: .skipped, now: t0)

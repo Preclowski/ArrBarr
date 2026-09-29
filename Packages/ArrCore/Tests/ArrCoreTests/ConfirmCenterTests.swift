@@ -14,7 +14,7 @@ struct ConfirmCenterTests {
         return c
     }
 
-    private func pending(_ onConfirm: @escaping @MainActor () -> Void) -> PendingConfirm {
+    private func pending(_ onConfirm: @escaping @MainActor @Sendable () -> Void) -> PendingConfirm {
         PendingConfirm(title: "Cancel this download?",
                        message: "This will remove the download from the client.",
                        confirmLabel: "Cancel download",

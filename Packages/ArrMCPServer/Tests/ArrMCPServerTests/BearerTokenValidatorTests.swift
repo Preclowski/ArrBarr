@@ -40,3 +40,17 @@ private func ctx() -> HTTPValidationContext {
     let req = HTTPRequest(method: "POST", headers: ["Authorization": "Bearer secre"], body: nil, path: "/mcp")
     #expect(v.validate(req, context: ctx())?.statusCode == 401)
 }
+
+@Test func validator_schemeIsCaseInsensitive() {
+    let v = StaticBearerValidator(token: "secret")
+    let req = HTTPRequest(method: "POST", headers: ["Authorization": "bearer secret"], body: nil, path: "/mcp")
+    #expect(v.validate(req, context: ctx()) == nil)
+}
+
+@Test func lanBind_acceptsAnyHostButRefusesBrowsers() {
+    let v = BrowserOriginValidator()
+    let client = HTTPRequest(method: "POST", headers: ["Host": "192.168.1.20:8080"], body: nil, path: "/mcp")
+    #expect(v.validate(client, context: ctx()) == nil)
+    let page = HTTPRequest(method: "POST", headers: ["Host": "192.168.1.20:8080", "Origin": "http://evil.example"], body: nil, path: "/mcp")
+    #expect(v.validate(page, context: ctx())?.statusCode == 403)
+}

@@ -20,6 +20,7 @@ struct FloatingBackButton: View {
         }
         .buttonStyle(.plain)
         .help(Text("settings.back.button", bundle: .module))
+        .accessibilityLabel(Text("settings.back.button", bundle: .module))
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }

@@ -40,7 +40,7 @@ public actor SearchClient {
             let searchRecords = try await searchTask
             let artistRecords: [ArrArtist]
             do { artistRecords = try await artistTask } catch {
-                Logger.extras.debug("lidarr artist lookup failed: \(error.localizedDescription, privacy: .public)")
+                Logger.extras.debug("lidarr artist lookup failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
                 artistRecords = []
             }
             let albums = searchRecords.enumerated().compactMap { offset, rec in rec.album.flatMap { SearchResult(album: $0, baseURL: baseURL, sourceRank: offset) } }

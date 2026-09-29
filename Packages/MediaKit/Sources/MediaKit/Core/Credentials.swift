@@ -44,6 +44,8 @@ public struct Fingerprint: Hashable, Sendable, Codable, CustomStringConvertible 
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false) ?? URLComponents()
         components.query = nil
         components.fragment = nil
+        components.user = nil
+        components.password = nil
         components.scheme = components.scheme?.lowercased()
         components.host = components.host?.lowercased()
         while components.path.hasSuffix("/") { components.path.removeLast() }

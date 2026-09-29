@@ -1,8 +1,8 @@
+import CryptoKit
 import Foundation
-import Security
 
 /// The MCP server's bearer token over `SecretStore`. Device-only, never synced.
-public enum MCPTokenStore {
+nonisolated public enum MCPTokenStore {
     /// Same backend selection as `ConfigStore`, or the server couldn't read back
     /// its own token after a relaunch.
     private static let store: SecretStore =
@@ -27,9 +27,7 @@ public enum MCPTokenStore {
     }
 
     public static func generate() -> String {
-        var bytes = [UInt8](repeating: 0, count: 32)
-        _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
-        return Data(bytes).base64EncodedString()
+        SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }.base64EncodedString()
             .replacingOccurrences(of: "+", with: "-")
             .replacingOccurrences(of: "/", with: "_")
             .replacingOccurrences(of: "=", with: "")

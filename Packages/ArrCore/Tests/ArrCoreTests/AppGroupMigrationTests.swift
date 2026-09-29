@@ -23,8 +23,7 @@ struct WidgetDemoPathTests {
 @Suite("Widget data store config read")
 struct WidgetDataStoreReadTests {
     private func freshSuite(_ name: String) -> UserDefaults {
-        let d = UserDefaults(suiteName: name)!
-        d.removePersistentDomain(forName: name)
+        let d = TestDefaults.suite(name)
         return d
     }
 
@@ -51,8 +50,7 @@ struct WidgetDataStoreReadTests {
 @Suite("App Group migration")
 struct AppGroupMigrationTests {
     private func fresh(_ name: String) -> UserDefaults {
-        let d = UserDefaults(suiteName: name)!
-        d.removePersistentDomain(forName: name)
+        let d = TestDefaults.suite(name)
         return d
     }
 

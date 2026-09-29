@@ -266,7 +266,7 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
             Self.log.debug("Season posters for item \(itemId, privacy: .public): \(posters.count, privacy: .public)")
         } catch {
             Self.log.error(
-                "Season poster fetch failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+                "Season poster fetch failed: \(error.logKind, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
         }
     }

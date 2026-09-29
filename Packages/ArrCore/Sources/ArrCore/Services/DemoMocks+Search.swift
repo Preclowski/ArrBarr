@@ -2,7 +2,7 @@ import Foundation
 
 // Search-result pools the demo chat draws its suggestions from.
 
-extension DemoMocks {
+nonisolated extension DemoMocks {
     static var radarrSearchPool: [SearchResult] {
         [
             SearchResult(

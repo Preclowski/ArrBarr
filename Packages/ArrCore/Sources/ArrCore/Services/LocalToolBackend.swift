@@ -119,7 +119,7 @@ public actor LocalToolBackend {
             return try await run(name: name, arguments: arguments)
         } catch {
             Self.log.error(
-                "tool \(name, privacy: .public) failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+                "tool \(name, privacy: .public) failed: \(error.logKind, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
             throw error
         }
@@ -335,7 +335,7 @@ public actor LocalToolBackend {
 }
 
 /// Each defaults to `.empty` (skipped).
-nonisolated public struct DownloadClientConfigs: Sendable {
+nonisolated public struct DownloadClientConfigs: Sendable, Equatable {
     public var qbittorrent: ServiceConfig
     public var transmission: ServiceConfig
     public var nzbget: ServiceConfig

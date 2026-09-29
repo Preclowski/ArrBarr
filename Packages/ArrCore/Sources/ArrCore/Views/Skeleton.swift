@@ -64,12 +64,15 @@ struct SkeletonCastRow: View {
 }
 
 private struct SkeletonPulse: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dim = false
     func body(content: Content) -> some View {
         content
             .opacity(dim ? 0.5 : 1)
             .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: dim)
+            // Reduce Motion: a steady dimmed placeholder instead of an endless pulse.
             .onAppear { dim = true }
+            .transaction { if reduceMotion { $0.animation = nil } }
     }
 }
 

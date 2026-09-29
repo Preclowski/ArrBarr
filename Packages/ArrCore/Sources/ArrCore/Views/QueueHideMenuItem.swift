@@ -20,7 +20,7 @@ struct QueueHideMenuItem: View {
 
     private func hide() {
         let items = items
-        let apply = { withAnimation(.smooth(duration: 0.22)) { QueueUIState.shared.hide(items) } }
+        let apply: @MainActor () -> Void = { withAnimation(.smooth(duration: 0.22)) { QueueUIState.shared.hide(items) } }
         guard !queueUI.hideHintSuppressed else { return apply() }
         #if os(macOS)
         let message = "queue.hideHint.message.macos"

@@ -7,8 +7,7 @@ import Foundation
 struct QueueAggregatorTests {
     private func makeConfigStore() -> ConfigStore {
         let suiteName = "QueueAggregatorTests.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
+        let defaults = TestDefaults.suite(suiteName)
         return ConfigStore(defaults: defaults)
     }
 

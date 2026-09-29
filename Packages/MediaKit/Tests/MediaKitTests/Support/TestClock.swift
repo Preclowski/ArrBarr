@@ -4,7 +4,7 @@ import os
 
 /// Deterministic time for tests: `sleep` suspends until `advance(by:)` passes the wake time.
 final class TestClock: MediaClock, Sendable {
-    private struct Sleeper { let wakeAt: Date; let continuation: CheckedContinuation<Void, any Error> }
+    private struct Sleeper { let id: UUID; let wakeAt: Date; let continuation: CheckedContinuation<Void, any Error> }
     private struct State { var now: Date; var sleepers: [Sleeper] = []; var autoAdvance = false }
     private let state: OSAllocatedUnfairLock<State>
 
@@ -20,17 +20,32 @@ final class TestClock: MediaClock, Sendable {
 
     var now: Date { state.withLock { $0.now } }
 
+    /// Cancellation ends the sleep at once, as `Task.sleep` does, so a cancelled sleeper is no longer pending.
     func sleep(for duration: Duration) async throws {
         try Task.checkCancellation()
         let wakeAt = now.addingTimeInterval(duration.seconds)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            let fireNow = state.withLock { s -> Bool in
-                if s.autoAdvance { s.now = max(s.now, wakeAt); return true }
-                if wakeAt <= s.now { return true }
-                s.sleepers.append(Sleeper(wakeAt: wakeAt, continuation: continuation))
-                return false
+        let id = UUID()
+        try await withTaskCancellationHandler {
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+                enum Start { case now, wait, cancelled }
+                let start = state.withLock { s -> Start in
+                    if Task.isCancelled { return .cancelled }
+                    if s.autoAdvance { s.now = max(s.now, wakeAt); return .now }
+                    if wakeAt <= s.now { return .now }
+                    s.sleepers.append(Sleeper(id: id, wakeAt: wakeAt, continuation: continuation))
+                    return .wait
+                }
+                switch start {
+                case .now: continuation.resume()
+                case .cancelled: continuation.resume(throwing: CancellationError())
+                case .wait: break
+                }
             }
-            if fireNow { continuation.resume() }
+        } onCancel: {
+            let cancelled = state.withLock { s -> Sleeper? in
+                s.sleepers.firstIndex { $0.id == id }.map { s.sleepers.remove(at: $0) }
+            }
+            cancelled?.continuation.resume(throwing: CancellationError())
         }
     }
 

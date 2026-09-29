@@ -11,10 +11,11 @@ struct StaticBearerValidator: HTTPRequestValidator {
 
     func validate(_ request: HTTPRequest, context: HTTPValidationContext) -> HTTPResponse? {
         // Fail closed on an empty token rather than match a forged empty "Bearer " header.
+        // The auth scheme is case-insensitive (RFC 9110), the token is not.
         guard !token.isEmpty,
               let auth = request.header(HTTPHeaderName.authorization),
-              auth.hasPrefix("Bearer "),
-              Self.constantTimeEquals(String(auth.dropFirst("Bearer ".count)), token) else {
+              auth.prefix(7).lowercased() == "bearer ",
+              Self.constantTimeEquals(String(auth.dropFirst(7)), token) else {
             // Notice-level so "misconfigured client" vs "something else knocking" can
             // be read back. The presented token is never logged, not even a prefix.
             let reason = token.isEmpty ? "no token configured"
@@ -29,5 +30,14 @@ struct StaticBearerValidator: HTTPRequestValidator {
     /// Digests, because String `==` short-circuits and leaks the matching prefix length.
     private static func constantTimeEquals(_ a: String, _ b: String) -> Bool {
         SHA256.hash(data: Data(a.utf8)) == SHA256.hash(data: Data(b.utf8))
+    }
+}
+
+/// A LAN bind is reached under whatever address the client used, so the Host header can't be pinned the way
+/// `OriginValidator.localhost` does; the bearer token guards it. A browser page still always sends Origin.
+struct BrowserOriginValidator: HTTPRequestValidator {
+    func validate(_ request: HTTPRequest, context: HTTPValidationContext) -> HTTPResponse? {
+        guard request.header(HTTPHeaderName.origin) != nil else { return nil }
+        return .error(statusCode: 403, .invalidRequest("Forbidden: Origin not allowed"), sessionID: context.sessionID)
     }
 }

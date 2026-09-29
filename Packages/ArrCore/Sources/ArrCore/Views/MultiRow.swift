@@ -8,7 +8,7 @@ struct MultiRow: View {
     var onTap: (() -> Void)? = nil
     var onPause: (() -> Void)? = nil
     var onResume: (() -> Void)? = nil
-    var onDelete: (() -> Void)? = nil
+    var onDelete: (@MainActor () -> Void)? = nil
 
     #if os(iOS)
     @State private var showDeleteConfirm = false

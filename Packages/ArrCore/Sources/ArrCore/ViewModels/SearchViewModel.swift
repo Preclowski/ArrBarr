@@ -116,7 +116,7 @@ final class SearchViewModel {
     }
 
     private static func configured(_ all: [QueueItem.Source: ServiceConfig]) -> [QueueItem.Source: ServiceConfig] {
-        all.filter { $0.value.isConfigured }
+        all.filter { $0.value.isVisible }
     }
 
     func onQueryChange() {
@@ -261,7 +261,7 @@ final class SearchViewModel {
         } else {
             do { raw = try await ServiceHandles.tmdb(apiKey: tmdbApiKey).searchPerson(query: term) } catch {
                 // In the people scope the list is the whole screen; elsewhere it is only the Starring extra.
-                if scope == .people, searchGeneration == generation { errorMessage = error.userFacingMessage }
+                if scope == .people, searchGeneration == generation { errorMessage = error.localizedDescription }
                 return ([], nil)
             }
         }
@@ -305,7 +305,7 @@ final class SearchViewModel {
             if error is CancellationError || (error as? URLError)?.code == .cancelled {
                 return []
             }
-            if searchGeneration == generation { errorMessage = error.userFacingMessage }
+            if searchGeneration == generation { errorMessage = error.localizedDescription }
             return []
         }
     }
@@ -347,7 +347,7 @@ final class SearchViewModel {
             (qualityProfiles, rootFolders, metadataProfiles) = try await (profiles, folders, metadata)
         } catch {
             // Empty pickers would read as "this arr has no profiles"; the reason is what the user can act on.
-            addError = error.userFacingMessage
+            addError = error.localizedDescription
         }
     }
 

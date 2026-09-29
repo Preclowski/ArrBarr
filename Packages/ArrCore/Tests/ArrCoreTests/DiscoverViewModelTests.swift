@@ -11,7 +11,7 @@ struct DiscoverViewModelTests {
     /// Each test gets a fresh, isolated UserDefaults to avoid cross-test
     /// contamination from persisted mediaSelection values.
     private func freshVM() -> DiscoverViewModel {
-        let suite = UserDefaults(suiteName: "test.\(UUID().uuidString)")!
+        let suite = TestDefaults.suite("test.\(UUID().uuidString)")
         return DiscoverViewModel(defaults: suite)
     }
 

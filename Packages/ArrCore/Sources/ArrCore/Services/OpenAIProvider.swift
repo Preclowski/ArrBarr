@@ -2,7 +2,7 @@ import Foundation
 import OSLog
 import MediaKit
 
-struct OpenAIProvider: LLMProvider {
+nonisolated struct OpenAIProvider: LLMProvider {
     private let config: OpenAIConfig
     private let session: URLSession
     private let replyLanguage: String
@@ -274,7 +274,7 @@ enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
 
 // MARK: - Wire types
 
-struct ChatCompletionsRequest: Encodable, Sendable {
+nonisolated struct ChatCompletionsRequest: Encodable, Sendable {
     let model: String
     let messages: [Message]
     let tools: [Tool]?
@@ -314,7 +314,7 @@ struct ChatCompletionsRequest: Encodable, Sendable {
     }
 }
 
-struct ChatCompletionsResponse: Decodable, Sendable {
+nonisolated struct ChatCompletionsResponse: Decodable, Sendable {
     let choices: [Choice]
     struct Choice: Decodable, Sendable {
         let message: Message

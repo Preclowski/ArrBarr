@@ -42,7 +42,6 @@ public final class ConfigStore: ObservableObject {
     /// Multiplier applied to every `.scaledFont(size:)` site; `1.0` is the native sizing.
     @Published public var fontScale: Double = 1.0
     @Published public var aiKnowsAboutWhisparr: Bool = false
-    @Published public var launchAtLogin: Bool = false
     /// macOS only: run as a regular Dock app with a real window and no menu-bar icon.
     @Published public var detachedWindow: Bool = false
     /// macOS only: a clicked Spotlight result opens the detail in-app instead of the arr's web UI.
@@ -57,7 +56,6 @@ public final class ConfigStore: ObservableObject {
     /// Warning-level health checks join the always-shown errors in "Needs you".
     /// Legacy name from an indexer-only toggle; the persisted key is kept.
     @Published public var showWarnings: Bool = true
-    @Published public var tonightHours: Int = 168
     /// 0 = all (no Show more/less at all).
     @Published public var tonightVisibleCount: Int = 3
     /// `nil` means the welcome screen was never seen; first launch shows the firstRun variant.
@@ -206,8 +204,7 @@ public final class ConfigStore: ObservableObject {
         #endif
     }
 
-    /// Test seam. Tears down sinks before reloading so the reload fires no writes or side
-    /// effects (the `launchAtLogin` sink would re-register the real login item).
+    /// Test seam. Tears down sinks before reloading so the reload fires no writes or side effects.
     func useStore(_ target: UserDefaults) {
         guard target !== defaults else { return }
         cancellables.removeAll()

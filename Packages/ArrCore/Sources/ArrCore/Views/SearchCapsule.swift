@@ -79,5 +79,6 @@ struct SearchCapsule: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .help(Text("search.scope.help", bundle: .module))
+        .accessibilityLabel(Text("search.scope.help", bundle: .module))
     }
 }

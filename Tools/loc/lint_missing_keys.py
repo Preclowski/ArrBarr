@@ -37,12 +37,25 @@ def missing_keys(sources=SOURCES):
                 bad.setdefault(k, p.name)
     return bad
 
+def unbundled_texts(sources=SOURCES):
+    """`Text(LocalizedStringKey(x))` looks x up in the main bundle, where no
+    ArrCore key lives, so it shows English in every language."""
+    call = re.compile(r'Text\(LocalizedStringKey\([^()]*\)\)')
+    return [f"{p.name}:{text.count(chr(10), 0, m.start()) + 1}"
+            for p in sorted(sources.rglob("*.swift"))
+            for text in [p.read_text()]
+            for m in call.finditer(text)]
+
 def main():
     bad = missing_keys()
     for k, f in sorted(bad.items()):
         print(f"MISSING-KEY: {k}  ({f})")
     print(f"{len(bad)} code-referenced keys missing from catalog")
-    sys.exit(0 if not bad else 1)
+    unbundled = unbundled_texts()
+    for site in unbundled:
+        print(f"NO-BUNDLE: {site}")
+    print(f"{len(unbundled)} Text(LocalizedStringKey(...)) without bundle: .module")
+    sys.exit(0 if not bad and not unbundled else 1)
 
 if __name__ == "__main__":
     main()

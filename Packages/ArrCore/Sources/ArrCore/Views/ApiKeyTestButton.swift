@@ -1,4 +1,5 @@
 import SwiftUI
+import MediaKit
 
 /// Same chrome as the arr / download-client test in `ServiceFields`.
 struct ApiKeyTestButton: View {
@@ -60,12 +61,7 @@ struct ApiKeyTestButton: View {
     }
 
     private func message(for error: Error) -> String {
-        let desc = (error as NSError).localizedDescription
-        if desc.localizedCaseInsensitiveContains("401")
-            || desc.localizedCaseInsensitiveContains("403")
-            || desc.localizedCaseInsensitiveContains("unauthor") {
-            return String(localized: "settings.invalidKey.button", bundle: .module)
-        }
-        return String(localized: "settings.failedCheckKeyUrl.button", bundle: .module)
+        if case MediaKitError.unauthorized = error { return String(localized: "settings.invalidKey.button", bundle: .module) }
+        return error.localizedDescription
     }
 }

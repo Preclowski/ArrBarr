@@ -47,12 +47,16 @@ struct QueueHeaderRow<Trailing: View>: View {
                 .rotationEffect(.degrees(collapsed ? 0 : 90))
                 .frame(width: QueueHeaderMetrics.chevronWidth)
                 .opacity(showChevron ? 1 : 0)
+                .accessibilityHidden(true)
             // Fixed-width slot so every title starts at the same x whatever the glyph.
             icon
                 .frame(width: QueueHeaderMetrics.iconWidth, alignment: .center)
             Text(verbatim: title)
                 .scaledFont(size: QueueHeaderType.title, weight: .semibold)
                 .foregroundStyle(QueueHeaderType.titleStyle)
+                // The row's tap target isn't reachable by VoiceOver; the heading carries the toggle.
+                .accessibilityAddTraits([.isHeader, .isButton])
+                .accessibilityAction { onToggle() }
             if let count {
                 Text(verbatim: "\(count)")
                     .scaledFont(size: QueueHeaderType.count)

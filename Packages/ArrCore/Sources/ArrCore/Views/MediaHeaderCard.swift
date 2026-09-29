@@ -36,7 +36,7 @@ public extension RatingChip {
     static func imdb(_ value: Double, linkTitle: String? = nil, imdbId: String? = nil,
                      votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
-        return RatingChip(label: "IMDb", value: String(format: "%.1f", value), color: .yellow,
+        return RatingChip(label: "IMDb", value: value.ratingText, color: .yellow,
                           url: linkTitle.flatMap { RatingSiteLink.imdb(id: imdbId, title: $0) },
                           iconName: "rating-imdb", votes: votes, siteName: "IMDb")
     }
@@ -44,7 +44,7 @@ public extension RatingChip {
     static func tmdb(_ value: Double, linkTitle: String? = nil, tmdbId: Int? = nil,
                      votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
-        return RatingChip(label: "TMDB", value: String(format: "%.1f", value), color: .teal,
+        return RatingChip(label: "TMDB", value: value.ratingText, color: .teal,
                           url: linkTitle.flatMap { RatingSiteLink.tmdbMovie(id: tmdbId, title: $0) },
                           iconName: "rating-tmdb", votes: votes, siteName: "TMDB")
     }
@@ -52,7 +52,7 @@ public extension RatingChip {
     static func tvdb(_ value: Double, linkTitle: String? = nil, tvdbId: Int? = nil,
                      votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
-        return RatingChip(label: "TVDB", value: String(format: "%.1f", value), color: .blue,
+        return RatingChip(label: "TVDB", value: value.ratingText, color: .blue,
                           url: linkTitle.flatMap { RatingSiteLink.tvdbSeries(id: tvdbId, title: $0) },
                           iconName: "rating-tvdb", votes: votes, siteName: "TVDB")
     }
@@ -76,7 +76,7 @@ public extension RatingChip {
     /// Sourceless score (Lidarr, Sonarr seasons): no brand mark, no link.
     static func plain(_ value: Double, votes: Int? = nil) -> RatingChip? {
         guard value > 0 else { return nil }
-        return RatingChip(label: "Rating", value: String(format: "%.1f", value), color: .yellow,
+        return RatingChip(label: "Rating", value: value.ratingText, color: .yellow,
                           votes: votes)
     }
 }
@@ -327,7 +327,7 @@ struct MediaHeaderCard: View {
     private var metadataRow: some View {
         let countryNames = CountryProvider.displayNames(countries, locale: locale)
         let segments: [String] = [
-            (runtime ?? 0) > 0 ? "\(runtime!) min" : nil,
+            runtime.flatMap { $0 > 0 ? $0.runtimeText : nil },
             network.flatMap { $0.isEmpty ? nil : $0 },
             certification.flatMap { $0.isEmpty ? nil : $0 },
             countryNames.isEmpty ? nil : countryNames.joined(separator: " / "),
@@ -696,7 +696,8 @@ struct RatingPill: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(height: 11)
             } else {
-                Text(chip.label)
+                // Brand names have no catalogue entry and stay as they are; "Rating" is translated.
+                Text(LocalizedStringKey(chip.label), bundle: .module)
                     .scaledFont(size: 9, weight: .semibold)
                     .foregroundStyle(chip.color)
             }

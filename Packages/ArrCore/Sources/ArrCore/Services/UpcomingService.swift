@@ -15,8 +15,11 @@ public actor UpcomingService {
         limit: Int = 8
     ) async -> [UpcomingItem] {
         let targets = [(QueueItem.Source.radarr, radarr), (.sonarr, sonarr), (.lidarr, lidarr), (.whisparr, whisparr)].filter { $0.1.isVisible }
-        let all = await Self.calendars(targets).items
-        return Self.curate(all, limit: limit)
+        let (fresh, failures) = await Self.calendars(targets)
+        // Away from the home LAN every fetch fails; the app's last snapshot beats "Nothing coming up".
+        let failed = Set(failures.map(\.0))
+        let snapshot = failed.isEmpty ? [] : WidgetDataStore.loadUpcoming().filter { failed.contains($0.source) }
+        return Self.curate(fresh + snapshot, limit: limit)
     }
 
     /// The demo calendar for `sources`, from the bundled fixtures (the widget's demo mode).

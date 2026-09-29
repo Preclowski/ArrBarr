@@ -188,7 +188,7 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"x"}]"#)
         let r: Resource<[Row]> = kit.resource("fetchQueue")
         _ = try await kit.store.read(r)
-        await kit.database!.flush()
+        await kit.store.flush()
         let baseURL = URL(string: "http://radarr.fixture.invalid:8080")!
         await kit.registry.apply([InstanceDescriptor(id: TestKit.radarr, baseURL: baseURL, generation: "g2"),
                                   InstanceDescriptor(id: TestKit.sonarr, baseURL: URL(string: "http://sonarr.fixture.invalid:8080")!, generation: "g1")])
@@ -201,7 +201,7 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         first.transport.answer("fetchQueue", json: #"[{"id":7,"title":"Tears of Steel"}]"#)
         let r: Resource<[Row]> = first.resource("fetchQueue")
         _ = try await first.store.read(r)
-        await first.database!.flush()
+        await first.store.flush()
         let second = try await TestKit(database: .file(in: dir))
         let served = try await second.store.read(r, policy: .cacheOnly)
         #expect(served.origin == .disk && served.value[0].id == 7)
@@ -242,5 +242,40 @@ struct Row: Codable, Sendable, Equatable { let id: Int; let title: String }
         let result = await kit.store.batch(batch, keys: Array(1...25))
         #expect(result.count == 25 && kit.transport.count == 3)
         if case let .success(rows)? = result[13] { #expect(rows.first?.title == "m13") } else { Issue.record("missing 13") }
+    }
+
+    @Test func aReadAfterAWriteDoesNotJoinTheFetchSentBeforeIt() async throws {
+        let kit = try await TestKit()
+        kit.transport.delay = .milliseconds(200)
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"before-write"}]"#)
+        kit.transport.answer("fetchQueue", json: #"[{"id":1,"title":"after-write"}]"#)
+        let r: Resource<[Row]> = kit.resource("fetchQueue")
+        let early = Task { try await kit.store.read(r, priority: .background) }
+        try await eventually { kit.transport.count == 1 }
+        await kit.store.invalidate([.collection(.queue, TestKit.radarr)], reason: .command)
+        let afterWrite = try await kit.store.read(r)
+        #expect(try await early.value.value[0].title == "before-write")
+        kit.transport.delay = .zero
+        let later = try await kit.store.read(r)
+        #expect(afterWrite.value[0].title == "after-write" && later.value[0].title == "after-write")
+        #expect(kit.transport.count == 2)
+    }
+
+    @Test func commandTrackersOfTwoArrsDoNotShareAnID() async throws {
+        let kit = try await TestKit()
+        kit.transport.fallback = { request in
+            ScriptedTransport.Answer(status: 200, body: Data((request.operation.name == "commandStatus" ? #"{"status":"started"}"# : #"{"id":42}"#).utf8))
+        }
+        func command(_ instance: InstanceID) -> Command {
+            Command(name: OperationID(instance.kind, "searchMovie"), instance: instance, invalidates: [.collection(.commands, instance)],
+                    tracking: .arrCommand(timeout: .seconds(60))) { _ in CommandReceipt(acceptedAt: Date(), trackingID: 42) }
+        }
+        kit.clock.autoAdvance = false
+        _ = try await kit.store.run(command(TestKit.radarr))
+        _ = try await kit.store.run(command(TestKit.sonarr))
+        try await Task.sleep(for: .milliseconds(50))
+        kit.clock.advance(by: .seconds(3))
+        let polled = { (prefix: String) in kit.transport.requests.contains { $0.operation.name == "commandStatus" && $0.url.host?.hasPrefix(prefix) == true } }
+        try await eventually { polled("radarr") && polled("sonarr") }
     }
 }

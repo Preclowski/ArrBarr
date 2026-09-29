@@ -44,8 +44,9 @@ public actor FixtureTransport: Transport, SocketTransport {
             return s.replacingOccurrences(of: "--", with: "-")
         }()
         let pathKey = "\(kind.rawValue)\(request.url.path)"
-        // SABnzbd's API writes are GETs; a download action is a write whatever the verb.
+        // SABnzbd's API writes are GETs, and so is Plex's library scan; those are writes whatever the verb.
         let isWrite = request.method != "GET" || (kind.family == .download && DownloadAction(rawValue: request.operation.name) != nil)
+            || (kind == .plex && request.pathTemplate.hasSuffix("/refresh"))
         if isWrite { noteWrite(request) }
         if request.method == "PUT", case let .bytes(data, contentType) = request.body, contentType.contains("json"),
            let json = try? JSONDecoder().decode(JSONValue.self, from: data) {

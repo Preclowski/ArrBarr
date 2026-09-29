@@ -74,7 +74,7 @@ struct TooltipInfoGrid: View {
                         .foregroundStyle(.secondary)
                         .gridColumnAlignment(.leading)
                     Text(verbatim: line.value)
-                        .font(line.mono ? .system(size: 11, design: .monospaced) : .system(size: 11))
+                        .scaledFont(size: 11, design: line.mono ? .monospaced : .default)
                         .foregroundStyle(line.valueColor.map { AnyShapeStyle($0) } ?? AnyShapeStyle(.primary))
                         .lineLimit(2)
                         .truncationMode(.middle)

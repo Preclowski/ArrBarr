@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import ArrCore
 
 /// With two clients of the same protocol configured, a pause/resume used to go
@@ -78,9 +79,7 @@ struct DownloadClientRoutingTests {
         #expect(QueueAggregator.route(clientNamed: "Transmission", among: []) == nil)
     }
 
-    /// `route` only ever sees candidates of the item's own protocol, and
-    /// `ConfigStore.selectedDownloadClient` has to agree with the same list —
-    /// pin the order so the two can't drift apart silently.
+    /// `route` only ever sees candidates of the item's own protocol; pin the fallback order.
     @Test("Candidate sets stay protocol-scoped and in priority order")
     func candidateKinds() {
         #expect(QueueAggregator.candidateKinds(for: .torrent) == [.qbittorrent, .transmission, .rtorrent, .deluge])
@@ -95,5 +94,19 @@ struct DownloadClientRoutingTests {
     func tokensDoNotLeakAcrossProtocols() {
         #expect(QueueAggregator.route(clientNamed: "SABnzbd", among: bothTorrent) == .qbittorrent)
         #expect(QueueAggregator.route(clientNamed: "Transmission", among: bothUsenet) == .sabnzbd)
+    }
+
+    @Test("Pause/resume gating asks the client the arr named, not the first configured one")
+    @MainActor func gatingFollowsTheNamedClient() {
+        let name = "test.routing.\(UUID().uuidString)"
+        let store = ConfigStore(defaults: TestDefaults.suite(name), secrets: InMemorySecretStore())
+        for kind in [ServiceKind.qbittorrent, .transmission] {
+            store.update(kind, with: ServiceConfig(enabled: true, baseURL: "http://\(kind.rawValue).lan", apiKey: "", username: "u", password: "p"))
+        }
+        let item = QueueItem(id: "1", source: .sonarr, arrQueueId: 1, downloadId: "abc", downloadProtocol: .torrent,
+                             downloadClient: "Transmission", title: "t", subtitle: nil, status: .downloading, progress: 0.5,
+                             sizeTotal: 1, sizeLeft: 1, timeLeft: nil, customFormats: [], customFormatScore: 0,
+                             quality: nil, isUpgrade: false, contentSlug: nil)
+        #expect(store.downloadClient(for: item) == .transmission)
     }
 }

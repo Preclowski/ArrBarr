@@ -81,7 +81,7 @@ private struct QueuePaywallHero: View {
     var body: some View {
         HeroCard(symbol: "arrow.down.circle", titleKey: "Queue") {
             VStack(alignment: .leading, spacing: 8) {
-                Text(verbatim: "No One Will Save You")
+                Text(verbatim: "Sintel")
                     .scaledFont(size: 12, weight: .medium)
                     .lineLimit(1)
                 GeometryReader { geo in
@@ -97,7 +97,8 @@ private struct QueuePaywallHero: View {
                     Image(systemName: "arrow.clockwise")
                     Image(systemName: "trash")
                     Spacer(minLength: 0)
-                    Text(verbatim: "1.0 GB left")
+                    Text(String(format: String(localized: "status.remaining.label", bundle: .module),
+                                Int64(1_000_000_000).formatted(.byteCount(style: .file))))
                         .scaledFont(size: 10)
                         .foregroundStyle(.secondary)
                 }
@@ -119,10 +120,10 @@ private struct AddTitlePaywallHero: View {
                     .frame(width: 34, height: 50)
                     .overlay(Image(systemName: "film").foregroundStyle(.secondary))
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(verbatim: "Stranger Things")
+                    Text(verbatim: "Pioneer One")
                         .scaledFont(size: 12, weight: .medium)
                         .lineLimit(1)
-                    Text(verbatim: "2016 · Series")
+                    Text("paywall.hero.addTitle.meta", bundle: .module)
                         .scaledFont(size: 10)
                         .foregroundStyle(.secondary)
                 }

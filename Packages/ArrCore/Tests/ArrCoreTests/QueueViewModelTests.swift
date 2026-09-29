@@ -1,4 +1,5 @@
 import Testing
+import Synchronization
 import Foundation
 import Combine
 import Observation
@@ -92,8 +93,7 @@ private func makeSUT(
     configure: (ConfigStore) -> Void = { _ in }
 ) -> (sut: QueueViewModel, fake: FakeAggregator, config: ConfigStore) {
     let suiteName = "QueueViewModelTests.\(UUID().uuidString)"
-    let defaults = UserDefaults(suiteName: suiteName)!
-    defaults.removePersistentDomain(forName: suiteName)
+    let defaults = TestDefaults.suite(suiteName)
     let config = ConfigStore(defaults: defaults)
     // Every arr configured by default. `refresh()` only commits sources the user
     // has actually set up — committing an unconfigured one would stamp
@@ -548,14 +548,14 @@ struct ObservationGranularityTests {
     @Test("@Observable: an unrelated property change does NOT notify a narrow observer")
     func observableIsFineGrained() {
         let (sut, _, _) = makeSUT()
-        var notified = 0
+        let notified = Mutex(0)
         withObservationTracking {
             _ = sut.upcoming                 // observe ONLY `upcoming`
         } onChange: {
-            notified += 1
+            notified.withLock { $0 += 1 }
         }
         sut.setTonightExpanded(true)         // change a DIFFERENT property
-        #expect(notified == 0)
+        #expect(notified.withLock { $0 } == 0)
     }
 
     /// Sanity: changing the observed property DOES notify, so the test above
@@ -563,14 +563,14 @@ struct ObservationGranularityTests {
     @Test("@Observable: a change to the observed property DOES notify")
     func observableNotifiesOnTrackedChange() {
         let (sut, _, _) = makeSUT()
-        var notified = 0
+        let notified = Mutex(0)
         withObservationTracking {
             _ = sut.tonightExpanded
         } onChange: {
-            notified += 1
+            notified.withLock { $0 += 1 }
         }
         sut.setTonightExpanded(!sut.tonightExpanded)
-        #expect(notified == 1)
+        #expect(notified.withLock { $0 } == 1)
     }
 
     /// The contrast that justifies the migration: `ObservableObject` fires

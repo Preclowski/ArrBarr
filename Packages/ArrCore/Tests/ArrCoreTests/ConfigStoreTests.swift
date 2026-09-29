@@ -4,15 +4,14 @@ import Foundation
 
 @Suite("ConfigStore")
 struct ConfigStoreTests {
-    private func makeDefaults() -> (UserDefaults, String) {
+    private func makeDefaults() -> UserDefaults {
         let name = "ArrBarrTests.\(UUID().uuidString)"
-        return (UserDefaults(suiteName: name)!, name)
+        return TestDefaults.suite(name)
     }
 
     @Test("Fresh store returns empty configs")
     @MainActor func freshDefaults() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         for kind in ServiceKind.allCases {
@@ -22,8 +21,7 @@ struct ConfigStoreTests {
 
     @Test("Service config round-trips through persistence (including secrets)")
     @MainActor func saveAndLoad() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let secrets = InMemorySecretStore()
         let config = ServiceConfig(
@@ -40,8 +38,7 @@ struct ConfigStoreTests {
 
     @Test("Secrets are not persisted as plaintext in UserDefaults")
     @MainActor func secretsNotInDefaults() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let secrets = InMemorySecretStore()
         let store = ConfigStore(defaults: defaults, secrets: secrets)
@@ -57,14 +54,31 @@ struct ConfigStoreTests {
         #expect(secrets.read(.password(for: .radarr)) == "SENSITIVE-PW")
     }
 
+    @Test("Editing a service's URL leaves its secrets' generation alone")
+    @MainActor func unchangedSecretsKeepTheirGeneration() {
+        let defaults = makeDefaults()
+
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
+        var config = ServiceConfig(enabled: true, baseURL: "http://h:7878", apiKey: "K", username: "", password: "")
+        store.update(.radarr, with: config)
+        let generation = SecretGenerations.generation(for: .apiKey(for: .radarr), in: defaults)
+
+        config.baseURL = "http://h:7879"
+        store.update(.radarr, with: config)
+        #expect(SecretGenerations.generation(for: .apiKey(for: .radarr), in: defaults) == generation)
+
+        config.apiKey = "K2"
+        store.update(.radarr, with: config)
+        #expect(SecretGenerations.generation(for: .apiKey(for: .radarr), in: defaults) != generation)
+    }
+
     /// Both intervals stopped being preferences: the queue is pushed at by
     /// SignalR, the bars interpolate between fetches, and the background poll
     /// only runs once realtime has gone silent. Pinned here so re-exposing
     /// them has to be a deliberate edit — the old test asserted the opposite.
     @Test("Refresh intervals are hard-locked, not stored")
     @MainActor func intervalsAreConstants() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
         #expect(store.foregroundInterval == 30)
@@ -76,8 +90,7 @@ struct ConfigStoreTests {
 
     @Test("The media-server token survives a relaunch")
     @MainActor func mediaServerTokenRoundTrips() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         // The real store for an ad-hoc build, not the in-memory one: this is
         // exactly the path that was losing the token.
@@ -107,12 +120,8 @@ struct ConfigStoreTests {
     /// token disappeared across a relaunch.
     @Test("Demo mode never touches the real profile's secrets")
     @MainActor func demoSuiteKeepsSecretsIsolated() {
-        let (real, realName) = makeDefaults()
-        let (demo, demoName) = makeDefaults()
-        defer {
-            UserDefaults.standard.removePersistentDomain(forName: realName)
-            UserDefaults.standard.removePersistentDomain(forName: demoName)
-        }
+        let real = makeDefaults()
+        let demo = makeDefaults()
 
         let store = ConfigStore(defaults: real, secrets: UserDefaultsSecretStore(defaults: real))
         store.mediaServer = MediaServerConfig(
@@ -134,8 +143,7 @@ struct ConfigStoreTests {
 
     @Test("config(for:) returns the correct service")
     @MainActor func configForKind() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let secrets = InMemorySecretStore()
         let store = ConfigStore(defaults: defaults, secrets: secrets)
@@ -157,8 +165,7 @@ struct ConfigStoreTests {
 
     @Test("update(:with:) sets all nine service kinds")
     @MainActor func updateAllKinds() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let secrets = InMemorySecretStore()
         let store = ConfigStore(defaults: defaults, secrets: secrets)
@@ -175,8 +182,7 @@ struct ConfigStoreTests {
 
     @Test("Notification settings default to true and persist")
     @MainActor func notificationSettings() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let secrets = InMemorySecretStore()
         let store = ConfigStore(defaults: defaults, secrets: secrets)
@@ -206,8 +212,7 @@ struct ConfigStoreTests {
     @Test("migration leaves UserDefaults secrets intact when the Keychain write fails")
     @MainActor func migrationVerifiesBeforeBlanking() throws {
         let suite = "test.cfg.migrate.\(UUID().uuidString)"
-        let d = UserDefaults(suiteName: suite)!
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        let d = TestDefaults.suite(suite)
 
         var cfg = ServiceConfig.empty
         cfg.apiKey = "secret-key"
@@ -225,8 +230,7 @@ struct ConfigStoreTests {
     @Test("migration blanks UserDefaults and sets the done flag when writes verify")
     @MainActor func migrationSucceedsWithWorkingStore() throws {
         let suite = "test.cfg.migrate.ok.\(UUID().uuidString)"
-        let d = UserDefaults(suiteName: suite)!
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        let d = TestDefaults.suite(suite)
 
         var cfg = ServiceConfig.empty
         cfg.apiKey = "k1"; cfg.password = "p1"
@@ -252,8 +256,7 @@ struct ConfigStoreTests {
     @Test("iCloudSyncEnabled defaults to true and persists")
     @MainActor func iCloudSyncEnabledPersists() {
         let suite = "test.cfg.icloud.\(UUID().uuidString)"
-        let d = UserDefaults(suiteName: suite)!
-        defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+        let d = TestDefaults.suite(suite)
 
         let store = ConfigStore(defaults: d, secrets: InMemorySecretStore())
         #expect(store.iCloudSyncEnabled == true)

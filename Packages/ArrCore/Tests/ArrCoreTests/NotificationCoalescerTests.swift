@@ -92,8 +92,7 @@ struct NotificationCoalescerTests {
     /// reaches `post`), but the initializer requires one.
     private static func makeConfigStore() -> ConfigStore {
         let suiteName = "test.coalescer.\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suiteName)!
-        defaults.removePersistentDomain(forName: suiteName)
+        let defaults = TestDefaults.suite(suiteName)
         return ConfigStore(defaults: defaults)
     }
 

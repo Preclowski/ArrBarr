@@ -5,8 +5,7 @@ import Foundation
 /// String lookup goes through SwiftUI's native `Text(_:bundle:)` /
 /// `String(localized:bundle:)`, which read from the resource bundle Xcode
 /// compiles from `Localizable.xcstrings`. Apple owns resolution, so there is
-/// nothing to unit-test about that — and SwiftPM does not compile xcstrings
-/// into the test target's `Bundle.module` anyway.
+/// nothing to unit-test about that.
 ///
 /// What we DO guarantee is catalog integrity: every key carries a non-empty
 /// value in every shipped locale (en, pl, de, es, fr, nl), whether it's a
@@ -16,7 +15,8 @@ import Foundation
 struct LocalizationCatalogTests {
     private static let shippedLocales = ["en", "pl", "de", "es", "fr", "nl"]
 
-    private static let catalog: [String: Any] = {
+    /// Read per test: a `[String: Any]` static isn't concurrency-safe, and the file is small.
+    private static var strings: [String: [String: Any]] {
         // #filePath is this test file; walk up to the package root, then into
         // the catalog. Robust as long as tests stay under Tests/ArrCoreTests/.
         let url = URL(fileURLWithPath: #filePath)
@@ -25,8 +25,9 @@ struct LocalizationCatalogTests {
             .deletingLastPathComponent() // package root
             .appendingPathComponent("Sources/ArrCore/Resources/Localizable.xcstrings")
         let data = try! Data(contentsOf: url)
-        return try! JSONSerialization.jsonObject(with: data) as! [String: Any]
-    }()
+        let catalog = try! JSONSerialization.jsonObject(with: data) as! [String: Any]
+        return catalog["strings"] as! [String: [String: Any]]
+    }
 
     /// A localization unit is complete when it has either a non-empty
     /// `stringUnit.value` or a `variations.plural` whose every category value
@@ -52,7 +53,7 @@ struct LocalizationCatalogTests {
     @Test("Every catalog key has a non-empty value in every shipped locale",
           arguments: shippedLocales)
     func everyKeyHasTranslation(_ locale: String) {
-        let strings = Self.catalog["strings"] as! [String: [String: Any]]
+        let strings = Self.strings
         var missing: [String] = []
         for (key, entry) in strings where !key.isEmpty {
             let localizations = entry["localizations"] as? [String: Any]
@@ -66,7 +67,7 @@ struct LocalizationCatalogTests {
 
     @Test("Catalog has no empty-string key")
     func catalogIsClean() {
-        let strings = Self.catalog["strings"] as! [String: [String: Any]]
+        let strings = Self.strings
         #expect(strings[""] == nil, "empty-string key must be dropped")
     }
 }

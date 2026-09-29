@@ -1,5 +1,6 @@
 import Foundation
 import os
+import MediaKit
 
 /// `log stream --predicate 'subsystem == "pl.incred.ArrBarr"'`.
 nonisolated public enum AppLog {
@@ -23,14 +24,24 @@ nonisolated public extension URL {
     }
 }
 
+nonisolated extension Error {
+    /// Safe for `.public`: which failure, never its message (that carries hosts, titles and server text).
+    var logKind: String {
+        if let mk = self as? MediaKitError { return mk.caseName }
+        let ns = self as NSError
+        return "\(ns.domain) \(ns.code)"
+    }
+}
+
 nonisolated extension Logger {
     /// Optional extras (cast, trailers, facts, file tooltips): a failure changes nothing on screen but stays findable.
     static let extras = Logger(category: "Extras")
 
     /// `try?` that leaves a trace: the value, or nil with the reason logged. `what` is a fixed label, never user data.
-    func attempt<T>(_ what: StaticString, level: OSLogType = .debug, _ body: () async throws -> T) async -> T? {
+    /// Runs on the caller's actor: it wraps main-actor work as often as not, and a hop per call bought nothing.
+    nonisolated(nonsending) func attempt<T>(_ what: StaticString, level: OSLogType = .debug, _ body: () async throws -> T) async -> T? {
         do { return try await body() } catch is CancellationError { return nil } catch {
-            log(level: level, "\(String(describing: what), privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+            log(level: level, "\(String(describing: what), privacy: .public) failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return nil
         }
     }

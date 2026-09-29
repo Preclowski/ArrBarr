@@ -344,8 +344,8 @@ struct PersonView: View {
             Self.warnIfIdentityDisagrees(ref: ref, details: details)
             (movieRows, seriesRows) = try await (m, s)
         } catch {
-            Self.identityLog.error("person \(ref.tmdbId, privacy: .public) failed to load: \(error.localizedDescription, privacy: .public)")
-            loadError = String(format: String(localized: "Couldn't load details: %@", bundle: .module), error.userFacingMessage)
+            Self.identityLog.error("person \(ref.tmdbId, privacy: .public) failed to load: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
+            loadError = String(format: String(localized: "Couldn't load details: %@", bundle: .module), error.localizedDescription)
         }
     }
 }

@@ -86,13 +86,14 @@ public actor HostGovernor {
         if canStart(priority, in: cell) {
             return try await start(Slot(host: host, id: id, priority: priority))
         }
-        return try await withTaskCancellationHandler {
+        let slot = try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Slot, any Error>) in
                 cells[host]!.waiters.append(Waiter(id: id, priority: priority, continuation: continuation))
             }
         } onCancel: {
             Task { await self.removeWaiter(host: host, id: id) }
         }
+        return try await spaced(slot)
     }
 
     public func leave(_ slot: Slot, outcome: Outcome) {
@@ -101,7 +102,7 @@ public actor HostGovernor {
         let now = clock.now
         switch outcome {
         case .success:
-            if case .down = cell.health { telemetry.record(.breakerClosed(slot.host)); log.log(.notice, category: "Governor", "breaker closed \(slot.host)") }
+            if case .down = cell.health { telemetry.record(.breakerClosed(slot.host)); log.log(.notice, category: "Governor", "breaker closed", privateFields: ["host": slot.host.description]) }
             cell.consecutiveFailures = 0
             cell.openCount = 0
             cell.halfOpenProbeGranted = false
@@ -117,7 +118,7 @@ public actor HostGovernor {
                 cell.health = .down(since: wasDown ? sinceOf(cell.health, now) : now, retryAt: retryAt)
                 cell.halfOpenProbeGranted = false
                 telemetry.record(.breakerOpened(slot.host, until: retryAt))
-                log.log(.notice, category: "Governor", "breaker open \(slot.host) for \(Int(openFor)) s")
+                log.log(.notice, category: "Governor", "breaker open for \(Int(openFor)) s", privateFields: ["host": slot.host.description])
                 let dropped = cell.waiters
                 cell.waiters = []
                 for w in dropped { w.continuation.resume(throwing: MediaKitError.breakerOpen(slot.host, until: retryAt)) }
@@ -180,8 +181,13 @@ public actor HostGovernor {
     }
 
     private func start(_ slot: Slot) async throws -> Slot {
+        cells[slot.host]?.active[slot.id] = slot.priority
+        return try await spaced(slot)
+    }
+
+    /// `minimumInterval` holds for every admitted slot, including one released from the queue by `drain`.
+    private func spaced(_ slot: Slot) async throws -> Slot {
         guard var cell = cells[slot.host] else { throw CancellationError() }
-        cell.active[slot.id] = slot.priority
         if let interval = cell.limits.minimumInterval, let last = cell.lastSend {
             let wait = interval.seconds - clock.now.timeIntervalSince(last)
             if wait > 0 {
@@ -202,16 +208,13 @@ public actor HostGovernor {
 
     private func drain(_ host: Host) {
         guard var cell = cells[host] else { return }
-        var index = 0
-        while index < cell.waiters.count {
+        while !cell.waiters.isEmpty {
             let bandOrder: [RequestPriority] = [.session, .interactive, .background]
             guard let pick = bandOrder.lazy.compactMap({ band in cell.waiters.firstIndex { $0.priority == band } }).first(where: { canStart(cell.waiters[$0].priority, in: cell) }) else { break }
             let waiter = cell.waiters.remove(at: pick)
             cell.active[waiter.id] = waiter.priority
-            cell.lastSend = clock.now
             cells[host] = cell
             waiter.continuation.resume(returning: Slot(host: host, id: waiter.id, priority: waiter.priority))
-            index = 0
         }
         cells[host] = cell
     }

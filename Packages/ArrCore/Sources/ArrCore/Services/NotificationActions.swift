@@ -1,4 +1,5 @@
 import Foundation
+import os
 import UserNotifications
 #if canImport(UIKit)
 import UIKit
@@ -7,9 +8,9 @@ import UIKit
 import AppKit
 #endif
 
-// MARK: - Notification action buttons (shared)
-// macOS wires these in its AppDelegate; iOS has none, so it registers and handles them here.
+// MARK: - Notification action buttons (both apps)
 public enum NotificationActions {
+    private static let log = Logger(category: "Notifications")
 
     public static func categories() -> [UNNotificationCategory] {
         let open = UNNotificationAction(
@@ -73,7 +74,11 @@ public enum NotificationActions {
         if vm.items(for: src).first(where: { $0.arrQueueId == qid }) == nil {
             await vm.refresh()
         }
-        guard let item = vm.items(for: src).first(where: { $0.arrQueueId == qid }) else { return }
+        guard let item = vm.items(for: src).first(where: { $0.arrQueueId == qid }) else {
+            log.notice("notification action for \(src.rawValue, privacy: .public) queue item \(qid, privacy: .public): no longer in the queue, ignored")
+            return
+        }
+        log.notice("notification action ran on \(src.rawValue, privacy: .public) queue item \(qid, privacy: .public)")
         await run(vm, item)
     }
 
@@ -90,27 +95,24 @@ public enum NotificationActions {
     }
 }
 
-public final class ArrNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
+/// Nonisolated: UserNotifications calls in on its own queue, and a main-actor witness would trap there.
+/// Stateless, hence `@unchecked`.
+nonisolated public final class ArrNotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @unchecked Sendable {
     public static let shared = ArrNotificationDelegate()
 
     public func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                       willPresent notification: UNNotification,
-                                       withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler([.banner, .sound])
+                                       willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound]
     }
 
-    public func userNotificationCenter(_ center: UNUserNotificationCenter,
-                                       didReceive response: UNNotificationResponse,
-                                       withCompletionHandler completionHandler: @escaping () -> Void) {
+    /// Returning completes the response, so an action finishes its request before the system may suspend the app.
+    public func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         // UNNotificationResponse / userInfo aren't Sendable; extract before hopping actors.
         let action = response.actionIdentifier
         let info = response.notification.request.content.userInfo
         let source = info[NotificationCoalescer.userInfoSourceKey] as? String
         let qid = info[NotificationCoalescer.userInfoQueueIdKey] as? Int
         let base = info[NotificationCoalescer.userInfoBaseURLKey] as? String
-        Task { @MainActor in
-            await NotificationActions.handle(action: action, source: source, arrQueueId: qid, baseURL: base)
-            completionHandler()
-        }
+        await NotificationActions.handle(action: action, source: source, arrQueueId: qid, baseURL: base)
     }
 }

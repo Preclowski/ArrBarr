@@ -292,7 +292,7 @@ private struct SearchResultCard: View {
                     HStack(spacing: 2) {
                         Image(systemName: "star.fill")
                             .scaledFont(size: 9)
-                        Text(String(format: "%.1f", rating))
+                        Text(rating.ratingText)
                             .scaledFont(size: 10)
                     }
                     .foregroundStyle(.secondary)

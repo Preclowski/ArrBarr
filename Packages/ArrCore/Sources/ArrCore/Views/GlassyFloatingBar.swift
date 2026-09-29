@@ -40,7 +40,7 @@ private struct SelectionModeBarModifier: ViewModifier {
 
 /// One `InsettableShape` for capsule and rounded rect: SwiftUI ships no
 /// type-erased insettable shape.
-private struct BarShape: InsettableShape {
+nonisolated private struct BarShape: InsettableShape {
     var cornerRadius: CGFloat?
     /// Wins over `cornerRadius`.
     var isCircle: Bool = false

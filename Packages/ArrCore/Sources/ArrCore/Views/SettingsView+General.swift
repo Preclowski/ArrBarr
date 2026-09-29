@@ -46,8 +46,8 @@ extension SettingsView {
     var generalPane: some View {
         Form {
             Section {
-                Toggle(isOn: $configStore.launchAtLogin) { Text("settings.launchAtLogin.button", bundle: .module) }
                 #if os(macOS)
+                LaunchAtLoginToggle()
                 Picker(selection: $configStore.detachedWindow) {
                     Text("settings.interfaceMode.menuBar", bundle: .module).tag(false)
                     Text("settings.interfaceMode.window", bundle: .module).tag(true)
@@ -55,7 +55,8 @@ extension SettingsView {
                 #endif
                 Picker(selection: $configStore.appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
-                        Text(LocalizedStringKey(opt.label)).tag(opt.code)
+                        // Languages keep their own names; only "System" is translated.
+                        (opt.code == "system" ? Text("settings.system.button", bundle: .module) : Text(verbatim: opt.label)).tag(opt.code)
                     }
                 } label: { Text("settings.language.button", bundle: .module) }
                 themePicker
@@ -270,3 +271,19 @@ extension SettingsView {
         } header: { Text("Needs you", bundle: .module) }
     }
 }
+
+#if os(macOS)
+private struct LaunchAtLoginToggle: View {
+    @State private var isOn = LaunchAtLogin.isEnabled
+
+    var body: some View {
+        Toggle(isOn: $isOn) { Text("settings.launchAtLogin.button", bundle: .module) }
+            .onChange(of: isOn) { _, wanted in
+                LaunchAtLogin.set(enabled: wanted)
+                isOn = LaunchAtLogin.isEnabled
+            }
+            // Re-read on show: the item may have been removed in System Settings meanwhile.
+            .onAppear { isOn = LaunchAtLogin.isEnabled }
+    }
+}
+#endif

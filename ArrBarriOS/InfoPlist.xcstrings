@@ -1,0 +1,47 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSLocalNetworkUsageDescription": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr needs to find your Sonarr, Radarr, Lidarr and Whisparr servers running on your home Wi-Fi."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr potrzebuje dostępu do sieci lokalnej, aby znaleźć serwery Sonarr, Radarr, Lidarr i Whisparr w twojej domowej sieci Wi-Fi."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr muss deine Sonarr-, Radarr-, Lidarr- und Whisparr-Server in deinem WLAN zu Hause finden."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr necesita encontrar tus servidores de Sonarr, Radarr, Lidarr y Whisparr en la wifi de tu casa."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr doit trouver vos serveurs Sonarr, Radarr, Lidarr et Whisparr sur le Wi-Fi de votre domicile."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ArrBarr moet je Sonarr-, Radarr-, Lidarr- en Whisparr-servers op je wifi thuis kunnen vinden."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

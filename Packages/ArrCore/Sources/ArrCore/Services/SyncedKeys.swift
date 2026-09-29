@@ -2,7 +2,7 @@ import Foundation
 
 /// UserDefaults keys mirrored via iCloud KVS; anything unlisted stays device-local.
 /// Secrets sync via iCloud Keychain instead.
-enum SyncedKeys {
+nonisolated enum SyncedKeys {
     static let all: Set<String> = {
         var keys: Set<String> = [
             "ArrBarr.notifyRadarr", "ArrBarr.notifySonarr", "ArrBarr.notifyLidarr",
