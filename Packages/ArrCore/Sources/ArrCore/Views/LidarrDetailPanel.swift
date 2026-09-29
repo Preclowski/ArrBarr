@@ -3,7 +3,7 @@ import MediaKit
 
 struct LidarrDetailPanel: View {
     let item: QueueItem
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     let lidarrAlbum: ArrAlbum?
     let lidarrTracks: [ArrTrack]
     /// Joined per-track by `trackFileId` in the pushed track detail.

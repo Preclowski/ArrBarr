@@ -34,7 +34,7 @@ public extension View {
 
 struct PersonView: View {
     let ref: PersonRef
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
     /// Explicit pop callback: reading `dismiss` in a view that declares `navigationDestination` re-renders
     /// the whole stack at ~150 Hz.
@@ -354,7 +354,7 @@ struct PersonView: View {
 private struct PersonFilmographyRow: View {
     let result: SearchResult
     let onTap: () -> Void
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     #if os(macOS)
     private var hasTooltip: Bool {
         (result.overview.map { !$0.isEmpty } ?? false) || !result.genres.isEmpty
@@ -390,7 +390,7 @@ private struct PersonFilmographyRow: View {
         #if os(macOS)
         row
             .hoverTooltip(enabled: hasTooltip) {
-                SearchResultTooltip(result: result).environmentObject(configStore)
+                SearchResultTooltip(result: result).environment(configStore)
             }
         #else
         row

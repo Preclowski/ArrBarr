@@ -5,7 +5,7 @@ import SwiftUI
 struct QuizResumeCard: View {
     let mood: String
     let posterURLs: [URL]
-    /// The shared instance: `@EnvironmentObject` doesn't reliably reach chat bubbles.
+    /// The shared instance: the environment doesn't reliably reach chat bubbles.
     private var discoverViewModel = DiscoverViewModel.shared
 
     init(mood: String, posterURLs: [URL]) {

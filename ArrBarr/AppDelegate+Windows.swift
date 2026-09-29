@@ -17,7 +17,7 @@ extension AppDelegate {
         let view = PaywallView(context: StoreManager.shared.gatedFeature) {
             StoreManager.shared.dismissPaywall()
         }
-        .environmentObject(configStore)
+        .environment(configStore)
         .appFontScale(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
@@ -56,7 +56,7 @@ extension AppDelegate {
             NSApp.activate(ignoringOtherApps: true)
             return
         }
-        let hosting = NSHostingController(rootView: AboutView().environmentObject(configStore))
+        let hosting = NSHostingController(rootView: AboutView().environment(configStore))
         let win = NSWindow(contentViewController: hosting)
         win.title = String(localized: "settings.about.button", bundle: .arrCore)
         win.styleMask = [.titled, .closable, .fullSizeContentView]
@@ -89,7 +89,7 @@ extension AppDelegate {
             onShowWelcome: { [weak self] in self?.openWelcome() },
             onTestNotification: { [weak self] in self?.queueVM.fireTestNotification() },
             onSetDemoMode: { [weak self] enabled in self?.setDemoModeAndRelaunch(enabled) ?? false }
-        ).environmentObject(configStore)
+        ).environment(configStore)
         let hosting = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: hosting)
         let shortVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
@@ -156,7 +156,7 @@ extension AppDelegate {
             onFinish: { [weak self] in
                 self?.welcomeWindow?.performClose(nil)
             }
-        ).environmentObject(configStore)
+        ).environment(configStore)
         .appFontScale(configStore)
 
         let hosting = NSHostingController(rootView: view)

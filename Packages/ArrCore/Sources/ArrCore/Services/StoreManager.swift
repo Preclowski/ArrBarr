@@ -1,5 +1,5 @@
 import Foundation
-import Combine
+import Observation
 
 /// Keeps StoreKit out of ArrCore: `StoreKitBackend` lives in the app targets behind
 /// `#if APPSTORE` and is injected via `StoreManager.use(_:)`.
@@ -14,19 +14,20 @@ public protocol PurchaseBackend: AnyObject {
 }
 
 /// Unlocked when no backend is injected, so Debug and OSS builds carry no payment code.
-public final class StoreManager: ObservableObject {
+@Observable
+public final class StoreManager {
     public static let shared = StoreManager()
 
-    @Published private var entitled: Bool = true
+    private var entitled: Bool = true
 
     /// Demo mode is always unlocked so it can showcase every gated feature.
     public var isPro: Bool { DemoMode.isActive || entitled }
 
     /// Non-nil drives the paywall; the feature just tried, for the contextual headline.
-    @Published public var gatedFeature: ProFeature?
-    @Published public private(set) var displayPrice: String?
+    public var gatedFeature: ProFeature?
+    public private(set) var displayPrice: String?
 
-    private var backend: PurchaseBackend?
+    @ObservationIgnored private var backend: PurchaseBackend?
 
     // periphery:ignore:parameters forTesting
     public init(forTesting: Bool = false) {}

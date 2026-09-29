@@ -4,7 +4,7 @@ import AppIntents
 /// Read-only actions, so no per-command toggles.
 struct SiriShortcutsSettingsContent: View {
     @Environment(\.openURL) private var openURL
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     @State private var clearingIntents = false
     @State private var clearedIntents = false
     init() {}
@@ -32,7 +32,7 @@ struct SiriShortcutsSettingsContent: View {
         #if os(macOS)
         // iOS has no equivalent switch — it always opens the detail in-app.
         Section {
-            Toggle(isOn: $configStore.spotlightOpensInApp) {
+            Toggle(isOn: Bindable(configStore).spotlightOpensInApp) {
                 Text("settings.spotlightOpensInArrbarr.button", bundle: .module)
             }
         } footer: {

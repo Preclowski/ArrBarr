@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Internal: the media-server pane in another file uses it.
 struct ProLockOverlay: View {
-    @ObservedObject private var store = StoreManager.shared
+    private var store: StoreManager { .shared }
     let feature: ProFeature
     var body: some View {
         ZStack {

@@ -32,7 +32,7 @@ struct DiscoverCardView: View {
     @State private var directors: [CastMember] = []
     /// TMDB-sourced cards carry no IMDb id; until it lands the IMDb pill opens a title search.
     @State private var resolvedIMDbId: String?
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     init(item: DiscoverItem,
                 dragOffset: CGSize = .zero,

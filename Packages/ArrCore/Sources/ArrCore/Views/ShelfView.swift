@@ -109,7 +109,7 @@ final class ShelfPosters {
 }
 
 struct ShelfView: View {
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// A pushed detail covers the Shelf: stop the display tick.
     let isObscured: Bool
     let onClose: (() -> Void)?
@@ -421,7 +421,7 @@ public struct ShelfDebugView: View {
 
 /// The Quiz card's metadata block: title (year), rating chips, director.
 private struct ShelfInfo: View {
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     let entry: LibraryEntry
     @State private var directors: [CastMember] = []
     @State private var creditsLoading = true

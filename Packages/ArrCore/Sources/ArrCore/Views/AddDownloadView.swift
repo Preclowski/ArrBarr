@@ -7,7 +7,7 @@ public struct AddDownloadView: View {
     let drops: [DownloadDrop]
     let onFinished: () -> Void
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     @State private var destinations: [DownloadDestination] = []
     @State private var selectedArr: ServiceKind?

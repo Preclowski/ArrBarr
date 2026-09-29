@@ -13,7 +13,7 @@ struct ReleaseListView: View {
     var waitContext = WaitCardContext()
     let onBack: () -> Void
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @Environment(\.colorScheme) private var colorScheme
 
     @State private var releases: [ArrRelease] = []

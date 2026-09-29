@@ -50,10 +50,11 @@ extension PendingConfirm {
 
 /// State, not an event: macOS tears the MenuBarExtra panel down when a context menu takes focus, so a posted
 /// message would be lost. With no surface left to draw the card, macOS falls back to a native alert.
-public final class ConfirmCenter: ObservableObject {
+@Observable
+public final class ConfirmCenter {
     public static let shared = ConfirmCenter()
 
-    @Published public private(set) var pending: PendingConfirm?
+    public private(set) var pending: PendingConfirm?
 
     /// False means nobody can draw the card.
     public var hasVisibleHost = false

@@ -3,7 +3,7 @@ import SwiftUI
 /// Search is not this view's business — `SearchHost` wraps it above the tabs.
 struct QueueTabContent: View {
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     @Binding var detailItem: QueueItem?
     @Binding var historySource: QueueItem.Source?

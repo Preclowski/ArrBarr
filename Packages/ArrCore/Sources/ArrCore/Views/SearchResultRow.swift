@@ -4,7 +4,7 @@ struct SearchResultRow: View {
     let result: SearchResult
     let onTap: () -> Void
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @Environment(\.locale) private var locale
 
     /// Arr lookups carry no country, so it comes from TMDB via `CountryProvider`, whose cache the detail view reuses.
@@ -43,7 +43,7 @@ struct SearchResultRow: View {
         // No extra request: uses what the lookup already sent.
         .hoverTooltip(enabled: hasTooltipContent) {
             SearchResultTooltip(result: result, countries: countries)
-                .environmentObject(configStore)
+                .environment(configStore)
         }
         #endif
         .task(id: result.id) { countries = await loadCountries() }
@@ -94,7 +94,7 @@ struct SearchResultRow: View {
 struct SearchResultTooltip: View {
     let result: SearchResult
     var countries: [String] = []
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @Environment(\.locale) private var locale
 
     var body: some View {

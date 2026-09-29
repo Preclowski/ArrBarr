@@ -2,8 +2,8 @@ import SwiftUI
 
 /// Reachable only in App Store builds (entries are `#if APPSTORE` in SettingsView).
 struct ICloudSettingsView: View {
-    @ObservedObject private var config = ConfigStore.shared
-    @ObservedObject private var coordinator = ICloudSettingsView.coordinator
+    private var config: ConfigStore { .shared }
+    private var coordinator: KVSyncCoordinator { Self.coordinator }
 
     /// Cached static fallback: a computed `shared ?? fallback` would create a throwaway every render and break observation.
     @MainActor private static var coordinator: KVSyncCoordinator = {
@@ -16,7 +16,7 @@ struct ICloudSettingsView: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $config.iCloudSyncEnabled) {
+                Toggle(isOn: Bindable(config).iCloudSyncEnabled) {
                     Text("settings.syncWithIcloud.button", bundle: .module)
                 }
             } footer: {

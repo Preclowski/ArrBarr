@@ -7,7 +7,7 @@ struct SearchAddPanel: View {
     var viewModel: SearchViewModel
     let onBack: () -> Void
 
-    @ObservedObject private var storeManager = StoreManager.shared
+    private var storeManager: StoreManager { .shared }
 
     /// Frozen at init: enrichment changes `result.id` for a TMDB-sourced series (0 → tvdbId),
     /// which would re-run the cast/trailer tasks and repaint the wrong series.
@@ -23,7 +23,7 @@ struct SearchAddPanel: View {
 
     /// Nil = no clip (or no TMDB key for the series route), so no poster badge.
     @State private var trailer: TrailerReel?
-    @ObservedObject private var trailerSession = TrailerSession.shared
+    private var trailerSession: TrailerSession { .shared }
 
     // Radarr state
     @State private var selectedProfileId: Int?
@@ -44,7 +44,7 @@ struct SearchAddPanel: View {
     @State private var lidarrMonitor: LidarrMonitorMode = .all
     @State private var enlargedPoster: URL?
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     /// Movies/series only; stays empty without a TMDB key.
     @State private var cast: [CastMember] = []
     @State private var directors: [CastMember] = []

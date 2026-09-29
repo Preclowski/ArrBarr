@@ -6,7 +6,7 @@ import AppKit
 /// On macOS `MCPServerController` starts/stops the server from these settings
 /// and reports into `MCPServerStatusModel`.
 struct MCPSettingsPane: View {
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     private var enabledToolCount: Int {
         ChatToolCatalog.allToolNames.count - configStore.mcpDisabledTools.count
@@ -15,7 +15,7 @@ struct MCPSettingsPane: View {
     var body: some View {
         Form {
             Section {
-                Toggle(isOn: $configStore.mcpEnabled) { Text("settings.enableMcpServer.button", bundle: .module) }
+                Toggle(isOn: Bindable(configStore).mcpEnabled) { Text("settings.enableMcpServer.button", bundle: .module) }
             } header: {
                 Text("settings.mcpServer.button", bundle: .module)
             } footer: {
@@ -39,7 +39,7 @@ struct MCPSettingsPane: View {
     private var connectionSection: some View {
         Section {
             LabeledContent {
-                TextField("", text: $configStore.mcpHostPort,
+                TextField("", text: Bindable(configStore).mcpHostPort,
                           prompt: Text(verbatim: "0.0.0.0:8080"))
                     .technicalField()
             } label: {
@@ -88,7 +88,7 @@ struct MCPSettingsPane: View {
 
     private var authSection: some View {
         Section {
-            Toggle(isOn: $configStore.mcpRequireAuth) { Text("settings.requireBearerToken.button", bundle: .module) }
+            Toggle(isOn: Bindable(configStore).mcpRequireAuth) { Text("settings.requireBearerToken.button", bundle: .module) }
             if configStore.mcpRequireAuth {
                 LabeledContent {
                     HStack(spacing: 8) {

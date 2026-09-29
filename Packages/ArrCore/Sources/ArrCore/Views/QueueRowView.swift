@@ -62,7 +62,7 @@ struct QueueRowView: View {
     let onDelete: @MainActor () -> Void
     var onShowDetail: (() -> Void)? = nil
     var selectionState: RowSelectionState = .hidden
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// Set by surfaces with a permanent detail pane, which don't need the long-hover tooltip.
     @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
@@ -299,7 +299,7 @@ struct QueueRowFormatStrip: View {
 struct QueueItemTooltip: View {
     let item: QueueItem
     var apiKey: String? = nil
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         MediaTooltipChrome(

@@ -105,7 +105,7 @@ enum SortMode: CaseIterable {
 /// The browsing strip and cover grid; search is wrapped above the tabs by `SearchHost`.
 struct LibraryTabContent: View {
     var viewModel: LibraryViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     @State private var source: QueueItem.Source = .radarr
     @State private var sourceResolved = false

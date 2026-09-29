@@ -9,7 +9,7 @@ struct QuizLoadingView: View {
     let posters: [URL]
     let onCancel: () -> Void
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     /// A stand-in from the user's library until the model's picks start landing.
     @State private var library: [URL] = LibraryPosterSampler.cached ?? []
     @State private var stories: [WaitStory] = []

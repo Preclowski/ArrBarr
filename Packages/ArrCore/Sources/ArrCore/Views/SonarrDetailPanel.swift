@@ -4,7 +4,7 @@ import MediaKit
 // MARK: - Sonarr
 
 struct SonarrDetailPanel<Header: View>: View {
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     let siblings: [QueueItem]
     let loadError: String?
     var isLoading: Bool = false

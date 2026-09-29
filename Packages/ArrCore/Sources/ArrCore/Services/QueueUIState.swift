@@ -9,8 +9,8 @@ public final class QueueUIState {
     public static let shared = QueueUIState()
     private static let logger = Logger(category: "Queue")
 
-    static let queueTitleGroupingKey = "ArrBarr.queueTitleGrouping"
-    static let collapsedArrsKey = "ArrBarr.collapsedArrs"
+    nonisolated static let queueTitleGroupingKey = "ArrBarr.queueTitleGrouping"
+    nonisolated static let collapsedArrsKey = "ArrBarr.collapsedArrs"
     // Device-local on purpose: not in `SyncedKeys`.
     static let hiddenQueueItemsKey = "ArrBarr.hiddenQueueItems"
     static let hideHintSuppressedKey = "ArrBarr.queueHideHintSuppressed"

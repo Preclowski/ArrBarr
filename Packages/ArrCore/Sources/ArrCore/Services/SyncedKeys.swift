@@ -4,17 +4,14 @@ import Foundation
 /// Secrets sync via iCloud Keychain instead.
 nonisolated enum SyncedKeys {
     static let all: Set<String> = {
+        typealias Keys = ConfigStore.Keys
         var keys: Set<String> = [
-            "ArrBarr.notifyRadarr", "ArrBarr.notifySonarr", "ArrBarr.notifyLidarr",
-            "ArrBarr.notificationSoundName",
-            "ArrBarr.blurWhisparrPosters", "ArrBarr.whisparrAgeConfirmed",
-            "ArrBarr.showWatchedIndicator",
-            "ArrBarr.aiKnowsAboutWhisparr",
-            "ArrBarr.arrOrder", "ArrBarr.showTonight", "ArrBarr.showNeedsYou",
-            "ArrBarr.tonightVisibleCount",
-            "ArrBarr.aiEnabled", "ArrBarr.chatProvider", "ArrBarr.openai",
-            "ArrBarr.collapsedArrs", "ArrBarr.queueTitleGrouping",
-            "ArrBarr.mediaServer", "ArrBarr.prowlarr",
+            Keys.notifyRadarr, Keys.notifySonarr, Keys.notifyLidarr, Keys.notificationSoundName,
+            Keys.blurWhisparrPosters, Keys.whisparrAgeConfirmed, Keys.showWatchedIndicator, Keys.aiKnowsAboutWhisparr,
+            Keys.arrOrder, Keys.showTonight, Keys.showNeedsYou, Keys.tonightVisibleCount,
+            Keys.aiEnabled, Keys.chatProvider, ConfigStore.openaiConfigKey,
+            QueueUIState.collapsedArrsKey, QueueUIState.queueTitleGroupingKey,
+            ConfigStore.mediaServerKey, ConfigStore.prowlarrKey,
         ]
         for kind in ServiceKind.allCases {
             keys.insert("ArrBarr.config.\(kind.rawValue)")

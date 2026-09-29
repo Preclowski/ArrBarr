@@ -5,7 +5,7 @@ import SwiftUI
 struct SearchCapsule: View {
     @Bindable var searchVM: SearchViewModel
     var focused: FocusState<Bool>.Binding
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     private var searchAvailable: Bool {
         QueueItem.Source.allCases.contains { configStore.config(for: $0.serviceKind).isVisible }

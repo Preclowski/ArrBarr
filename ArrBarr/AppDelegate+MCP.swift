@@ -1,7 +1,6 @@
 import AppKit
 import ArrCore
 import ArrMCPServer
-import Combine
 
 extension AppDelegate {
     // MARK: - MCP server
@@ -13,25 +12,29 @@ extension AppDelegate {
             }
         }
         // Every setting the tools read (arrs, download clients, TMDB, media server) restarts the server;
-        // anything else collapses in `removeDuplicates`.
-        configStore.objectWillChange
-            .debounce(for: .milliseconds(400), scheduler: RunLoop.main)
-            .prepend(())
-            .map { [weak self] _ in self?.mcpConfig() }
-            .removeDuplicates()
-            .sink { [weak self] config in
-                guard let controller = self?.mcpController else { return }
-                Task { if let config { await controller.restart(with: config) } else { await controller.stop() } }
-            }
-            .store(in: &cancellables)
+        // any other change leaves the config equal and is dropped.
+        applyMCPConfig(mcpConfig())
+        observers.append(observeChanges(of: { [weak self] in self?.mcpConfig() }, debounce: .milliseconds(400)) { [weak self] in
+            self?.applyMCPConfig($0)
+        })
+    }
+
+    private func applyMCPConfig(_ config: MCPServerController.Config?) {
+        let cs = configStore
+        // Mint a token rather than start a server whose auth can never pass (the validator fails closed on empty);
+        // the new token comes back through the observation.
+        if let config, config.requireAuth, config.token.isEmpty {
+            cs.mcpAuthToken = MCPTokenStore.generate()
+            return
+        }
+        let controller = mcpController
+        Task { if let config { await controller.restart(with: config) } else { await controller.stop() } }
     }
 
     /// nil = the server should be stopped.
     private func mcpConfig() -> MCPServerController.Config? {
         let cs = configStore
         guard cs.mcpEnabled else { return nil }
-        // Mint a token rather than start a server whose auth can never pass (the validator fails closed on empty).
-        if cs.mcpRequireAuth && cs.mcpAuthToken.isEmpty { cs.mcpAuthToken = MCPTokenStore.generate() }
         let inputs = MCPServerController.BackendInputs(
             sonarr: cs.sonarr, radarr: cs.radarr, lidarr: cs.lidarr, whisparr: cs.whisparr,
             aiKnowsAboutWhisparr: cs.aiKnowsAboutWhisparr, tmdbApiKey: cs.tmdbApiKey,

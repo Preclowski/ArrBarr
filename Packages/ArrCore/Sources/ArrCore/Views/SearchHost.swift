@@ -16,7 +16,7 @@ struct SearchHost<Content: View>: View {
     let onSelectAddResult: (SearchResult) -> Void
     @ViewBuilder var content: () -> Content
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     @State private var personRef: PersonRef?
     @FocusState private var fallbackFocus: Bool
 

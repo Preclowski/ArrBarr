@@ -5,12 +5,13 @@ import WebKit
 
 /// The one live trailer, owned above the view tree: the popover rebuilds its content on
 /// every open, so the key and web view live here to re-present the still-playing clip.
-public final class TrailerSession: ObservableObject {
+@Observable
+public final class TrailerSession {
     public static let shared = TrailerSession()
 
     /// Nil = no trailer up; set while a clip plays behind a closed popover too.
-    @Published public private(set) var key: String?
-    @Published public private(set) var reel: TrailerReel?
+    public private(set) var key: String?
+    public private(set) var reel: TrailerReel?
 
     /// Kept so a popover reopen re-parents the same web view instead of reloading the clip.
     var webView: WKWebView?
@@ -404,7 +405,7 @@ extension View {
 /// Hidden with a single clip, and in landscape, where the clip owns the glass.
 private struct TrailerReelStrip: View {
     let playing: String
-    @ObservedObject private var session = TrailerSession.shared
+    private var session: TrailerSession { .shared }
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     #endif

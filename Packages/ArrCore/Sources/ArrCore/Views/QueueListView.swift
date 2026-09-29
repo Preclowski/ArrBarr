@@ -4,7 +4,7 @@ import SwiftUI
 /// so each header and row is emitted as its own element.
 struct QueueListView: View {
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// Read off the singleton, not the environment, so the widget / hosting-view
     /// boundaries that re-inject `configStore` by hand stay out of it.
     var queueUI: QueueUIState { .shared }

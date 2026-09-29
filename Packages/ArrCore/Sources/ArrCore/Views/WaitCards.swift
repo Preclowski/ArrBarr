@@ -188,7 +188,7 @@ enum WaitStoryProvider {
 struct WaitStories: View {
     let context: WaitCardContext
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     @State private var stories: [WaitStory] = []
 
     var body: some View {

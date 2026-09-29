@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 import SwiftUI
 import UserNotifications
 import os
@@ -65,7 +64,7 @@ public final class QueueViewModel {
     var liveQueuesStarted = false
     /// The streams start after it so their first tick finds a fresh reading instead of a second fetch.
     var initialRefresh: Task<Void, Never>?
-    private var intervalObservers: Set<AnyCancellable> = []
+    private var configObservers: [Task<Void, Never>] = []
     private var configValidatedTask: Task<Void, Never>?
     private var artworkChangedTask: Task<Void, Never>?
     public internal(set) var isRefreshing = false
@@ -181,46 +180,20 @@ public final class QueueViewModel {
 
         // An arr added or removed starts or stops its queue stream. Probes are debounced because Settings
         // writes to `ConfigStore` per keystroke.
+        let store = configStore
         for source in QueueItem.Source.allCases {
-            configStore.publisher(for: source.serviceKind)
-                .dropFirst()
-                .map(\.isVisible)
-                .removeDuplicates()
-                .sink { [weak self] _ in Task { await self?.updateLiveQueues() } }
-                .store(in: &intervalObservers)
+            configObservers.append(observeChanges(of: { store.config(for: source).isVisible }) { [weak self] _ in
+                Task { await self?.updateLiveQueues() }
+            })
         }
-        for kind in MonitoredService.downloadClientKinds {
-            configStore.publisher(for: kind)
-                .dropFirst()
-                .removeDuplicates()
-                .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-                .sink { [weak self] _ in self?.reprobe(.arr(kind)) }
-                .store(in: &intervalObservers)
+        func reprobe(_ service: MonitoredService, when value: @escaping @MainActor @Sendable () -> some Equatable & Sendable) {
+            configObservers.append(observeChanges(of: value, debounce: .seconds(1.5)) { [weak self] _ in self?.reprobe(service) })
         }
-        configStore.$openai
-            .dropFirst()
-            .removeDuplicates()
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in self?.reprobe(.openai) }
-            .store(in: &intervalObservers)
-        configStore.$tmdbApiKey
-            .dropFirst()
-            .removeDuplicates()
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in self?.reprobe(.tmdb) }
-            .store(in: &intervalObservers)
-        configStore.$mediaServer
-            .dropFirst()
-            .removeDuplicates()
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in self?.reprobe(.mediaServer) }
-            .store(in: &intervalObservers)
-        configStore.$prowlarr
-            .dropFirst()
-            .removeDuplicates()
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in self?.reprobe(.prowlarr) }
-            .store(in: &intervalObservers)
+        for kind in MonitoredService.downloadClientKinds { reprobe(.arr(kind)) { store.config(for: kind) } }
+        reprobe(.openai) { store.openai }
+        reprobe(.tmdb) { store.tmdbApiKey }
+        reprobe(.mediaServer) { store.mediaServer }
+        reprobe(.prowlarr) { store.prowlarr }
 
         configValidatedTask = Task { [weak self] in
             for await _ in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.ConfigValidated.self) {
@@ -237,6 +210,7 @@ public final class QueueViewModel {
     /// `isolated` because a nonisolated `deinit` cannot touch the timers, and `invalidate()` must run on
     /// the run loop that installed them (`RunLoop.main`).
     isolated deinit {
+        configObservers.forEach { $0.cancel() }
         realtimeTask?.cancel()
         breakerTask?.cancel()
         upcomingRefreshTask?.cancel()

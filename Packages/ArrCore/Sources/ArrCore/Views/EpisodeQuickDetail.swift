@@ -32,7 +32,7 @@ struct EpisodeQuickDetail: View {
     private static let log = Logger(category: "Detail")
     let item: QueueItem
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     @Environment(\.isDetachedWindow) private var isDetachedWindow
     /// Not `@Environment(\.dismiss)`: reading it in a `navigationDestination`

@@ -11,7 +11,7 @@ struct QueueGroupRowView: View {
     var onShowDetail: (() -> Void)? = nil
     var selectionState: RowSelectionState = .hidden
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
 
@@ -225,7 +225,7 @@ struct QueueGroupRowView: View {
 struct QueueGroupTooltip: View {
     let group: QueueGroup
     var apiKey: String? = nil
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     private var rep: QueueItem { group.representative }
 

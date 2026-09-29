@@ -35,7 +35,7 @@ extension AppDelegate {
         let view = AddDownloadView(drops: batch) { [weak self] in
             self?.addDownloadWindow?.close()
         }
-        .environmentObject(configStore)
+        .environment(configStore)
         // Standalone scene: without the injected font-scale preset every scaledFont renders at 1.0.
         .appFontScale(configStore)
 

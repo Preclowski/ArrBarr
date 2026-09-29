@@ -11,7 +11,7 @@ struct QueueTitleGroupRowView: View {
     let onResumeAll: () -> Void
     let onDeleteAll: @MainActor () -> Void
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @Environment(\.queueOffline) private var isOffline
     @State private var isHovering = false
     /// Separate from `isHovering`: hovering the title promises "detail", anywhere else "toggle".

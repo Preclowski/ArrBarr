@@ -184,7 +184,7 @@ private struct WaitStoryText: View {
 private struct PersonFace: View {
     let person: WaitStory.Person
     @Binding var holding: Bool
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     var body: some View {
         #if os(macOS)

@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Free to watch; this sells the one-time "Control" unlock. Never "pro"/"premium" wording.
 public struct PaywallView: View {
-    @ObservedObject private var store = StoreManager.shared
+    private var store: StoreManager { .shared }
     let context: ProFeature?
     let onClose: () -> Void
 

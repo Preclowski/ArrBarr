@@ -12,7 +12,7 @@ struct ArrBarrApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
 
     @State private var queueVM = QueueViewModel.shared
-    @ObservedObject private var configStore = ConfigStore.shared
+    private var configStore: ConfigStore { .shared }
 
     init() {
         // Before the first localized lookup, so model-layer strings match the UI language.
@@ -36,7 +36,7 @@ struct ArrBarrApp: App {
                 onShowAbout: { appDelegate.showAbout() },
                 onQuit: { NSApp.terminate(nil) }
             )
-            .environmentObject(configStore)
+            .environment(configStore)
         } label: {
             // A custom (non-symbol) image inside a `Label` suppresses the title in the status item.
             let active = queueVM.activeCount

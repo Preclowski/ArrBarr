@@ -6,10 +6,10 @@ import CoreSpotlight
 /// internal section views without making their initialisers public.
 public struct iOSAppRoot: View {
     @State private var viewModel: QueueViewModel
-    @ObservedObject private var configStore: ConfigStore
-    @ObservedObject private var storeManager = StoreManager.shared
+    private let configStore = ConfigStore.shared
+    private var storeManager: StoreManager { .shared }
     /// Surfaces start the one live trailer; this root renders it.
-    @ObservedObject private var trailerSession = TrailerSession.shared
+    private var trailerSession: TrailerSession { .shared }
     @Environment(\.scenePhase) private var scenePhase
     @State private var searchVM: SearchViewModel
     /// Owned here so the queue's library-only search reads the same cache.
@@ -44,7 +44,6 @@ public struct iOSAppRoot: View {
 
     public init() {
         self._viewModel = State(initialValue: .shared)
-        self._configStore = ObservedObject(wrappedValue: .shared)
         let library = LibraryViewModel()
         let search = SearchViewModel()
         search.library = library
@@ -96,7 +95,7 @@ public struct iOSAppRoot: View {
                 Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
             }
         }
-        .environmentObject(configStore)
+        .environment(configStore)
         // Root-owned so the quiz's chat bridge works before the Chat tab was ever shown.
         .onAppear {
             chatHolder.reconfigure(store: configStore)
@@ -129,7 +128,7 @@ public struct iOSAppRoot: View {
                 },
                 onRequestMore: requestMoreQuizPicks
             )
-            .environmentObject(configStore)
+            .environment(configStore)
             .sheet(item: $quizAddResult) { result in
                 NavigationStack {
                     SearchAddPanel(result: result, viewModel: searchVM) {
@@ -138,7 +137,7 @@ public struct iOSAppRoot: View {
                 }
                 // A sheet inside a fullScreenCover doesn't inherit its environment; without this
                 // `SearchAddPanel.loadCast` traps on a missing ConfigStore.
-                .environmentObject(configStore)
+                .environment(configStore)
             }
             // The root's overlay renders under this cover (its own presentation context), so the deck
             // needs its own copy.
@@ -225,7 +224,7 @@ private struct QueueTab: View {
     var localHits: [LocalHit]
     var isActive: Bool
     @Binding var searchPresented: Bool
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var detailItem: QueueItem?
     @State private var searchResult: SearchResult?
     @State private var selecting = false
@@ -404,7 +403,7 @@ private struct LibraryTab: View {
     var viewModel: QueueViewModel
     var isActive: Bool
     @Binding var searchPresented: Bool
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var searchResult: SearchResult?
     @State private var detailItem: QueueItem?
 
@@ -447,7 +446,7 @@ private struct UpcomingTab: View {
     var localHits: [LocalHit]
     var isActive: Bool
     @Binding var searchPresented: Bool
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var detailItem: QueueItem?
     @State private var searchResult: SearchResult?
 
@@ -555,7 +554,7 @@ private struct UpcomingTab: View {
 // MARK: - Chat tab
 
 private struct ChatTab: View {
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// Owned by the root: the quiz's "more picks" round-trip is a chat turn from any tab.
     var chatHolder: ChatViewModelHolder
     /// Pushed from here so back returns to the conversation.
@@ -595,7 +594,7 @@ private struct SettingsTab: View {
 private struct HistoryTab: View {
     var viewModel: QueueViewModel
     var initialSource: QueueItem.Source?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var selected: QueueItem.Source?
     @State private var didSeedSource = false
     /// nil = all. Types are unified across arrs, so one list serves every service.

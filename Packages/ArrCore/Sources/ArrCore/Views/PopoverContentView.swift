@@ -2,8 +2,8 @@ import SwiftUI
 
 public struct PopoverContentView: View {
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
-    @ObservedObject var storeManager = StoreManager.shared
+    @Environment(ConfigStore.self) var configStore
+    var storeManager: StoreManager { .shared }
     let onOpenSettings: () -> Void
     let onShowAbout: () -> Void
     let onQuit: () -> Void
@@ -51,7 +51,7 @@ public struct PopoverContentView: View {
     /// rebuilds constantly and a chat turn can open the quiz while it's shut.
     @State var discoverViewModel = DiscoverViewModel.shared
     /// Outlives this view, so a playing clip is re-presented when the popover reopens.
-    @ObservedObject private var trailerSession = TrailerSession.shared
+    private var trailerSession: TrailerSession { .shared }
 
     private var sonarrConfigured: Bool { configStore.sonarr.isVisible }
     var radarrConfigured: Bool { configStore.radarr.isVisible }

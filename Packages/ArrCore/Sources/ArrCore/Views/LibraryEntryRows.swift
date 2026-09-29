@@ -74,7 +74,7 @@ extension View {
 struct LibraryTile: View {
     let entry: LibraryEntry
     let apiKey: String?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         Button {
@@ -131,7 +131,7 @@ struct LibraryTile: View {
 struct LibraryListRow: View {
     let entry: LibraryEntry
     let apiKey: String?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     private var rowTitle: String {
         if let year = entry.year {
@@ -184,7 +184,7 @@ struct LibraryListRow: View {
 
 struct LibraryStatusChip: View {
     let entry: LibraryEntry
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         MediaStateChip(

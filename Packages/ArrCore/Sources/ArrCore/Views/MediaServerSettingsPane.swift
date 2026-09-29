@@ -3,8 +3,8 @@ import SwiftUI
 
 /// One server at a time: merging two servers' watch state raises "watched where?" questions.
 struct MediaServerSettingsPane: View {
-    @EnvironmentObject var configStore: ConfigStore
-    @ObservedObject private var storeManager = StoreManager.shared
+    @Environment(ConfigStore.self) var configStore
+    private var storeManager: StoreManager { .shared }
 
     @State private var testState: OperationState = .idle
     @State private var reindexState: OperationState = .idle
@@ -220,7 +220,7 @@ struct MediaServerSettingsPane: View {
                     Text("settings.lastUpdated.label", bundle: .module)
                 }
             }
-            Toggle(isOn: $configStore.showWatchedIndicator) {
+            Toggle(isOn: Bindable(configStore).showWatchedIndicator) {
                 Text("settings.showWatchedIndicator.label", bundle: .module)
             }
             Button { runReindex() } label: {

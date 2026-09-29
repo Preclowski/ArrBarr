@@ -98,7 +98,7 @@ struct DirectedByLine: View {
 private struct CastTile: View {
     let person: CastMember
     var onTapPerson: ((CastMember) -> Void)?
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     #if os(macOS)
     #endif

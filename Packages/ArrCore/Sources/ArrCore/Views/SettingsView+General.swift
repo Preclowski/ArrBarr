@@ -48,12 +48,12 @@ extension SettingsView {
             Section {
                 #if os(macOS)
                 LaunchAtLoginToggle()
-                Picker(selection: $configStore.detachedWindow) {
+                Picker(selection: Bindable(configStore).detachedWindow) {
                     Text("settings.interfaceMode.menuBar", bundle: .module).tag(false)
                     Text("settings.interfaceMode.window", bundle: .module).tag(true)
                 } label: { Text("settings.interfaceMode.label", bundle: .module) }
                 #endif
-                Picker(selection: $configStore.appLanguage) {
+                Picker(selection: Bindable(configStore).appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in
                         // Languages keep their own names; only "System" is translated.
                         (opt.code == "system" ? Text("settings.system.button", bundle: .module) : Text(verbatim: opt.label)).tag(opt.code)
@@ -106,7 +106,7 @@ extension SettingsView {
                 .help(Text("settings.play.button", bundle: .module))
                 .accessibilityLabel(Text("settings.play.button", bundle: .module))
 
-                Picker(selection: $configStore.notificationSoundName) {
+                Picker(selection: Bindable(configStore).notificationSoundName) {
                     Text("settings.default.button", bundle: .module).tag("")
                     Text("search.none.button", bundle: .module).tag(ConfigStore.silentSoundName)
                     Divider()
@@ -163,10 +163,10 @@ extension SettingsView {
     /// One switch: the window is hard-locked to 7 days.
     var upcomingSection: some View {
         Section {
-            Toggle(isOn: $configStore.showTonight) {
+            Toggle(isOn: Bindable(configStore).showTonight) {
                 Text("settings.showUpcomingInQueue.label", bundle: .module)
             }
-            Picker(selection: $configStore.tonightVisibleCount) {
+            Picker(selection: Bindable(configStore).tonightVisibleCount) {
                 ForEach(ConfigStore.tonightVisibleOptions, id: \.self) { option in
                     if option == 0 {
                         Text("search.all.button", bundle: .module).tag(0)
@@ -254,18 +254,18 @@ extension SettingsView {
     @ViewBuilder
     var needsYouSection: some View {
         Section {
-            Toggle(isOn: $configStore.showNeedsYou) {
+            Toggle(isOn: Bindable(configStore).showNeedsYou) {
                 Text("settings.showSection.label", bundle: .module)
             }
             // iOS is errors-only: ConfigStore forces showWarnings off on every load.
             #if os(macOS)
-            Picker(selection: $configStore.showWarnings) {
+            Picker(selection: Bindable(configStore).showWarnings) {
                 Text("settings.errorsOnly.option", bundle: .module).tag(false)
                 Text("settings.errorsAndWarnings.option", bundle: .module).tag(true)
             } label: { Text("settings.needsYouSeverity.label", bundle: .module) }
                 .disabled(!configStore.showNeedsYou)
             #endif
-            Toggle(isOn: $configStore.notifyHealth) {
+            Toggle(isOn: Bindable(configStore).notifyHealth) {
                 Text("settings.notifyHealth.label", bundle: .module)
             }
         } header: { Text("Needs you", bundle: .module) }

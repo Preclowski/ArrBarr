@@ -20,7 +20,7 @@ struct EpisodeRow: View {
 
     private var queueItem: QueueItem? { queueItems.first }
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     /// Long-hover tooltip: a downloading row shows `QueueItemTooltip`, any other
     /// row the episode (synopsis, air date, file) its one trailing slot can't fit.
     /// Search fired from the context menu, shown in the trailing state slot

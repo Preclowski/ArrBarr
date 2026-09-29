@@ -6,7 +6,7 @@ import MediaKit
 /// tooltip, anything else the upcoming tooltip.
 struct UpcomingHoverTooltip: ViewModifier {
     let item: UpcomingItem
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     func body(content: Content) -> some View {
         content.hoverTooltip {
@@ -15,10 +15,10 @@ struct UpcomingHoverTooltip: ViewModifier {
                     item: active,
                     apiKey: active.posterRequiresAuth ? apiKey : nil
                 )
-                .environmentObject(configStore)
+                .environment(configStore)
             } else {
                 UpcomingItemTooltip(item: item, apiKey: apiKey)
-                    .environmentObject(configStore)
+                    .environment(configStore)
             }
         }
     }
@@ -49,7 +49,7 @@ extension View {
 
 struct UpcomingRowView: View {
     let item: UpcomingItem
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         PosterMetadataRow(
@@ -166,7 +166,7 @@ struct UpcomingRowView: View {
 struct UpcomingItemTooltip: View {
     let item: UpcomingItem
     var apiKey: String? = nil
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// `/moviefile` for movies, `/episodefile` (series map keyed by the calendar's
     /// `episodeFileId`) for episodes.
     struct FileFacts {

@@ -9,7 +9,7 @@ struct LidarrArtistView: View {
     let onBack: () -> Void
     var viewModel: QueueViewModel
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     @State private var artist: ArrArtist?
     @State private var albums: [ArrAlbum] = []

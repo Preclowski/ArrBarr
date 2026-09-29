@@ -28,7 +28,7 @@ struct DiscoverTabView: View {
     /// While this lags the top card the button stays but is inert — it would play the
     /// previous card's clip.
     @State private var trailerCardId: String?
-    @ObservedObject private var trailerSession = TrailerSession.shared
+    private var trailerSession: TrailerSession { .shared }
     /// Arrow keys only reach `onKeyPress` while something is focused.
     @FocusState private var deckFocused: Bool
     /// The skip animation runs 550 ms before the drop; a second verdict inside it (a held

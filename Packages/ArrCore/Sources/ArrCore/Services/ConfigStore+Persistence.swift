@@ -1,43 +1,51 @@
 import Foundation
-import Combine
+import os
 
 extension ConfigStore {
-    private static let notifyHealthKey = "ArrBarr.notifyHealth"
-    private static let notifyRadarrKey = "ArrBarr.notifyRadarr"
-    private static let notifySonarrKey = "ArrBarr.notifySonarr"
-    private static let notifyLidarrKey = "ArrBarr.notifyLidarr"
-    private static let notificationSoundNameKey = "ArrBarr.notificationSoundName"
+    /// Plain settings, one `UserDefaults` value each. `SyncedKeys` picks from these, so a rename can't unsync one.
+    nonisolated enum Keys {
+        static let notifyHealth = "ArrBarr.notifyHealth"
+        static let notifyRadarr = "ArrBarr.notifyRadarr"
+        static let notifySonarr = "ArrBarr.notifySonarr"
+        static let notifyLidarr = "ArrBarr.notifyLidarr"
+        static let notificationSoundName = "ArrBarr.notificationSoundName"
+        static let blurWhisparrPosters = "ArrBarr.blurWhisparrPosters"
+        static let showWatchedIndicator = "ArrBarr.showWatchedIndicator"
+        static let whisparrAgeConfirmed = "ArrBarr.whisparrAgeConfirmed"
+        static let fontScale = "ArrBarr.fontScale"
+        static let aiKnowsAboutWhisparr = "ArrBarr.aiKnowsAboutWhisparr"
+        static let detachedWindow = "ArrBarr.detachedWindow"
+        static let spotlightOpensInApp = "ArrBarr.spotlightOpensInApp"
+        static let appearance = "ArrBarr.appearance"
+        static let arrOrder = "ArrBarr.arrOrder"
+        static let showTonight = "ArrBarr.showTonight"
+        static let showNeedsYou = "ArrBarr.showNeedsYou"
+        static let tonightVisibleCount = "ArrBarr.tonightVisibleCount"
+        /// Legacy name from an indexer-only toggle; backs `showWarnings`.
+        static let showIndexerIssues = "ArrBarr.showIndexerIssues"
+        static let welcomeSeenVersion = "ArrBarr.welcomeSeenVersion"
+        static let aiEnabled = "ArrBarr.aiEnabled"
+        static let chatProvider = "ArrBarr.chatProvider"
+        static let mcpEnabled = "ArrBarr.mcpEnabled"
+        static let mcpHostPort = "ArrBarr.mcpHostPort"
+        static let mcpRequireAuth = "ArrBarr.mcpRequireAuth"
+        static let mcpDisabledTools = "ArrBarr.mcpDisabledTools"
+    }
+
     /// Sentinel value stored in `notificationSoundName` to mean "play no sound".
     public static let silentSoundName = "__none__"
-    private static let blurWhisparrPostersKey = "ArrBarr.blurWhisparrPosters"
-    private static let showWatchedIndicatorKey = "ArrBarr.showWatchedIndicator"
-    private static let whisparrAgeConfirmedKey = "ArrBarr.whisparrAgeConfirmed"
-    private static let fontScaleKey = "ArrBarr.fontScale"
-    private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
-    private static let detachedWindowKey = "ArrBarr.detachedWindow"
-    private static let spotlightOpensInAppKey = "ArrBarr.spotlightOpensInApp"
     nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
     nonisolated static let appLanguageKey = "ArrBarr.appLanguage"
-    private static let appearanceKey = "ArrBarr.appearance"
-    private static let arrOrderKey = "ArrBarr.arrOrder"
-    private static let showTonightKey = "ArrBarr.showTonight"
-    private static let showNeedsYouKey = "ArrBarr.showNeedsYou"
-    private static let tonightVisibleCountKey = "ArrBarr.tonightVisibleCount"
-    private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
-    private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
-    private static let aiEnabledKey = "ArrBarr.aiEnabled"
-    private static let chatProviderKey = "ArrBarr.chatProvider"
     nonisolated static let openaiConfigKey = "ArrBarr.openai"
     nonisolated static let tmdbApiKeyKey = "ArrBarr.tmdbApiKey"
     nonisolated static let mediaServerKey = "ArrBarr.mediaServer"
     nonisolated static let prowlarrKey = "ArrBarr.prowlarr"
-    private static let mcpEnabledKey = "ArrBarr.mcpEnabled"
-    private static let mcpHostPortKey = "ArrBarr.mcpHostPort"
-    private static let mcpRequireAuthKey = "ArrBarr.mcpRequireAuth"
-    private static let mcpDisabledToolsKey = "ArrBarr.mcpDisabledTools"
+    private static let log = Logger(category: "Config")
 
-    /// Called with sinks torn down, so assignments here are never persisted back.
+    /// Assignments here are never persisted back (`isLoading`).
     func applyValues(from defaults: UserDefaults) {
+        isLoading = true
+        defer { isLoading = false }
         self.radarr = loadService(.radarr)
         self.sonarr = loadService(.sonarr)
         self.lidarr = loadService(.lidarr)
@@ -48,220 +56,96 @@ extension ConfigStore {
         self.transmission = loadService(.transmission)
         self.rtorrent = loadService(.rtorrent)
         self.deluge = loadService(.deluge)
-        self.notifyHealth = defaults.bool(forKey: Self.notifyHealthKey)
-        self.notifyRadarr = defaults.object(forKey: Self.notifyRadarrKey) != nil ? defaults.bool(forKey: Self.notifyRadarrKey) : true
-        self.notifySonarr = defaults.object(forKey: Self.notifySonarrKey) != nil ? defaults.bool(forKey: Self.notifySonarrKey) : true
-        self.notifyLidarr = defaults.object(forKey: Self.notifyLidarrKey) != nil ? defaults.bool(forKey: Self.notifyLidarrKey) : true
-        self.notificationSoundName = defaults.string(forKey: Self.notificationSoundNameKey) ?? ""
-        self.blurWhisparrPosters = defaults.object(forKey: Self.blurWhisparrPostersKey) != nil ? defaults.bool(forKey: Self.blurWhisparrPostersKey) : true
-        self.showWatchedIndicator = defaults.object(forKey: Self.showWatchedIndicatorKey) != nil ? defaults.bool(forKey: Self.showWatchedIndicatorKey) : true
-        self.whisparrAgeConfirmed = defaults.bool(forKey: Self.whisparrAgeConfirmedKey)
+        self.notifyHealth = value(Keys.notifyHealth, false)
+        self.notifyRadarr = value(Keys.notifyRadarr, true)
+        self.notifySonarr = value(Keys.notifySonarr, true)
+        self.notifyLidarr = value(Keys.notifyLidarr, true)
+        self.notificationSoundName = value(Keys.notificationSoundName, "")
+        self.blurWhisparrPosters = value(Keys.blurWhisparrPosters, true)
+        self.showWatchedIndicator = value(Keys.showWatchedIndicator, true)
+        self.whisparrAgeConfirmed = value(Keys.whisparrAgeConfirmed, false)
         // Accept any positive value rather than validating against the picker,
         // so changing the option list never resets saved values.
-        let storedScale = defaults.double(forKey: Self.fontScaleKey)
+        let storedScale = value(Keys.fontScale, 0.0)
         self.fontScale = storedScale > 0 ? storedScale : 1.0
-        self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
-        self.detachedWindow = defaults.bool(forKey: Self.detachedWindowKey)
-        self.spotlightOpensInApp = defaults.object(forKey: Self.spotlightOpensInAppKey) != nil
-            ? defaults.bool(forKey: Self.spotlightOpensInAppKey) : true
-        self.iCloudSyncEnabled = defaults.object(forKey: Self.iCloudSyncEnabledKey) != nil
-            ? defaults.bool(forKey: Self.iCloudSyncEnabledKey) : true
-        self.appLanguage = defaults.string(forKey: Self.appLanguageKey) ?? "system"
-        self.appearance = defaults.string(forKey: Self.appearanceKey) ?? "system"
+        self.aiKnowsAboutWhisparr = value(Keys.aiKnowsAboutWhisparr, false)
+        self.detachedWindow = value(Keys.detachedWindow, false)
+        self.spotlightOpensInApp = value(Keys.spotlightOpensInApp, true)
+        self.iCloudSyncEnabled = value(Self.iCloudSyncEnabledKey, true)
+        self.appLanguage = value(Self.appLanguageKey, "system")
+        self.appearance = value(Keys.appearance, "system")
         #if os(iOS)
         // iOS has no language picker; clear any per-app override an older build left behind.
         self.appLanguage = "system"
         defaults.removeObject(forKey: "AppleLanguages")
         #endif
-        self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Self.arrOrderKey))
-        self.showTonight = defaults.object(forKey: Self.showTonightKey) != nil ? defaults.bool(forKey: Self.showTonightKey) : true
-        self.showNeedsYou = defaults.object(forKey: Self.showNeedsYouKey) != nil ? defaults.bool(forKey: Self.showNeedsYouKey) : true
-        self.showWarnings = defaults.object(forKey: Self.showIndexerIssuesKey) != nil ? defaults.bool(forKey: Self.showIndexerIssuesKey) : true
+        self.arrOrder = Self.normalizeArrOrder(defaults.stringArray(forKey: Keys.arrOrder))
+        self.showTonight = value(Keys.showTonight, true)
+        self.showNeedsYou = value(Keys.showNeedsYou, true)
+        self.showWarnings = value(Keys.showIndexerIssues, true)
         #if os(iOS)
         self.showWarnings = false
         self.appearance = "system"
         #endif
-        self.tonightVisibleCount = defaults.object(forKey: Self.tonightVisibleCountKey) != nil
-            ? defaults.integer(forKey: Self.tonightVisibleCountKey) : 3
-        self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
-        self.aiEnabled = defaults.object(forKey: Self.aiEnabledKey) != nil
-            ? defaults.bool(forKey: Self.aiEnabledKey) : false
+        self.tonightVisibleCount = value(Keys.tonightVisibleCount, 3)
+        self.welcomeSeenVersion = defaults.string(forKey: Keys.welcomeSeenVersion)
+        self.aiEnabled = value(Keys.aiEnabled, false)
         // Coerce to OpenAI where Foundation Models is unsupported: the picker hides that
         // option, so a stored `.foundationModels` would show OpenAI but resolve to Unavailable.
-        let storedProvider = ChatProvider(rawValue: defaults.string(forKey: Self.chatProviderKey) ?? "") ?? .foundationModels
+        let storedProvider = ChatProvider(rawValue: value(Keys.chatProvider, "")) ?? .foundationModels
         self.chatProvider = (storedProvider == .foundationModels && !FoundationModelsAvailability.isSupported)
             ? .openai
             : storedProvider
-        if let data = defaults.data(forKey: Self.openaiConfigKey),
-           let cfg = try? JSONDecoder().decode(OpenAIConfig.self, from: data) {
-            self.openai = cfg
-        } else {
-            self.openai = .empty
-        }
+        self.openai = decoded(OpenAIConfig.self, forKey: Self.openaiConfigKey) ?? .empty
         self.openai.apiKey = secrets.read(.openAIKey) ?? self.openai.apiKey
         self.tmdbApiKey = secrets.read(.tmdbKey) ?? (defaults.string(forKey: Self.tmdbApiKeyKey) ?? "")
-        if let data = defaults.data(forKey: Self.mediaServerKey),
-           let cfg = try? JSONDecoder().decode(MediaServerConfig.self, from: data) {
-            self.mediaServer = cfg
-        } else {
-            self.mediaServer = .empty
-        }
+        self.mediaServer = decoded(MediaServerConfig.self, forKey: Self.mediaServerKey) ?? .empty
         self.mediaServer.token = secrets.read(.mediaServerToken) ?? self.mediaServer.token
-        if let data = defaults.data(forKey: Self.prowlarrKey),
-           let cfg = try? JSONDecoder().decode(ServiceConfig.self, from: data) {
-            self.prowlarr = cfg
-        }
+        if let cfg = decoded(ServiceConfig.self, forKey: Self.prowlarrKey) { self.prowlarr = cfg }
         self.prowlarr.apiKey = secrets.read(.prowlarrKey) ?? self.prowlarr.apiKey
         // Prowlarr configs saved before it had an Enabled switch persisted as `enabled: false`.
         if !self.prowlarr.enabled, !self.prowlarr.baseURL.isEmpty { self.prowlarr.enabled = true }
-        self.mcpEnabled = defaults.bool(forKey: Self.mcpEnabledKey)
-        self.mcpHostPort = defaults.string(forKey: Self.mcpHostPortKey) ?? "127.0.0.1:8080"
-        // An absent key means the toggle was never touched (sinks write only on change).
-        self.mcpRequireAuth = (defaults.object(forKey: Self.mcpRequireAuthKey) as? Bool) ?? true
+        self.mcpEnabled = value(Keys.mcpEnabled, false)
+        self.mcpHostPort = value(Keys.mcpHostPort, "127.0.0.1:8080")
+        self.mcpRequireAuth = value(Keys.mcpRequireAuth, true)
         self.mcpAuthToken = MCPTokenStore.read() ?? ""
-        self.mcpDisabledTools = Set(defaults.stringArray(forKey: Self.mcpDisabledToolsKey) ?? [])
+        self.mcpDisabledTools = Set(defaults.stringArray(forKey: Keys.mcpDisabledTools) ?? [])
         defaults.removeObject(forKey: "ArrBarr.mcpAuthUsername")
         defaults.removeObject(forKey: "ArrBarr.mcpAuthPassword")
     }
 
-    func setupSinks() {
-        cancellables.removeAll()
-        for kind in ServiceKind.allCases {
-            publisher(for: kind).dropFirst().sink { [weak self] cfg in
-                self?.save(kind, cfg)
-            }.store(in: &cancellables)
+
+    /// The stored value, or `fallback` when the key is absent (never touched) or holds another type.
+    private func value<T>(_ key: String, _ fallback: T) -> T {
+        defaults.object(forKey: key) as? T ?? fallback
+    }
+
+    /// A stored config that no longer decodes is logged: silently reading it as empty would lose it on the next save.
+    private func decoded<T: Decodable>(_ type: T.Type, forKey key: String) -> T? {
+        guard let data = defaults.data(forKey: key) else { return nil }
+        do { return try JSONDecoder().decode(type, from: data) } catch {
+            Self.log.error("stored \(key, privacy: .public) no longer decodes: \(error.logKind, privacy: .public)")
+            return nil
         }
-        $notifyHealth.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.notifyHealthKey)
-        }.store(in: &cancellables)
-        $notifyRadarr.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.notifyRadarrKey)
-        }.store(in: &cancellables)
-        $notifySonarr.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.notifySonarrKey)
-        }.store(in: &cancellables)
-        $notifyLidarr.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.notifyLidarrKey)
-        }.store(in: &cancellables)
-        $notificationSoundName.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.notificationSoundNameKey)
-        }.store(in: &cancellables)
-        $whisparrAgeConfirmed.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.whisparrAgeConfirmedKey)
-        }.store(in: &cancellables)
-        $showWatchedIndicator.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.showWatchedIndicatorKey)
-        }.store(in: &cancellables)
-        $blurWhisparrPosters.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.blurWhisparrPostersKey)
-        }.store(in: &cancellables)
-        $fontScale.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.fontScaleKey)
-        }.store(in: &cancellables)
-        $aiKnowsAboutWhisparr.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.aiKnowsAboutWhisparrKey)
-        }.store(in: &cancellables)
-        $detachedWindow.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.detachedWindowKey)
-        }.store(in: &cancellables)
-        $spotlightOpensInApp.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.spotlightOpensInAppKey)
-        }.store(in: &cancellables)
-        $iCloudSyncEnabled.dropFirst().sink { [weak self] val in
-            guard let self else { return }
-            self.defaults.set(val, forKey: Self.iCloudSyncEnabledKey)
-            guard AppCapabilities.isAppStore else { return }
-            KVSyncCoordinator.shared?.setEnabled(val)
-            self.secrets.reapplySyncAttribute(for: SecretKey.syncable)
-        }.store(in: &cancellables)
-        $arrOrder.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.arrOrderKey)
-        }.store(in: &cancellables)
-        $showTonight.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.showTonightKey)
-        }.store(in: &cancellables)
-        $showNeedsYou.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.showNeedsYouKey)
-        }.store(in: &cancellables)
-        $showWarnings.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
-        }.store(in: &cancellables)
-        $tonightVisibleCount.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.tonightVisibleCountKey)
-        }.store(in: &cancellables)
-        $appearance.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.appearanceKey)
-        }.store(in: &cancellables)
-        $welcomeSeenVersion.dropFirst().sink { [weak self] val in
-            if let val {
-                self?.defaults.set(val, forKey: Self.welcomeSeenVersionKey)
-            } else {
-                self?.defaults.removeObject(forKey: Self.welcomeSeenVersionKey)
-            }
-        }.store(in: &cancellables)
-        $appLanguage.dropFirst().sink { [weak self] val in
-            guard let self else { return }
-            self.defaults.set(val, forKey: Self.appLanguageKey)
-            // `.standard`, not the suite: Foundation reads process language only from there,
-            // snapshotted at launch, so it takes effect after one restart.
-            if val == "system" {
-                UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-            } else {
-                UserDefaults.standard.set([val], forKey: "AppleLanguages")
-            }
-        }.store(in: &cancellables)
-        $aiEnabled.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.aiEnabledKey)
-        }.store(in: &cancellables)
-        $chatProvider.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val.rawValue, forKey: Self.chatProviderKey)
-        }.store(in: &cancellables)
-        $openai.dropFirst().sink { [weak self] cfg in
-            guard let self else { return }
-            self.setOrDelete(cfg.apiKey, for: .openAIKey)
-            var stripped = cfg
-            stripped.apiKey = ""
-            if let data = try? JSONEncoder().encode(stripped) {
-                self.defaults.set(data, forKey: Self.openaiConfigKey)
-            }
-        }.store(in: &cancellables)
-        $tmdbApiKey.dropFirst().sink { [weak self] val in
-            self?.setOrDelete(val, for: .tmdbKey)
-            self?.defaults.removeObject(forKey: Self.tmdbApiKeyKey)
-        }.store(in: &cancellables)
-        $prowlarr.dropFirst().sink { [weak self] cfg in
-            guard let self else { return }
-            self.setOrDelete(cfg.apiKey, for: .prowlarrKey)
-            var stripped = cfg
-            stripped.apiKey = ""
-            if let data = try? JSONEncoder().encode(stripped) {
-                self.defaults.set(data, forKey: Self.prowlarrKey)
-            }
-        }.store(in: &cancellables)
-        $mediaServer.dropFirst().sink { [weak self] cfg in
-            guard let self else { return }
-            self.setOrDelete(cfg.token, for: .mediaServerToken)
-            var stripped = cfg
-            stripped.token = ""
-            if let data = try? JSONEncoder().encode(stripped) {
-                self.defaults.set(data, forKey: Self.mediaServerKey)
-            }
-        }.store(in: &cancellables)
-        $mcpEnabled.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.mcpEnabledKey)
-        }.store(in: &cancellables)
-        $mcpHostPort.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.mcpHostPortKey)
-        }.store(in: &cancellables)
-        $mcpRequireAuth.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.mcpRequireAuthKey)
-        }.store(in: &cancellables)
-        $mcpAuthToken.dropFirst().sink { val in
-            if val.isEmpty { MCPTokenStore.delete() } else { MCPTokenStore.set(val) }
-        }.store(in: &cancellables)
-        $mcpDisabledTools.dropFirst().sink { [weak self] val in
-            self?.defaults.set(Array(val), forKey: Self.mcpDisabledToolsKey)
-        }.store(in: &cancellables)
+    }
+
+    func persist<T: Equatable>(_ new: T, _ old: T, _ key: String) {
+        guard !isLoading, new != old else { return }
+        defaults.set(new, forKey: key)
+    }
+
+    func store<T: Encodable>(_ value: T, forKey key: String) {
+        if let data = try? JSONEncoder().encode(value) { defaults.set(data, forKey: key) }
+    }
+
+    /// Foundation reads the process language only from `.standard`, snapshotted at launch, so it takes
+    /// effect after one restart.
+    nonisolated static func applyAppLanguage(_ language: String) {
+        if language == "system" {
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        } else {
+            UserDefaults.standard.set([language], forKey: "AppleLanguages")
+        }
     }
 
     // MARK: - Persistence
@@ -275,29 +159,27 @@ extension ConfigStore {
         return cfg
     }
 
-    /// Extension-safe: the widget must not construct `ConfigStore.shared` (MainActor,
-    /// Combine sinks, Keychain migration).
+    /// Extension-safe: the widget must not construct `ConfigStore.shared` (MainActor, Keychain migration).
     public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         load(kind, from: defaults)
     }
 
-    /// Every service sink re-saves both of its secrets; rewriting an unchanged one would bump its
+    /// Every service save re-saves both of its secrets; rewriting an unchanged one would bump its
     /// generation, and MediaKit drops that instance's cache and sessions on a new generation.
-    private func setOrDelete(_ value: String, for key: SecretKey) {
+    func setOrDelete(_ value: String, for key: SecretKey) {
         guard (secrets.read(key) ?? "") != value else { return }
         if value.isEmpty { secrets.delete(key) } else { secrets.set(value, for: key) }
         SecretGenerations.bump(key, in: defaults)
     }
 
-    private func save(_ kind: ServiceKind, _ config: ServiceConfig) {
+    func persist(_ kind: ServiceKind, _ config: ServiceConfig, _ old: ServiceConfig) {
+        guard !isLoading, config != old else { return }
         setOrDelete(config.apiKey, for: .apiKey(for: kind))
         setOrDelete(config.password, for: .password(for: kind))
         var stripped = config
         stripped.apiKey = ""
         stripped.password = ""
-        if let data = try? JSONEncoder().encode(stripped) {
-            defaults.set(data, forKey: Self.key(kind))
-        }
+        store(stripped, forKey: Self.key(kind))
     }
 
     private func loadService(_ kind: ServiceKind) -> ServiceConfig {

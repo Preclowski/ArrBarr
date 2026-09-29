@@ -16,22 +16,22 @@ extension SettingsView {
 
     var mediaManagerSpecs: [ServiceSpec] {
         [
-            .init(kind: .radarr, title: "Radarr", config: $configStore.radarr, notify: $configStore.notifyRadarr),
-            .init(kind: .sonarr, title: "Sonarr", config: $configStore.sonarr, notify: $configStore.notifySonarr),
-            .init(kind: .lidarr, title: "Lidarr", config: $configStore.lidarr, notify: $configStore.notifyLidarr),
-            .init(kind: .whisparr, title: "Whisparr", config: $configStore.whisparr,
-                  ageConfirmed: $configStore.whisparrAgeConfirmed, nsfwFilter: $configStore.blurWhisparrPosters),
+            .init(kind: .radarr, title: "Radarr", config: Bindable(configStore).radarr, notify: Bindable(configStore).notifyRadarr),
+            .init(kind: .sonarr, title: "Sonarr", config: Bindable(configStore).sonarr, notify: Bindable(configStore).notifySonarr),
+            .init(kind: .lidarr, title: "Lidarr", config: Bindable(configStore).lidarr, notify: Bindable(configStore).notifyLidarr),
+            .init(kind: .whisparr, title: "Whisparr", config: Bindable(configStore).whisparr,
+                  ageConfirmed: Bindable(configStore).whisparrAgeConfirmed, nsfwFilter: Bindable(configStore).blurWhisparrPosters),
         ]
     }
 
     var downloadClientSpecs: [ServiceSpec] {
         [
-            .init(kind: .sabnzbd, title: "SABnzbd", config: $configStore.sabnzbd),
-            .init(kind: .nzbget, title: "NZBGet", config: $configStore.nzbget),
-            .init(kind: .qbittorrent, title: "qBittorrent", config: $configStore.qbittorrent),
-            .init(kind: .transmission, title: "Transmission", config: $configStore.transmission),
-            .init(kind: .rtorrent, title: "rTorrent", config: $configStore.rtorrent),
-            .init(kind: .deluge, title: "Deluge", config: $configStore.deluge),
+            .init(kind: .sabnzbd, title: "SABnzbd", config: Bindable(configStore).sabnzbd),
+            .init(kind: .nzbget, title: "NZBGet", config: Bindable(configStore).nzbget),
+            .init(kind: .qbittorrent, title: "qBittorrent", config: Bindable(configStore).qbittorrent),
+            .init(kind: .transmission, title: "Transmission", config: Bindable(configStore).transmission),
+            .init(kind: .rtorrent, title: "rTorrent", config: Bindable(configStore).rtorrent),
+            .init(kind: .deluge, title: "Deluge", config: Bindable(configStore).deluge),
         ]
     }
 

@@ -30,8 +30,8 @@ struct MediaDeletePanel: View {
     /// The host closes the modal, and leaves the detail when its record went with it.
     let onDeleted: () -> Void
 
-    @EnvironmentObject private var configStore: ConfigStore
-    @ObservedObject private var storeManager = StoreManager.shared
+    @Environment(ConfigStore.self) private var configStore
+    private var storeManager: StoreManager { .shared }
 
     @State private var deleteFiles = false
     @State private var addExclusion = false

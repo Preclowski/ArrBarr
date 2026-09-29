@@ -4,11 +4,11 @@ extension SettingsView {
     @ViewBuilder
     var aiSection: some View {
         Section {
-            Toggle(isOn: $configStore.aiEnabled) { Text("settings.enableAi.button", bundle: .module) }
+            Toggle(isOn: Bindable(configStore).aiEnabled) { Text("settings.enableAi.button", bundle: .module) }
         } header: { Text("settings.assistant.button", bundle: .module) }
         if configStore.aiEnabled {
             Section {
-                Picker(selection: $configStore.chatProvider) {
+                Picker(selection: Bindable(configStore).chatProvider) {
                     ForEach(ChatProvider.allCases.filter {
                         $0 != .foundationModels || FoundationModelsAvailability.isSupported
                     }) { p in
@@ -16,17 +16,17 @@ extension SettingsView {
                     }
                 } label: { Text("settings.aiProvider.button", bundle: .module) }
                 if configStore.chatProvider == .openai {
-                    TextField(text: $configStore.openai.baseURL,
+                    TextField(text: Bindable(configStore).openai.baseURL,
                               prompt: Text(verbatim: "https://api.openai.com/v1")) {
                         Text("settings.apiBaseUrl.button", bundle: .module)
                     }
                     .urlField()
-                    SecureField(text: $configStore.openai.apiKey) { Text("settings.apiKey2.button", bundle: .module) }
+                    SecureField(text: Bindable(configStore).openai.apiKey) { Text("settings.apiKey2.button", bundle: .module) }
                         .apiKeyField()
                     // A bare Form TextField hides its label once it has a value.
                     LabeledContent {
                         // Empty title: LabeledContent supplies the label; a second one renders twice.
-                        TextField("", text: $configStore.openai.model,
+                        TextField("", text: Bindable(configStore).openai.model,
                                   prompt: Text(verbatim: "gpt-4o-mini"))
                         #if os(iOS)
                         .multilineTextAlignment(.trailing)
@@ -69,7 +69,7 @@ extension SettingsView {
                     #endif
                 }
                 if configStore.whisparr.isConfigured {
-                    Toggle(isOn: $configStore.aiKnowsAboutWhisparr) { Text("settings.aiKnowsAboutWhisparr.button", bundle: .module) }
+                    Toggle(isOn: Bindable(configStore).aiKnowsAboutWhisparr) { Text("settings.aiKnowsAboutWhisparr.button", bundle: .module) }
                 }
             }
         }
@@ -78,7 +78,7 @@ extension SettingsView {
     /// Under General, not AI: the TMDB key also powers cast strips and discovery.
     var tmdbSection: some View {
         Section {
-            SecureField(text: $configStore.tmdbApiKey,
+            SecureField(text: Bindable(configStore).tmdbApiKey,
                         prompt: Text(verbatim: "v4 Read Access Token")) {
                 Text("settings.tmdbReadAccessToken.button", bundle: .module)
             }
@@ -109,7 +109,7 @@ extension SettingsView {
     /// fields are spelled out here, matching `ServiceFields`.
     @ViewBuilder
     var prowlarrFields: some View {
-        Toggle(isOn: $configStore.prowlarr.enabled) {
+        Toggle(isOn: Bindable(configStore).prowlarr.enabled) {
             Text("settings.enabled.button", bundle: .module)
         }
         if configStore.prowlarr.enabled {
@@ -118,7 +118,7 @@ extension SettingsView {
                 Text("settings.url.label", bundle: .module)
             }
             .urlField()
-            SecureField(text: $configStore.prowlarr.apiKey,
+            SecureField(text: Bindable(configStore).prowlarr.apiKey,
                         prompt: Text("settings.pasteYourApiKey.button", bundle: .module)) {
                 Text("settings.apiKey.button", bundle: .module)
             }

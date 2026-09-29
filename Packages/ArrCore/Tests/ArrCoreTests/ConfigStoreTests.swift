@@ -1,4 +1,5 @@
 import Testing
+import Synchronization
 import Foundation
 @testable import ArrCore
 
@@ -52,6 +53,28 @@ struct ConfigStoreTests {
         #expect(!raw.contains("SENSITIVE-PW"))
         #expect(secrets.read(.apiKey(for: .radarr)) == "SENSITIVE-KEY")
         #expect(secrets.read(.password(for: .radarr)) == "SENSITIVE-PW")
+    }
+
+    @Test("Changing one setting doesn't notify a view that reads another")
+    @MainActor func observationIsPerProperty() {
+        let store = ConfigStore(defaults: makeDefaults(), secrets: InMemorySecretStore())
+        let notified = Mutex(0)
+        withObservationTracking { _ = store.radarr } onChange: { notified.withLock { $0 += 1 } }
+        store.tmdbApiKey = "typing"
+        #expect(notified.withLock { $0 } == 0)
+        store.radarr.baseURL = "http://h:7878"
+        #expect(notified.withLock { $0 } == 1)
+    }
+
+    @Test("Reloading from defaults writes nothing back")
+    @MainActor func reloadDoesNotPersist() {
+        let defaults = makeDefaults()
+        let store = ConfigStore(defaults: defaults, secrets: InMemorySecretStore())
+        store.update(.radarr, with: ServiceConfig(enabled: true, baseURL: "http://h:7878", apiKey: "K", username: "", password: ""))
+        let generation = SecretGenerations.generation(for: .apiKey(for: .radarr), in: defaults)
+        store.reloadFromDefaults()
+        #expect(SecretGenerations.generation(for: .apiKey(for: .radarr), in: defaults) == generation)
+        #expect(store.radarr.apiKey == "K")
     }
 
     @Test("Editing a service's URL leaves its secrets' generation alone")

@@ -1,4 +1,5 @@
 import Foundation
+import Observation
 import os
 
 /// Abstraction over `NSUbiquitousKeyValueStore` so the coordinator is testable
@@ -13,19 +14,20 @@ extension NSUbiquitousKeyValueStore: KeyValueSyncing {}
 
 /// Mirrors the `SyncedKeys` allowlist between UserDefaults (source of truth) and
 /// iCloud KVS. Compiled everywhere for tests; started only under `#if APPSTORE`.
-public final class KVSyncCoordinator: ObservableObject {
+@Observable
+public final class KVSyncCoordinator {
     private let defaults: UserDefaults
     private let kv: KeyValueSyncing
     private let reload: () -> Void
     private var isApplyingRemote = false
     private var observers: [NSObjectProtocol] = []
 
-    @Published public private(set) var lastSyncDate: Date?
-    @Published public private(set) var lastError: String?
-    @Published public private(set) var isRunning: Bool = false
+    public private(set) var lastSyncDate: Date?
+    public private(set) var lastError: String?
+    public private(set) var isRunning: Bool = false
 
-    /// Stored and `@Published` so Settings refreshes live on iCloud sign-in/out.
-    @Published public private(set) var accountAvailable: Bool
+    /// Stored and observed so Settings refreshes live on iCloud sign-in/out.
+    public private(set) var accountAvailable: Bool
 
     /// Injectable so tests can drive sign-in/out.
     private let identityCheck: @Sendable () -> Bool

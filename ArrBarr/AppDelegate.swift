@@ -1,6 +1,5 @@
 import AppKit
 import SwiftUI
-import Combine
 import UserNotifications
 import CoreSpotlight
 import ArrCore
@@ -25,7 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let configStore = ConfigStore.shared
     let queueVM = QueueViewModel.shared
     lazy var mcpController = MCPServerController()
-    var cancellables = Set<AnyCancellable>()
+    /// Config and store observations, alive as long as the app.
+    var observers: [Task<Void, Never>] = []
     private var dropMessages: Task<Void, Never>?
 
     /// Held for the process lifetime: an accessory app with no visible window is App Nap's prime target,
@@ -53,7 +53,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         #if DEBUG
         if let spec = UserDefaults.standard.string(forKey: "ShelfDebug") {
-            let win = NSWindow(contentViewController: NSHostingController(rootView: ShelfDebugView(spec: spec).environmentObject(configStore)))
+            let win = NSWindow(contentViewController: NSHostingController(rootView: ShelfDebugView(spec: spec).environment(configStore)))
             win.title = "ShelfDebug"
             win.styleMask = [.titled]
             win.setFrameTopLeftPoint(NSPoint(x: 60, y: 900))
@@ -63,24 +63,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
 
         // `.preferredColorScheme` doesn't reach the menu-bar popover or the hosted windows; `NSApp.appearance` does.
-        applyAppearance(configStore.appearance)
-        configStore.$appearance
-            .sink { [weak self] in self?.applyAppearance($0) }
-            .store(in: &cancellables)
-
-        // The sink fires once on subscribe with the current value, then on every toggle.
-        configStore.$detachedWindow
-            .removeDuplicates()
-            .sink { [weak self] in self?.applyWindowMode($0) }
-            .store(in: &cancellables)
+        let cs = configStore
+        applyAppearance(cs.appearance)
+        observers.append(observeChanges(of: { cs.appearance }) { [weak self] in self?.applyAppearance($0) })
+        applyWindowMode(cs.detachedWindow)
+        observers.append(observeChanges(of: { cs.detachedWindow }) { [weak self] in self?.applyWindowMode($0) })
 
         // Hosted in a real NSWindow: the MenuBarExtra panel auto-dismisses when StoreKit's purchase UI takes focus.
-        StoreManager.shared.$gatedFeature
-            .receive(on: RunLoop.main)
-            .sink { [weak self] feature in
-                if feature != nil { self?.showPaywall() } else { self?.closePaywall() }
-            }
-            .store(in: &cancellables)
+        observers.append(observeChanges(of: { StoreManager.shared.gatedFeature != nil }) { [weak self] gated in
+            if gated { self?.showPaywall() } else { self?.closePaywall() }
+        })
 
         // The SwiftUI side can't reach the window plumbing, so drops arrive as a message.
         dropMessages = Task { [weak self] in
@@ -222,7 +214,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             onQuit: { NSApp.terminate(nil) },
             onCloseWindow: { [weak self] in self?.mainWindow?.close() }
         )
-        .environmentObject(configStore)
+        .environment(configStore)
         .background(WindowGlassBackground().ignoresSafeArea())
         // NavigationStack's back chevron doesn't render in a hand-built NSWindow; DetailView draws its own here.
         .environment(\.isDetachedWindow, true)

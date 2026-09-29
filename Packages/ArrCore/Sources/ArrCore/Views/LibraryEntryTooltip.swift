@@ -14,7 +14,7 @@ extension View {
 private struct LibraryEntryTooltip: View {
     let entry: LibraryEntry
     let apiKey: String?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// Radarr/Whisparr list endpoints don't compute custom formats, release group or languages;
     /// `/moviefile` does, and the clients cache it per movie.
     @State private var fileDetails: ArrFile?

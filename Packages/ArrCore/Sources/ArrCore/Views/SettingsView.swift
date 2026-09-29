@@ -18,10 +18,10 @@ public struct SettingsView: View {
         self.onSetDemoMode = onSetDemoMode
     }
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     /// `@Bindable` because the queue state is `@Observable`, not a `$`-projected store.
     @Bindable var queueUI = QueueUIState.shared
-    @ObservedObject var storeManager = StoreManager.shared
+    var storeManager: StoreManager { .shared }
     @State var demoModeOn: Bool = DemoMode.isActive
     @State var telemetryReport: String?
     /// iOS: 7 taps on the Version row enable Developer mode (no launch args there).
@@ -91,7 +91,7 @@ public struct SettingsView: View {
     var textSizePicker: some View {
         // `as Double` on every tag: SwiftUI infers some literals as Int and the
         // selection then silently never matches.
-        Picker(selection: $configStore.fontScale) {
+        Picker(selection: Bindable(configStore).fontScale) {
             Text("settings.default.button", bundle: .module).tag(1.0 as Double)
             Text("settings.larger.button", bundle: .module).tag(1.10 as Double)
             Text("settings.largest.button", bundle: .module).tag(1.20 as Double)
@@ -100,7 +100,7 @@ public struct SettingsView: View {
 
     @ViewBuilder
     var themePicker: some View {
-        Picker(selection: $configStore.appearance) {
+        Picker(selection: Bindable(configStore).appearance) {
             Text("settings.system.button", bundle: .module).tag("system")
             Text("settings.light.button", bundle: .module).tag("light")
             Text("settings.dark.button", bundle: .module).tag("dark")

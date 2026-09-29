@@ -5,7 +5,7 @@ struct QueueSearchRow: View {
     let item: QueueItem
     let onTap: () -> Void
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     init(item: QueueItem, onTap: @escaping () -> Void) {
         self.item = item

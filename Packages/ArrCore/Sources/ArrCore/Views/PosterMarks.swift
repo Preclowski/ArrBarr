@@ -77,7 +77,7 @@ private struct PosterMarks: ViewModifier {
     let cornerRadius: CGFloat
     let ribbonWidth: CGFloat
     /// Not the environment object: tooltips and popovers don't inherit it, and a missing one crashes.
-    @ObservedObject private var configStore = ConfigStore.shared
+    private var configStore: ConfigStore { .shared }
 
     func body(content: Content) -> some View {
         content

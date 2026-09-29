@@ -1,5 +1,4 @@
 import Foundation
-import Combine
 
 extension ConfigStore {
     /// Pause/resume go straight to the download client; only a confirmed `.down` gates,
@@ -20,21 +19,6 @@ extension ConfigStore {
 
     public func shouldBlurPoster(for source: QueueItem.Source) -> Bool {
         source == .whisparr && blurWhisparrPosters
-    }
-
-    func publisher(for kind: ServiceKind) -> Published<ServiceConfig>.Publisher {
-        switch kind {
-        case .radarr: $radarr
-        case .sonarr: $sonarr
-        case .lidarr: $lidarr
-        case .whisparr: $whisparr
-        case .sabnzbd: $sabnzbd
-        case .qbittorrent: $qbittorrent
-        case .nzbget: $nzbget
-        case .transmission: $transmission
-        case .rtorrent: $rtorrent
-        case .deluge: $deluge
-        }
     }
 
     public func config(for kind: ServiceKind) -> ServiceConfig {

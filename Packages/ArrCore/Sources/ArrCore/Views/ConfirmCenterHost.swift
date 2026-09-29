@@ -7,7 +7,7 @@ public extension View {
 }
 
 private struct ConfirmCenterHost: ViewModifier {
-    @ObservedObject private var center = ConfirmCenter.shared
+    private var center: ConfirmCenter { .shared }
 
     func body(content: Content) -> some View {
         presented(content)

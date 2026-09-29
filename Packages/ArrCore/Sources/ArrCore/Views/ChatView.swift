@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ChatView: View {
     var viewModel: ChatViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var draft: String = ""
     @State private var quizPosterURLs: [URL] = LibraryPosterSampler.cached ?? []
     @FocusState private var inputFocused: Bool
@@ -235,7 +235,7 @@ private struct MessageBubble: View {
     /// card another tool call in the same turn now owns.
     var richOverride: ChatRichContent?
     @State private var expanded = false
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     private var rich: ChatRichContent? { richOverride ?? message.richContent }
 

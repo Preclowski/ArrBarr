@@ -41,7 +41,7 @@ struct SeasonDetailView: View {
     /// An episode's file went from disk: the parent reloads the files it lends this view.
     var onEpisodeFileDeleted: (() -> Void)? = nil
 
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
 
     @State private var selectedEpisode: ArrEpisode?

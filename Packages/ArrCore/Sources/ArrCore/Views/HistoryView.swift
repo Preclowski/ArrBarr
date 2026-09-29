@@ -7,7 +7,7 @@ struct HistoryView: View {
     var scope: HistoryScope? = nil
     var title: String? = nil
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     let onClose: () -> Void
     /// The iOS History tab supplies its own nav bar and filter instead.
     var showHeader: Bool = true
@@ -163,7 +163,7 @@ struct HistoryRowView: View {
     let item: HistoryItem
     var showSourceBadge: Bool = false
     var onOpenDetail: ((QueueItem) -> Void)? = nil
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         HStack(alignment: .top, spacing: 8) {
@@ -284,7 +284,7 @@ struct HistoryRowView: View {
 private struct HistoryItemTooltip: View {
     let item: HistoryItem
     let apiKey: String?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         MediaTooltipChrome(

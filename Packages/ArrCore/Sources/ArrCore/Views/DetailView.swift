@@ -10,7 +10,7 @@ struct DetailView: View {
     var viewModel: QueueViewModel
     /// The record went from the library; the host drops whatever still lists it.
     let onDeleted: (() -> Void)?
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     init(
         item: QueueItem,
@@ -124,7 +124,7 @@ struct DetailView: View {
     /// Nil = no badge (no trailer, or no TMDB key for the series path).
     @State var trailer: TrailerReel?
     /// Shared session, so the clip survives the popover closing mid-play.
-    @ObservedObject var trailerSession = TrailerSession.shared
+    var trailerSession: TrailerSession { .shared }
     @State var seasonDrill: SeasonDrill?
     @State var manualSearchTarget: ManualSearchTarget?
     @State var actionState = DetailActionState()

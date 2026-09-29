@@ -2,7 +2,7 @@ import SwiftUI
 
 struct UpcomingTabContent: View {
     var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
 
     var body: some View {
         ScrollView {

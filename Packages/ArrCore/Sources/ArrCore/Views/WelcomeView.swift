@@ -19,7 +19,7 @@ public struct WelcomeView: View {
         self.onFinish = onFinish
     }
 
-    @EnvironmentObject var configStore: ConfigStore
+    @Environment(ConfigStore.self) var configStore
     @State private var pageIndex: Int = 0
 
     private var pages: [WelcomeContent.WelcomePage] { WelcomeContent.firstRunPages }

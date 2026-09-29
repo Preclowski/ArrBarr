@@ -17,8 +17,8 @@ struct MediaEditPanel: View {
     /// Fired once `load()` settles; the macOS overlay stays invisible until then.
     var onReady: (() -> Void)? = nil
 
-    @EnvironmentObject private var configStore: ConfigStore
-    @ObservedObject private var storeManager = StoreManager.shared
+    @Environment(ConfigStore.self) private var configStore
+    private var storeManager: StoreManager { .shared }
 
     @State private var qualityProfiles: [ArrQualityProfile] = []
     @State private var metadataProfiles: [ArrMetadataProfile] = []

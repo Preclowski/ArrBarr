@@ -1,23 +1,24 @@
 import Foundation
-import Combine
+import Observation
 
 #if canImport(WidgetKit)
 import WidgetKit
 #endif
 
-public final class ConfigStore: ObservableObject {
+@Observable
+public final class ConfigStore {
     @MainActor public static let shared = ConfigStore()
 
-    @Published public var radarr: ServiceConfig = .empty
-    @Published public var sonarr: ServiceConfig = .empty
-    @Published public var lidarr: ServiceConfig = .empty
-    @Published public var whisparr: ServiceConfig = .empty
-    @Published public var sabnzbd: ServiceConfig = .empty
-    @Published public var qbittorrent: ServiceConfig = .empty
-    @Published public var nzbget: ServiceConfig = .empty
-    @Published public var transmission: ServiceConfig = .empty
-    @Published public var rtorrent: ServiceConfig = .empty
-    @Published public var deluge: ServiceConfig = .empty
+    public var radarr: ServiceConfig = .empty { didSet { persist(.radarr, radarr, oldValue) } }
+    public var sonarr: ServiceConfig = .empty { didSet { persist(.sonarr, sonarr, oldValue) } }
+    public var lidarr: ServiceConfig = .empty { didSet { persist(.lidarr, lidarr, oldValue) } }
+    public var whisparr: ServiceConfig = .empty { didSet { persist(.whisparr, whisparr, oldValue) } }
+    public var sabnzbd: ServiceConfig = .empty { didSet { persist(.sabnzbd, sabnzbd, oldValue) } }
+    public var qbittorrent: ServiceConfig = .empty { didSet { persist(.qbittorrent, qbittorrent, oldValue) } }
+    public var nzbget: ServiceConfig = .empty { didSet { persist(.nzbget, nzbget, oldValue) } }
+    public var transmission: ServiceConfig = .empty { didSet { persist(.transmission, transmission, oldValue) } }
+    public var rtorrent: ServiceConfig = .empty { didSet { persist(.rtorrent, rtorrent, oldValue) } }
+    public var deluge: ServiceConfig = .empty { didSet { persist(.deluge, deluge, oldValue) } }
     /// Hard-locked and slow on purpose: progress bars interpolate between readings
     /// and real changes arrive by SignalR push, so the fetch only keeps facts current.
     public let foregroundInterval: TimeInterval = 30
@@ -28,62 +29,116 @@ public final class ConfigStore: ObservableObject {
     /// broadcasts the queue every minute by default, so a healthy hub is never quiet this long.
     public let realtimeSilenceTimeout: TimeInterval = 300
     /// Off by default: unlike every other notification, the user never asked for this one.
-    @Published public var notifyHealth: Bool = false
-    @Published public var notifyRadarr: Bool = true
-    @Published public var notifySonarr: Bool = true
-    @Published public var notifyLidarr: Bool = true
+    public var notifyHealth: Bool = false { didSet { persist(notifyHealth, oldValue, Keys.notifyHealth) } }
+    public var notifyRadarr: Bool = true { didSet { persist(notifyRadarr, oldValue, Keys.notifyRadarr) } }
+    public var notifySonarr: Bool = true { didSet { persist(notifySonarr, oldValue, Keys.notifySonarr) } }
+    public var notifyLidarr: Bool = true { didSet { persist(notifyLidarr, oldValue, Keys.notifyLidarr) } }
     /// `""` = system default, `ConfigStore.silentSoundName` = no sound, otherwise
     /// the bare name of a sound in `/System/Library/Sounds`.
-    @Published public var notificationSoundName: String = ""
-    @Published public var blurWhisparrPosters: Bool = true
-    @Published public var showWatchedIndicator: Bool = true
+    public var notificationSoundName: String = "" { didSet { persist(notificationSoundName, oldValue, Keys.notificationSoundName) } }
+    public var blurWhisparrPosters: Bool = true { didSet { persist(blurWhisparrPosters, oldValue, Keys.blurWhisparrPosters) } }
+    public var showWatchedIndicator: Bool = true { didSet { persist(showWatchedIndicator, oldValue, Keys.showWatchedIndicator) } }
     /// App Store builds gate enabling Whisparr behind an 18+ confirmation.
-    @Published public var whisparrAgeConfirmed: Bool = false
+    public var whisparrAgeConfirmed: Bool = false { didSet { persist(whisparrAgeConfirmed, oldValue, Keys.whisparrAgeConfirmed) } }
     /// Multiplier applied to every `.scaledFont(size:)` site; `1.0` is the native sizing.
-    @Published public var fontScale: Double = 1.0
-    @Published public var aiKnowsAboutWhisparr: Bool = false
+    public var fontScale: Double = 1.0 { didSet { persist(fontScale, oldValue, Keys.fontScale) } }
+    public var aiKnowsAboutWhisparr: Bool = false { didSet { persist(aiKnowsAboutWhisparr, oldValue, Keys.aiKnowsAboutWhisparr) } }
     /// macOS only: run as a regular Dock app with a real window and no menu-bar icon.
-    @Published public var detachedWindow: Bool = false
+    public var detachedWindow: Bool = false { didSet { persist(detachedWindow, oldValue, Keys.detachedWindow) } }
     /// macOS only: a clicked Spotlight result opens the detail in-app instead of the arr's web UI.
-    @Published public var spotlightOpensInApp: Bool = true
-    @Published public var iCloudSyncEnabled: Bool = true
-    @Published public var appLanguage: String = "system"
+    public var spotlightOpensInApp: Bool = true { didSet { persist(spotlightOpensInApp, oldValue, Keys.spotlightOpensInApp) } }
+    public var iCloudSyncEnabled: Bool = true {
+        didSet {
+            guard !isLoading, iCloudSyncEnabled != oldValue else { return }
+            defaults.set(iCloudSyncEnabled, forKey: Self.iCloudSyncEnabledKey)
+            guard AppCapabilities.isAppStore else { return }
+            KVSyncCoordinator.shared?.setEnabled(iCloudSyncEnabled)
+            secrets.reapplySyncAttribute(for: SecretKey.syncable)
+        }
+    }
+    public var appLanguage: String = "system" {
+        didSet {
+            guard !isLoading, appLanguage != oldValue else { return }
+            defaults.set(appLanguage, forKey: Self.appLanguageKey)
+            Self.applyAppLanguage(appLanguage)
+        }
+    }
     /// UI appearance preference: "system" / "light" / "dark".
-    @Published public var appearance: String = "system"
-    @Published public var arrOrder: [String] = ConfigStore.defaultArrOrder
-    @Published public var showTonight: Bool = true
-    @Published public var showNeedsYou: Bool = true
+    public var appearance: String = "system" { didSet { persist(appearance, oldValue, Keys.appearance) } }
+    public var arrOrder: [String] = ConfigStore.defaultArrOrder { didSet { persist(arrOrder, oldValue, Keys.arrOrder) } }
+    public var showTonight: Bool = true { didSet { persist(showTonight, oldValue, Keys.showTonight) } }
+    public var showNeedsYou: Bool = true { didSet { persist(showNeedsYou, oldValue, Keys.showNeedsYou) } }
     /// Warning-level health checks join the always-shown errors in "Needs you".
     /// Legacy name from an indexer-only toggle; the persisted key is kept.
-    @Published public var showWarnings: Bool = true
+    public var showWarnings: Bool = true { didSet { persist(showWarnings, oldValue, Keys.showIndexerIssues) } }
     /// 0 = all (no Show more/less at all).
-    @Published public var tonightVisibleCount: Int = 3
+    public var tonightVisibleCount: Int = 3 { didSet { persist(tonightVisibleCount, oldValue, Keys.tonightVisibleCount) } }
     /// `nil` means the welcome screen was never seen; first launch shows the firstRun variant.
-    @Published public var welcomeSeenVersion: String? = nil
-    @Published public var aiEnabled: Bool = false
-    @Published public var chatProvider: ChatProvider = .foundationModels
-    @Published public var openai: OpenAIConfig = .empty
+    public var welcomeSeenVersion: String? = nil {
+        didSet {
+            guard !isLoading, welcomeSeenVersion != oldValue else { return }
+            defaults.set(welcomeSeenVersion, forKey: Keys.welcomeSeenVersion)
+        }
+    }
+    public var aiEnabled: Bool = false { didSet { persist(aiEnabled, oldValue, Keys.aiEnabled) } }
+    public var chatProvider: ChatProvider = .foundationModels { didSet { persist(chatProvider.rawValue, oldValue.rawValue, Keys.chatProvider) } }
+    public var openai: OpenAIConfig = .empty {
+        didSet {
+            guard !isLoading, openai != oldValue else { return }
+            setOrDelete(openai.apiKey, for: .openAIKey)
+            var stripped = openai
+            stripped.apiKey = ""
+            store(stripped, forKey: Self.openaiConfigKey)
+        }
+    }
     /// Empty disables the TMDB-backed chat tools.
-    @Published public var tmdbApiKey: String = ""
+    public var tmdbApiKey: String = "" {
+        didSet {
+            guard !isLoading, tmdbApiKey != oldValue else { return }
+            setOrDelete(tmdbApiKey, for: .tmdbKey)
+            defaults.removeObject(forKey: Self.tmdbApiKeyKey)
+        }
+    }
 
     /// Used only as a name service: the arrs report indexers under the sync
     /// template's name, and only Prowlarr knows what the user called them.
-    @Published public var prowlarr: ServiceConfig = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "")
+    public var prowlarr: ServiceConfig = ServiceConfig(enabled: false, baseURL: "", apiKey: "", username: "", password: "") {
+        didSet {
+            guard !isLoading, prowlarr != oldValue else { return }
+            setOrDelete(prowlarr.apiKey, for: .prowlarrKey)
+            var stripped = prowlarr
+            stripped.apiKey = ""
+            store(stripped, forKey: Self.prowlarrKey)
+        }
+    }
 
     /// The one media server (Plex / Jellyfin / Emby) for artwork and watch state.
-    @Published public var mediaServer: MediaServerConfig = .empty
+    public var mediaServer: MediaServerConfig = .empty {
+        didSet {
+            guard !isLoading, mediaServer != oldValue else { return }
+            setOrDelete(mediaServer.token, for: .mediaServerToken)
+            var stripped = mediaServer
+            stripped.token = ""
+            store(stripped, forKey: Self.mediaServerKey)
+        }
+    }
 
     // MARK: - MCP server
     // On macOS the AppDelegate restarts `MCPServerController` whenever these change.
-    @Published public var mcpEnabled: Bool = false
+    public var mcpEnabled: Bool = false { didSet { persist(mcpEnabled, oldValue, Keys.mcpEnabled) } }
     /// Defaults to localhost only; `0.0.0.0` is an explicit opt-in.
-    @Published public var mcpHostPort: String = "127.0.0.1:8080"
+    public var mcpHostPort: String = "127.0.0.1:8080" { didSet { persist(mcpHostPort, oldValue, Keys.mcpHostPort) } }
     /// The server also refuses non-loopback binds without auth.
-    @Published public var mcpRequireAuth: Bool = true
+    public var mcpRequireAuth: Bool = true { didSet { persist(mcpRequireAuth, oldValue, Keys.mcpRequireAuth) } }
     /// Mirrors the Keychain; the token never lives in UserDefaults.
-    @Published public var mcpAuthToken: String = MCPTokenStore.read() ?? ""
+    public var mcpAuthToken: String = MCPTokenStore.read() ?? "" {
+        didSet {
+            guard !isLoading, mcpAuthToken != oldValue else { return }
+            if mcpAuthToken.isEmpty { MCPTokenStore.delete() } else { MCPTokenStore.set(mcpAuthToken) }
+        }
+    }
     /// Tool names the user switched off; empty = every catalog tool is exposed.
-    @Published public var mcpDisabledTools: Set<String> = []
+    public var mcpDisabledTools: Set<String> = [] { didSet { persist(Array(mcpDisabledTools).sorted(), Array(oldValue).sorted(), Keys.mcpDisabledTools) } }
 
     public static let needsYouOrderKey = "needsyou"
     public static let tonightOrderKey = "tonight"
@@ -109,12 +164,7 @@ public final class ConfigStore: ObservableObject {
     /// Apply the in-app language to the process so model-layer `String(localized:)`
     /// follows it too; Foundation only reads `.standard`, never the group suite. Call before the first lookup.
     nonisolated public static func applyAppLanguageToProcess() {
-        let lang = resolveDefaults().string(forKey: appLanguageKey) ?? "system"
-        if lang == "system" {
-            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
-        } else {
-            UserDefaults.standard.set([lang], forKey: "AppleLanguages")
-        }
+        applyAppLanguage(resolveDefaults().string(forKey: appLanguageKey) ?? "system")
     }
 
     /// Foundation Models is keyless; an enabled-but-keyless OpenAI config counts as AI off.
@@ -137,13 +187,15 @@ public final class ConfigStore: ObservableObject {
         #endif
     }
 
-    var defaults: UserDefaults
+    @ObservationIgnored var defaults: UserDefaults
     var defaultsForGateway: UserDefaults { defaults }
     /// The MediaKit assembly for this profile; created on first use, rebuilt when demo mode toggles.
-    @MainActor public internal(set) lazy var gateway = ServiceGateway(configStore: self)
+    @ObservationIgnored @MainActor public internal(set) lazy var gateway = ServiceGateway(configStore: self)
     /// Follows the backing store (`useStore`) so demo mode never writes the real profile's secrets.
-    var secrets: SecretStore
-    var cancellables: Set<AnyCancellable> = []
+    @ObservationIgnored var secrets: SecretStore
+    /// Stops a load writing back what it just read (and echoing an iCloud change back to iCloud).
+    /// `true` because the first load runs in `init`.
+    @ObservationIgnored var isLoading = true
 
     /// Demo suite while demo is active, otherwise the App Group suite (`.standard` in tests).
     /// Only the host app migrates: an extension's `.standard` is a different, empty container.
@@ -192,7 +244,6 @@ public final class ConfigStore: ObservableObject {
             Self.recoverSecretsFromKeychainIfNeeded(defaults: defaults, secrets: store)
         }
         applyValues(from: defaults)
-        setupSinks()
     }
 
     public func useDemoStore(_ on: Bool) {
@@ -204,21 +255,17 @@ public final class ConfigStore: ObservableObject {
         #endif
     }
 
-    /// Test seam. Tears down sinks before reloading so the reload fires no writes or side effects.
+    /// Test seam.
     func useStore(_ target: UserDefaults) {
         guard target !== defaults else { return }
-        cancellables.removeAll()
         defaults = target
         secrets = Self.makeDefaultSecretStore(defaults: target)
         applyValues(from: target)
-        setupSinks()
         QueueUIState.shared.use(target)
     }
 
     public func reloadFromDefaults() {
-        cancellables.removeAll()
         applyValues(from: defaults)
-        setupSinks()
     }
 
     /// Demo instances get a demo URL and key so every gate reads them like a real profile.

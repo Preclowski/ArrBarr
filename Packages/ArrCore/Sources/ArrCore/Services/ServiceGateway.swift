@@ -1,4 +1,3 @@
-import Combine
 import Foundation
 import MediaKit
 import os
@@ -30,7 +29,7 @@ public final class ServiceGateway {
     public nonisolated var kit: MediaStack { kitLock.withLock { $0 } }
     public let telemetry = TelemetryRecorder()
     let configStore: ConfigStore
-    private var observers: Set<AnyCancellable> = []
+    private var observer: Task<Void, Never>?
     private var started = false
     private var startTask: Task<Void, Never>?
     private var realtime: [InstanceID: SignalRSource] = [:]
@@ -535,15 +534,20 @@ public final class ServiceGateway {
         return out
     }
 
+    /// Everything `descriptors()` reads from the profile.
+    nonisolated private struct Registered: Equatable, Sendable {
+        let services: [ServiceConfig]
+        let mediaServer: MediaServerConfig
+        let tmdbKey: String
+        let prowlarr: ServiceConfig
+    }
+
     private func observe() {
-        let services = Publishers.MergeMany(ServiceKind.allCases.map { configStore.publisher(for: $0).map { _ in () } })
-        services
-            .merge(with: configStore.$mediaServer.map { _ in () }, configStore.$tmdbApiKey.map { _ in () },
-                   configStore.$prowlarr.map { _ in () })
-            .dropFirst()
-            .debounce(for: .seconds(1.5), scheduler: DispatchQueue.main)
-            .sink { [weak self] _ in Task { await self?.reconcile() } }
-            .store(in: &observers)
+        let store = configStore
+        observer = observeChanges(of: {
+            Registered(services: ServiceKind.allCases.map(store.config(for:)), mediaServer: store.mediaServer,
+                       tmdbKey: store.tmdbApiKey, prowlarr: store.prowlarr)
+        }, debounce: .seconds(1.5)) { [weak self] _ in Task { await self?.reconcile() } }
     }
 }
 

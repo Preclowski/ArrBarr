@@ -64,7 +64,7 @@ struct EpisodeDetailOverlay: View {
     /// Owned here: this overlay is its own stack entry, so the host's person destination would sit below it.
     @State private var personRef: PersonRef?
     @State private var episodeRating: EpisodeRatingProvider.Rating?
-    @EnvironmentObject private var configStore: ConfigStore
+    @Environment(ConfigStore.self) private var configStore
 
     private var hasAired: Bool {
         guard let air = episode.airDateUtc.flatMap(parseArrDate) else { return true }
