@@ -23,8 +23,6 @@ nonisolated struct WaitStory: Identifiable, Hashable, Sendable {
     }
     let sentence: String
     var people: [Person] = []
-    /// Covers of the titles the sentence names; they take the fan's side cards.
-    var posters: [URL] = []
     var id: String { sentence }
 }
 
@@ -103,8 +101,7 @@ enum WaitStoryProvider {
             }
             if let picks = await Logger.extras.attempt("wait recommendations", { try await client.recommendedMovies(movieId: id, language: language) }), picks.count >= 2 {
                 let a = picks[0], b = picks[1]
-                stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)"),
-                                         posters: [a.posterPath, b.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
+                stories.append(WaitStory(sentence: L("wait.story.alsoWatch \(title) \(a.title) \(b.title)")))
             }
         } else if let s = ctx.series, let id = await client.seriesId(tmdbId: s.tmdbId, tvdbId: s.tvdbId) {
             if let f = await Logger.extras.attempt("wait series facts", { try await client.tvDetails(tvId: id, language: language) }), let seasons = f.numberOfSeasons, let episodes = f.numberOfEpisodes,
@@ -147,16 +144,14 @@ enum WaitStoryProvider {
                 stories.append(WaitStory(sentence: sentence, people: [portrait]))
             } else if let hit {
                 let sentence = L("wait.story.knownForSentence \(person.name) \(hit.title)")
-                stories.append(WaitStory(sentence: sentence, people: [portrait],
-                                         posters: [hit.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
+                stories.append(WaitStory(sentence: sentence, people: [portrait]))
             }
 
             if !owned.isEmpty,
                let other = others.filter({ owned[$0.id] != nil }).max(by: { ($0.voteCount ?? 0) < ($1.voteCount ?? 0) }),
                let otherTitle = owned[other.id] {
                 stories.append(WaitStory(sentence: L("wait.story.library \(person.name) \(otherTitle)"),
-                                         people: [portrait],
-                                         posters: [other.posterPath].compactMap { TMDBClient.imageURL(path: $0) }))
+                                         people: [portrait]))
             }
         }
         return stories

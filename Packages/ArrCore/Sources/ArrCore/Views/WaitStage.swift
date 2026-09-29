@@ -5,20 +5,19 @@ nonisolated struct WaitPoster: Hashable, Sendable {
     var apiKey: String? = nil
 }
 
-/// The shared long-wait screen (quiz deck, manual release search): a fan of three covers, one
-/// "Did you know" line, the host's status at the foot. Draws no backdrop; hosts place `WaitBackdrop`.
+/// The shared long-wait screen (quiz deck, manual release search): the cover (a fan when there are
+/// several), one "Did you know" line, the host's status at the foot. Draws no backdrop; hosts place `WaitBackdrop`.
 struct WaitStage<Footer: View>: View {
     let center: WaitPoster?
-    /// Up to two; a story that names titles replaces them, and they stay until the next one does.
+    /// Up to two other covers; none leaves the centre one on its own.
     var sides: [WaitPoster] = []
-    /// Stand-ins for covers still on their way: dimmed and desaturated.
+    /// Stand-ins for covers still on their way: dimmed and desaturated, never see-through.
     var pending = false
     let stories: [WaitStory]
     var interval: TimeInterval = 7
     @ViewBuilder var footer: () -> Footer
 
     @State private var index = 0
-    @State private var storySides: [WaitPoster] = []
     /// A person card is open: the story holds still under it.
     @State private var holding = false
     @State private var breathe = false
@@ -50,12 +49,6 @@ struct WaitStage<Footer: View>: View {
             guard !old.isEmpty else { return }
             index = new.firstIndex(of: old[index % old.count]) ?? 0
         }
-        .onChange(of: story?.id, initial: true) { _, _ in
-            guard let posters = story?.posters, !posters.isEmpty else { return }
-            withAnimation(.smooth(duration: 0.45)) {
-                storySides = posters.prefix(2).map { WaitPoster(url: $0) }
-            }
-        }
         .task(id: "\(index)-\(holding)-\(stories.count)") {
             guard !holding, stories.count > 1 else { return }
             try? await Task.sleep(for: .seconds(interval))
@@ -71,11 +64,10 @@ struct WaitStage<Footer: View>: View {
     // MARK: - Fan
 
     private var fan: some View {
-        let shownSides = storySides.isEmpty ? sides : storySides
         let spread: CGFloat = breathe ? 1 : 0.8
         return ZStack {
-            ForEach(Array([-1, 1].enumerated()), id: \.offset) { slot, direction in
-                card(shownSides.indices.contains(slot) ? shownSides[slot] : center)
+            ForEach(Array(zip([-1, 1], sides.prefix(2))), id: \.0) { direction, poster in
+                card(poster)
                     .brightness(-0.28)
                     .scaleEffect(0.9)
                     .rotationEffect(.degrees(Double(direction) * 9 * spread))
@@ -84,7 +76,7 @@ struct WaitStage<Footer: View>: View {
             card(center)
         }
         .saturation(pending ? 0.35 : 1)
-        .opacity(pending ? 0.7 : 1)
+        .brightness(pending ? -0.15 : 0)
         .frame(height: Self.cardSize.height + 16)
         .animation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true), value: breathe)
         .animation(.smooth(duration: 0.4), value: pending)
@@ -95,6 +87,8 @@ struct WaitStage<Footer: View>: View {
         RemotePoster(url: poster?.url, apiKey: poster?.apiKey, tier: .card,
                      size: Self.cardSize, cornerRadius: Tokens.Radius.card, fallbackSymbol: "film")
             .frame(width: Self.cardSize.width, height: Self.cardSize.height)
+            // RemotePoster's placeholder is translucent; a card in a fan must hide the one behind it.
+            .background(Color(white: 0.16), in: RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous))
             .id(poster)
             .transition(.opacity.combined(with: .scale(scale: 0.96)))
             .shadow(color: .black.opacity(0.45), radius: 10, y: 5)
