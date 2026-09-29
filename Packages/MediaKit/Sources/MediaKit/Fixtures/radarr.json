@@ -1535,7 +1535,7 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "thegeneral",
-    "digitalRelease": "2011-03-01T00:00:00Z",
+    "digitalRelease": "2026-07-20T00:00:00Z",
     "folderName": "/data/movies/The General (1926)",
     "genres": [
      "Action",
@@ -1557,7 +1557,7 @@
      }
     ],
     "imdbId": null,
-    "inCinemas": "2008-10-24T00:00:00Z",
+    "inCinemas": "2026-06-03T00:00:00Z",
     "isAvailable": true,
     "keywords": [
      "1920s",
@@ -1593,7 +1593,7 @@
     "originalTitle": "The General",
     "overview": "A Southern railroad engineer chases down the Union spies who stole his beloved locomotive.",
     "path": "/data/movies/The General (1926)",
-    "physicalRelease": "2009-05-07T00:00:00Z",
+    "physicalRelease": "2026-09-22T00:00:00Z",
     "popularity": 7.2265,
     "qualityProfileId": 18,
     "ratings": {
@@ -1653,14 +1653,14 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "sherlockjr",
-    "digitalRelease": "2012-08-16T00:00:00Z",
+    "digitalRelease": "2026-09-15T00:00:00Z",
     "folderName": "/data/movies/Sherlock Jr. (1924)",
     "genres": [
      "Comedy",
      "Action",
      "Romance"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3036,
     "images": [
      {
@@ -1676,7 +1676,7 @@
     ],
     "imdbId": null,
     "inCinemas": "2012-04-11T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "aftercreditsstinger",
      "armada",
@@ -1712,7 +1712,7 @@
     "originalTitle": "Sherlock Jr.",
     "overview": "A film projectionist who dreams of being a detective walks right into the movie on screen.",
     "path": "/data/movies/Sherlock Jr. (1924)",
-    "physicalRelease": "2012-08-16T00:00:00Z",
+    "physicalRelease": "2026-10-13T00:00:00Z",
     "popularity": 13.5758,
     "qualityProfileId": 18,
     "ratings": {
@@ -1746,7 +1746,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 45,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 57071034421,
+    "sizeOnDisk": 0,
     "sortTitle": "sherlock jr.",
     "statistics": {
      "movieFileCount": 1,
@@ -1899,13 +1899,13 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "thecabinetofdrcaligari",
-    "digitalRelease": "2002-08-07T00:00:00Z",
+    "digitalRelease": "2026-10-08T00:00:00Z",
     "folderName": "/data/movies/The Cabinet of Dr. Caligari (1920)",
     "genres": [
      "Horror",
      "Mystery"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3038,
     "images": [
      {
@@ -1921,7 +1921,7 @@
     ],
     "imdbId": null,
     "inCinemas": "1989-08-04T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "car mechanic",
      "jail guard",
@@ -1973,7 +1973,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 76,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 60966287154,
+    "sizeOnDisk": 0,
     "sortTitle": "the cabinet of dr. caligari",
     "statistics": {
      "movieFileCount": 1,
@@ -1982,7 +1982,7 @@
      ],
      "sizeOnDisk": 60966287154
     },
-    "status": "released",
+    "status": "announced",
     "studio": "Decla-Bioscop",
     "tags": [
      6
@@ -1999,7 +1999,7 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "plan9fromouterspace",
-    "digitalRelease": "2002-01-26T00:00:00Z",
+    "digitalRelease": "2002-04-08T00:00:00Z",
     "folderName": "/data/movies/Plan 9 from Outer Space (1957)",
     "genres": [
      "Science Fiction",
@@ -2020,7 +2020,7 @@
      }
     ],
     "imdbId": null,
-    "inCinemas": "1987-06-26T00:00:00Z",
+    "inCinemas": "1996-06-10T00:00:00Z",
     "isAvailable": true,
     "keywords": [
      "anti war",
@@ -2071,7 +2071,7 @@
     "originalTitle": "Plan 9 from Outer Space",
     "overview": "Aliens raise the dead to stop humanity from building a doomsday weapon.",
     "path": "/data/movies/Plan 9 from Outer Space (1957)",
-    "physicalRelease": "2001-09-19T00:00:00Z",
+    "physicalRelease": "2026-10-06T00:00:00Z",
     "popularity": 15.4515,
     "qualityProfileId": 18,
     "ratings": {
@@ -2248,7 +2248,7 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "charade",
-    "digitalRelease": "2012-08-16T00:00:00Z",
+    "digitalRelease": "2026-09-20T00:00:00Z",
     "folderName": "/data/movies/Charade (1963)",
     "genres": [
      "Mystery",
@@ -2270,7 +2270,7 @@
      }
     ],
     "imdbId": null,
-    "inCinemas": "2012-04-11T00:00:00Z",
+    "inCinemas": "1999-12-22T00:00:00Z",
     "isAvailable": true,
     "keywords": [
      "aftercreditsstinger",
@@ -2307,7 +2307,7 @@
     "originalTitle": "Charade",
     "overview": "A widow in Paris is hunted by men after the fortune her late husband stole.",
     "path": "/data/movies/Charade (1963)",
-    "physicalRelease": "2012-08-16T00:00:00Z",
+    "physicalRelease": "2014-12-15T00:00:00Z",
     "popularity": 13.5758,
     "qualityProfileId": 18,
     "ratings": {
@@ -2381,13 +2381,13 @@
      "tmdbId": 246202,
      "year": 2010
     },
-    "digitalRelease": "1997-06-01T00:00:00Z",
+    "digitalRelease": "2026-09-23T00:00:00Z",
     "folderName": "/data/movies/Carnival of Souls (1962)",
     "genres": [
      "Horror",
      "Mystery"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3042,
     "images": [
      {
@@ -2403,7 +2403,7 @@
     ],
     "imdbId": null,
     "inCinemas": "1995-11-18T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "adult animation",
      "android",
@@ -2435,7 +2435,7 @@
     "originalTitle": "Carnival of Souls",
     "overview": "After surviving a car crash, a church organist is drawn to an abandoned lakeside pavilion.",
     "path": "/data/movies/Carnival of Souls (1962)",
-    "physicalRelease": "1995-09-23T00:00:00Z",
+    "physicalRelease": "2026-10-21T00:00:00Z",
     "popularity": 12.1057,
     "qualityProfileId": 18,
     "ratings": {
@@ -2470,7 +2470,7 @@
     "runtime": 78,
     "secondaryYear": 1996,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 58581521220,
+    "sizeOnDisk": 0,
     "sortTitle": "carnival of souls",
     "statistics": {
      "movieFileCount": 1,
@@ -2494,7 +2494,7 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "houseonhauntedhill",
-    "digitalRelease": "2002-08-07T00:00:00Z",
+    "digitalRelease": "2026-07-23T00:00:00Z",
     "folderName": "/data/movies/House on Haunted Hill (1959)",
     "genres": [
      "Horror",
@@ -2515,7 +2515,7 @@
      }
     ],
     "imdbId": null,
-    "inCinemas": "1989-08-04T00:00:00Z",
+    "inCinemas": "2026-05-21T00:00:00Z",
     "isAvailable": true,
     "keywords": [
      "car mechanic",
@@ -2534,7 +2534,7 @@
     "originalTitle": "House on Haunted Hill",
     "overview": "An eccentric millionaire pays five guests to survive a night in a haunted mansion.",
     "path": "/data/movies/House on Haunted Hill (1959)",
-    "physicalRelease": "1991-06-25T00:00:00Z",
+    "physicalRelease": "2026-09-28T00:00:00Z",
     "popularity": 7.087,
     "qualityProfileId": 18,
     "ratings": {
@@ -2594,13 +2594,13 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "detour",
-    "digitalRelease": "2002-01-26T00:00:00Z",
+    "digitalRelease": "2026-09-20T00:00:00Z",
     "folderName": "/data/movies/Detour (1945)",
     "genres": [
      "Crime",
      "Thriller"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3044,
     "images": [
      {
@@ -2616,7 +2616,7 @@
     ],
     "imdbId": null,
     "inCinemas": "1987-06-26T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "anti war",
      "army",
@@ -2666,7 +2666,7 @@
     "originalTitle": "Detour",
     "overview": "A hitchhiking pianist falls into a spiral of bad luck on the road to Los Angeles.",
     "path": "/data/movies/Detour (1945)",
-    "physicalRelease": "2001-09-19T00:00:00Z",
+    "physicalRelease": "2026-10-18T00:00:00Z",
     "popularity": 15.4515,
     "qualityProfileId": 18,
     "ratings": {
@@ -2700,7 +2700,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 67,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 57923953142,
+    "sizeOnDisk": 0,
     "sortTitle": "detour",
     "statistics": {
      "movieFileCount": 1,
@@ -2844,14 +2844,14 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "thekid",
-    "digitalRelease": "2012-08-16T00:00:00Z",
+    "digitalRelease": "2026-09-18T00:00:00Z",
     "folderName": "/data/movies/The Kid (1921)",
     "genres": [
      "Comedy",
      "Drama",
      "Family"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3046,
     "images": [
      {
@@ -2867,7 +2867,7 @@
     ],
     "imdbId": null,
     "inCinemas": "2012-04-11T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "aftercreditsstinger",
      "armada",
@@ -2903,7 +2903,7 @@
     "originalTitle": "The Kid",
     "overview": "The Tramp raises an abandoned baby until the authorities come to take him away.",
     "path": "/data/movies/The Kid (1921)",
-    "physicalRelease": "2012-08-16T00:00:00Z",
+    "physicalRelease": "2026-10-16T00:00:00Z",
     "popularity": 13.5758,
     "qualityProfileId": 18,
     "ratings": {
@@ -2937,7 +2937,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 68,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 57071034421,
+    "sizeOnDisk": 0,
     "sortTitle": "the kid",
     "statistics": {
      "movieFileCount": 1,
@@ -4167,14 +4167,14 @@
      "tmdbId": 246202,
      "year": 2010
     },
-    "digitalRelease": "1997-06-01T00:00:00Z",
+    "digitalRelease": "2026-09-30T00:00:00Z",
     "folderName": "/data/movies/Meet John Doe (1941)",
     "genres": [
      "Comedy",
      "Drama",
      "Romance"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3057,
     "images": [
      {
@@ -4190,7 +4190,7 @@
     ],
     "imdbId": null,
     "inCinemas": "1995-11-18T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "adult animation",
      "android",
@@ -4222,7 +4222,7 @@
     "originalTitle": "Meet John Doe",
     "overview": "A columnist invents a protest letter and hires a drifter to play its author.",
     "path": "/data/movies/Meet John Doe (1941)",
-    "physicalRelease": "1995-09-23T00:00:00Z",
+    "physicalRelease": "2026-10-28T00:00:00Z",
     "popularity": 12.1057,
     "qualityProfileId": 18,
     "ratings": {
@@ -4257,7 +4257,7 @@
     "runtime": 122,
     "secondaryYear": 1996,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 58581521220,
+    "sizeOnDisk": 0,
     "sortTitle": "meet john doe",
     "statistics": {
      "movieFileCount": 1,
@@ -4976,13 +4976,13 @@
     "alternateTitles": [],
     "certification": "NR",
     "cleanTitle": "the39steps",
-    "digitalRelease": "2002-01-26T00:00:00Z",
+    "digitalRelease": "2026-09-26T00:00:00Z",
     "folderName": "/data/movies/The 39 Steps (1935)",
     "genres": [
      "Thriller",
      "Mystery"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3064,
     "images": [
      {
@@ -4998,7 +4998,7 @@
     ],
     "imdbId": null,
     "inCinemas": "1987-06-26T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "anti war",
      "army",
@@ -5048,7 +5048,7 @@
     "originalTitle": "The 39 Steps",
     "overview": "A Canadian in London is framed for murder and runs to expose a spy ring.",
     "path": "/data/movies/The 39 Steps (1935)",
-    "physicalRelease": "2001-09-19T00:00:00Z",
+    "physicalRelease": "2026-10-24T00:00:00Z",
     "popularity": 15.4515,
     "qualityProfileId": 18,
     "ratings": {
@@ -5082,7 +5082,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 86,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 57923953142,
+    "sizeOnDisk": 0,
     "sortTitle": "the 39 steps",
     "statistics": {
      "movieFileCount": 1,
@@ -5108,14 +5108,14 @@
     "alternateTitles": [],
     "certification": "G",
     "cleanTitle": "gulliverstravels",
-    "digitalRelease": "2011-03-01T00:00:00Z",
+    "digitalRelease": "2026-10-04T00:00:00Z",
     "folderName": "/data/movies/Gulliver's Travels (1939)",
     "genres": [
      "Animation",
      "Adventure",
      "Family"
     ],
-    "hasFile": true,
+    "hasFile": false,
     "id": 3065,
     "images": [
      {
@@ -5131,7 +5131,7 @@
     ],
     "imdbId": null,
     "inCinemas": "2008-10-24T00:00:00Z",
-    "isAvailable": true,
+    "isAvailable": false,
     "keywords": [
      "1920s",
      "apathetic",
@@ -5166,7 +5166,7 @@
     "originalTitle": "Gulliver's Travels",
     "overview": "A shipwrecked sailor wakes up a giant among the tiny, quarrelling people of Lilliput.",
     "path": "/data/movies/Gulliver's Travels (1939)",
-    "physicalRelease": "2009-05-07T00:00:00Z",
+    "physicalRelease": "2026-11-01T00:00:00Z",
     "popularity": 7.2265,
     "qualityProfileId": 18,
     "ratings": {
@@ -5200,7 +5200,7 @@
     "rootFolderPath": "/data/radarr",
     "runtime": 76,
     "secondaryYearSourceId": 0,
-    "sizeOnDisk": 28738826393,
+    "sizeOnDisk": 0,
     "sortTitle": "gulliver's travels",
     "statistics": {
      "movieFileCount": 1,
@@ -9299,129 +9299,125 @@
       }
      ],
      "movie": {
-      "added": "2026-08-10T23:05:40Z",
+      "added": "2021-08-24T17:32:52Z",
       "alternateTitles": [],
       "certification": "G",
       "cleanTitle": "santaclausconquersthemartians",
-      "collection": {
-       "certification": "NR",
-       "genres": [
-        "Horror",
-        "Science Fiction"
-       ],
-       "overview": "A surgeon keeps his fiancee's head alive while hunting for a new body.",
-       "runtime": 82,
-       "studio": "Rex Carlton Productions",
-       "title": "The Brain That Wouldn't Die",
-       "tmdbId": 24313,
-       "year": 1962
-      },
-      "digitalRelease": "2026-08-18T00:00:00Z",
-      "folderName": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
+      "digitalRelease": "2012-08-16T00:00:00Z",
+      "folderName": "/data/movies/Santa Claus Conquers the Martians (1964)",
       "genres": [
        "Science Fiction",
        "Comedy",
        "Family"
       ],
-      "id": 3001,
+      "hasFile": true,
+      "id": 3051,
       "images": [
        {
         "coverType": "poster",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        },
        {
         "coverType": "fanart",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        }
       ],
-      "imdbId": "tt9620800",
-      "inCinemas": "2026-06-17T00:00:00Z",
+      "imdbId": null,
+      "inCinemas": "2012-04-11T00:00:00Z",
       "isAvailable": true,
       "keywords": [
-       "3d animation",
-       "abandonment",
-       "blunt",
-       "buddy comedy",
-       "cowboy",
-       "cowgirl",
-       "duringcreditsstinger",
-       "farm",
-       "frog",
-       "hippo",
-       "horse",
-       "island",
-       "love",
-       "pig",
-       "pixar",
-       "replacement",
-       "rescue mission",
-       "rivalry",
-       "sequel",
-       "stranded",
-       "tablet",
-       "tire swing",
-       "toilet paper",
-       "toy",
-       "toy comes to life",
-       "walkie talkie",
-       "wedding"
+       "aftercreditsstinger",
+       "armada",
+       "based on board game",
+       "battleship",
+       "buoy",
+       "communications expert",
+       "crash landing",
+       "fictional war",
+       "fight",
+       "hong kong",
+       "jds myoko",
+       "jet fighter pilot",
+       "joint chiefs of staff",
+       "lost communication",
+       "mind reading",
+       "naval combat",
+       "naval warfare",
+       "navy lieutenant",
+       "permission to marry",
+       "scientist",
+       "taser",
+       "u.s. navy",
+       "uss missouri"
       ],
-      "lastSearchTime": "2026-08-17T21:22:46Z",
-      "minimumAvailability": "released",
+      "minimumAvailability": "inCinemas",
       "monitored": true,
-      "movieFileId": 13536,
+      "movieFileId": 12232,
       "originalLanguage": {
        "id": 1,
        "name": "English"
       },
       "originalTitle": "Santa Claus Conquers the Martians",
       "overview": "Martians kidnap Santa Claus to bring Christmas to their children.",
-      "path": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
-      "physicalRelease": "2026-09-22T00:00:00Z",
-      "popularity": 147.7164,
+      "path": "/data/movies/Santa Claus Conquers the Martians (1964)",
+      "physicalRelease": "2012-08-16T00:00:00Z",
+      "popularity": 13.5758,
       "qualityProfileId": 18,
       "ratings": {
        "imdb": {
         "type": "user",
         "value": 2.7,
-        "votes": 80066
+        "votes": 271349
        },
        "metacritic": {
         "type": "user",
-        "value": 73,
+        "value": 41,
         "votes": 0
        },
        "rottenTomatoes": {
         "type": "user",
-        "value": 93,
+        "value": 33,
         "votes": 0
        },
        "tmdb": {
         "type": "user",
-        "value": 8.347,
-        "votes": 2113
+        "value": 5.9,
+        "votes": 6130
        },
        "trakt": {
         "type": "user",
-        "value": 8.23875,
-        "votes": 4578
+        "value": 6.31906,
+        "votes": 8616
        }
       },
-      "releaseDate": "2026-08-18T00:00:00Z",
+      "releaseDate": "2012-04-11T00:00:00Z",
+      "rootFolderPath": "/data/radarr",
       "runtime": 81,
       "secondaryYearSourceId": 0,
+      "sizeOnDisk": 57071034421,
       "sortTitle": "santa claus conquers the martians",
+      "statistics": {
+       "movieFileCount": 1,
+       "releaseGroups": [
+        "DEMO"
+       ],
+       "sizeOnDisk": 57071034421
+      },
       "status": "released",
       "studio": "Jalor Productions",
-      "tags": [],
+      "tags": [
+       11
+      ],
       "title": "Santa Claus Conquers the Martians",
-      "titleSlug": "santa-claus-conquers-the-martians-518457",
-      "tmdbId": 518457,
+      "titleSlug": "santa-claus-conquers-the-martians",
+      "tmdbId": 125995,
       "website": "",
       "year": 1964,
       "youTubeTrailerId": ""
      },
-     "movieId": 3001,
+     "movieId": 3051,
      "quality": {
       "quality": {
        "id": 7,
@@ -9485,100 +9481,139 @@
       }
      ],
      "movie": {
-      "added": "2026-04-02T17:18:45Z",
+      "added": "2020-10-18T22:39:19Z",
       "alternateTitles": [],
       "certification": "NR",
       "cleanTitle": "doa",
-      "digitalRelease": "2026-09-15T00:00:00Z",
-      "folderName": "/data/radarr/D.O.A. (2026) {tmdb-410096}",
+      "digitalRelease": "2002-01-26T00:00:00Z",
+      "folderName": "/data/movies/D.O.A. (1950)",
       "genres": [
        "Crime",
        "Thriller",
        "Mystery"
       ],
-      "id": 2892,
+      "hasFile": true,
+      "id": 3054,
       "images": [
        {
         "coverType": "poster",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
        },
        {
         "coverType": "fanart",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
        }
       ],
-      "imdbId": "tt4684530",
-      "inCinemas": "2026-08-12T00:00:00Z",
+      "imdbId": null,
+      "inCinemas": "1987-06-26T00:00:00Z",
       "isAvailable": true,
       "keywords": [
-       "1980s",
-       "amused",
-       "dinosaur",
-       "family relationships",
-       "giant snake",
-       "joyous",
-       "neighborhood",
-       "nuclear family",
-       "playful",
-       "suburban",
-       "suburbia",
-       "suburbs",
-       "survival",
-       "survival adventure",
-       "survival horror",
-       "teleportation"
+       "anti war",
+       "army",
+       "based on novel or book",
+       "blanket party",
+       "boot camp",
+       "combat",
+       "critical",
+       "discipline",
+       "fighting",
+       "frustrated",
+       "genocide",
+       "harsh",
+       "helicopter",
+       "infantry",
+       "journalism",
+       "jungle",
+       "mass grave",
+       "military",
+       "obstacle course",
+       "platoon",
+       "propaganda",
+       "prostitute",
+       "racism",
+       "recruit",
+       "rescue",
+       "scathing",
+       "sergeant",
+       "sniper",
+       "soldiers",
+       "suicide",
+       "u.s. marine",
+       "vietnam",
+       "vietnam war",
+       "war",
+       "war correspondent",
+       "war photographer"
       ],
-      "lastSearchTime": "2026-08-05T22:33:11Z",
+      "lastSearchTime": "2024-10-24T13:45:02Z",
       "minimumAvailability": "released",
       "monitored": true,
-      "movieFileId": 13537,
+      "movieFileId": 8239,
       "originalLanguage": {
        "id": 1,
        "name": "English"
       },
       "originalTitle": "D.O.A.",
       "overview": "A poisoned accountant has a few days left to find out who murdered him.",
-      "path": "/data/radarr/D.O.A. (2026) {tmdb-410096}",
-      "physicalRelease": "2026-11-03T00:00:00Z",
-      "popularity": 136.6446,
+      "path": "/data/movies/D.O.A. (1950)",
+      "physicalRelease": "2001-09-19T00:00:00Z",
+      "popularity": 15.4515,
       "qualityProfileId": 18,
       "ratings": {
        "imdb": {
         "type": "user",
         "value": 7.2,
-        "votes": 38218
+        "votes": 857438
        },
        "metacritic": {
         "type": "user",
-        "value": 69,
+        "value": 78,
         "votes": 0
        },
        "rottenTomatoes": {
         "type": "user",
-        "value": 86,
+        "value": 90,
         "votes": 0
        },
        "tmdb": {
         "type": "user",
-        "value": 6.4,
-        "votes": 487
+        "value": 8.1,
+        "votes": 11688
+       },
+       "trakt": {
+        "type": "user",
+        "value": 8.23763,
+        "votes": 16000
        }
       },
-      "releaseDate": "2026-09-15T00:00:00Z",
+      "releaseDate": "2001-09-19T00:00:00Z",
+      "rootFolderPath": "/data/radarr",
       "runtime": 83,
       "secondaryYearSourceId": 0,
+      "sizeOnDisk": 57923953142,
       "sortTitle": "d.o.a.",
-      "status": "inCinemas",
+      "statistics": {
+       "movieFileCount": 1,
+       "releaseGroups": [
+        "DEMO"
+       ],
+       "sizeOnDisk": 57923953142
+      },
+      "status": "released",
       "studio": "Cardinal Pictures",
-      "tags": [],
+      "tags": [
+       6
+      ],
       "title": "D.O.A.",
-      "titleSlug": "d-o-a-410096",
-      "tmdbId": 410096,
+      "titleSlug": "d-o-a",
+      "tmdbId": 22950,
       "website": "",
       "year": 1950,
       "youTubeTrailerId": ""
      },
-     "movieId": 2892,
+     "movieId": 3054,
      "quality": {
       "quality": {
        "id": 3,
@@ -9644,129 +9679,125 @@
       }
      ],
      "movie": {
-      "added": "2026-08-10T23:05:40Z",
+      "added": "2021-08-24T17:32:52Z",
       "alternateTitles": [],
       "certification": "G",
       "cleanTitle": "santaclausconquersthemartians",
-      "collection": {
-       "certification": "NR",
-       "genres": [
-        "Horror",
-        "Science Fiction"
-       ],
-       "overview": "A surgeon keeps his fiancee's head alive while hunting for a new body.",
-       "runtime": 82,
-       "studio": "Rex Carlton Productions",
-       "title": "The Brain That Wouldn't Die",
-       "tmdbId": 24313,
-       "year": 1962
-      },
-      "digitalRelease": "2026-08-18T00:00:00Z",
-      "folderName": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
+      "digitalRelease": "2012-08-16T00:00:00Z",
+      "folderName": "/data/movies/Santa Claus Conquers the Martians (1964)",
       "genres": [
        "Science Fiction",
        "Comedy",
        "Family"
       ],
-      "id": 3001,
+      "hasFile": true,
+      "id": 3051,
       "images": [
        {
         "coverType": "poster",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        },
        {
         "coverType": "fanart",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        }
       ],
-      "imdbId": "tt9620800",
-      "inCinemas": "2026-06-17T00:00:00Z",
+      "imdbId": null,
+      "inCinemas": "2012-04-11T00:00:00Z",
       "isAvailable": true,
       "keywords": [
-       "3d animation",
-       "abandonment",
-       "blunt",
-       "buddy comedy",
-       "cowboy",
-       "cowgirl",
-       "duringcreditsstinger",
-       "farm",
-       "frog",
-       "hippo",
-       "horse",
-       "island",
-       "love",
-       "pig",
-       "pixar",
-       "replacement",
-       "rescue mission",
-       "rivalry",
-       "sequel",
-       "stranded",
-       "tablet",
-       "tire swing",
-       "toilet paper",
-       "toy",
-       "toy comes to life",
-       "walkie talkie",
-       "wedding"
+       "aftercreditsstinger",
+       "armada",
+       "based on board game",
+       "battleship",
+       "buoy",
+       "communications expert",
+       "crash landing",
+       "fictional war",
+       "fight",
+       "hong kong",
+       "jds myoko",
+       "jet fighter pilot",
+       "joint chiefs of staff",
+       "lost communication",
+       "mind reading",
+       "naval combat",
+       "naval warfare",
+       "navy lieutenant",
+       "permission to marry",
+       "scientist",
+       "taser",
+       "u.s. navy",
+       "uss missouri"
       ],
-      "lastSearchTime": "2026-08-17T21:22:46Z",
-      "minimumAvailability": "released",
+      "minimumAvailability": "inCinemas",
       "monitored": true,
-      "movieFileId": 13536,
+      "movieFileId": 12232,
       "originalLanguage": {
        "id": 1,
        "name": "English"
       },
       "originalTitle": "Santa Claus Conquers the Martians",
       "overview": "Martians kidnap Santa Claus to bring Christmas to their children.",
-      "path": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
-      "physicalRelease": "2026-09-22T00:00:00Z",
-      "popularity": 147.7164,
+      "path": "/data/movies/Santa Claus Conquers the Martians (1964)",
+      "physicalRelease": "2012-08-16T00:00:00Z",
+      "popularity": 13.5758,
       "qualityProfileId": 18,
       "ratings": {
        "imdb": {
         "type": "user",
         "value": 2.7,
-        "votes": 80066
+        "votes": 271349
        },
        "metacritic": {
         "type": "user",
-        "value": 73,
+        "value": 41,
         "votes": 0
        },
        "rottenTomatoes": {
         "type": "user",
-        "value": 93,
+        "value": 33,
         "votes": 0
        },
        "tmdb": {
         "type": "user",
-        "value": 8.347,
-        "votes": 2113
+        "value": 5.9,
+        "votes": 6130
        },
        "trakt": {
         "type": "user",
-        "value": 8.23875,
-        "votes": 4578
+        "value": 6.31906,
+        "votes": 8616
        }
       },
-      "releaseDate": "2026-08-18T00:00:00Z",
+      "releaseDate": "2012-04-11T00:00:00Z",
+      "rootFolderPath": "/data/radarr",
       "runtime": 81,
       "secondaryYearSourceId": 0,
+      "sizeOnDisk": 57071034421,
       "sortTitle": "santa claus conquers the martians",
+      "statistics": {
+       "movieFileCount": 1,
+       "releaseGroups": [
+        "DEMO"
+       ],
+       "sizeOnDisk": 57071034421
+      },
       "status": "released",
       "studio": "Jalor Productions",
-      "tags": [],
+      "tags": [
+       11
+      ],
       "title": "Santa Claus Conquers the Martians",
-      "titleSlug": "santa-claus-conquers-the-martians-518457",
-      "tmdbId": 518457,
+      "titleSlug": "santa-claus-conquers-the-martians",
+      "tmdbId": 125995,
       "website": "",
       "year": 1964,
       "youTubeTrailerId": ""
      },
-     "movieId": 3001,
+     "movieId": 3051,
      "quality": {
       "quality": {
        "id": 18,
@@ -9841,100 +9872,139 @@
       }
      ],
      "movie": {
-      "added": "2026-04-02T17:18:45Z",
+      "added": "2020-10-18T22:39:19Z",
       "alternateTitles": [],
       "certification": "NR",
       "cleanTitle": "doa",
-      "digitalRelease": "2026-09-15T00:00:00Z",
-      "folderName": "/data/radarr/D.O.A. (2026) {tmdb-410096}",
+      "digitalRelease": "2002-01-26T00:00:00Z",
+      "folderName": "/data/movies/D.O.A. (1950)",
       "genres": [
        "Crime",
        "Thriller",
        "Mystery"
       ],
-      "id": 2892,
+      "hasFile": true,
+      "id": 3054,
       "images": [
        {
         "coverType": "poster",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
        },
        {
         "coverType": "fanart",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/D.O.A._(1950_poster).jpg?width=500"
        }
       ],
-      "imdbId": "tt4684530",
-      "inCinemas": "2026-08-12T00:00:00Z",
+      "imdbId": null,
+      "inCinemas": "1987-06-26T00:00:00Z",
       "isAvailable": true,
       "keywords": [
-       "1980s",
-       "amused",
-       "dinosaur",
-       "family relationships",
-       "giant snake",
-       "joyous",
-       "neighborhood",
-       "nuclear family",
-       "playful",
-       "suburban",
-       "suburbia",
-       "suburbs",
-       "survival",
-       "survival adventure",
-       "survival horror",
-       "teleportation"
+       "anti war",
+       "army",
+       "based on novel or book",
+       "blanket party",
+       "boot camp",
+       "combat",
+       "critical",
+       "discipline",
+       "fighting",
+       "frustrated",
+       "genocide",
+       "harsh",
+       "helicopter",
+       "infantry",
+       "journalism",
+       "jungle",
+       "mass grave",
+       "military",
+       "obstacle course",
+       "platoon",
+       "propaganda",
+       "prostitute",
+       "racism",
+       "recruit",
+       "rescue",
+       "scathing",
+       "sergeant",
+       "sniper",
+       "soldiers",
+       "suicide",
+       "u.s. marine",
+       "vietnam",
+       "vietnam war",
+       "war",
+       "war correspondent",
+       "war photographer"
       ],
-      "lastSearchTime": "2026-08-05T22:33:11Z",
+      "lastSearchTime": "2024-10-24T13:45:02Z",
       "minimumAvailability": "released",
       "monitored": true,
-      "movieFileId": 13537,
+      "movieFileId": 8239,
       "originalLanguage": {
        "id": 1,
        "name": "English"
       },
       "originalTitle": "D.O.A.",
       "overview": "A poisoned accountant has a few days left to find out who murdered him.",
-      "path": "/data/radarr/D.O.A. (2026) {tmdb-410096}",
-      "physicalRelease": "2026-11-03T00:00:00Z",
-      "popularity": 136.6446,
+      "path": "/data/movies/D.O.A. (1950)",
+      "physicalRelease": "2001-09-19T00:00:00Z",
+      "popularity": 15.4515,
       "qualityProfileId": 18,
       "ratings": {
        "imdb": {
         "type": "user",
         "value": 7.2,
-        "votes": 38218
+        "votes": 857438
        },
        "metacritic": {
         "type": "user",
-        "value": 69,
+        "value": 78,
         "votes": 0
        },
        "rottenTomatoes": {
         "type": "user",
-        "value": 86,
+        "value": 90,
         "votes": 0
        },
        "tmdb": {
         "type": "user",
-        "value": 6.4,
-        "votes": 487
+        "value": 8.1,
+        "votes": 11688
+       },
+       "trakt": {
+        "type": "user",
+        "value": 8.23763,
+        "votes": 16000
        }
       },
-      "releaseDate": "2026-09-15T00:00:00Z",
+      "releaseDate": "2001-09-19T00:00:00Z",
+      "rootFolderPath": "/data/radarr",
       "runtime": 83,
       "secondaryYearSourceId": 0,
+      "sizeOnDisk": 57923953142,
       "sortTitle": "d.o.a.",
-      "status": "inCinemas",
+      "statistics": {
+       "movieFileCount": 1,
+       "releaseGroups": [
+        "DEMO"
+       ],
+       "sizeOnDisk": 57923953142
+      },
+      "status": "released",
       "studio": "Cardinal Pictures",
-      "tags": [],
+      "tags": [
+       6
+      ],
       "title": "D.O.A.",
-      "titleSlug": "d-o-a-410096",
-      "tmdbId": 410096,
+      "titleSlug": "d-o-a",
+      "tmdbId": 22950,
       "website": "",
       "year": 1950,
       "youTubeTrailerId": ""
      },
-     "movieId": 2892,
+     "movieId": 3054,
      "quality": {
       "quality": {
        "id": 3,
@@ -9990,129 +10060,125 @@
       }
      ],
      "movie": {
-      "added": "2026-08-10T23:05:40Z",
+      "added": "2021-08-24T17:32:52Z",
       "alternateTitles": [],
       "certification": "G",
       "cleanTitle": "santaclausconquersthemartians",
-      "collection": {
-       "certification": "NR",
-       "genres": [
-        "Horror",
-        "Science Fiction"
-       ],
-       "overview": "A surgeon keeps his fiancee's head alive while hunting for a new body.",
-       "runtime": 82,
-       "studio": "Rex Carlton Productions",
-       "title": "The Brain That Wouldn't Die",
-       "tmdbId": 24313,
-       "year": 1962
-      },
-      "digitalRelease": "2026-08-18T00:00:00Z",
-      "folderName": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
+      "digitalRelease": "2012-08-16T00:00:00Z",
+      "folderName": "/data/movies/Santa Claus Conquers the Martians (1964)",
       "genres": [
        "Science Fiction",
        "Comedy",
        "Family"
       ],
-      "id": 3001,
+      "hasFile": true,
+      "id": 3051,
       "images": [
        {
         "coverType": "poster",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        },
        {
         "coverType": "fanart",
-        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
+        "remoteUrl": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500",
+        "url": "https://en.wikipedia.org/wiki/Special:FilePath/Santa_Claus_Conquers_the_Martians_1.jpg?width=500"
        }
       ],
-      "imdbId": "tt9620800",
-      "inCinemas": "2026-06-17T00:00:00Z",
+      "imdbId": null,
+      "inCinemas": "2012-04-11T00:00:00Z",
       "isAvailable": true,
       "keywords": [
-       "3d animation",
-       "abandonment",
-       "blunt",
-       "buddy comedy",
-       "cowboy",
-       "cowgirl",
-       "duringcreditsstinger",
-       "farm",
-       "frog",
-       "hippo",
-       "horse",
-       "island",
-       "love",
-       "pig",
-       "pixar",
-       "replacement",
-       "rescue mission",
-       "rivalry",
-       "sequel",
-       "stranded",
-       "tablet",
-       "tire swing",
-       "toilet paper",
-       "toy",
-       "toy comes to life",
-       "walkie talkie",
-       "wedding"
+       "aftercreditsstinger",
+       "armada",
+       "based on board game",
+       "battleship",
+       "buoy",
+       "communications expert",
+       "crash landing",
+       "fictional war",
+       "fight",
+       "hong kong",
+       "jds myoko",
+       "jet fighter pilot",
+       "joint chiefs of staff",
+       "lost communication",
+       "mind reading",
+       "naval combat",
+       "naval warfare",
+       "navy lieutenant",
+       "permission to marry",
+       "scientist",
+       "taser",
+       "u.s. navy",
+       "uss missouri"
       ],
-      "lastSearchTime": "2026-08-17T21:22:46Z",
-      "minimumAvailability": "released",
+      "minimumAvailability": "inCinemas",
       "monitored": true,
-      "movieFileId": 13536,
+      "movieFileId": 12232,
       "originalLanguage": {
        "id": 1,
        "name": "English"
       },
       "originalTitle": "Santa Claus Conquers the Martians",
       "overview": "Martians kidnap Santa Claus to bring Christmas to their children.",
-      "path": "/data/radarr/Santa Claus Conquers the Martians (2026) {tmdb-518457}",
-      "physicalRelease": "2026-09-22T00:00:00Z",
-      "popularity": 147.7164,
+      "path": "/data/movies/Santa Claus Conquers the Martians (1964)",
+      "physicalRelease": "2012-08-16T00:00:00Z",
+      "popularity": 13.5758,
       "qualityProfileId": 18,
       "ratings": {
        "imdb": {
         "type": "user",
         "value": 2.7,
-        "votes": 80066
+        "votes": 271349
        },
        "metacritic": {
         "type": "user",
-        "value": 73,
+        "value": 41,
         "votes": 0
        },
        "rottenTomatoes": {
         "type": "user",
-        "value": 93,
+        "value": 33,
         "votes": 0
        },
        "tmdb": {
         "type": "user",
-        "value": 8.347,
-        "votes": 2113
+        "value": 5.9,
+        "votes": 6130
        },
        "trakt": {
         "type": "user",
-        "value": 8.23875,
-        "votes": 4578
+        "value": 6.31906,
+        "votes": 8616
        }
       },
-      "releaseDate": "2026-08-18T00:00:00Z",
+      "releaseDate": "2012-04-11T00:00:00Z",
+      "rootFolderPath": "/data/radarr",
       "runtime": 81,
       "secondaryYearSourceId": 0,
+      "sizeOnDisk": 57071034421,
       "sortTitle": "santa claus conquers the martians",
+      "statistics": {
+       "movieFileCount": 1,
+       "releaseGroups": [
+        "DEMO"
+       ],
+       "sizeOnDisk": 57071034421
+      },
       "status": "released",
       "studio": "Jalor Productions",
-      "tags": [],
+      "tags": [
+       11
+      ],
       "title": "Santa Claus Conquers the Martians",
-      "titleSlug": "santa-claus-conquers-the-martians-518457",
-      "tmdbId": 518457,
+      "titleSlug": "santa-claus-conquers-the-martians",
+      "tmdbId": 125995,
       "website": "",
       "year": 1964,
       "youTubeTrailerId": ""
      },
-     "movieId": 3001,
+     "movieId": 3051,
      "quality": {
       "quality": {
        "id": 7,

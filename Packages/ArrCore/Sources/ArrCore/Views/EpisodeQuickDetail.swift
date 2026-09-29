@@ -127,7 +127,12 @@ struct EpisodeQuickDetail: View {
             DetailView(
                 item: req.item,
                 onBack: { seriesPush = nil },
-                viewModel: viewModel
+                viewModel: viewModel,
+                // The episode page under it belongs to the series just deleted.
+                onDeleted: {
+                    Task { await viewModel.refresh() }
+                    onBack()
+                }
             )
         }
         .navigationDestination(item: $seasonPush) { drill in

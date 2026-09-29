@@ -83,8 +83,10 @@ final class HistoryFeed {
         var pages = 0
         // Past the cap only while the batch has added nothing: a narrow scope can page through
         // empty stretches, and a batch that brings no row leaves the list's end spinner waiting for good.
+        // Bounded even then, or an arr that ignores the filter is walked end to end.
+        let ceiling = maxPagesPerBatch * 4
         while rows.count < target, cursors.values.contains(where: { $0.hasMore }),
-              pages < maxPagesPerBatch || rows.count == startRows.count {
+              pages < maxPagesPerBatch || (rows.count == startRows.count && pages < ceiling) {
             for source in sources where cursors[source]?.hasMore == true {
                 var cursor = cursors[source] ?? Cursor()
                 let result = await fetch(source, cursor.nextPage)
@@ -100,6 +102,10 @@ final class HistoryFeed {
             }
             pages += 1
             rows = Self.merged(sources: sources, cursors: cursors)
+        }
+        // Nothing in `ceiling` pages: call it the end rather than strand the spinner.
+        if pages >= ceiling, rows.count == startRows.count {
+            for source in cursors.keys { cursors[source]?.hasMore = false }
         }
         return Batch(cursors: cursors, rows: rows)
     }

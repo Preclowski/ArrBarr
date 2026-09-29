@@ -208,7 +208,7 @@ struct SeasonDetailView: View {
             ReleaseListView(target: wrapper.target,
                             existingByEpisode: existingFileByEpisodeNumber,
                             waitContext: WaitCardContext(series: sonarrDetail, seriesYear: drill.seriesYear,
-                                                         cast: cast, posterURL: posterURL),
+                                                         cast: cast, posterURL: posterURL, posterApiKey: posterAPIKey),
                             onBack: { manualSearchTarget = nil })
         }
         .detailActionsHost($actionState) { _ in onSeriesDeleted?() }

@@ -7937,7 +7937,7 @@
        "tadbId": 555934,
        "tags": []
       },
-      "artistId": 26,
+      "artistId": 80,
       "disambiguation": "",
       "duration": 352613,
       "foreignAlbumId": "f57f0f8f-9624-ee3a-bd11-fc3a77123796",
@@ -8048,178 +8048,702 @@
        }
       ],
       "secondaryTypes": [],
-      "title": "The adventure goes on, vol.1"
+      "title": "Oddities"
      },
      "albumId": 3336,
      "artist": {
-      "added": "2026-06-21T01:26:39Z",
-      "artistName": "Komiku",
-      "artistType": "Person",
-      "cleanName": "komiku",
+      "added": "2026-08-10T01:31:46Z",
+      "artistName": "Kevin MacLeod",
+      "artistType": "Group",
+      "cleanName": "kevinmacleod",
       "disambiguation": "",
-      "discogsId": 188306,
+      "discogsId": 470506,
       "ended": false,
-      "foreignArtistId": "3b61358a-1953-3b1c-04ef-4f21f568cde0",
+      "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
       "genres": [
-       "Electro Swing",
-       "Electronic",
-       "Nu Jazz",
-       "Trip Hop",
-       "House"
+       "New Wave",
+       "Pop",
+       "Synth-Pop",
+       "Dance-Pop",
+       "Sophisti-Pop"
       ],
-      "id": 26,
-      "images": [],
-      "lastAlbum": null,
+      "id": 80,
+      "images": [
+       {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+       },
+       {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/banner.jpg"
+       },
+       {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500",
+        "url": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+       },
+       {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500",
+        "url": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+       }
+      ],
+      "lastAlbum": {
+       "albumType": "Album",
+       "anyReleaseOk": true,
+       "artist": {
+        "added": "2026-08-10T01:31:46Z",
+        "artistName": "Kevin MacLeod",
+        "artistType": "Group",
+        "cleanName": "kevinmacleod",
+        "disambiguation": "",
+        "discogsId": 470506,
+        "ended": false,
+        "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
+        "genres": [
+         "New Wave",
+         "Pop",
+         "Synth-Pop",
+         "Dance-Pop",
+         "Sophisti-Pop"
+        ],
+        "id": 80,
+        "images": [
+         {
+          "coverType": "clearlogo",
+          "extension": ".png",
+          "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+         },
+         {
+          "coverType": "banner",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg"
+         },
+         {
+          "coverType": "fanart",
+          "extension": ".jpg",
+          "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+         },
+         {
+          "coverType": "poster",
+          "extension": ".jpg",
+          "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+         }
+        ],
+        "lastAlbum": null,
+        "links": [
+         {
+          "name": "Kevin MacLeod",
+          "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+         },
+         {
+          "name": "discogs",
+          "url": "https://example.invalid/links/kevin-macleod/discogs"
+         },
+         {
+          "name": "imdb",
+          "url": "https://example.invalid/links/kevin-macleod/imdb"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "myspace",
+          "url": "https://example.invalid/links/kevin-macleod/myspace"
+         },
+         {
+          "name": "allmusic",
+          "url": "https://example.invalid/links/kevin-macleod/allmusic"
+         },
+         {
+          "name": "twitter",
+          "url": "https://example.invalid/links/kevin-macleod/twitter"
+         },
+         {
+          "name": "youtube",
+          "url": "https://example.invalid/links/kevin-macleod/youtube"
+         },
+         {
+          "name": "facebook",
+          "url": "https://example.invalid/links/kevin-macleod/facebook"
+         },
+         {
+          "name": "wikidata",
+          "url": "https://example.invalid/links/kevin-macleod/wikidata"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "rateyourmusic",
+          "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "viaf",
+          "url": "https://example.invalid/links/kevin-macleod/viaf"
+         },
+         {
+          "name": "spotify",
+          "url": "https://example.invalid/links/kevin-macleod/spotify"
+         },
+         {
+          "name": "deezer",
+          "url": "https://example.invalid/links/kevin-macleod/deezer"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "whosampled",
+          "url": "https://example.invalid/links/kevin-macleod/whosampled"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "genius",
+          "url": "https://example.invalid/links/kevin-macleod/genius"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "soundcloud",
+          "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+         },
+         {
+          "name": "secondhandsongs",
+          "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+         },
+         {
+          "name": "songkick",
+          "url": "https://example.invalid/links/kevin-macleod/songkick"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "instagram",
+          "url": "https://example.invalid/links/kevin-macleod/instagram"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "tidal",
+          "url": "https://example.invalid/links/kevin-macleod/tidal"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         }
+        ],
+        "metadataProfileId": 3,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Kevin MacLeod",
+        "qualityProfileId": 1,
+        "ratings": {
+         "value": 8.3,
+         "votes": 13
+        },
+        "sortName": "kevin macleod",
+        "status": "continuing",
+        "tadbId": 839130,
+        "tags": []
+       },
+       "artistId": 80,
+       "disambiguation": "",
+       "duration": 3146000,
+       "foreignAlbumId": "e9490b30-1b82-55ba-745b-c3c86ca3f365",
+       "genres": [
+        "Pop",
+        "Europop",
+        "Dance-Rock"
+       ],
+       "id": 5289,
+       "images": [
+        {
+         "coverType": "cover",
+         "extension": ".jpg",
+         "remoteUrl": "https://coverartarchive.org/release-group/5e8f2228-03c5-4ca1-9672-f5ae4a12dd35/front-500"
+        },
+        {
+         "coverType": "disc",
+         "extension": ".jpg",
+         "remoteUrl": "https://example.invalid/album/some-guys/disc.jpg"
+        }
+       ],
+       "links": [
+        {
+         "name": "wikidata",
+         "url": "https://example.invalid/links/some-guys/wikidata"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        },
+        {
+         "name": "allmusic",
+         "url": "https://example.invalid/links/some-guys/allmusic"
+        },
+        {
+         "name": "discogs",
+         "url": "https://example.invalid/links/some-guys/discogs"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        }
+       ],
+       "media": [
+        {
+         "mediumFormat": "CD",
+         "mediumName": "",
+         "mediumNumber": 1
+        }
+       ],
+       "mediumCount": 1,
+       "monitored": true,
+       "overview": "An open-licensed album from the demo library.",
+       "profileId": 1,
+       "ratings": {
+        "value": 6.4,
+        "votes": 4
+       },
+       "releaseDate": "2022-10-21T00:00:00Z",
+       "releases": [
+        {
+         "albumId": 5289,
+         "country": [
+          "[Worldwide]"
+         ],
+         "disambiguation": "",
+         "duration": 3145000,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "Digital Media",
+         "id": 19093,
+         "label": [
+          "Demo Label 7",
+          "Demo Label 8"
+         ],
+         "media": [
+          {
+           "mediumFormat": "Digital Media",
+           "mediumName": "",
+           "mediumNumber": 1
+          }
+         ],
+         "mediumCount": 1,
+         "monitored": false,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        },
+        {
+         "albumId": 5289,
+         "country": [
+          "Europe"
+         ],
+         "disambiguation": "",
+         "duration": 0,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "2x12\" Vinyl",
+         "id": 19092,
+         "label": [
+          "Demo Label 9",
+          "Demo Label 10"
+         ],
+         "media": [
+          {
+           "mediumFormat": "12\" Vinyl",
+           "mediumName": "",
+           "mediumNumber": 1
+          },
+          {
+           "mediumFormat": "12\" Vinyl",
+           "mediumName": "",
+           "mediumNumber": 2
+          }
+         ],
+         "mediumCount": 2,
+         "monitored": false,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        },
+        {
+         "albumId": 5289,
+         "country": [
+          "Europe"
+         ],
+         "disambiguation": "",
+         "duration": 3146000,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "CD",
+         "id": 19091,
+         "label": [
+          "Demo Label 9",
+          "Demo Label 10"
+         ],
+         "media": [
+          {
+           "mediumFormat": "CD",
+           "mediumName": "",
+           "mediumNumber": 1
+          }
+         ],
+         "mediumCount": 1,
+         "monitored": true,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        }
+       ],
+       "secondaryTypes": [],
+       "title": "Some Guys"
+      },
       "links": [
        {
+        "name": "Kevin MacLeod",
+        "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+       },
+       {
         "name": "discogs",
-        "url": "https://example.invalid/links/komiku/discogs"
-       },
-       {
-        "name": "allmusic",
-        "url": "https://example.invalid/links/komiku/allmusic"
-       },
-       {
-        "name": "facebook",
-        "url": "https://example.invalid/links/komiku/facebook"
-       },
-       {
-        "name": "soundcloud",
-        "url": "https://example.invalid/links/komiku/soundcloud"
-       },
-       {
-        "name": "twitter",
-        "url": "https://example.invalid/links/komiku/twitter"
-       },
-       {
-        "name": "youtube",
-        "url": "https://example.invalid/links/komiku/youtube"
-       },
-       {
-        "name": "wikidata",
-        "url": "https://example.invalid/links/komiku/wikidata"
-       },
-       {
-        "name": "viaf",
-        "url": "https://example.invalid/links/komiku/viaf"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "deezer",
-        "url": "https://example.invalid/links/komiku/deezer"
-       },
-       {
-        "name": "spotify",
-        "url": "https://example.invalid/links/komiku/spotify"
-       },
-       {
-        "name": "genius",
-        "url": "https://example.invalid/links/komiku/genius"
-       },
-       {
-        "name": "rateyourmusic",
-        "url": "https://example.invalid/links/komiku/rateyourmusic"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "tidal",
-        "url": "https://example.invalid/links/komiku/tidal"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "bandcamp",
-        "url": "https://example.invalid/links/komiku/bandcamp"
-       },
-       {
-        "name": "Komiku",
-        "url": "https://example.invalid/links/komiku/komiku"
+        "url": "https://example.invalid/links/kevin-macleod/discogs"
        },
        {
         "name": "imdb",
-        "url": "https://example.invalid/links/komiku/imdb"
+        "url": "https://example.invalid/links/kevin-macleod/imdb"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "myspace",
+        "url": "https://example.invalid/links/kevin-macleod/myspace"
+       },
+       {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/kevin-macleod/allmusic"
+       },
+       {
+        "name": "twitter",
+        "url": "https://example.invalid/links/kevin-macleod/twitter"
+       },
+       {
+        "name": "youtube",
+        "url": "https://example.invalid/links/kevin-macleod/youtube"
+       },
+       {
+        "name": "facebook",
+        "url": "https://example.invalid/links/kevin-macleod/facebook"
+       },
+       {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/kevin-macleod/wikidata"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "viaf",
+        "url": "https://example.invalid/links/kevin-macleod/viaf"
+       },
+       {
+        "name": "spotify",
+        "url": "https://example.invalid/links/kevin-macleod/spotify"
+       },
+       {
+        "name": "deezer",
+        "url": "https://example.invalid/links/kevin-macleod/deezer"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/kevin-macleod/whosampled"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "genius",
+        "url": "https://example.invalid/links/kevin-macleod/genius"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+       },
+       {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+       },
+       {
+        "name": "songkick",
+        "url": "https://example.invalid/links/kevin-macleod/songkick"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "instagram",
-        "url": "https://example.invalid/links/komiku/instagram"
+        "url": "https://example.invalid/links/kevin-macleod/instagram"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "tidal",
+        "url": "https://example.invalid/links/kevin-macleod/tidal"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
        }
       ],
-      "metadataProfileId": 1,
+      "metadataProfileId": 3,
       "monitorNewItems": "all",
       "monitored": true,
       "nextAlbum": null,
-      "path": "/data/lidarr/Komiku",
-      "qualityProfileId": 2,
+      "path": "/data/lidarr/Kevin MacLeod",
+      "qualityProfileId": 1,
       "ratings": {
-       "value": 8.8,
-       "votes": 8
+       "value": 8.3,
+       "votes": 13
       },
-      "sortName": "komiku",
+      "rootFolderPath": "/data/lidarr/",
+      "sortName": "kevin macleod",
+      "statistics": {
+       "albumCount": 90,
+       "percentOfTracks": 4.394426580921758,
+       "sizeOnDisk": 510499948,
+       "totalTrackCount": 933,
+       "trackCount": 933,
+       "trackFileCount": 41
+      },
       "status": "continuing",
-      "tadbId": 555934,
+      "tadbId": 839130,
       "tags": []
      },
-     "artistId": 26,
+     "artistId": 80,
      "customFormatScore": 0,
      "customFormats": [
       {
@@ -8325,7 +8849,7 @@
        "tadbId": 59237,
        "tags": []
       },
-      "artistId": 18,
+      "artistId": 83,
       "disambiguation": "",
       "duration": 4505769,
       "foreignAlbumId": "2dbe35f0-5250-8d5d-5729-832ec928c01c",
@@ -8387,67 +8911,52 @@
       "secondaryTypes": [
        "Compilation"
       ],
-      "title": "The Beautiful Machine"
+      "title": "Reappear"
      },
      "albumId": 7604,
      "artist": {
-      "added": "2026-06-17T01:13:59Z",
-      "artistName": "Josh Woodward",
-      "artistType": "Group",
-      "cleanName": "joshwoodward",
+      "added": "2026-08-09T12:12:09Z",
+      "artistName": "Chris Zabriskie",
+      "artistType": "Person",
+      "cleanName": "chriszabriskie",
       "disambiguation": "",
-      "discogsId": 218985,
+      "discogsId": 202074,
       "ended": false,
-      "foreignArtistId": "bdf6e2bd-b32f-bd06-2617-dc0bef69cf02",
-      "genres": [
-       "Punk Rock",
-       "Rock"
-      ],
-      "id": 18,
-      "images": [],
-      "lastAlbum": null,
-      "links": [
+      "foreignArtistId": "demo-e4554cad",
+      "genres": [],
+      "id": 83,
+      "images": [
        {
-        "name": "link",
-        "url": "https://example.invalid/links/josh-woodward/link"
-       },
-       {
-        "name": "allmusic",
-        "url": "https://example.invalid/links/josh-woodward/allmusic"
-       },
-       {
-        "name": "discogs",
-        "url": "https://example.invalid/links/josh-woodward/discogs"
-       },
-       {
-        "name": "wikidata",
-        "url": "https://example.invalid/links/josh-woodward/wikidata"
-       },
-       {
-        "name": "facebook",
-        "url": "https://example.invalid/links/josh-woodward/facebook"
-       },
-       {
-        "name": "deezer",
-        "url": "https://example.invalid/links/josh-woodward/deezer"
+        "coverType": "poster",
+        "remoteUrl": "https://coverartarchive.org/release-group/1aef68be-3f46-4104-8977-a9230c0f446a/front-500",
+        "url": "https://coverartarchive.org/release-group/1aef68be-3f46-4104-8977-a9230c0f446a/front-500"
        }
       ],
-      "metadataProfileId": 1,
+      "links": [],
+      "metadataProfileId": 2,
       "monitorNewItems": "all",
       "monitored": true,
-      "nextAlbum": null,
-      "path": "/data/lidarr/Josh Woodward",
+      "path": "/data/lidarr/Chris Zabriskie",
       "qualityProfileId": 1,
       "ratings": {
-       "value": 9.5,
-       "votes": 4
+       "value": 0,
+       "votes": 0
       },
-      "sortName": "josh woodward",
+      "rootFolderPath": "/data/lidarr/",
+      "sortName": "chris zabriskie",
+      "statistics": {
+       "albumCount": 1,
+       "percentOfTracks": 0,
+       "sizeOnDisk": 0,
+       "totalTrackCount": 15,
+       "trackCount": 15,
+       "trackFileCount": 0
+      },
       "status": "continuing",
-      "tadbId": 59237,
+      "tadbId": 572763,
       "tags": []
      },
-     "artistId": 18,
+     "artistId": 83,
      "customFormatScore": 0,
      "customFormats": [],
      "data": {
@@ -8650,7 +9159,7 @@
        "tadbId": 555934,
        "tags": []
       },
-      "artistId": 26,
+      "artistId": 80,
       "disambiguation": "",
       "duration": 352613,
       "foreignAlbumId": "f57f0f8f-9624-ee3a-bd11-fc3a77123796",
@@ -8761,178 +9270,702 @@
        }
       ],
       "secondaryTypes": [],
-      "title": "The adventure goes on, vol.1"
+      "title": "Oddities"
      },
      "albumId": 3336,
      "artist": {
-      "added": "2026-06-21T01:26:39Z",
-      "artistName": "Komiku",
-      "artistType": "Person",
-      "cleanName": "komiku",
+      "added": "2026-08-10T01:31:46Z",
+      "artistName": "Kevin MacLeod",
+      "artistType": "Group",
+      "cleanName": "kevinmacleod",
       "disambiguation": "",
-      "discogsId": 188306,
+      "discogsId": 470506,
       "ended": false,
-      "foreignArtistId": "3b61358a-1953-3b1c-04ef-4f21f568cde0",
+      "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
       "genres": [
-       "Electro Swing",
-       "Electronic",
-       "Nu Jazz",
-       "Trip Hop",
-       "House"
+       "New Wave",
+       "Pop",
+       "Synth-Pop",
+       "Dance-Pop",
+       "Sophisti-Pop"
       ],
-      "id": 26,
-      "images": [],
-      "lastAlbum": null,
+      "id": 80,
+      "images": [
+       {
+        "coverType": "clearlogo",
+        "extension": ".png",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+       },
+       {
+        "coverType": "banner",
+        "extension": ".jpg",
+        "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg",
+        "url": "https://example.invalid/album/kevin-macleod/banner.jpg"
+       },
+       {
+        "coverType": "fanart",
+        "extension": ".jpg",
+        "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500",
+        "url": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+       },
+       {
+        "coverType": "poster",
+        "extension": ".jpg",
+        "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500",
+        "url": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+       }
+      ],
+      "lastAlbum": {
+       "albumType": "Album",
+       "anyReleaseOk": true,
+       "artist": {
+        "added": "2026-08-10T01:31:46Z",
+        "artistName": "Kevin MacLeod",
+        "artistType": "Group",
+        "cleanName": "kevinmacleod",
+        "disambiguation": "",
+        "discogsId": 470506,
+        "ended": false,
+        "foreignArtistId": "12e988e3-fa34-1a12-bb0e-30376fed8a39",
+        "genres": [
+         "New Wave",
+         "Pop",
+         "Synth-Pop",
+         "Dance-Pop",
+         "Sophisti-Pop"
+        ],
+        "id": 80,
+        "images": [
+         {
+          "coverType": "clearlogo",
+          "extension": ".png",
+          "remoteUrl": "https://example.invalid/album/kevin-macleod/clearlogo.jpg"
+         },
+         {
+          "coverType": "banner",
+          "extension": ".jpg",
+          "remoteUrl": "https://example.invalid/album/kevin-macleod/banner.jpg"
+         },
+         {
+          "coverType": "fanart",
+          "extension": ".jpg",
+          "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+         },
+         {
+          "coverType": "poster",
+          "extension": ".jpg",
+          "remoteUrl": "https://coverartarchive.org/release-group/19f4d7a9-7cc3-45c7-b468-d56c223ae422/front-500"
+         }
+        ],
+        "lastAlbum": null,
+        "links": [
+         {
+          "name": "Kevin MacLeod",
+          "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+         },
+         {
+          "name": "discogs",
+          "url": "https://example.invalid/links/kevin-macleod/discogs"
+         },
+         {
+          "name": "imdb",
+          "url": "https://example.invalid/links/kevin-macleod/imdb"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "myspace",
+          "url": "https://example.invalid/links/kevin-macleod/myspace"
+         },
+         {
+          "name": "allmusic",
+          "url": "https://example.invalid/links/kevin-macleod/allmusic"
+         },
+         {
+          "name": "twitter",
+          "url": "https://example.invalid/links/kevin-macleod/twitter"
+         },
+         {
+          "name": "youtube",
+          "url": "https://example.invalid/links/kevin-macleod/youtube"
+         },
+         {
+          "name": "facebook",
+          "url": "https://example.invalid/links/kevin-macleod/facebook"
+         },
+         {
+          "name": "wikidata",
+          "url": "https://example.invalid/links/kevin-macleod/wikidata"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "rateyourmusic",
+          "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "viaf",
+          "url": "https://example.invalid/links/kevin-macleod/viaf"
+         },
+         {
+          "name": "spotify",
+          "url": "https://example.invalid/links/kevin-macleod/spotify"
+         },
+         {
+          "name": "deezer",
+          "url": "https://example.invalid/links/kevin-macleod/deezer"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "whosampled",
+          "url": "https://example.invalid/links/kevin-macleod/whosampled"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "genius",
+          "url": "https://example.invalid/links/kevin-macleod/genius"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "soundcloud",
+          "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+         },
+         {
+          "name": "secondhandsongs",
+          "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+         },
+         {
+          "name": "songkick",
+          "url": "https://example.invalid/links/kevin-macleod/songkick"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "instagram",
+          "url": "https://example.invalid/links/kevin-macleod/instagram"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "tidal",
+          "url": "https://example.invalid/links/kevin-macleod/tidal"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         },
+         {
+          "name": "link",
+          "url": "https://example.invalid/links/kevin-macleod/link"
+         }
+        ],
+        "metadataProfileId": 3,
+        "monitorNewItems": "all",
+        "monitored": true,
+        "nextAlbum": null,
+        "path": "/data/lidarr/Kevin MacLeod",
+        "qualityProfileId": 1,
+        "ratings": {
+         "value": 8.3,
+         "votes": 13
+        },
+        "sortName": "kevin macleod",
+        "status": "continuing",
+        "tadbId": 839130,
+        "tags": []
+       },
+       "artistId": 80,
+       "disambiguation": "",
+       "duration": 3146000,
+       "foreignAlbumId": "e9490b30-1b82-55ba-745b-c3c86ca3f365",
+       "genres": [
+        "Pop",
+        "Europop",
+        "Dance-Rock"
+       ],
+       "id": 5289,
+       "images": [
+        {
+         "coverType": "cover",
+         "extension": ".jpg",
+         "remoteUrl": "https://coverartarchive.org/release-group/5e8f2228-03c5-4ca1-9672-f5ae4a12dd35/front-500"
+        },
+        {
+         "coverType": "disc",
+         "extension": ".jpg",
+         "remoteUrl": "https://example.invalid/album/some-guys/disc.jpg"
+        }
+       ],
+       "links": [
+        {
+         "name": "wikidata",
+         "url": "https://example.invalid/links/some-guys/wikidata"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        },
+        {
+         "name": "allmusic",
+         "url": "https://example.invalid/links/some-guys/allmusic"
+        },
+        {
+         "name": "discogs",
+         "url": "https://example.invalid/links/some-guys/discogs"
+        },
+        {
+         "name": "link",
+         "url": "https://example.invalid/links/some-guys/link"
+        }
+       ],
+       "media": [
+        {
+         "mediumFormat": "CD",
+         "mediumName": "",
+         "mediumNumber": 1
+        }
+       ],
+       "mediumCount": 1,
+       "monitored": true,
+       "overview": "An open-licensed album from the demo library.",
+       "profileId": 1,
+       "ratings": {
+        "value": 6.4,
+        "votes": 4
+       },
+       "releaseDate": "2022-10-21T00:00:00Z",
+       "releases": [
+        {
+         "albumId": 5289,
+         "country": [
+          "[Worldwide]"
+         ],
+         "disambiguation": "",
+         "duration": 3145000,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "Digital Media",
+         "id": 19093,
+         "label": [
+          "Demo Label 7",
+          "Demo Label 8"
+         ],
+         "media": [
+          {
+           "mediumFormat": "Digital Media",
+           "mediumName": "",
+           "mediumNumber": 1
+          }
+         ],
+         "mediumCount": 1,
+         "monitored": false,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        },
+        {
+         "albumId": 5289,
+         "country": [
+          "Europe"
+         ],
+         "disambiguation": "",
+         "duration": 0,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "2x12\" Vinyl",
+         "id": 19092,
+         "label": [
+          "Demo Label 9",
+          "Demo Label 10"
+         ],
+         "media": [
+          {
+           "mediumFormat": "12\" Vinyl",
+           "mediumName": "",
+           "mediumNumber": 1
+          },
+          {
+           "mediumFormat": "12\" Vinyl",
+           "mediumName": "",
+           "mediumNumber": 2
+          }
+         ],
+         "mediumCount": 2,
+         "monitored": false,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        },
+        {
+         "albumId": 5289,
+         "country": [
+          "Europe"
+         ],
+         "disambiguation": "",
+         "duration": 3146000,
+         "foreignReleaseId": "30c434a3-9ff0-a7ba-a9c5-1d259d1ad229",
+         "format": "CD",
+         "id": 19091,
+         "label": [
+          "Demo Label 9",
+          "Demo Label 10"
+         ],
+         "media": [
+          {
+           "mediumFormat": "CD",
+           "mediumName": "",
+           "mediumNumber": 1
+          }
+         ],
+         "mediumCount": 1,
+         "monitored": true,
+         "status": "Official",
+         "title": "Some Guys",
+         "trackCount": 12
+        }
+       ],
+       "secondaryTypes": [],
+       "title": "Some Guys"
+      },
       "links": [
        {
+        "name": "Kevin MacLeod",
+        "url": "https://example.invalid/links/kevin-macleod/kevin-macleod"
+       },
+       {
         "name": "discogs",
-        "url": "https://example.invalid/links/komiku/discogs"
-       },
-       {
-        "name": "allmusic",
-        "url": "https://example.invalid/links/komiku/allmusic"
-       },
-       {
-        "name": "facebook",
-        "url": "https://example.invalid/links/komiku/facebook"
-       },
-       {
-        "name": "soundcloud",
-        "url": "https://example.invalid/links/komiku/soundcloud"
-       },
-       {
-        "name": "twitter",
-        "url": "https://example.invalid/links/komiku/twitter"
-       },
-       {
-        "name": "youtube",
-        "url": "https://example.invalid/links/komiku/youtube"
-       },
-       {
-        "name": "wikidata",
-        "url": "https://example.invalid/links/komiku/wikidata"
-       },
-       {
-        "name": "viaf",
-        "url": "https://example.invalid/links/komiku/viaf"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "deezer",
-        "url": "https://example.invalid/links/komiku/deezer"
-       },
-       {
-        "name": "spotify",
-        "url": "https://example.invalid/links/komiku/spotify"
-       },
-       {
-        "name": "genius",
-        "url": "https://example.invalid/links/komiku/genius"
-       },
-       {
-        "name": "rateyourmusic",
-        "url": "https://example.invalid/links/komiku/rateyourmusic"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "tidal",
-        "url": "https://example.invalid/links/komiku/tidal"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
-       },
-       {
-        "name": "bandcamp",
-        "url": "https://example.invalid/links/komiku/bandcamp"
-       },
-       {
-        "name": "Komiku",
-        "url": "https://example.invalid/links/komiku/komiku"
+        "url": "https://example.invalid/links/kevin-macleod/discogs"
        },
        {
         "name": "imdb",
-        "url": "https://example.invalid/links/komiku/imdb"
+        "url": "https://example.invalid/links/kevin-macleod/imdb"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "myspace",
+        "url": "https://example.invalid/links/kevin-macleod/myspace"
+       },
+       {
+        "name": "allmusic",
+        "url": "https://example.invalid/links/kevin-macleod/allmusic"
+       },
+       {
+        "name": "twitter",
+        "url": "https://example.invalid/links/kevin-macleod/twitter"
+       },
+       {
+        "name": "youtube",
+        "url": "https://example.invalid/links/kevin-macleod/youtube"
+       },
+       {
+        "name": "facebook",
+        "url": "https://example.invalid/links/kevin-macleod/facebook"
+       },
+       {
+        "name": "wikidata",
+        "url": "https://example.invalid/links/kevin-macleod/wikidata"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "rateyourmusic",
+        "url": "https://example.invalid/links/kevin-macleod/rateyourmusic"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "viaf",
+        "url": "https://example.invalid/links/kevin-macleod/viaf"
+       },
+       {
+        "name": "spotify",
+        "url": "https://example.invalid/links/kevin-macleod/spotify"
+       },
+       {
+        "name": "deezer",
+        "url": "https://example.invalid/links/kevin-macleod/deezer"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "whosampled",
+        "url": "https://example.invalid/links/kevin-macleod/whosampled"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "genius",
+        "url": "https://example.invalid/links/kevin-macleod/genius"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "soundcloud",
+        "url": "https://example.invalid/links/kevin-macleod/soundcloud"
+       },
+       {
+        "name": "secondhandsongs",
+        "url": "https://example.invalid/links/kevin-macleod/secondhandsongs"
+       },
+       {
+        "name": "songkick",
+        "url": "https://example.invalid/links/kevin-macleod/songkick"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "instagram",
-        "url": "https://example.invalid/links/komiku/instagram"
+        "url": "https://example.invalid/links/kevin-macleod/instagram"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "tidal",
+        "url": "https://example.invalid/links/kevin-macleod/tidal"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
        },
        {
         "name": "link",
-        "url": "https://example.invalid/links/komiku/link"
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
+       },
+       {
+        "name": "link",
+        "url": "https://example.invalid/links/kevin-macleod/link"
        }
       ],
-      "metadataProfileId": 1,
+      "metadataProfileId": 3,
       "monitorNewItems": "all",
       "monitored": true,
       "nextAlbum": null,
-      "path": "/data/lidarr/Komiku",
-      "qualityProfileId": 2,
+      "path": "/data/lidarr/Kevin MacLeod",
+      "qualityProfileId": 1,
       "ratings": {
-       "value": 8.8,
-       "votes": 8
+       "value": 8.3,
+       "votes": 13
       },
-      "sortName": "komiku",
+      "rootFolderPath": "/data/lidarr/",
+      "sortName": "kevin macleod",
+      "statistics": {
+       "albumCount": 90,
+       "percentOfTracks": 4.394426580921758,
+       "sizeOnDisk": 510499948,
+       "totalTrackCount": 933,
+       "trackCount": 933,
+       "trackFileCount": 41
+      },
       "status": "continuing",
-      "tadbId": 555934,
+      "tadbId": 839130,
       "tags": []
      },
-     "artistId": 26,
+     "artistId": 80,
      "customFormatScore": 0,
      "customFormats": [
       {
@@ -9025,7 +10058,7 @@
        "tadbId": 59237,
        "tags": []
       },
-      "artistId": 18,
+      "artistId": 84,
       "disambiguation": "",
       "duration": 4505769,
       "foreignAlbumId": "2dbe35f0-5250-8d5d-5729-832ec928c01c",
@@ -9087,67 +10120,58 @@
       "secondaryTypes": [
        "Compilation"
       ],
-      "title": "The Beautiful Machine"
+      "title": "Layers"
      },
      "albumId": 7604,
      "artist": {
-      "added": "2026-06-17T01:13:59Z",
-      "artistName": "Josh Woodward",
+      "added": "2026-08-10T01:31:46Z",
+      "artistName": "Broke For Free",
       "artistType": "Group",
-      "cleanName": "joshwoodward",
+      "cleanName": "brokeforfree",
       "disambiguation": "",
-      "discogsId": 218985,
+      "discogsId": 470506,
       "ended": false,
-      "foreignArtistId": "bdf6e2bd-b32f-bd06-2617-dc0bef69cf02",
+      "foreignArtistId": "demo-d593581c",
       "genres": [
-       "Punk Rock",
-       "Rock"
+       "New Wave",
+       "Pop",
+       "Synth-Pop",
+       "Dance-Pop",
+       "Sophisti-Pop"
       ],
-      "id": 18,
-      "images": [],
-      "lastAlbum": null,
-      "links": [
+      "id": 84,
+      "images": [
        {
-        "name": "link",
-        "url": "https://example.invalid/links/josh-woodward/link"
-       },
-       {
-        "name": "allmusic",
-        "url": "https://example.invalid/links/josh-woodward/allmusic"
-       },
-       {
-        "name": "discogs",
-        "url": "https://example.invalid/links/josh-woodward/discogs"
-       },
-       {
-        "name": "wikidata",
-        "url": "https://example.invalid/links/josh-woodward/wikidata"
-       },
-       {
-        "name": "facebook",
-        "url": "https://example.invalid/links/josh-woodward/facebook"
-       },
-       {
-        "name": "deezer",
-        "url": "https://example.invalid/links/josh-woodward/deezer"
+        "coverType": "poster",
+        "remoteUrl": "https://coverartarchive.org/release-group/81606559-8c68-4688-a91d-bcc1ce575bd4/front-500",
+        "url": "https://coverartarchive.org/release-group/81606559-8c68-4688-a91d-bcc1ce575bd4/front-500"
        }
       ],
-      "metadataProfileId": 1,
+      "links": [],
+      "metadataProfileId": 3,
       "monitorNewItems": "all",
       "monitored": true,
-      "nextAlbum": null,
-      "path": "/data/lidarr/Josh Woodward",
+      "path": "/data/lidarr/Broke For Free",
       "qualityProfileId": 1,
       "ratings": {
-       "value": 9.5,
-       "votes": 4
+       "value": 8.3,
+       "votes": 13
       },
-      "sortName": "josh woodward",
+      "rootFolderPath": "/data/lidarr/",
+      "sortName": "broke for free",
+      "statistics": {
+       "albumCount": 90,
+       "percentOfTracks": 4.394426580921758,
+       "sizeOnDisk": 510499948,
+       "totalTrackCount": 933,
+       "trackCount": 933,
+       "trackFileCount": 41
+      },
       "status": "continuing",
-      "tadbId": 59237,
+      "tadbId": 839130,
       "tags": []
      },
-     "artistId": 18,
+     "artistId": 84,
      "customFormatScore": 0,
      "customFormats": [
       {
@@ -9238,7 +10262,7 @@
        "tadbId": 59237,
        "tags": []
       },
-      "artistId": 18,
+      "artistId": 84,
       "disambiguation": "",
       "duration": 4505769,
       "foreignAlbumId": "2dbe35f0-5250-8d5d-5729-832ec928c01c",
@@ -9300,67 +10324,58 @@
       "secondaryTypes": [
        "Compilation"
       ],
-      "title": "The Beautiful Machine"
+      "title": "XXVII"
      },
      "albumId": 7604,
      "artist": {
-      "added": "2026-06-17T01:13:59Z",
-      "artistName": "Josh Woodward",
+      "added": "2026-08-10T01:31:46Z",
+      "artistName": "Broke For Free",
       "artistType": "Group",
-      "cleanName": "joshwoodward",
+      "cleanName": "brokeforfree",
       "disambiguation": "",
-      "discogsId": 218985,
+      "discogsId": 470506,
       "ended": false,
-      "foreignArtistId": "bdf6e2bd-b32f-bd06-2617-dc0bef69cf02",
+      "foreignArtistId": "demo-d593581c",
       "genres": [
-       "Punk Rock",
-       "Rock"
+       "New Wave",
+       "Pop",
+       "Synth-Pop",
+       "Dance-Pop",
+       "Sophisti-Pop"
       ],
-      "id": 18,
-      "images": [],
-      "lastAlbum": null,
-      "links": [
+      "id": 84,
+      "images": [
        {
-        "name": "link",
-        "url": "https://example.invalid/links/josh-woodward/link"
-       },
-       {
-        "name": "allmusic",
-        "url": "https://example.invalid/links/josh-woodward/allmusic"
-       },
-       {
-        "name": "discogs",
-        "url": "https://example.invalid/links/josh-woodward/discogs"
-       },
-       {
-        "name": "wikidata",
-        "url": "https://example.invalid/links/josh-woodward/wikidata"
-       },
-       {
-        "name": "facebook",
-        "url": "https://example.invalid/links/josh-woodward/facebook"
-       },
-       {
-        "name": "deezer",
-        "url": "https://example.invalid/links/josh-woodward/deezer"
+        "coverType": "poster",
+        "remoteUrl": "https://coverartarchive.org/release-group/81606559-8c68-4688-a91d-bcc1ce575bd4/front-500",
+        "url": "https://coverartarchive.org/release-group/81606559-8c68-4688-a91d-bcc1ce575bd4/front-500"
        }
       ],
-      "metadataProfileId": 1,
+      "links": [],
+      "metadataProfileId": 3,
       "monitorNewItems": "all",
       "monitored": true,
-      "nextAlbum": null,
-      "path": "/data/lidarr/Josh Woodward",
+      "path": "/data/lidarr/Broke For Free",
       "qualityProfileId": 1,
       "ratings": {
-       "value": 9.5,
-       "votes": 4
+       "value": 8.3,
+       "votes": 13
       },
-      "sortName": "josh woodward",
+      "rootFolderPath": "/data/lidarr/",
+      "sortName": "broke for free",
+      "statistics": {
+       "albumCount": 90,
+       "percentOfTracks": 4.394426580921758,
+       "sizeOnDisk": 510499948,
+       "totalTrackCount": 933,
+       "trackCount": 933,
+       "trackFileCount": 41
+      },
       "status": "continuing",
-      "tadbId": 59237,
+      "tadbId": 839130,
       "tags": []
      },
-     "artistId": 18,
+     "artistId": 84,
      "customFormatScore": 0,
      "customFormats": [],
      "data": {

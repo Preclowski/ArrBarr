@@ -203,8 +203,7 @@ struct WaitStories: View {
         .task {
             stories = WaitStoryProvider.localStories(context).shuffled()
             let remote = await WaitStoryProvider.remoteStories(context, configStore: configStore)
-            // The story on screen stays first; everything after it is reshuffled with the new ones.
-            stories = Array(stories.prefix(1)) + (Array(stories.dropFirst()) + remote).shuffled()
+            stories = (stories + remote).shuffled()
         }
     }
 }

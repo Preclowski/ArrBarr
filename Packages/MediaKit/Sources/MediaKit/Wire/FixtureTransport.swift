@@ -54,8 +54,9 @@ public actor FixtureTransport: Transport, SocketTransport {
         if request.method == "GET", let remembered = putBodies[pathKey] {
             return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
         }
-        if request.method == "GET", let record = record(in: table, template: request.pathTemplate, id: request.url.lastPathComponent) {
-            return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(record))
+        if request.method == "GET", let hit = record(in: table, template: request.pathTemplate, id: request.url.lastPathComponent) {
+            let body = hit.anchor.map { Self.shift(hit.body, byDays: Self.days(from: $0, to: clock.now)) } ?? hit.body
+            return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(body))
         }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
             var body = applyState(entry.body, name: name)
@@ -97,15 +98,16 @@ public actor FixtureTransport: Transport, SocketTransport {
         return table
     }
 
-    /// One recorded detail answers every id; a library that lists the requested id answers with that entry instead.
-    private func record(in table: [String: Entry], template: String, id: String) -> JSONValue? {
-        let sources = ["movie": ["fetchallmovies", "fetchcalendar"], "series": ["fetchallseries"],
-                       "artist": ["fetchallartists"], "album": ["fetchartistalbums", "fetchcalendar"]]
+    /// One recorded detail answers every id; a list that holds the requested id answers with that entry
+    /// instead, dated like the list. The calendar goes first: its rows are the upcoming state of the title.
+    private func record(in table: [String: Entry], template: String, id: String) -> (body: JSONValue, anchor: Date?)? {
+        let sources = ["movie": ["fetchcalendar", "fetchallmovies"], "series": ["fetchallseries"],
+                       "artist": ["fetchallartists"], "album": ["fetchcalendar", "fetchartistalbums"]]
         guard let noun = template.split(separator: "/").dropLast().last.map(String.init), template.hasSuffix("/{id}"),
               let ops = sources[noun], let wanted = Double(id) else { return nil }
         for op in ops {
             guard case let .array(items)? = table[op]?.body else { continue }
-            if let hit = items.first(where: { $0["id"]?.intValue.map(Double.init) == wanted }) { return hit }
+            if let hit = items.first(where: { $0["id"]?.intValue.map(Double.init) == wanted }) { return (hit, table[op]?.anchor) }
         }
         return nil
     }
@@ -117,10 +119,12 @@ public actor FixtureTransport: Transport, SocketTransport {
         return .array(items.filter { $0[key]?.intValue == id })
     }
 
-    private static func days(from anchor: Date, to now: Date) -> Int {
+    /// The recording's day against the viewer's local day, so "today" rows read as today east of UTC too.
+    static func days(from anchor: Date, to now: Date, calendar: Calendar = .current) -> Int {
         var utc = Calendar(identifier: .gregorian)
         utc.timeZone = TimeZone(identifier: "UTC")!
-        return utc.dateComponents([.day], from: utc.startOfDay(for: anchor), to: utc.startOfDay(for: now)).day ?? 0
+        guard let today = utc.date(from: calendar.dateComponents([.year, .month, .day], from: now)) else { return 0 }
+        return utc.dateComponents([.day], from: utc.startOfDay(for: anchor), to: today).day ?? 0
     }
 
     private static func shift(_ value: JSONValue, byDays days: Int) -> JSONValue {

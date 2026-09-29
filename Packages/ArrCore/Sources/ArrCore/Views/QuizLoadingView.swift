@@ -37,8 +37,12 @@ struct QuizLoadingView: View {
                 }
             }
         }
+        // The deck it hands over to is always dark.
+        .environment(\.colorScheme, .dark)
         .task {
             stories = WaitFacts.watching().shuffled().map { WaitStory(sentence: $0.text) }
+            let owned = await WaitFacts.library(configStore: configStore)
+            stories = (stories + owned.map { WaitStory(sentence: $0.text) }).shuffled()
             if library.isEmpty {
                 library = await LibraryPosterSampler.sample(configStore: configStore)
             }

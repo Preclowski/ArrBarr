@@ -200,7 +200,8 @@ struct EpisodeDetailOverlay: View {
         .navigationDestination(item: $manualSearchTarget) { wrapper in
             ReleaseListView(target: wrapper.target,
                             existing: episodeFile.map(UpgradeDiffView.side(file:)),
-                            waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL),
+                            waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL,
+                                                         posterApiKey: posterRequiresAuth ? apiKey : nil),
                             onBack: { manualSearchTarget = nil })
         }
         .detailActionsHost($actionState) { _ in onFileDeleted?() }

@@ -33,8 +33,10 @@ def clean(s):
 
 
 def main():
+    global ANCHOR
     cat = json.load(open(os.path.join(HERE, "demo_catalogue.json")))
     files = {k: json.load(open(os.path.join(PACKED, k + ".json"))) for k in KINDS}
+    ANCHOR = recording_day(files["radarr"])
     albums_of = {a["name"]: [x["title"] for x in a["albums"]] for a in cat["artists"]}
     pools = {
         "Movie": [m["title"] for m in cat["movies"]],
@@ -180,7 +182,15 @@ def main():
 
 
 # The recording day; FixtureTransport moves calendar dates so this day reads as today.
-ANCHOR = datetime(2026, 9, 15, tzinfo=timezone.utc)
+ANCHOR = None
+
+
+def recording_day(radarr):
+    """A re-run keeps the anchor it wrote; a fresh recording is curated the day it was made."""
+    written = radarr.get("fetchcalendar", {}).get("anchor")
+    if written:
+        return datetime.strptime(written, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
 EXTRA_ID = 900_000  # rows this script adds; re-runs find them by id and skip
 
 
@@ -252,6 +262,26 @@ def link_and_extend(files, cat, by_title, series_by_title):
         if album and album_artist[album] in artists:
             r["artistId"] = artists[album_artist[album]]["id"]
 
+    # -- History: rows open the library entry they name.
+    for r in radarr["fetchhistory"]["body"]["records"]:
+        t = r.get("movie", {}).get("title")
+        if t in movies:
+            r["movieId"] = movies[t]["id"]
+            r["movie"] = copy.deepcopy(movies[t])
+    for r in sonarr["fetchhistory"]["body"]["records"]:
+        t = r.get("series", {}).get("title")
+        if t in shows:
+            r["seriesId"] = shows[t]["id"]
+            r["series"] = copy.deepcopy(shows[t])
+    for r in lidarr["fetchhistory"]["body"]["records"]:
+        album = next((al for al in sorted(album_artist, key=len, reverse=True) if r["sourceTitle"].startswith(dotted_name(al))), None)
+        if album and album_artist[album] in artists:
+            a = artists[album_artist[album]]
+            r["artistId"] = a["id"]
+            r["artist"] = copy.deepcopy(a)
+            if isinstance(r.get("album"), dict):
+                r["album"].update(title=album, artistId=a["id"])
+
     # -- Upcoming: releases and episodes spread over the next three weeks.
     rc = radarr["fetchcalendar"]["body"]
     for i, (title, day) in enumerate([("Sherlock Jr.", 0), ("Nosferatu", 2), ("The Kid", 3), ("Detour", 5), ("Carnival of Souls", 8),
@@ -263,7 +293,15 @@ def link_and_extend(files, cat, by_title, series_by_title):
         rc.append(m)
     for m in rc:
         if m["title"] in movies:
-            m["id"] = movies[m["title"]]["id"]
+            lib = movies[m["title"]]
+            m["id"] = lib["id"]
+            # The library copy is what the list shows; it must not call an upcoming release downloaded.
+            for k in ("inCinemas", "digitalRelease", "physicalRelease", "hasFile", "isAvailable", "status"):
+                if k in m:
+                    lib[k] = m[k]
+            if not m.get("hasFile"):
+                lib.pop("movieFile", None)
+                lib["sizeOnDisk"] = 0
     radarr["fetchcalendar"]["anchor"] = iso(0)
 
     sc = sonarr["fetchcalendar"]["body"]

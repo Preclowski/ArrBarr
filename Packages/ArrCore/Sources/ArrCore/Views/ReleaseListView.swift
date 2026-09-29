@@ -14,7 +14,6 @@ struct ReleaseListView: View {
     let onBack: () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
-    @Environment(\.colorScheme) private var colorScheme
 
     @State private var releases: [ArrRelease] = []
     @State private var loading = true
@@ -75,9 +74,8 @@ struct ReleaseListView: View {
             #endif
             content
         }
-        // The wait stage runs under the header too, and the header reads on it.
+        // The wait stage runs under the header too.
         .background { if loading { WaitBackdrop(poster: waitContext.poster) } }
-        .environment(\.colorScheme, loading ? .dark : colorScheme)
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)

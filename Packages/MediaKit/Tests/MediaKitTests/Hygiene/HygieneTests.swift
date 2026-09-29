@@ -82,7 +82,23 @@ import Testing
         let sintel = try #require(movies.first { $0["title"]?.stringValue == "Sintel" }?["id"]?.intValue)
         #expect(try await get("/api/v3/movie/\(sintel)", "/api/v3/movie/{id}", "radarr.fetchMovieDetails")["title"]?.stringValue == "Sintel")
         let calendar = try await get("/api/v3/calendar", "/api/v3/calendar", "radarr.fetchCalendar").arrayValue ?? []
-        #expect(calendar.first { $0["title"]?.stringValue == "Sherlock Jr." }?["digitalRelease"]?.stringValue == "2026-09-25T00:00:00Z")
+        let sherlock = try #require(calendar.first { $0["title"]?.stringValue == "Sherlock Jr." })
+        #expect(sherlock["digitalRelease"]?.stringValue == "2026-09-25T00:00:00Z")
+        // Its detail is the upcoming row, dated like the calendar, not the library's downloaded copy.
+        let detail = try await get("/api/v3/movie/\(sherlock["id"]?.intValue ?? 0)", "/api/v3/movie/{id}", "radarr.fetchMovieDetails")
+        #expect(detail["digitalRelease"]?.stringValue == "2026-09-25T00:00:00Z")
+        #expect(detail["hasFile"]?.boolValue == false)
+    }
+
+    @Test func demoDatesCountTheViewersLocalDay() throws {
+        let anchor = try #require(ISO8601DateFormatter().date(from: "2026-09-15T00:00:00Z"))
+        let lateUTC = try #require(ISO8601DateFormatter().date(from: "2026-09-29T22:30:00Z"))
+        var sydney = Calendar(identifier: .gregorian)
+        sydney.timeZone = try #require(TimeZone(identifier: "Australia/Sydney"))
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = try #require(TimeZone(identifier: "UTC"))
+        #expect(FixtureTransport.days(from: anchor, to: lateUTC, calendar: utc) == 14)
+        #expect(FixtureTransport.days(from: anchor, to: lateUTC, calendar: sydney) == 15)
     }
 
     @Test func aDemoPauseSticksOnTheArrRowTrackingTheDownload() async throws {

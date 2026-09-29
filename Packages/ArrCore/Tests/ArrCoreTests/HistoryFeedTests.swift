@@ -74,6 +74,19 @@ struct HistoryFeedTests {
         #expect(feed.hasMore)
     }
 
+    @Test("A scope that never matches stops at a ceiling and ends the list")
+    func emptyScopeEndsAtCeiling() async {
+        var calls = 0
+        let feed = HistoryFeed(sources: [.lidarr], rowsPerBatch: 5, maxPagesPerBatch: 2) { _, _ in
+            calls += 1
+            return HistoryResult(items: [], hasMore: true, error: nil)
+        }
+        await feed.load()
+        #expect(calls == 8)
+        #expect(feed.items.isEmpty)
+        #expect(!feed.hasMore)
+    }
+
     @Test("loadMore appends the next batch and stops when the arr runs out")
     func loadMoreUntilExhausted() async {
         let feed = HistoryFeed(sources: [.radarr], rowsPerBatch: 2) { _, page in

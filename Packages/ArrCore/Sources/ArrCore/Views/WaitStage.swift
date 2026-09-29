@@ -44,8 +44,12 @@ struct WaitStage<Footer: View>: View {
         }
         .padding(.horizontal, 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .environment(\.colorScheme, .dark)
         .onAppear { breathe = true }
+        // Late stories (TMDB answers after the first turn) must not swap the line being read.
+        .onChange(of: stories.map(\.id)) { old, new in
+            guard !old.isEmpty else { return }
+            index = new.firstIndex(of: old[index % old.count]) ?? 0
+        }
         .onChange(of: story?.id, initial: true) { _, _ in
             guard let posters = story?.posters, !posters.isEmpty else { return }
             withAnimation(.smooth(duration: 0.45)) {
@@ -97,14 +101,18 @@ struct WaitStage<Footer: View>: View {
     }
 }
 
-/// Behind the whole host surface, so it runs under its header too.
+/// Behind the whole host surface, so it runs under its header too. Follows the colour scheme,
+/// so a host that isn't always dark doesn't flip to dark for the wait and flash back after it.
 struct WaitBackdrop: View {
     let poster: WaitPoster?
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let base = colorScheme == .dark ? Color.black : Color.white
         GeometryReader { proxy in
             ZStack {
-                Color.black
+                base
                 if let poster {
                     RemotePoster(url: poster.url, apiKey: poster.apiKey, size: proxy.size,
                                  cornerRadius: 0, fallbackSymbol: nil, fill: true)
@@ -116,7 +124,7 @@ struct WaitBackdrop: View {
                         .id(poster)
                         .transition(.opacity)
                 }
-                Color.black.opacity(0.45)
+                base.opacity(colorScheme == .dark ? 0.45 : 0.6)
             }
             .clipped()
             .animation(.easeInOut(duration: 0.6), value: poster)
