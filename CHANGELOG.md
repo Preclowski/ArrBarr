@@ -9,6 +9,35 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.1.0] — 2026-09-30
+
+### Added
+
+- Automatic and manual search in queue, library and Upcoming row menus.
+- The quiz card shows in chat as soon as its deck is dealt.
+- VoiceOver actions on queue rows: pause, resume, remove.
+
+### Changed
+
+- Search is ⌘F (was ⌘N).
+- Quiz and release search load over the title's cover instead of a spinner.
+- Filmography scores show as rating chips.
+- Apple Intelligence stays selected while its model downloads.
+- Posters decode off the main thread; scrolling stutters less.
+
+### Fixed
+
+- Resume all / Pause all on a grouped series stopped after a few episodes.
+- Apple Intelligence silently cancelled tools that ask for confirmation.
+- OpenAI chat sent each message twice and returned empty replies at the token
+  limit.
+- Errors show the arr's own reason.
+- A wrong qBittorrent or Deluge password is not retried until it changes.
+- MCP server refused every request when bound to the LAN.
+- Deep links and Siri searches no longer get lost before the panel opens.
+- The widget's Today and Tomorrow turn over at midnight.
+- More of the app is translated and readable by VoiceOver.
+
 ## [3.0.0] — 2026-09-28
 
 ### Added
