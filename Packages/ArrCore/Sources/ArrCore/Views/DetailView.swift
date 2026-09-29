@@ -276,12 +276,6 @@ struct DetailView: View {
                     }
                 }
             }
-            // Parked while the lightbox is up (see PopoverContentView — hiding alone isn't parking).
-            // The lightbox sits outside this ZStack, so disabling can't reach its dismiss gestures.
-            .opacity(enlargedPoster != nil ? 0 : 1)
-            .allowsHitTesting(enlargedPoster == nil)
-            .disabled(enlargedPoster != nil)
-            .accessibilityHidden(enlargedPoster != nil)
         }
         .detailActionsHost($actionState) { _ in handleDeleted() }
         .onDetailIntent(for: item.id, ready: !loading) { detailActions.carryOut($0, state: $actionState) }

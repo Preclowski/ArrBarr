@@ -251,20 +251,22 @@ struct EpisodeDetailOverlay: View {
     /// Only for a single active download; with duplicates each block controls its own.
     @ViewBuilder
     private var episodeCTAStrip: some View {
-        let canPauseResume = queueItems.count == 1
-            && (queueItem?.status == .downloading || queueItem?.status == .paused)
-            && ((queueItem?.isPaused == true && onResumeEpisode != nil)
-                || (queueItem?.isPaused == false && onPauseEpisode != nil))
-        HStack(spacing: 8) {
-            if canPauseResume, let q = queueItem {
-                ctaPauseResume(q: q)
-                #if os(macOS)
-                if onDeleteEpisode != nil {
-                    ctaCancelProminent
-                }
-                #endif
-            }
+        if let q = queueItem {
+            DownloadCTAStrip(
+                isPaused: q.isPaused,
+                progress: q.progress,
+                onToggle: { if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) } },
+                onCancel: cancelAction
+            )
         }
+    }
+
+    private var cancelAction: (() -> Void)? {
+        #if os(macOS)
+        onDeleteEpisode == nil ? nil : { ctaPendingDelete = true }
+        #else
+        nil
+        #endif
     }
 
     private var headerMenu: some View {
@@ -289,32 +291,6 @@ struct EpisodeDetailOverlay: View {
             actions.deleteLabel = "detail.deleteFile.button"
         }
         return actions
-    }
-
-    @ViewBuilder
-    private func ctaPauseResume(q: QueueItem) -> some View {
-        // Action tint, not status tint — see DetailView.pauseResumeProminent.
-        PauseResumeButton(isPaused: q.isPaused, progress: q.progress, tint: q.isPaused ? .blue : .orange) {
-            if q.isPaused { await onResumeEpisode?(q) } else { await onPauseEpisode?(q) }
-        }
-        // The ring is the only place this completion shows, so VoiceOver gets it as the value.
-        .accessibilityValue(Text(max(0.0, min(1.0, q.progress)), format: .percent.precision(.fractionLength(0))))
-    }
-
-    @ViewBuilder
-    private var ctaCancelProminent: some View {
-        Button { PanelActivation.bringForward(); ctaPendingDelete = true } label: {
-            Image(systemName: "xmark")
-                .scaledFont(size: 13, weight: .bold)
-                .frame(width: 26)
-                .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .tint(.red)
-        .help(Text("queue.cancelDownload.button", bundle: .module))
-        .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
-        // "Cancel download" alone doesn't say the client loses the transfer.
-        .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
     }
 
     private var episodeHeroTitle: String {

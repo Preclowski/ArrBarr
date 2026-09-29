@@ -21,9 +21,7 @@ private struct ConfirmCenterHost: ViewModifier {
         content
             // Without these, rows under the scrim still took clicks and opened their
             // tooltips, which as floating windows came up on top of the alert.
-            .allowsHitTesting(center.pending == nil)
-            .disabled(center.pending != nil)
-            .accessibilityHidden(center.pending != nil)
+            .parked(center.pending != nil, opacity: 1)
             .environment(\.suppressRowTooltip, center.pending != nil)
             .overlay {
                 if let pending = center.pending {

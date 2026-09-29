@@ -52,6 +52,8 @@ public struct iOSAppRoot: View {
     }
 
     public var body: some View {
+        // Once per body, not once per tab.
+        let localHits = localHits
         TabView(selection: $selectedTab) {
             Tab(value: RootTab.queue) {
                 NavigationStack { QueueTab(viewModel: viewModel, searchVM: searchVM, localHits: localHits, isActive: selectedTab == .queue, searchPresented: $searchPresented) }

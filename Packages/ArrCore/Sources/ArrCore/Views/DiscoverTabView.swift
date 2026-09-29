@@ -136,20 +136,7 @@ struct DiscoverTabView: View {
     }
 
     /// Same fly-off as a skip; only the memory of it differs.
-    private func handleVeto() {
-        guard !verdictInFlight else { return }
-        verdictInFlight = true
-        withAnimation(.easeOut(duration: 0.55)) {
-            dragOffset = CGSize(width: -1000, height: 0)
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 550_000_000)
-            viewModel.veto()
-            dragOffset = .zero
-            isDragging = false
-            verdictInFlight = false
-        }
-    }
+    private func handleVeto() { flyOff(then: viewModel.veto) }
 
     /// ← mirrors the ✕ button, → opens the add card like a right swipe.
     private var deckWithKeyboard: some View {
@@ -472,17 +459,16 @@ struct DiscoverTabView: View {
         isDragging = false
     }
 
+    private func handleSkip() { flyOff(then: viewModel.skip) }
+
     /// Fly off first, then drop — the peek card scales up instead of the next one sliding in.
-    private func handleSkip() {
+    private func flyOff(then drop: @escaping () -> Void) {
         guard !verdictInFlight else { return }
         verdictInFlight = true
-        let flyDistance: CGFloat = 1000
         withAnimation(.easeOut(duration: 0.55)) {
-            dragOffset = CGSize(width: -flyDistance, height: 0)
-        }
-        Task {
-            try? await Task.sleep(nanoseconds: 550_000_000)
-            viewModel.skip()
+            dragOffset = CGSize(width: -1000, height: 0)
+        } completion: {
+            drop()
             dragOffset = .zero
             isDragging = false
             verdictInFlight = false

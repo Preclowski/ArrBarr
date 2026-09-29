@@ -57,12 +57,7 @@ struct SearchAddPanel: View {
     var body: some View {
         ZStack {
             mainContent
-                // Parked with all four mechanisms, as in PopoverContentView: hidden layers still hold
-                // pointer regions and sit in the accessibility tree.
-                .opacity(enlargedPoster != nil ? 0 : 1)
-                .allowsHitTesting(enlargedPoster == nil)
-                .disabled(enlargedPoster != nil)
-                .accessibilityHidden(enlargedPoster != nil)
+                .parked(enlargedPoster != nil)
 
             if let url = enlargedPoster {
                 PosterLightbox(

@@ -62,12 +62,7 @@ extension PopoverContentView {
                     PopoverEmptyState(onOpenSettings: onOpenSettings) { moreMenu }
                 }
             }
-            // Parking takes all four mechanisms; skipping one leaks. `.disabled` is what stops an
-            // invisible TextField handing its I-beam to the overlay drawn over it.
-            .opacity(tabContentParked ? Self.parkedOpacity : 1)
-            .allowsHitTesting(!tabContentParked)
-            .disabled(tabContentParked)
-            .accessibilityHidden(tabContentParked)
+            .parked(tabContentParked, opacity: Self.parkedOpacity)
 
             if discoverViewModel.isPresented {
                 DiscoverTabView(
@@ -86,11 +81,8 @@ extension PopoverContentView {
                     },
                     onRequestMore: requestMoreQuizPicks
                 )
-                // Parked with all four mechanisms too; the detail surface has no opaque background.
-                .opacity(discoverParked ? Self.parkedOpacity : 1)
-                .allowsHitTesting(!discoverParked)
-                .disabled(discoverParked)
-                .accessibilityHidden(discoverParked)
+                // The detail surface has no opaque background.
+                .parked(discoverParked, opacity: Self.parkedOpacity)
                 .transition(.opacity)
             }
 

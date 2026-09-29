@@ -712,6 +712,17 @@ struct RatingPill: View {
 
 // MARK: - Poster lightbox presentation
 
+extension View {
+    /// Content under an overlay needs all four: a hidden layer still holds pointer regions and tooltips,
+    /// hands its I-beam to what is drawn over it, and stays in the accessibility tree.
+    func parked(_ isParked: Bool, opacity parkedOpacity: Double = 0) -> some View {
+        self.opacity(isParked ? parkedOpacity : 1)
+            .allowsHitTesting(!isParked)
+            .disabled(isParked)
+            .accessibilityHidden(isParked)
+    }
+}
+
 public extension View {
     /// iOS uses `.fullScreenCover` to cover the nav and tab bars; macOS overlays inside the popover.
     @ViewBuilder
@@ -727,7 +738,8 @@ public extension View {
             }
         }
         #else
-        overlay {
+        // The lightbox is a sibling of the parked content, so its dismiss gestures stay live.
+        parked(url.wrappedValue != nil).overlay {
             if let u = url.wrappedValue {
                 PosterLightbox(url: u, apiKey: apiKey, aspectRatio: aspectRatio,
                                onDismiss: { url.wrappedValue = nil })
