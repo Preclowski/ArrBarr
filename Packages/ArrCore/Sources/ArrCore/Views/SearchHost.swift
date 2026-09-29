@@ -10,7 +10,7 @@ struct SearchHost<Content: View>: View {
     var enabled: Bool = true
     /// iOS only: owned by the root so an empty field closes on a tab switch.
     var isPresented: Binding<Bool> = .constant(false)
-    /// macOS only: the capsule's focus, owned by the root (⌘N aims at it).
+    /// macOS only: the capsule's focus, owned by the root (⌘F aims at it).
     var focused: FocusState<Bool>.Binding? = nil
     var onSelectQueueItem: (QueueItem) -> Void = { _ in }
     let onSelectAddResult: (SearchResult) -> Void

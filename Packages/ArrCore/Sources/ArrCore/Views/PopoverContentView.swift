@@ -41,7 +41,7 @@ public struct PopoverContentView: View {
     @State var detailItem: QueueItem?
     /// Detail surfaces own their person destination; chat has none, so the root hosts it.
     @State var personRef: PersonRef?
-    /// Owned here because ⌘N and the Add/search intents aim at it from outside any tab.
+    /// Owned here because ⌘F and the Add/search intents aim at it from outside any tab.
     @FocusState var searchFieldFocused: Bool
 
     /// Opened from chat: Back returns to chat instead of the Add tab.
@@ -222,7 +222,7 @@ public struct PopoverContentView: View {
             }
             searchFieldFocused = true
         }
-        .keyboardShortcut("n", modifiers: .command)
+        .keyboardShortcut("f", modifiers: .command)
         .opacity(0)
         .frame(width: 0, height: 0)
         Button("") { Task { await viewModel.refresh() } }

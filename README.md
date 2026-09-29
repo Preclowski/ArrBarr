@@ -174,7 +174,7 @@ All optional, all off until you flip them on.
   your own Shortcuts.
 - **Spotlight** — those same actions are searchable straight from Spotlight.
 - **Native notifications** the moment a release is grabbed.
-- **Keyboard shortcuts** — **⌘,** Settings · **⌘N** Add · **⌘R** Refresh ·
+- **Keyboard shortcuts** — **⌘,** Settings · **⌘F** Search · **⌘R** Refresh ·
   **⌘Q** Quit.
 
 Want to explore the UI without wiring up real servers? Launch demo mode — it
