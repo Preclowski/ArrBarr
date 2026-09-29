@@ -5,7 +5,7 @@
 
 ## Goal
 
-Add a Tinder-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from three sources — blended fairly, with source-appropriate swipe actions, reusing as much existing machinery as possible.
+Add a swipe-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from three sources — blended fairly, with source-appropriate swipe actions, reusing as much existing machinery as possible.
 
 ## Sources
 
@@ -94,7 +94,7 @@ Round-robin order: `[tmdb, library, llm]`, skipping any source that is exhausted
 The architecture review surfaced that `LLMProvider` has no server-side session, so any "more suggestions" call has to resend its own exclude context. Embrace it instead of fighting it.
 
 **Request shape (one shot per "more" press):**
-- System: "You recommend movies for a tinder-style picker. Reply only as JSON array `[{title, year, reason}]`."
+- System: "You recommend movies for a swipe-style picker. Reply only as JSON array `[{title, year, reason}]`."
 - User: `"Mood: <user mood text>. Active filters: <decade if set>. Suggest 20 movies. Do NOT include any of these already-shown titles: <comma-separated exclude list>."`
 
 **Drain:**

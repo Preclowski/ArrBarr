@@ -10,7 +10,7 @@ Two concrete defects in the current Discover tab:
 
 1. **Tab bar disappears mid-flow.** `hideTabBarDeepInDiscover` in
    `PopoverContentView.swift` hides the main popover tab bar whenever the
-   user is in `.tinder` stage or in `.picker` stage with an active session
+   user is in `.quiz` stage or in `.picker` stage with an active session
    (`current != nil`). In practice this means the tab bar vanishes from the
    first submit onward and only returns after a full back-arrow walk to a
    "clean" picker. Users feel trapped in Discover.
@@ -37,7 +37,7 @@ tab bar visible.
   tab, same as every other tab.
 - `FloatingBackButton` in `DiscoverTabView` keeps its existing role
   (matched → swipe → picker). It is no longer the only escape — tabs are.
-- Accept ~44 pt less vertical space inside Discover. Tinder card already
+- Accept ~44 pt less vertical space inside Discover. Quiz card already
   has headroom; no layout rework required.
 
 ### 2. Picker (DiscoverPickerView.swift) — full rewrite
@@ -55,7 +55,7 @@ New body, top to bottom:
   disclosure, no "+ Add" menu, no autocomplete popover, no AI starter row,
   no per-category groupings.
 
-`DiscoverTabView.tinderTopBar` already renders `filterSummaryChip` — adapt
+`DiscoverTabView.quizTopBar` already renders `filterSummaryChip` — adapt
 it to show a truncated `moodText` and tap to return to the picker with the
 prompt pre-filled (already the behavior, just no other filter parts to
 join).
@@ -74,7 +74,7 @@ Remove published state and APIs that exist only for the visual composer:
 
 Keep:
 
-- `stage` (`.picker` / `.tinder`)
+- `stage` (`.picker` / `.quiz`)
 - `moodText`, `matched`, `current`, `picksMilestoneTick`, `removeMatch`,
   `reshuffle`
 - `DiscoverFilter` struct as a type (still referenced by TMDB client
@@ -116,8 +116,8 @@ Add (small):
 - No new "history of prompts" UI.
 - No saved prompts / favorites.
 - No structured filter UI in any form (including hidden behind disclosure).
-- No redesign of tinder swipe / matched-list views.
-- No change to chat-driven Discover entry (`arrBarrOpenDiscoverInTinder`)
+- No redesign of quiz swipe / matched-list views.
+- No change to chat-driven Discover entry (`arrBarrOpenDiscoverInQuiz`)
   beyond making sure it still works with the LLM-only pipeline.
 
 ## Trade-offs accepted
@@ -125,7 +125,7 @@ Add (small):
 - **Every search hits the LLM.** No free TMDB browsing. Mitigation: a
   small in-VM cache keyed on the normalized prompt so going back to the
   picker and re-submitting the same prompt does not re-call the model.
-- **Less vertical space in tinder mode** (~44 pt). Acceptable; card has
+- **Less vertical space in quiz mode** (~44 pt). Acceptable; card has
   headroom.
 - **Loss of "explore popular 90s sci-fi" as a no-LLM path.** User must
   prompt for it. Trusting the model to handle that prose well.

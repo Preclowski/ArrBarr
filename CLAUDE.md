@@ -45,7 +45,7 @@ Packages/ArrCore/           # the real codebase (Swift 6 tools, lang mode v5)
                    #   DiscoverTabView, SearchView, DetailView, iOSAppRoot, …)
     AppIntents/    # ArrBarrIntents — Siri/Shortcuts/Spotlight
     Resources/Localizable.xcstrings   # single string catalog, Bundle.module
-  Tests/ArrCoreTests/        # ~40 test files (Swift Testing: import Testing, @Test/#expect)
+  Tests/ArrCoreTests/        # Swift Testing (import Testing, @Test/#expect); defaults suites via TestDefaults
 
 Packages/MediaKit/          # zero-dependency communication layer (Swift 6, strict):
                             #   transport, per-host limits, SQLite resource store,
@@ -66,8 +66,8 @@ docs/superpowers/{plans,specs}/  # design docs per feature (dated)
 docs/{design,notes}/             # ad-hoc design notes
 ```
 
-External deps (resolved by SPM): `swift-nio`, `mcp-swift-sdk`, `swift-log`,
-`eventsource`, plus swift-collections/atomics/system transitively. MediaKit has none.
+External deps (resolved by SPM): `swift-markdown` (ArrCore's only one), `swift-nio`, `mcp-swift-sdk`,
+`swift-log`, `eventsource`, plus swift-cmark/collections/atomics/system transitively. MediaKit has none.
 
 ## MediaKit
 
@@ -83,9 +83,9 @@ policies (`cacheFirst`, `staleWhileRevalidate`, `mustRevalidate`); writes are
 `SignalRSource`. Fixtures are packed one JSON per kind by `Tools/fixtures/pack_fixtures.py`;
 re-record only with `(cd Packages/MediaKit && swift run mediakit-record <instances.json> <scratch-dir>)`
 (`MediaKitRecording`: reads only, allow-list), keep the raw recording in the scratchpad, and run
-`Tools/fixtures/anonymize_fixtures.py --check` before packing, then `Tools/fixtures/curate_demo.py` (puts
+`Tools/fixtures/anonymize_fixtures.py --check --root <unpacked-recording>` before packing, then `Tools/fixtures/curate_demo.py` (puts
 the demo library's titles and artwork from `demo_catalogue.json` over the placeholders) before committing. Package tests:
-`(cd Packages/MediaKit && swift test)`. ArrCore compiles with
+`(cd Packages/MediaKit && swift test)`. All three packages are Swift 6 language mode; ArrCore compiles with
 `.defaultIsolation(MainActor.self)`: wire models, helpers and facades are `nonisolated`.
 
 ## Build & Run

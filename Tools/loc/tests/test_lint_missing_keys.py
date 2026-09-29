@@ -5,6 +5,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import lint_missing_keys as lmk
 
 class TestMissingKeys(unittest.TestCase):
+    def test_flags_text_without_bundle(self):
+        tmp = Path(__file__).parent / "fixtures" / "_codeprobe"
+        tmp.mkdir(parents=True, exist_ok=True)
+        (tmp / "D.swift").write_text(
+            'Text(LocalizedStringKey(page.titleKey))\n'
+            'Text(LocalizedStringKey(page.bodyKey), bundle: .module)')
+        try:
+            self.assertEqual(lmk.unbundled_texts(sources=tmp), ["D.swift:1"])
+        finally:
+            (tmp / "D.swift").unlink()
+
     def test_flags_area_key_absent_from_catalog(self):
         # monkeypatch the catalog reader
         orig = lmk.catalog_keys_and_areas

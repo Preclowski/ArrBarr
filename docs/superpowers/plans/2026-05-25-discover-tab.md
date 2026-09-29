@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Tinder-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from TMDB Discover, the user's Radarr library, and (optionally) an LLM mood query — blended via VM-level round-robin with per-source swipe actions.
+**Goal:** Add a swipe-style "Discover" tab to ArrBarr's popover that surfaces movie suggestions from TMDB Discover, the user's Radarr library, and (optionally) an LLM mood query — blended via VM-level round-robin with per-source swipe actions.
 
 **Architecture:** Three independent async source functions live on `DiscoverViewModel`. The VM round-robins them into a queue, dedupes by `id`, and tops up when the queue runs low. Cards reuse `SearchResult` wrapped in a thin `DiscoverItem`. Card body reuses `MediaHeaderCard` + `RemotePoster`. LLM uses a stateless call with an `exclude` array — no multi-turn conversation premise.
 
@@ -439,7 +439,7 @@ public enum DiscoverLLMPrompt {
     ) -> String {
         var lines: [String] = []
         lines.append(
-            "You recommend movies for a tinder-style picker. " +
+            "You recommend movies for a swipe-style picker. " +
             "Respond ONLY as a JSON array of objects with keys " +
             "{\"title\": string, \"year\": int|null, \"reason\": string}. " +
             "No prose, no markdown."

@@ -910,8 +910,8 @@ def sweep(node, sweeps, key=None, inside=False):
 # Driver
 # --------------------------------------------------------------------------
 
-def fixture_files():
-    return sorted(glob.glob(os.path.join(FIXTURE_ROOT, "**", "*.json"), recursive=True))
+def fixture_files(root):
+    return sorted(glob.glob(os.path.join(root, "**", "*.json"), recursive=True))
 
 
 def client_of(path: str) -> str:
@@ -952,9 +952,15 @@ def main():
     parser = argparse.ArgumentParser(description="Anonymize MediaKit fixtures + corpus.")
     parser.add_argument("--check", action="store_true",
                         help="report whether anything would change, write nothing")
+    parser.add_argument("--root", default=FIXTURE_ROOT,
+                        help="unpacked fixture tree, e.g. a recording in the scratchpad (default: %(default)s)")
     args = parser.parse_args()
 
-    files = fixture_files()
+    files = fixture_files(args.root)
+    # An empty tree used to "pass" the check having inspected nothing.
+    if not files:
+        print("anonymize_fixtures: no fixture files under %s — unpack or record there first" % args.root, file=sys.stderr)
+        return 2
     corpus_entries = load(CORPUS) if os.path.exists(CORPUS) else []
 
     # Pass 1 — reserve every value that is already anonymized.
