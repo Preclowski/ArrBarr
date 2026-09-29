@@ -441,7 +441,13 @@ struct UpNextProvider: AppIntentTimelineProvider {
 
     func timeline(for configuration: UpcomingConfigIntent, in context: Context) async -> Timeline<UpcomingEntry> {
         let e = await entry(for: configuration)
-        return Timeline(entries: [e], policy: .after(e.date.addingTimeInterval(3 * 3600)))
+        // A second entry at midnight, so "Today"/"Tomorrow" and yesterday's releases turn over on time.
+        let calendar = Calendar.current
+        guard let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: e.date)) else {
+            return Timeline(entries: [e], policy: .after(e.date.addingTimeInterval(3 * 3600)))
+        }
+        let next = UpcomingEntry(date: midnight, items: e.items.filter { $0.airDate >= midnight }, anyConfigured: e.anyConfigured)
+        return Timeline(entries: [e, next], policy: .after(e.date.addingTimeInterval(3 * 3600)))
     }
 
     private func entry(for c: UpcomingConfigIntent) async -> UpcomingEntry {
@@ -534,7 +540,7 @@ struct UpNextView: View {
                     if let sub = it.subtitle {
                         Text(sub).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
-                    Text(it.airDateFormatted())
+                    Text(it.airDateFormatted(now: entry.date))
                         .font(.subheadline.weight(.bold))
                         .foregroundStyle(.primary)
                         .padding(.top, 1)
@@ -578,7 +584,7 @@ struct UpNextView: View {
                 }
             }
             Spacer(minLength: 4)
-            Text(it.airDateFormatted())
+            Text(it.airDateFormatted(now: entry.date))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

@@ -120,20 +120,24 @@ struct ReleaseListView: View {
             statusState(symbol: "exclamationmark.triangle", text: Text(verbatim: loadError))
         } else if releases.isEmpty {
             statusState(symbol: "magnifyingglass", text: Text("No releases found", bundle: .module))
-        } else if visible.isEmpty {
-            // Said outright: an empty list would read as "the search found nothing".
-            statusState(symbol: "line.3.horizontal.decrease.circle",
-                        text: Text("Every result is filtered out.", bundle: .module))
         } else {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(visible) { release in
-                        row(release)
+            // Filtered and sorted once per render: the check and the list both need it.
+            let visible = visible
+            if visible.isEmpty {
+                // Said outright: an empty list would read as "the search found nothing".
+                statusState(symbol: "line.3.horizontal.decrease.circle",
+                            text: Text("Every result is filtered out.", bundle: .module))
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 0) {
+                        ForEach(visible) { release in
+                            row(release)
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

@@ -111,13 +111,14 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
     }
 
     /// Words go through `AppLocalized`: `String(localized:)` stays in the process
-    /// language until relaunch, mismatching the date.
-    public func airDateFormatted(locale: Locale = .current) -> String {
+    /// language until relaunch, mismatching the date. `now` is the moment the text is shown at: a widget
+    /// renders its midnight entry ahead of time.
+    public func airDateFormatted(locale: Locale = .current, now: Date = Date()) -> String {
         let cal = Calendar.current
-        if cal.isDateInToday(airDate) {
+        if cal.isDate(airDate, inSameDayAs: now) {
             return AppLocalized.string("upcoming.today.button", locale: locale)
         }
-        if cal.isDateInTomorrow(airDate) {
+        if let tomorrow = cal.date(byAdding: .day, value: 1, to: now), cal.isDate(airDate, inSameDayAs: tomorrow) {
             return AppLocalized.string("upcoming.tomorrow.button", locale: locale)
         }
         return airDate.formatted(

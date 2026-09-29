@@ -15,7 +15,7 @@ final class StatusItemDropTarget {
     private var watchdog: Timer?
 
     /// SwiftUI creates the status item after `applicationDidFinishLaunching`, so this
-    /// retries; there is none in Dock-window mode.
+    /// retries; there is none in Dock-window mode, where `stop()` ends the retries.
     func install() {
         attachIfNeeded(log: true)
         // Re-attaches only when the button was replaced.
@@ -23,6 +23,11 @@ final class StatusItemDropTarget {
         watchdog = Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { [weak self] _ in
             MainActor.assumeIsolated { self?.attachIfNeeded(log: false) }
         }
+    }
+
+    func stop() {
+        watchdog?.invalidate()
+        watchdog = nil
     }
 
     private func attachIfNeeded(log logFailure: Bool) {

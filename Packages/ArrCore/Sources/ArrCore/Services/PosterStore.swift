@@ -147,7 +147,7 @@ public actor PosterStore {
             let key = Self.memoryKey(url, candidate)
             if let hit = memory.object(forKey: key as NSString) { return hit }
             if let data = Self.storedData(for: url, tier: candidate),
-               let image = PlatformImage(data: data) {
+               let image = Self.decoded(data) {
                 Self.keepAlive([url], tier: candidate)
                 store(image, key: key)
                 return image
@@ -207,20 +207,40 @@ public actor PosterStore {
     // MARK: - Fetching
 
     private func loadOrFetch(url: URL, tier: PosterTier, apiKey: String?) async -> PlatformImage? {
-        if let file = Self.file(url, tier), let data = try? Data(contentsOf: file),
-           let image = PlatformImage(data: data) {
+        if let image = await Self.loadStored(url, tier) {
             // Reading counts as use: `purge()` goes by mtime and only the icon tier gets a keep-alive sweep.
             Self.keepAlive([url], tier: tier)
             store(image, key: Self.memoryKey(url, tier))
             return image
         }
         guard let fetched = await fetchStoring(url, tier: tier, apiKey: apiKey),
-              let image = PlatformImage(data: fetched.data) else {
+              let image = await Self.decode(fetched.data) else {
             noteFailure(Self.memoryKey(url, tier))
             return nil
         }
         store(image, key: Self.memoryKey(url, tier))
         return image
+    }
+
+    /// The file read and the decode run off the actor, so a grid of posters loads in parallel.
+    @concurrent
+    private static func loadStored(_ url: URL, _ tier: PosterTier) async -> PlatformImage? {
+        storedData(for: url, tier: tier).flatMap(decoded)
+    }
+
+    @concurrent
+    private static func decode(_ data: Data) async -> PlatformImage? { decoded(data) }
+
+    /// Decoded now: `PlatformImage(data:)` defers the JPEG decode to the first draw, on the main thread mid-scroll.
+    nonisolated static func decoded(_ data: Data) -> PlatformImage? {
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateImageAtIndex(source, 0, [kCGImageSourceShouldCacheImmediately: true] as CFDictionary)
+        else { return nil }
+        #if os(macOS)
+        return NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height))
+        #else
+        return UIImage(cgImage: image)
+        #endif
     }
 
     /// Also sweeps expired markers: reads only check their own key, so stale ones would never go.

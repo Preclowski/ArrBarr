@@ -81,8 +81,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
 
-        // Installed on a delay because SwiftUI creates the status item after this callback returns.
-        statusItemDropTarget.install()
         installStatusItemRightClickMenu()
 
         _ = Self.bootstrapLogging
@@ -191,11 +189,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The menu-bar icon is toggled separately via `MenuBarExtra(isInserted:)` on the same flag.
     private func applyWindowMode(_ detached: Bool) {
         if detached {
+            statusItemDropTarget.stop()
             NSApp.setActivationPolicy(.regular)
             openMainWindow()
         } else {
             mainWindow?.close()
             NSApp.setActivationPolicy(.accessory)
+            // Retries until SwiftUI has created the status item, which happens after launch returns.
+            statusItemDropTarget.install()
         }
     }
 
