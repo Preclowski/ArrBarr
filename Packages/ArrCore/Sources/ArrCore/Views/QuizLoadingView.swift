@@ -3,7 +3,7 @@ import SwiftUI
 struct QuizLoadingView: View {
     let phase: DiscoverViewModel.LoadPhase
     let startedAt: Date?
-    /// Covers of the picks resolved so far; the stage shows the newest.
+    /// Covers of the picks resolved so far; the fan shows the newest three.
     let posters: [URL]
     let onCancel: () -> Void
 
@@ -16,7 +16,7 @@ struct QuizLoadingView: View {
 
     var body: some View {
         let covers = posters.isEmpty ? library : Array(posters.reversed())
-        WaitStage(covers: covers.map { WaitPoster(url: $0) }, pending: posters.isEmpty, stories: stories) {
+        WaitStage(covers: covers.map { WaitPoster(url: $0) }, slotCount: 3, pending: posters.isEmpty, stories: stories) {
             VStack(spacing: 10) {
                 LoadingStateView(label: phaseKey)
                     .contentTransition(.opacity)
