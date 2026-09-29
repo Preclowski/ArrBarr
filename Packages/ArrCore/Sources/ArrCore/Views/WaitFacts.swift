@@ -54,11 +54,18 @@ struct WaitFactTicker: View {
 
     var body: some View {
         if !facts.isEmpty {
-            Text(verbatim: facts[index % facts.count].text)
-                .scaledFont(size: 12)
+            // A fact completes the lead ("…you finished 40 titles…?"), so it never stands alone.
+            VStack(spacing: 3) {
+                Text("wait.story.lead", bundle: .module)
+                    .scaledFont(size: 10, weight: .semibold)
+                    .textCase(.uppercase)
+                    .kerning(0.8)
+                Text((try? AttributedString(markdown: facts[index % facts.count].text)) ?? AttributedString(facts[index % facts.count].text))
+                    .scaledFont(size: 12)
+                    .lineLimit(2)
+            }
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
-                .lineLimit(2)
                 .id(index)
                 .transition(.opacity)
                 .frame(maxWidth: .infinity)

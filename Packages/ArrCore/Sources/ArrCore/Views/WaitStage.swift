@@ -8,29 +8,26 @@ nonisolated struct WaitPoster: Hashable, Sendable {
 /// The shared long-wait screen: one cover (release search) or a fan of three (quiz) over soft blots
 /// of their colour, one "Did you know" line, the host's status at the foot. No backdrop: the window's glass shows.
 struct WaitStage<Footer: View>: View {
-    /// Newest first. Real covers fill the slots as they come; stand-ins (`pending`) take turns.
+    /// Newest first; the first `slotCount` are shown.
     let covers: [WaitPoster]
     /// 1 or 3: the centre card, then left and right.
     var slotCount = 1
-    /// Stand-ins for covers still on their way: dimmed and desaturated, never see-through.
-    var pending = false
     let stories: [WaitStory]
     var interval: TimeInterval = 7
     @ViewBuilder var footer: () -> Footer
 
     @State private var index = 0
-    /// Cards never move; a new cover crossfades into a slot in place.
-    @State private var slots: [WaitPoster?] = []
+    @State private var slots: [WaitSlot] = []
     @State private var lastChange = Date.distantPast
     @State private var tint: Color?
+    @State private var breathe = false
     /// A person card is open: the story holds still under it.
     @State private var holding = false
 
     /// Picks land several a second; a slot changes at most this often so it reads as a change, not a strobe.
-    private static var hold: TimeInterval { 1.2 }
-    private static var standInHold: TimeInterval { 1.6 }
+    private static var hold: TimeInterval { 1.4 }
     /// Empty slots fill quickly, so the fan is up almost at once.
-    private static var fillHold: TimeInterval { 0.25 }
+    private static var fillHold: TimeInterval { 0.2 }
 
     var body: some View {
         GeometryReader { proxy in
@@ -54,6 +51,7 @@ struct WaitStage<Footer: View>: View {
             .padding(.horizontal, 24)
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
+        .onAppear { breathe = true }
         // Late stories (TMDB answers after the first turn) must not swap the line being read.
         .onChange(of: stories.map(\.id)) { old, new in
             guard !old.isEmpty else { return }
@@ -75,81 +73,127 @@ struct WaitStage<Footer: View>: View {
     // MARK: - Cards
 
     private func follow() async {
-        if slots.count != slotCount { slots = Array(repeating: nil, count: slotCount) }
-        var turn = 0
-        while !Task.isCancelled, let (slot, next) = nextChange(turn: turn) {
-            turn += 1
-            let pace = slots.contains(where: { $0 == nil }) ? Self.fillHold : (pending ? Self.standInHold : Self.hold)
+        if slots.count != slotCount { slots = Array(repeating: WaitSlot(), count: slotCount) }
+        while !Task.isCancelled, let (slot, next) = nextChange() {
+            let pace = slots.contains(where: { $0.poster == nil }) ? Self.fillHold : Self.hold
             let wait = pace - Date().timeIntervalSince(lastChange)
             if wait > 0 { try? await Task.sleep(for: .seconds(wait)) }
-            // In before it shows, so a card never fades in blank and pops its image later.
+            // Loaded before it shows, and drawn from memory: no placeholder frame mid-fade.
+            var image: PlatformImage?
             if let url = next.url {
-                _ = await PosterStore.shared.image(for: url, tier: .card, apiKey: next.apiKey)
+                image = await PosterStore.shared.image(for: url, tier: .card, apiKey: next.apiKey)
             }
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, slots.indices.contains(slot) else { return }
             lastChange = Date()
-            withAnimation(.easeInOut(duration: 0.9)) { slots[slot] = next }
-            tint = await PosterTint.color(for: next.url) ?? tint
+            if let color = image.flatMap(PosterTint.averageColor(of:)) { tint = Self.vivid(color) }
+            slots[slot].poster = next
+            if !slots[slot].shown {
+                slots[slot].image = image
+                withAnimation(.easeOut(duration: 0.5)) { slots[slot].shown = true }
+            } else {
+                // The new cover fades in over the old one, which stays fully opaque until it is covered.
+                withAnimation(.easeInOut(duration: 0.8)) {
+                    slots[slot].incoming = WaitSlot.Incoming(image: image)
+                } completion: {
+                    var settle = Transaction()
+                    settle.disablesAnimations = true
+                    withTransaction(settle) {
+                        slots[slot].image = image
+                        slots[slot].incoming = nil
+                    }
+                }
+            }
         }
     }
 
-    /// Real covers: the oldest one not yet up takes the first slot holding nothing current.
-    /// Stand-ins: the next one not on screen takes the next slot in turn, for as long as the wait lasts.
-    private func nextChange(turn: Int) -> (Int, WaitPoster)? {
+    /// The oldest cover not yet up takes the first slot holding nothing current.
+    private func nextChange() -> (Int, WaitPoster)? {
         let unique = covers.reduce(into: [WaitPoster]()) { if !$0.contains($1) { $0.append($1) } }
-        if pending {
-            guard let next = unique.first(where: { !slots.contains($0) }) ?? unique.first,
-                  unique.count > slotCount || slots.contains(where: { $0 == nil }) else { return nil }
-            let slot = slots.firstIndex(where: { $0 == nil }) ?? turn % slotCount
-            return (slot, next)
-        }
         let current = Array(unique.prefix(slotCount))
-        guard let incoming = current.last(where: { !slots.contains($0) }),
-              let slot = slots.firstIndex(where: { $0 == nil || !current.contains($0!) }) else { return nil }
+        guard let incoming = current.last(where: { cover in !slots.contains { $0.poster == cover } }),
+              let slot = slots.firstIndex(where: { $0.poster.map { !current.contains($0) } ?? true }) else { return nil }
         return (slot, incoming)
     }
 
     private func fan(_ size: CGSize) -> some View {
-        ZStack {
+        let spread: CGFloat = breathe ? 1 : 0.94
+        return ZStack {
             WaitTintBlots(tint: tint ?? .accentColor, size: size)
-                .animation(.easeInOut(duration: 1.2), value: tint)
-            ForEach(Array(slots.enumerated()).reversed(), id: \.offset) { slot, poster in
+                .animation(.easeInOut(duration: 1.5), value: tint)
+            ForEach(Array(slots.enumerated()).reversed(), id: \.offset) { slot, state in
                 let direction: CGFloat = slot == 0 ? 0 : (slot == 1 ? -1 : 1)
-                card(poster, size: size)
-                    .brightness(slot == 0 ? 0 : -0.22)
-                    .scaleEffect(slot == 0 ? 1 : 0.82)
-                    .rotationEffect(.degrees(Double(direction) * 8))
-                    .offset(x: direction * size.width * 0.46, y: slot == 0 ? 0 : 10)
+                if state.shown {
+                    WaitCard(slot: state, size: size)
+                        .scaleEffect(slot == 0 ? 1 : 0.82)
+                        .rotationEffect(.degrees(Double(direction) * 8 * spread))
+                        .offset(x: direction * size.width * 0.46 * spread, y: slot == 0 ? 0 : 10)
+                        .transition(.scale(scale: 0.92).combined(with: .opacity))
+                }
             }
         }
         .frame(width: size.width, height: size.height)
-        .saturation(pending ? 0.35 : 1)
-        .brightness(pending ? -0.15 : 0)
-        .animation(.smooth(duration: 0.6), value: pending)
+        .animation(.easeInOut(duration: 2.4).repeatForever(autoreverses: true), value: breathe)
         .accessibilityHidden(true)
     }
 
-    @ViewBuilder
-    private func card(_ poster: WaitPoster?, size: CGSize) -> some View {
-        if let poster {
-            ZStack {
-                // The base stays put under the crossfade, so the glass never shows through mid-change.
-                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-                    .fill(Color(white: 0.16))
-                    .shadow(color: .black.opacity(0.25), radius: 12, y: 6)
-                RemotePoster(url: poster.url, apiKey: poster.apiKey, tier: .card,
-                             size: size, cornerRadius: Tokens.Radius.card, fallbackSymbol: "film")
-                    .frame(width: size.width, height: size.height)
-                    .id(poster)
-                    .transition(.opacity)
+    /// Poster averages come out muddy; the blots need the hue at full voice. Near-greys stay grey.
+    private static func vivid(_ color: Color) -> Color {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #if os(macOS)
+        guard let rgb = NSColor(color).usingColorSpace(.sRGB) else { return color }
+        rgb.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        #else
+        UIColor(color).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        #endif
+        return Color(hue: h, saturation: s < 0.08 ? s : max(s, 0.6), brightness: max(b, 0.85))
+    }
+}
+
+private struct WaitSlot: Equatable {
+    struct Incoming: Equatable { let image: PlatformImage? }
+    var poster: WaitPoster?
+    var image: PlatformImage?
+    var incoming: Incoming?
+    var shown = false
+}
+
+private struct WaitCard: View {
+    let slot: WaitSlot
+    let size: CGSize
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+        ZStack {
+            face(slot.image)
+            if let incoming = slot.incoming {
+                face(incoming.image).transition(.opacity)
             }
-            .frame(width: size.width, height: size.height)
-            .transition(.opacity)
+        }
+        .frame(width: size.width, height: size.height)
+        .clipShape(shape)
+        .shadow(color: .black.opacity(0.28), radius: 14, y: 7)
+    }
+
+    @ViewBuilder
+    private func face(_ image: PlatformImage?) -> some View {
+        if let image {
+            Image(platformImage: image)
+                .resizable()
+                .interpolation(.high)
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size.width, height: size.height)
+        } else {
+            ZStack {
+                Color(white: 0.2)
+                Image(systemName: "film")
+                    .font(.system(size: size.width * 0.3, weight: .light))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
         }
     }
 }
 
-/// Soft blots of the cover's colour drifting under it, like light through tinted glass.
+/// Soft blots of the covers' colour drifting around and past the cards, like light through tinted glass.
 private struct WaitTintBlots: View {
     let tint: Color
     let size: CGSize
@@ -162,14 +206,14 @@ private struct WaitTintBlots: View {
                     let phase = Double(i) * 2.1
                     Circle()
                         .fill(tint)
-                        .hueRotation(.degrees(Double(i - 1) * 30))
-                        .frame(width: size.width * 0.95, height: size.width * 0.95)
-                        .offset(x: cos(t * 0.33 + phase) * size.width * 0.32,
-                                y: sin(t * 0.25 + phase) * size.height * 0.26)
+                        .hueRotation(.degrees(Double(i - 1) * 28))
+                        .frame(width: size.width * 1.25, height: size.width * 1.25)
+                        .offset(x: cos(t * 0.3 + phase) * size.width * 0.75,
+                                y: sin(t * 0.23 + phase) * size.height * 0.32)
                 }
             }
-            .blur(radius: 48)
-            .opacity(0.75)
+            .blur(radius: 56)
+            .opacity(0.7)
         }
         .allowsHitTesting(false)
     }

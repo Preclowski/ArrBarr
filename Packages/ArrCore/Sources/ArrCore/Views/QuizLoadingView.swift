@@ -16,7 +16,7 @@ struct QuizLoadingView: View {
 
     var body: some View {
         let covers = posters.isEmpty ? library : Array(posters.reversed())
-        WaitStage(covers: covers.map { WaitPoster(url: $0) }, slotCount: 3, pending: posters.isEmpty, stories: stories) {
+        WaitStage(covers: covers.map { WaitPoster(url: $0) }, slotCount: 3, stories: stories) {
             VStack(spacing: 10) {
                 LoadingStateView(label: phaseKey)
                     .contentTransition(.opacity)

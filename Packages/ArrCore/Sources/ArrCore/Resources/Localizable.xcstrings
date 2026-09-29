@@ -29969,7 +29969,7 @@
       "comment": "Settings toggle: draw the watched mark on posters"
     },
     "wait.quiz.finishedRecently %lld": {
-      "comment": "Quiz wait-screen fact. %lld = titles the viewer finished on the media server in the last 30 days.",
+      "comment": "Quiz wait-screen fact. %lld = titles the viewer finished on the media server in the last 30 days. Completes \"Did you know that…\" (wait.story.lead): starts with …, ends with ?.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -29978,13 +29978,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "You finished one title in the last 30 days"
+                  "value": "…you finished **one** title in the last 30 days?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "You finished %lld titles in the last 30 days"
+                  "value": "…you finished **%lld** titles in the last 30 days?"
                 }
               }
             }
@@ -29996,25 +29996,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Jeden tytuł obejrzany w ostatnich 30 dniach"
+                  "value": "…w ostatnich 30 dniach obejrzałeś **jeden** tytuł?"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld tytuły obejrzane w ostatnich 30 dniach"
+                  "value": "…w ostatnich 30 dniach obejrzałeś **%lld** tytuły?"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld tytułów obejrzanych w ostatnich 30 dniach"
+                  "value": "…w ostatnich 30 dniach obejrzałeś **%lld** tytułów?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld tytułu obejrzanego w ostatnich 30 dniach"
+                  "value": "…w ostatnich 30 dniach obejrzałeś **%lld** tytułu?"
                 }
               }
             }
@@ -30026,13 +30026,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Ein Titel in den letzten 30 Tagen zu Ende gesehen"
+                  "value": "…du in den letzten 30 Tagen **einen** Titel zu Ende geschaut hast?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld Titel in den letzten 30 Tagen zu Ende gesehen"
+                  "value": "…du in den letzten 30 Tagen **%lld** Titel zu Ende geschaut hast?"
                 }
               }
             }
@@ -30044,13 +30044,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Has terminado un título en los últimos 30 días"
+                  "value": "…terminaste **un** título en los últimos 30 días?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Has terminado %lld títulos en los últimos 30 días"
+                  "value": "…terminaste **%lld** títulos en los últimos 30 días?"
                 }
               }
             }
@@ -30062,13 +30062,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Un titre terminé ces 30 derniers jours"
+                  "value": "…vous avez terminé **un** titre ces 30 derniers jours ?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld titres terminés ces 30 derniers jours"
+                  "value": "…vous avez terminé **%lld** titres ces 30 derniers jours ?"
                 }
               }
             }
@@ -30080,13 +30080,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Eén titel uitgekeken in de laatste 30 dagen"
+                  "value": "…je de afgelopen 30 dagen **één** titel hebt uitgekeken?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld titels uitgekeken in de laatste 30 dagen"
+                  "value": "…je de afgelopen 30 dagen **%lld** titels hebt uitgekeken?"
                 }
               }
             }
@@ -30095,43 +30095,43 @@
       }
     },
     "wait.quiz.lastFinished %@": {
-      "comment": "Quiz wait-screen fact. %@ = title of the most recently finished play on the media server.",
+      "comment": "Quiz wait-screen fact. %@ = title of the most recently finished play on the media server. Completes \"Did you know that…\" (wait.story.lead): starts with …, ends with ?.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last finished: %@"
+            "value": "…the last thing you finished was **%@**?"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ostatnio obejrzane: %@"
+            "value": "…ostatnio obejrzałeś **%@**?"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Zuletzt gesehen: %@"
+            "value": "…du zuletzt **%@** zu Ende geschaut hast?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Último visto: %@"
+            "value": "…lo último que terminaste fue **%@**?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dernier terminé : %@"
+            "value": "…la dernière chose que vous avez terminée est **%@** ?"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Laatst uitgekeken: %@"
+            "value": "…je als laatste **%@** hebt uitgekeken?"
           }
         }
       }
@@ -34196,7 +34196,7 @@
       }
     },
     "wait.quiz.libraryMovies %lld": {
-      "comment": "Quiz wait-screen fact. %lld = movies in the user's Radarr library.",
+      "comment": "Quiz wait-screen fact. %lld = movies in the user's Radarr library. Completes \"Did you know that…\" (wait.story.lead): starts with …, ends with ?.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -34205,13 +34205,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One movie in your library"
+                  "value": "…your library holds **one** movie?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld movies in your library"
+                  "value": "…your library holds **%lld** movies?"
                 }
               }
             }
@@ -34223,25 +34223,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Jeden film w bibliotece"
+                  "value": "…masz w bibliotece **jeden** film?"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld filmy w bibliotece"
+                  "value": "…masz w bibliotece **%lld** filmy?"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld filmów w bibliotece"
+                  "value": "…masz w bibliotece **%lld** filmów?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld filmu w bibliotece"
+                  "value": "…masz w bibliotece **%lld** filmu?"
                 }
               }
             }
@@ -34253,13 +34253,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Ein Film in der Bibliothek"
+                  "value": "…deine Bibliothek **einen** Film enthält?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld Filme in der Bibliothek"
+                  "value": "…deine Bibliothek **%lld** Filme enthält?"
                 }
               }
             }
@@ -34271,13 +34271,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Una película en la biblioteca"
+                  "value": "…tu biblioteca tiene **una** película?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld películas en la biblioteca"
+                  "value": "…tu biblioteca tiene **%lld** películas?"
                 }
               }
             }
@@ -34289,13 +34289,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Un film dans la bibliothèque"
+                  "value": "…votre bibliothèque contient **un** film ?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld films dans la bibliothèque"
+                  "value": "…votre bibliothèque contient **%lld** films ?"
                 }
               }
             }
@@ -34307,13 +34307,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Eén film in de bibliotheek"
+                  "value": "…je bibliotheek **één** film bevat?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld films in de bibliotheek"
+                  "value": "…je bibliotheek **%lld** films bevat?"
                 }
               }
             }
@@ -34322,7 +34322,7 @@
       }
     },
     "wait.quiz.librarySeries %lld": {
-      "comment": "Quiz wait-screen fact. %lld = series in the user's Sonarr library.",
+      "comment": "Quiz wait-screen fact. %lld = series in the user's Sonarr library. Completes \"Did you know that…\" (wait.story.lead): starts with …, ends with ?.",
       "extractionState": "manual",
       "localizations": {
         "en": {
@@ -34331,13 +34331,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "One series in your library"
+                  "value": "…your library holds **one** series?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld series in your library"
+                  "value": "…your library holds **%lld** series?"
                 }
               }
             }
@@ -34349,25 +34349,25 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Jeden serial w bibliotece"
+                  "value": "…masz w bibliotece **jeden** serial?"
                 }
               },
               "few": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld seriale w bibliotece"
+                  "value": "…masz w bibliotece **%lld** seriale?"
                 }
               },
               "many": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld seriali w bibliotece"
+                  "value": "…masz w bibliotece **%lld** seriali?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld serialu w bibliotece"
+                  "value": "…masz w bibliotece **%lld** serialu?"
                 }
               }
             }
@@ -34379,13 +34379,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Eine Serie in der Bibliothek"
+                  "value": "…deine Bibliothek **eine** Serie enthält?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld Serien in der Bibliothek"
+                  "value": "…deine Bibliothek **%lld** Serien enthält?"
                 }
               }
             }
@@ -34397,13 +34397,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Una serie en la biblioteca"
+                  "value": "…tu biblioteca tiene **una** serie?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld series en la biblioteca"
+                  "value": "…tu biblioteca tiene **%lld** series?"
                 }
               }
             }
@@ -34415,13 +34415,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Une série dans la bibliothèque"
+                  "value": "…votre bibliothèque contient **une** série ?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld séries dans la bibliothèque"
+                  "value": "…votre bibliothèque contient **%lld** séries ?"
                 }
               }
             }
@@ -34433,13 +34433,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Eén serie in de bibliotheek"
+                  "value": "…je bibliotheek **één** serie bevat?"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld series in de bibliotheek"
+                  "value": "…je bibliotheek **%lld** series bevat?"
                 }
               }
             }
@@ -34448,43 +34448,43 @@
       }
     },
     "wait.quiz.oldestMovie %@ %@": {
-      "comment": "Quiz wait-screen fact. First %@ = movie title, second %@ = its year. Markdown bold around the title.",
+      "comment": "Quiz wait-screen fact. First %@ = movie title, second %@ = its year. Completes \"Did you know that…\" (wait.story.lead): starts with …, ends with ?.",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oldest movie in the library: **%@** (%@)"
+            "value": "…the oldest movie in your library is **%@** from %@?"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Najstarszy film w bibliotece: **%@** (%@)"
+            "value": "…najstarszy film w Twojej bibliotece to **%@** z %@ roku?"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ältester Film in der Bibliothek: **%@** (%@)"
+            "value": "…der älteste Film in deiner Bibliothek **%@** von %@ ist?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Película más antigua de la biblioteca: **%@** (%@)"
+            "value": "…la película más antigua de tu biblioteca es **%@**, de %@?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plus ancien film de la bibliothèque : **%@** (%@)"
+            "value": "…le plus ancien film de votre bibliothèque est **%@**, sorti en %@ ?"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Oudste film in de bibliotheek: **%@** (%@)"
+            "value": "…de oudste film in je bibliotheek **%@** uit %@ is?"
           }
         }
       }
