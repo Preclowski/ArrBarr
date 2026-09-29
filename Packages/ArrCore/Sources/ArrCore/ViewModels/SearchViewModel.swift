@@ -93,7 +93,9 @@ final class SearchViewModel {
 
     @ObservationIgnored var library: LibraryViewModel?
 
-    private var searchTask: Task<Void, Never>?
+    private(set) var searchTask: Task<Void, Never>?
+    /// Typing pause before a lookup; tests set zero.
+    @ObservationIgnored var debounce: Duration = .milliseconds(300)
     /// Read on every use so a server edited in Settings is the one the next search asks.
     @ObservationIgnored private var settings: () -> (configs: [QueueItem.Source: ServiceConfig], tmdbApiKey: String) = { ([:], "") }
     private var configs: [QueueItem.Source: ServiceConfig] { settings().configs }
@@ -155,7 +157,7 @@ final class SearchViewModel {
         if !Self.isRefinement(previous, trimmed) { clearResults() }
 
         searchTask = Task {
-            try? await Task.sleep(for: .milliseconds(300))
+            try? await Task.sleep(for: debounce)
             guard !Task.isCancelled else { return }
             await search(generation: myGen)
         }

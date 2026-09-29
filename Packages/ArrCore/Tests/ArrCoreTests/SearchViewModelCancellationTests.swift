@@ -22,11 +22,14 @@ private final class SearchStubState: @unchecked Sendable {
 }
 
 private let searchState = SearchStubState()
+/// Yields once per hanging request, so a test knows the lookup is in flight.
+private let requestArrived = AsyncStream<Void>.makeStream()
 
 /// `.hang` never answers: the request sits in flight until the superseding
 /// keystroke cancels it.
 private let searchTransport = ScriptedTransport { _ in
     guard searchState.behaviour == .fail else {
+        requestArrived.continuation.yield()
         try await Task.sleep(for: .seconds(3600))
         return .init()
     }
@@ -49,28 +52,29 @@ struct SearchViewModelCancellationTests {
                       apiKey: "test-key", username: "", password: "")
     }
 
-    /// Drives a search up to the point where its lookups are in flight.
-    /// `onQueryChange` debounces for 300 ms before it even starts.
-    private func startSearch(_ vm: SearchViewModel, _ query: String) async throws {
-        vm.query = query
-        try await Task.sleep(for: .milliseconds(600))
+    private func makeVM() -> SearchViewModel {
+        let vm = SearchViewModel()
+        vm.debounce = .zero
+        vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
+        return vm
     }
 
     @Test("A lookup cancelled by the next keystroke leaves no error on screen")
-    func cancelledLookupIsSilent() async throws {
+    func cancelledLookupIsSilent() async {
         searchState.behaviour = .hang
 
-        let vm = SearchViewModel()
-        vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
+        let vm = makeVM()
         defer { vm.query = "" }
 
-        try await startSearch(vm, "matrix")
+        vm.query = "matrix"
+        var arrivals = requestArrived.stream.makeAsyncIterator()
+        await arrivals.next()
+        let superseded = vm.searchTask
         // The next keystroke supersedes it. `onQueryChange` cancels the
         // in-flight task and clears `errorMessage` — so anything found there
         // afterwards was written by the cancelled lookup's catch block.
-        try await startSearch(vm, "matrix reloaded")
-        // Let the cancellation finish propagating out of the pipeline.
-        try await Task.sleep(for: .milliseconds(400))
+        vm.query = "matrix reloaded"
+        await superseded?.value
 
         #expect(vm.errorMessage == nil)
         // The sticky loader is untouched: a cancelled fetch must not look like
@@ -81,16 +85,15 @@ struct SearchViewModelCancellationTests {
     /// The other half — swallowing every error would be just as broken. A real
     /// failure on the search the user is actually waiting for still surfaces.
     @Test("A genuine failure on the current search still surfaces")
-    func realFailureStillSurfaces() async throws {
+    func realFailureStillSurfaces() async {
         searchState.behaviour = .fail
         defer { searchState.behaviour = .hang }
 
-        let vm = SearchViewModel()
-        vm.setup(radarrConfig: radarrConfig, sonarrConfig: .empty)
+        let vm = makeVM()
         defer { vm.query = "" }
 
-        try await startSearch(vm, "matrix")
-        try await Task.sleep(for: .milliseconds(200))
+        vm.query = "matrix"
+        await vm.searchTask?.value
 
         #expect(vm.errorMessage != nil)
         // And it must not be the cancellation text that used to leak through.

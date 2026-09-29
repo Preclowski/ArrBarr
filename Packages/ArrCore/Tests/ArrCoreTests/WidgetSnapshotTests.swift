@@ -88,9 +88,8 @@ struct WidgetSnapshotTests {
                 withIntermediateDirectories: true)
 
             WidgetDataStore.saveUpcoming([])
-            try await Task.sleep(for: .milliseconds(200))
-
-            #expect(WidgetDataStore.loadUpcoming().isEmpty)
+            // Reads queue behind the write, so this one sees its outcome.
+            #expect(await WidgetDataStore.loadUpcomingAsync().isEmpty)
         }
     }
 
@@ -102,8 +101,8 @@ struct WidgetSnapshotTests {
     func testProcessStaysOutOfUserLibrary() async throws {
         WidgetDataStore.snapshotDirectoryOverrideForTesting = nil
         WidgetDataStore.saveUpcoming([])
-        // Give the queued write time to land wherever it is going.
-        try await Task.sleep(for: .milliseconds(200))
+        // Reads queue behind the write: once this returns, the write has landed.
+        _ = await WidgetDataStore.loadUpcomingAsync()
 
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let forbidden = [
