@@ -26,6 +26,21 @@ struct DiscoverViewModelTests {
         Issue.record("condition never became true")
     }
 
+    /// The view model's observer attaches on its own Task with nothing to await, so post until it
+    /// answers. Only for messages whose repeat lands in the same state (a fresh, non-appending round).
+    private func postUntil(_ message: AppMessages.OpenDiscoverQuiz, _ condition: () -> Bool,
+                           within: Duration = .seconds(5)) async throws {
+        let deadline = ContinuousClock.now + within
+        while ContinuousClock.now < deadline {
+            AppMessages.post(message)
+            for _ in 0..<5 {
+                if condition() { return }
+                try await Task.sleep(for: .milliseconds(20))
+            }
+        }
+        Issue.record("the message was never handled")
+    }
+
     private func makeItem(_ id: Int) -> DiscoverItem {
         let r = SearchResult(
             externalId: id, foreignId: String(id), title: "T\(id)", subtitle: nil,
@@ -115,10 +130,9 @@ struct DiscoverViewModelTests {
         // seeded. The view model listens for itself now, for the life of the
         // process, so no surface has to be on screen at the right moment.
         let vm = freshVM()
-        try await Task.sleep(for: .milliseconds(150))   // let the observer attach
-        AppMessages.post(AppMessages.OpenDiscoverQuiz(
-            items: [makeItem(1), makeItem(2)], append: false))
-        try await waitUntil { vm.current != nil }
+        try await postUntil(AppMessages.OpenDiscoverQuiz(items: [makeItem(1), makeItem(2)], append: false)) {
+            vm.current != nil
+        }
 
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.sessionTotal == 2)
