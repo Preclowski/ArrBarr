@@ -117,13 +117,13 @@ enum ArrQueueLoader {
         return records.compactMap { ArrCompositions.upcoming($0, source: source, baseURL: baseURL) }
     }
 
-    static func history(source: QueueItem.Source, gateway: ServiceGateway, baseURL: String, page: Int, pageSize: Int, entityId: Int?) async throws -> HistoryPage {
+    static func history(source: QueueItem.Source, gateway: ServiceGateway, baseURL: String, page: Int, pageSize: Int, scope: HistoryScope?) async throws -> HistoryPage {
         await gateway.ready()
         let service = gateway.servarr(source)
         guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
-        let resource = entityId.map { service.historyFor(entityID: $0, pageSize: pageSize) } ?? service.history(page: page, pageSize: pageSize)
+        let resource = scope?.resource(service, page: page, pageSize: pageSize) ?? service.history(page: page, pageSize: pageSize)
         let result = try await gateway.store.read(resource, policy: page == 1 ? .staleWhileRevalidate : .cacheFirst).value
-        let items = result.records.compactMap { ArrCompositions.history($0, source: source, baseURL: baseURL) }
+        let items = result.records.filter { scope?.admits($0) ?? true }.compactMap { ArrCompositions.history($0, source: source, baseURL: baseURL) }
         return HistoryPage(items: items, hasMore: page * pageSize < (result.totalRecords ?? 0))
     }
 }

@@ -8,16 +8,20 @@ struct DetailView: View {
     let item: QueueItem
     let onBack: () -> Void
     var viewModel: QueueViewModel
+    /// The record went from the library; the host drops whatever still lists it.
+    let onDeleted: (() -> Void)?
     @EnvironmentObject var configStore: ConfigStore
 
     init(
         item: QueueItem,
         onBack: @escaping () -> Void,
-        viewModel: QueueViewModel
+        viewModel: QueueViewModel,
+        onDeleted: (() -> Void)? = nil
     ) {
         self.item = item
         self.onBack = onBack
         self.viewModel = viewModel
+        self.onDeleted = onDeleted
     }
 
     /// All queue items of the same arr entity; more than one renders a stacked list.
@@ -123,9 +127,7 @@ struct DetailView: View {
     @ObservedObject var trailerSession = TrailerSession.shared
     @State var seasonDrill: SeasonDrill?
     @State var manualSearchTarget: ManualSearchTarget?
-    @State var editRequest: MediaEditRequest?
-    @State var deleteRequest: MediaDeleteRequest?
-    @State var historyShown = false
+    @State var actionState = DetailActionState()
     @State var searchFeedback: SearchFeedback = .idle
     /// The server is running an indexer search for this record — including the one the arr
     /// starts by itself on add, which the app never triggered.
@@ -280,22 +282,9 @@ struct DetailView: View {
             .allowsHitTesting(enlargedPoster == nil)
             .disabled(enlargedPoster != nil)
             .accessibilityHidden(enlargedPoster != nil)
-
-            // `.sheet` doesn't render in a MenuBarExtra popover, and a NavigationStack push nudged the
-            // popover down by the collapsed nav bar's height.
-            #if os(macOS)
-            if let req = editRequest {
-                MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
-                    .zIndex(6)
-            }
-            if let req = deleteRequest {
-                MediaDeleteModalOverlay(request: req,
-                                        onDismiss: { deleteRequest = nil },
-                                        onDeleted: handleDeleted)
-                    .zIndex(7)
-            }
-            #endif
         }
+        .detailActionsHost($actionState) { _ in handleDeleted() }
+        .onDetailIntent(for: item.id, ready: !loading) { detailActions.carryOut($0, state: $actionState) }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .posterLightbox(
             url: $enlargedPoster,
@@ -369,30 +358,17 @@ struct DetailView: View {
                     } catch {
                         await load(showSpinner: false)
                     }
-                }
+                },
+                onSeriesDeleted: { handleDeleted() },
+                onEpisodeFileDeleted: { Task { await load(showSpinner: false) } }
             )
         }
-        #if os(iOS)
-        .sheet(item: $editRequest) { req in
-            // Detents live inside the panel: only it knows how many rows this source shows.
-            MediaEditPanel(request: req, onBack: { editRequest = nil })
-        }
-        .sheet(item: $deleteRequest) { req in
-            MediaDeletePanel(request: req,
-                             onCancel: { deleteRequest = nil },
-                             onDeleted: handleDeleted)
-        }
-        #endif
         .navigationDestination(item: $manualSearchTarget) { target in
             ReleaseListView(target: target,
                             existing: manualSearchExistingFile,
                             existingByEpisode: manualSearchEpisodeFiles(for: target),
                             waitContext: manualSearchContext,
                             onBack: { manualSearchTarget = nil })
-        }
-        .navigationDestination(isPresented: $historyShown) {
-            HistoryView(source: item.source, entityId: item.entityId, title: navTitleString,
-                        viewModel: viewModel, onClose: { historyShown = false })
         }
         // Not `.confirmationDialog`: the system dialog steals focus and MenuBarExtra(.window)
         // auto-dismisses.

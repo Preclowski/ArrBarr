@@ -58,7 +58,8 @@ struct DiscoverTabView: View {
 
     var body: some View {
         if let phase = viewModel.loadPhase {
-            QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt, onCancel: onCancelLoading)
+            QuizLoadingView(phase: phase, startedAt: viewModel.loadStartedAt,
+                            posters: viewModel.loadingPosters, onCancel: onCancelLoading)
         } else {
             swipeSurface
         }
@@ -508,6 +509,7 @@ struct DiscoverTabView: View {
             Spacer()
             if isLookingForMore {
                 ProgressView()
+                    .controlSize(.small)
                 Text("discover.lookingForMore.label", bundle: .module)
                     .scaledFont(size: 13, weight: .medium)
                     .foregroundStyle(.secondary)

@@ -1,11 +1,25 @@
 import SwiftUI
 
 struct MediaDeleteRequest: Identifiable, Hashable {
+    enum Target: Hashable {
+        /// The library record: a movie, series or Lidarr artist.
+        case record(Int)
+        /// A Lidarr album; its artist stays.
+        case album(id: Int, artistId: Int)
+        /// The file on disk only; the episode stays in the library.
+        case episodeFile(id: Int, seriesId: Int)
+    }
+
     let source: QueueItem.Source
-    /// Lidarr takes the ARTIST id: an album is deleted from its artist in the arr.
-    let entityId: Int
+    let target: Target
     let title: String
-    var id: String { "\(source.rawValue)-delete-\(entityId)" }
+    var id: String { "\(source.rawValue)-delete-\(target)" }
+
+    /// A file has no library side to spare, so nothing to choose.
+    var offersOptions: Bool {
+        if case .episodeFile = target { return false }
+        return true
+    }
 }
 
 /// macOS hosts it in `MediaDeleteModalOverlay` because `.sheet` doesn't render in a MenuBarExtra popover;
@@ -13,7 +27,7 @@ struct MediaDeleteRequest: Identifiable, Hashable {
 struct MediaDeletePanel: View {
     let request: MediaDeleteRequest
     let onCancel: () -> Void
-    /// The record is gone, so the host closes the modal AND leaves the detail surface behind it.
+    /// The host closes the modal, and leaves the detail when its record went with it.
     let onDeleted: () -> Void
 
     @EnvironmentObject private var configStore: ConfigStore
@@ -43,8 +57,12 @@ struct MediaDeletePanel: View {
         NavigationStack {
             Form {
                 Section {
-                    Toggle(isOn: $deleteFiles) { Text("delete.filesFromDisk.button", bundle: .module) }
-                    Toggle(isOn: $addExclusion) { Text("delete.addExclusion.button", bundle: .module) }
+                    if request.offersOptions {
+                        Toggle(isOn: $deleteFiles) { Text("delete.filesFromDisk.button", bundle: .module) }
+                        Toggle(isOn: $addExclusion) { Text("delete.addExclusion.button", bundle: .module) }
+                    } else {
+                        Text("delete.fileOnlyWarning.label", bundle: .module)
+                    }
                 } header: {
                     Text(verbatim: request.title)
                 }
@@ -60,7 +78,7 @@ struct MediaDeletePanel: View {
                     Section { Text(err).foregroundStyle(.red).font(.footnote) }
                 }
             }
-            .navigationTitle(Text("detail.delete.button", bundle: .module))
+            .navigationTitle(Text(headingKey, bundle: .module))
             .navigationBarTitleDisplayMode(.inline)
             .presentationDetents([.height(fittedSheetHeight), .large])
             .presentationDragIndicator(.visible)
@@ -77,7 +95,7 @@ struct MediaDeletePanel: View {
                         } else {
                             HStack(spacing: 4) {
                                 if !storeManager.isPro { Image(systemName: "lock.fill") }
-                                Text("detail.delete.button", bundle: .module)
+                                Text(headingKey, bundle: .module)
                             }
                         }
                     }
@@ -92,7 +110,7 @@ struct MediaDeletePanel: View {
     private var fittedSheetHeight: CGFloat {
         let chrome: CGFloat = 150
         let extras = (deleteFiles ? formRowHeight : 0) + (deleteError == nil ? 0 : formRowHeight)
-        return 2 * formRowHeight + chrome + extras
+        return (request.offersOptions ? 2 : 1) * formRowHeight + chrome + extras
     }
     #endif
 
@@ -102,7 +120,7 @@ struct MediaDeletePanel: View {
         // Same skeleton as the edit card: both live under the same glyph and must read as one surface.
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                Text("detail.delete.button", bundle: .module)
+                Text(headingKey, bundle: .module)
                     .scaledFont(size: 14, weight: .semibold)
                 Text(verbatim: request.title)
                     .scaledFont(size: 11)
@@ -123,11 +141,18 @@ struct MediaDeletePanel: View {
             }
             .padding(.horizontal, 14)
 
-            VStack(spacing: 4) {
-                ModalFormToggle(label: "delete.filesFromDisk.button", isOn: $deleteFiles)
-                ModalFormToggle(label: "delete.addExclusion.button", isOn: $addExclusion)
+            if request.offersOptions {
+                VStack(spacing: 4) {
+                    ModalFormToggle(label: "delete.filesFromDisk.button", isOn: $deleteFiles)
+                    ModalFormToggle(label: "delete.addExclusion.button", isOn: $addExclusion)
+                }
+                .padding(.horizontal, 14)
+            } else {
+                Text("delete.fileOnlyWarning.label", bundle: .module)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 14)
             }
-            .padding(.horizontal, 14)
 
             if deleteFiles {
                 Text("delete.filesWarning.label", bundle: .module)
@@ -161,7 +186,7 @@ struct MediaDeletePanel: View {
                         }
                         Image(systemName: "trash")
                             .scaledFont(size: 11, weight: .semibold)
-                        Text("delete.confirm.button", bundle: .module)
+                        Text(request.offersOptions ? "delete.confirm.button" : "detail.deleteFile.button", bundle: .module)
                             .scaledFont(size: 12, weight: .semibold)
                     }
                     .frame(maxWidth: .infinity)
@@ -177,11 +202,11 @@ struct MediaDeletePanel: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Data
-
-    private var client: any ArrAPIClient {
-        configStore.arrClient(for: request.source)
+    private var headingKey: LocalizedStringKey {
+        request.offersOptions ? "detail.delete.button" : "detail.deleteFile.button"
     }
+
+    // MARK: - Data
 
     private func performDelete() async {
         // Changing what is in the library is the Control side of the app.
@@ -190,9 +215,16 @@ struct MediaDeletePanel: View {
         deleteError = nil
         defer { deleting = false }
         do {
-            try await client.deleteLibraryRecord(entityId: request.entityId,
-                                                 deleteFiles: deleteFiles,
-                                                 addImportExclusion: addExclusion)
+            switch request.target {
+            case let .record(id):
+                try await configStore.arrClient(for: request.source)
+                    .deleteLibraryRecord(entityId: id, deleteFiles: deleteFiles, addImportExclusion: addExclusion)
+            case let .album(id, artistId):
+                try await configStore.lidarrClient
+                    .deleteAlbum(albumId: id, artistId: artistId, deleteFiles: deleteFiles, addImportListExclusion: addExclusion)
+            case let .episodeFile(id, seriesId):
+                try await configStore.sonarrClient.deleteEpisodeFile(id: id, seriesId: seriesId)
+            }
             onDeleted()
         } catch {
             // The arr puts the real reason in the response body, not the status.

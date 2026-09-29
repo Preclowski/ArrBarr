@@ -191,6 +191,9 @@ struct QueueRowView: View {
                 } label: {
                     Label { Text("queue.removeFromQueue.button", bundle: .module) } icon: { Image(systemName: "trash") }
                 }
+                Section {
+                    DetailEntryMenuItems(target: item, webURL: arrWebURL(for: item, in: configStore))
+                }
             }
         }
         // Hover-only affordances are macOS-only; on iOS the tooltip popover would render as a sheet.

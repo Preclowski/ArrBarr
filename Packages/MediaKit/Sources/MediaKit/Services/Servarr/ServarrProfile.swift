@@ -26,7 +26,7 @@ public struct ServarrProfile: Sendable, Hashable {
     public static let lidarr = ServarrProfile(
         kind: .lidarr, apiBase: "/api/v1", entityNoun: "artist", entityKind: .artist, fileNoun: "trackfile",
         fileParentKey: "albumId", queueIncludeFlag: "includeUnknownArtistItems", historyIncludeKeys: ["includeArtist", "includeAlbum"],
-        historyIDsKey: "albumIds", calendarIncludeKey: "includeArtist")
+        historyIDsKey: "albumId", calendarIncludeKey: "includeArtist")
 
     public static let whisparr = ServarrProfile(
         kind: .whisparr, apiBase: "/api/v3", entityNoun: "movie", entityKind: .movie, fileNoun: "moviefile",

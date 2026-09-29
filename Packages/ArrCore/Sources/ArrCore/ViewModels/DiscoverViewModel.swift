@@ -22,13 +22,17 @@ public final class DiscoverViewModel {
     /// Owned here, not by a surface: the seeding chat turn runs for a minute and the menu-bar
     /// panel rebuilds its views meanwhile, so a surface that must catch the moment misses it.
     public var isPresented: Bool = false
+    /// Top-up batches keep landing for a while after Back; only a new deck or a resume may reopen.
+    private var closedByUser = false
 
     public enum LoadPhase: Equatable, Sendable {
         case askingModel
-        /// `totalIsFinal` is false while the model is still streaming picks.
-        case resolving(done: Int, total: Int, totalIsFinal: Bool)
+        /// No count: the model streams picks as fast as they resolve, so "n of total" only ever read n of n.
+        case resolving
     }
     public private(set) var loadPhase: LoadPhase?
+    /// Covers of the picks resolved so far, in pick order, for the wait screen's fan.
+    public private(set) var loadingPosters: [URL] = []
     public private(set) var loadStartedAt: Date?
     /// Never unregistered: the view model lives as long as the Quiz does.
     private var addObserver: Task<Void, Never>?
@@ -85,27 +89,42 @@ public final class DiscoverViewModel {
         if items.isEmpty {
             // An empty round must never touch the deck: seeding it reset the session being resumed.
             Self.log.notice("quiz: reopening the deck, \(self.queue.count + (self.current == nil ? 0 : 1), privacy: .public) card(s) left")
-        } else if append && hasSession {
+        }
+        let extending = !items.isEmpty && append && hasSession
+        if extending {
             extend(items: items)
-        } else {
+        } else if !items.isEmpty {
             seed(items: items)
         }
         if !items.isEmpty {
             loadPhase = nil
             loadStartedAt = nil
+            loadingPosters = []
         }
+        if extending && closedByUser { return }
+        closedByUser = false
         isPresented = true
+    }
+
+    public func close() {
+        closedByUser = true
+        isPresented = false
     }
 
     public func beginLoading() {
-        if loadPhase == nil { loadStartedAt = Date() }
+        if loadPhase == nil {
+            loadStartedAt = Date()
+            loadingPosters = []
+        }
         loadPhase = loadPhase ?? .askingModel
+        closedByUser = false
         isPresented = true
     }
 
-    public func noteResolving(done: Int, total: Int, totalIsFinal: Bool) {
+    public func noteResolving(posters: [URL]) {
         guard loadPhase != nil else { return }
-        loadPhase = .resolving(done: done, total: total, totalIsFinal: totalIsFinal)
+        loadPhase = .resolving
+        loadingPosters = posters
     }
 
     /// With no deck to show, the overlay steps aside so the chat's explanation shows.
@@ -113,6 +132,7 @@ public final class DiscoverViewModel {
         guard loadPhase != nil else { return }
         loadPhase = nil
         loadStartedAt = nil
+        loadingPosters = []
         if !hasSession { isPresented = false }
     }
 

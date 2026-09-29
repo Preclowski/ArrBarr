@@ -172,11 +172,6 @@ struct ShelfView: View {
         let entries = entries
         GeometryReader { geo in
             ZStack {
-                Color.black
-                // Pinned: the aspect-fill poster is taller than the area under the tab bar and would grow the stack.
-                backdrop(entries)
-                    .frame(width: geo.size.width, height: geo.size.height)
-                    .clipped()
                 if sceneReady(entries) {
                 TimelineView(.animation(paused: isObscured || !motion.active)) { timeline in
                     ShelfScene(
@@ -200,6 +195,19 @@ struct ShelfView: View {
                     LoadingStateView()
                 }
             }
+        }
+        // Under the tab bar too, so the stage fills the whole popover instead of stopping at the glass.
+        .background {
+            GeometryReader { geo in
+                ZStack {
+                    Color.black
+                    // Pinned: the aspect-fill poster is taller than the stage and would grow it.
+                    backdrop(entries)
+                        .frame(width: geo.size.width, height: geo.size.height)
+                        .clipped()
+                }
+            }
+            .ignoresSafeArea()
         }
         .animation(.easeOut(duration: 0.3), value: revealed)
         .onChange(of: sceneReady(entries)) { _, ready in

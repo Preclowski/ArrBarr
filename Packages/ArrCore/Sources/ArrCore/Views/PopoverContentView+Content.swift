@@ -53,7 +53,9 @@ extension PopoverContentView {
                     // its soft scroll-edge blur (with `.scrollEdgeEffectStyle(.soft)` on each tab).
                     .safeAreaBar(edge: .top, spacing: 0) {
                         if !(searchViewModel.isActive && selectedTab.hostsSearch) {
+                            // Shelf's stage runs under the bar and is always dark.
                             tabBar
+                                .environment(\.colorScheme, selectedTab == .shelf ? .dark : colorScheme)
                         }
                     }
                 } else {
@@ -76,7 +78,7 @@ extension PopoverContentView {
                     moreInFlight: chatHolder.vm.isThinking,
                     isObscured: discoverParked,
                     onClose: {
-                        withAnimation(.smooth(duration: 0.22)) { discoverViewModel.isPresented = false }
+                        withAnimation(.smooth(duration: 0.22)) { discoverViewModel.close() }
                     },
                     onCancelLoading: {
                         chatHolder.vm.cancelTurn()
@@ -104,7 +106,7 @@ extension PopoverContentView {
         .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
             // Episode rows open the episode; the series is reachable via its "series name >" tap.
-            if isSonarrEpisodeRow(item) {
+            if item.opensEpisodeDetail {
                 // EpisodeQuickDetail owns the series push, so back returns to the episode.
                 EpisodeQuickDetail(
                     item: item,

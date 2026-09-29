@@ -124,7 +124,7 @@ public struct iOSAppRoot: View {
                 // The top-up round is a chat turn, so the deck waits on the agent's thinking flag.
                 moreInFlight: chatHolder.vm.isThinking,
                 isObscured: quizAddResult != nil,
-                onClose: { discoverViewModel.isPresented = false },
+                onClose: { discoverViewModel.close() },
                 onCancelLoading: {
                     chatHolder.vm.cancelTurn()
                     discoverViewModel.endLoading()

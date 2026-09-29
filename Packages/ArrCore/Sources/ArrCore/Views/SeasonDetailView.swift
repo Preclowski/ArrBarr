@@ -36,6 +36,10 @@ struct SeasonDetailView: View {
     /// The parent owns `sonarrDetail` and the episodes; nil renders the bookmarks inert.
     var onSetSeasonMonitored: ((Bool) async -> Void)? = nil
     var onSetEpisodeMonitored: ((Int, Bool) async -> Void)? = nil
+    /// The series went from the library: the parent leaves too.
+    var onSeriesDeleted: (() -> Void)? = nil
+    /// An episode's file went from disk: the parent reloads the files it lends this view.
+    var onEpisodeFileDeleted: (() -> Void)? = nil
 
     @EnvironmentObject private var configStore: ConfigStore
     @Environment(\.isDetachedWindow) private var isDetachedWindow
@@ -44,6 +48,7 @@ struct SeasonDetailView: View {
     @State private var enlargedPoster: URL?
     @State private var manualSearchTarget: SeasonReleaseSearch?
     @State private var searchFeedback: SearchFeedback = .idle
+    @State private var actionState = DetailActionState()
     /// nil keeps the series poster.
     @State private var mediaServerSeasonPoster: URL?
     @State private var countries: [String] = []
@@ -95,7 +100,7 @@ struct SeasonDetailView: View {
                     .lineLimit(1)
                     .truncationMode(.middle)
                 Spacer(minLength: 0)
-                headerSearchMenu
+                headerMenu
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -180,6 +185,7 @@ struct SeasonDetailView: View {
                 onSearch: { episodeId in
                     try await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
                 },
+                seriesWebURL: seriesWebURL,
                 onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
                 onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
                 onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
@@ -194,7 +200,8 @@ struct SeasonDetailView: View {
                 mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
                 // The pushed `ep` is a snapshot frozen at tap time.
                 monitored: episodes.first { $0.id == ep.id }?.monitored,
-                onToggleMonitored: onSetEpisodeMonitored.map { toggle in { m in await toggle(ep.id, m) } }
+                onToggleMonitored: onSetEpisodeMonitored.map { toggle in { m in await toggle(ep.id, m) } },
+                onFileDeleted: onEpisodeFileDeleted
             )
         }
         .navigationDestination(item: $manualSearchTarget) { wrapper in
@@ -204,11 +211,12 @@ struct SeasonDetailView: View {
                                                          cast: cast, posterURL: posterURL),
                             onBack: { manualSearchTarget = nil })
         }
+        .detailActionsHost($actionState) { _ in onSeriesDeleted?() }
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
-                headerSearchMenu
+                headerMenu
             }
         }
         #else
@@ -227,16 +235,30 @@ struct SeasonDetailView: View {
         return out
     }
 
-    private var headerSearchMenu: some View {
-        HeaderSearchMenu(
-            feedback: searchFeedback,
-            onAutomatic: { startAutomaticSearch() },
-            onManual: {
-                manualSearchTarget = SeasonReleaseSearch(target: .season(
-                    seriesId: drill.seriesId, seasonNumber: drill.seasonNumber,
-                    title: "\(drill.seriesTitle) · \(navTitle)"))
-            }
-        )
+    private var headerMenu: some View {
+        DetailActionsMenu(actions: detailActions, state: $actionState, feedback: searchFeedback)
+    }
+
+    /// A season has no record of its own, so edit and delete act on the series and say so.
+    private var detailActions: DetailActions {
+        let title = "\(drill.seriesTitle) · \(navTitle)"
+        return DetailActions(
+            edit: MediaEditRequest(source: .sonarr, entityId: drill.seriesId),
+            editLabel: "detail.editSeries.button",
+            search: DetailActions.Search(
+                isSending: searchFeedback.isSending,
+                onAutomatic: { startAutomaticSearch() },
+                onManual: {
+                    manualSearchTarget = SeasonReleaseSearch(target: .season(
+                        seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, title: title))
+                }),
+            webURL: seriesWebURL,
+            delete: onSeriesDeleted.map { _ in MediaDeleteRequest(source: .sonarr, target: .record(drill.seriesId), title: drill.seriesTitle) },
+            deleteLabel: "detail.deleteSeries.button")
+    }
+
+    private var seriesWebURL: URL? {
+        arrWebURL(source: .sonarr, slug: sonarrDetail?.titleSlug, in: configStore)
     }
 
     private func episodeSearchTitle(_ ep: ArrEpisode) -> String {

@@ -59,8 +59,8 @@ extension DetailView {
     /// Bounded: each poll that sees a running search restarts the window, but a settled item
     /// stops polling instead of tapping the server forever.
     func watchSearchState() async {
-        guard let entityId = item.entityId, item.source != .sonarr,
-              let client = searchClient() else { return }
+        guard let entityId = item.entityId else { return }
+        let client = configStore.arrClient(for: item.source)
         var deadline = Date().addingTimeInterval(Self.searchWatchWindow)
         while !Task.isCancelled, Date() < deadline {
             let running = await client.isSearchRunning(entityId: entityId)
@@ -78,18 +78,14 @@ extension DetailView {
     /// Comfortably longer than a normal indexer sweep, and refreshed while one is live.
     private static let searchWatchWindow: TimeInterval = 180
 
-    private func searchClient() -> (any ArrAPIClient)? {
-        item.source == .sonarr ? nil : configStore.arrClient(for: item.source)
-    }
-
-    /// Movie / album only — series search is per-season in SeasonDetailView.
+    /// A series searches every monitored episode; manual search stays per season.
     private func runAutomaticSearch() async throws {
         guard let entityId = item.entityId else { return }
         switch item.source {
         case .radarr: try await configStore.radarrClient.searchMovie(movieId: entityId)
         case .whisparr: try await configStore.whisparrClient.searchMovie(movieId: entityId)
         case .lidarr: try await configStore.lidarrClient.searchAlbum(albumId: entityId)
-        case .sonarr: break
+        case .sonarr: try await configStore.sonarrClient.searchSeries(seriesId: entityId)
         }
     }
 }

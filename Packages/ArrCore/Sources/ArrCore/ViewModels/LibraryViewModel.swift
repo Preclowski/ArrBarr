@@ -16,6 +16,8 @@ public struct LibraryEntry: Identifiable, Equatable, Sendable, Codable {
     public let arrId: Int
     /// tmdbId (Radarr/Whisparr) or tvdbId (Sonarr), as `SearchResult.externalId` carries it. Nil for Lidarr.
     public var externalId: Int? = nil
+    /// Where the arr's web UI files it: `titleSlug`, or Lidarr's `foreignArtistId`.
+    public var slug: String? = nil
     /// Resolved once at projection, not per body pass: the index is lock-guarded and a scrolling grid
     /// would take that lock every frame.
     public var watched: Bool = false
@@ -279,7 +281,7 @@ public final class LibraryViewModel {
                 baseURL: baseURL, mediaServerKeys: keys
             )
             var entry = LibraryEntry(
-                id: "radarr-\(id)", source: .radarr, arrId: id, externalId: r.tmdbId, title: title,
+                id: "radarr-\(id)", source: .radarr, arrId: id, externalId: r.tmdbId, slug: r.titleSlug, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
                 state: .movie(monitored: r.monitored, hasFile: r.hasFile ?? false,
                              available: r.isAvailable ?? true),
@@ -316,7 +318,7 @@ public final class LibraryViewModel {
             )
             let counts = r.episodeFileCounts
             var entry = LibraryEntry(
-                id: "sonarr-\(id)", source: .sonarr, arrId: id, externalId: r.tvdbId, title: title,
+                id: "sonarr-\(id)", source: .sonarr, arrId: id, externalId: r.tvdbId, slug: r.titleSlug, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
                 state: .series(monitored: r.monitored, counts: counts),
                 sizeOnDisk: r.statistics?.sizeOnDisk ?? 0, fileCount: counts.have, totalCount: counts.total,
@@ -344,7 +346,7 @@ public final class LibraryViewModel {
             let files = r.statistics?.trackFileCount ?? 0
             let total = r.statistics?.trackCount ?? 0
             return LibraryEntry(
-                id: "lidarr-\(id)", source: .lidarr, arrId: id, title: name,
+                id: "lidarr-\(id)", source: .lidarr, arrId: id, slug: r.foreignArtistId, title: name,
                 year: nil, posterURL: poster, posterRequiresAuth: auth,
                 state: .resolve(monitored: r.monitored, complete: total > 0 && files >= total, partial: files > 0),
                 sizeOnDisk: r.statistics?.sizeOnDisk ?? 0, fileCount: files, totalCount: total,
@@ -367,7 +369,7 @@ public final class LibraryViewModel {
             let title = r.title
             let (poster, auth) = (r.images ?? []).posterURL(baseURL: baseURL)
             return LibraryEntry(
-                id: "whisparr-\(id)", source: .whisparr, arrId: id, externalId: r.tmdbId, title: title,
+                id: "whisparr-\(id)", source: .whisparr, arrId: id, externalId: r.tmdbId, slug: r.titleSlug, title: title,
                 year: r.year, posterURL: poster, posterRequiresAuth: auth,
                 state: .movie(monitored: r.monitored, hasFile: r.hasFile ?? false,
                              available: r.isAvailable ?? true),

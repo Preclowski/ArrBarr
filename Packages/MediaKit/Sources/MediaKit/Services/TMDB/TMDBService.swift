@@ -32,8 +32,9 @@ public struct TMDBService: Sendable {
         json(plan("searchPerson", path: "/search/person", query: [("query", query)]), tags: [.collection(.lookup, instance)], freshness: .live)
     }
 
-    public func movie(id: Int) -> Resource<TMDBDetails> {
-        json(plan("movieCountries", path: "/movie/{id}", values: ["id": String(id)]), tags: [movieTag(id)], freshness: .archival)
+    /// `language` (BCP 47) localises titles and taglines; without it TMDB answers in English.
+    public func movie(id: Int, language: String? = nil) -> Resource<TMDBDetails> {
+        json(plan("movieCountries", path: "/movie/{id}", values: ["id": String(id)], query: Self.language(language)), tags: [movieTag(id)], freshness: .archival)
     }
     public func movieCredits(id: Int) -> Resource<TMDBCredits> {
         json(plan("movieCredits", path: "/movie/{id}/credits", values: ["id": String(id)]), tags: [movieTag(id)], freshness: .archival)
@@ -41,12 +42,13 @@ public struct TMDBService: Sendable {
     public func movieVideos(id: Int) -> Resource<TMDBVideos> {
         json(plan("movieVideos", path: "/movie/{id}/videos", values: ["id": String(id)]), tags: [movieTag(id)], freshness: .archival)
     }
-    public func movieRecommendations(id: Int, page: Int = 1) -> Resource<TMDBPage<TMDBMovieSummary>> {
-        json(plan("recommendedMovies", path: "/movie/{id}/recommendations", values: ["id": String(id)], query: [("page", String(page))]), tags: [movieTag(id)], freshness: .warm)
+    public func movieRecommendations(id: Int, page: Int = 1, language: String? = nil) -> Resource<TMDBPage<TMDBMovieSummary>> {
+        json(plan("recommendedMovies", path: "/movie/{id}/recommendations", values: ["id": String(id)], query: [("page", String(page))] + Self.language(language)),
+             tags: [movieTag(id)], freshness: .warm)
     }
 
-    public func tv(id: Int) -> Resource<TMDBDetails> {
-        json(plan("tvCountries", path: "/tv/{id}", values: ["id": String(id)]), tags: [tvTag(id)], freshness: .archival)
+    public func tv(id: Int, language: String? = nil) -> Resource<TMDBDetails> {
+        json(plan("tvCountries", path: "/tv/{id}", values: ["id": String(id)], query: Self.language(language)), tags: [tvTag(id)], freshness: .archival)
     }
     public func tvCredits(id: Int) -> Resource<TMDBCredits> {
         json(plan("tvCredits", path: "/tv/{id}/aggregate_credits", values: ["id": String(id)]), tags: [tvTag(id)], freshness: .archival)
@@ -80,9 +82,12 @@ public struct TMDBService: Sendable {
         json(plan("personDetails", path: "/person/{id}", values: ["id": String(id)], query: language.map { [("language", $0)] } ?? []),
              tags: [personTag(id)], freshness: .archival)
     }
-    public func personMovieCredits(id: Int) -> Resource<TMDBPersonCredits<TMDBMovieSummary>> {
-        json(plan("personMovieCredits", path: "/person/{id}/movie_credits", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)
+    public func personMovieCredits(id: Int, language: String? = nil) -> Resource<TMDBPersonCredits<TMDBMovieSummary>> {
+        json(plan("personMovieCredits", path: "/person/{id}/movie_credits", values: ["id": String(id)], query: Self.language(language)),
+             tags: [personTag(id)], freshness: .archival)
     }
+
+    private static func language(_ code: String?) -> [(String, String)] { code.map { [("language", $0)] } ?? [] }
     public func personTVCredits(id: Int) -> Resource<TMDBPersonCredits<TMDBTVSummary>> {
         json(plan("personTVCredits", path: "/person/{id}/tv_credits", values: ["id": String(id)]), tags: [personTag(id)], freshness: .archival)
     }

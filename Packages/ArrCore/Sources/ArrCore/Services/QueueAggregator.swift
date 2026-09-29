@@ -40,7 +40,7 @@ protocol QueueDataProviding: Sendable {
     func latestRevision(source: QueueItem.Source) -> QueueRevision?
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
-    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, scope: HistoryScope?) async -> HistoryResult
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
 }
@@ -220,10 +220,10 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
                             whisparr: records[.whisparr] ?? [], failed: failed)
     }
 
-    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, entityId: Int?) async -> HistoryResult {
+    func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, scope: HistoryScope?) async -> HistoryResult {
         do {
             let baseURL = configStore.config(for: source.serviceKind).baseURL
-            let result = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: baseURL, page: page, pageSize: pageSize, entityId: entityId)
+            let result = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: baseURL, page: page, pageSize: pageSize, scope: scope)
             return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
         } catch {
             return HistoryResult(items: [], error: MediaKitErrorPresenter.message(for: error))

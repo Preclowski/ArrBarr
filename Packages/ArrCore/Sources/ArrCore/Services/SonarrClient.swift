@@ -16,6 +16,8 @@ nonisolated public struct SonarrClient: ArrAPIClient {
     func fetchEpisodes(seriesId: Int) async throws -> [ArrEpisode] { try await read { $0.episodes(seriesID: seriesId) } }
     func searchEpisodes(episodeIds: [Int]) async throws { try await run { $0.search(.episodes(episodeIds)) } }
     func searchSeason(seriesId: Int, seasonNumber: Int) async throws { try await run { $0.search(.season(seriesID: seriesId, season: seasonNumber)) } }
+    func searchSeries(seriesId: Int) async throws { try await run { $0.search(.series(seriesId)) } }
+    func deleteEpisodeFile(id: Int, seriesId: Int) async throws { try await run { $0.deleteFile(id: id, parent: seriesId) } }
     func setSeriesMonitored(seriesId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: seriesId, monitored) } }
     func setEpisodesMonitored(episodeIds: [Int], monitored: Bool) async throws { try await run { $0.setEpisodesMonitored(ids: episodeIds, monitored) } }
     func setSeasonMonitored(seriesId: Int, seasonNumber: Int, monitored: Bool) async throws {

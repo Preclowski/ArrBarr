@@ -33,7 +33,6 @@ actor QuizDeckPipeline {
     private var released = 0
     private var inFlight: [Int: Task<Void, Never>] = [:]
     private var delivered: Set<String> = []
-    private var totalIsFinal = false
     private var cancelled = false
     private var deliveryTail: Task<Void, Never>?
     private var finishWaiters: [CheckedContinuation<Void, Never>] = []
@@ -45,10 +44,9 @@ actor QuizDeckPipeline {
     }
 
     /// Only the tail beyond what was already fed is new.
-    func feed(_ all: [Pick], isFinal: Bool = false) {
+    func feed(_ all: [Pick]) {
         guard !cancelled else { return }
         if all.count > picks.count { picks.append(contentsOf: all[picks.count...]) }
-        if isFinal { totalIsFinal = true }
         pump()
     }
 
@@ -118,16 +116,15 @@ actor QuizDeckPipeline {
         guard setup.delivers else { return }
         let previous = deliveryTail
         let extends = setup.append || delivered.count > batch.count
-        let done = results.count
-        let total = picks.count
-        let isFinal = totalIsFinal
+        // Filtered-out picks too: they are still what the model chose, and the fan should move.
+        let posters = batch.isEmpty ? (0..<picks.count).compactMap { (results[$0] ?? nil)?.result.posterURL } : []
         deliveryTail = Task { [weak self] in
             await previous?.value
             guard await self?.cancelled == false else { return }
             await MainActor.run {
                 let deck = DiscoverViewModel.shared
                 if batch.isEmpty {
-                    deck.noteResolving(done: done, total: total, totalIsFinal: isFinal)
+                    deck.noteResolving(posters: posters)
                 } else {
                     deck.open(items: batch, append: extends)
                 }

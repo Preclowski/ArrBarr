@@ -72,18 +72,9 @@ struct PersonView: View {
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                Menu { moreActions } label: {
-                    Image(systemName: "ellipsis")
-                        .scaledFont(size: 14, weight: .medium)
-                        .foregroundStyle(.secondary)
-                        .frame(width: 22, height: 22)
-                        .contentShape(Rectangle())
-                }
-                .menuStyle(.button)
-                .buttonStyle(.plain)
-                .menuIndicator(.hidden)
-                .help(Text("common.moreActions.button", bundle: .module))
-                .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
+                TrailingMenu { moreActions } label: { HeaderGlyph(systemName: "ellipsis") }
+                    .help(Text("common.moreActions.button", bundle: .module))
+                    .accessibilityLabel(Text("common.moreActions.button", bundle: .module))
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)

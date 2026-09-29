@@ -23,4 +23,8 @@ nonisolated public struct LidarrClient: ArrAPIClient {
     func setAlbumMonitored(albumId: Int, monitored: Bool) async throws { try await run { $0.setAlbumMonitored(albumID: albumId, monitored) } }
     func setArtistMonitored(artistId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: artistId, monitored) } }
     func searchAlbum(albumId: Int) async throws { try await run { $0.search(.albums([albumId])) } }
+    func searchArtist(artistId: Int) async throws { try await run { $0.search(.artist(artistId)) } }
+    func deleteAlbum(albumId: Int, artistId: Int, deleteFiles: Bool, addImportListExclusion: Bool) async throws {
+        try await run { $0.deleteAlbum(id: albumId, artistID: artistId, deleteFiles: deleteFiles, addImportListExclusion: addImportListExclusion) }
+    }
 }

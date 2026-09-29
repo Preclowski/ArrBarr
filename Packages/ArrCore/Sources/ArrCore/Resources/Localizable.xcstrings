@@ -4550,47 +4550,6 @@
         }
       }
     },
-    "Search": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Search"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Szukaj"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Suchen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rechercher"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zoeken"
-          }
-        }
-      }
-    },
     "Search TV series to add": {
       "extractionState": "manual",
       "localizations": {
@@ -10140,47 +10099,6 @@
         }
       },
       "comment": "Header pencil in detail — opens the edit panel"
-    },
-    "detail.editOrDelete.tooltip": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edit or delete"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Edytuj lub usuń"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bearbeiten oder löschen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Editar o eliminar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modifier ou supprimer"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bewerken of verwijderen"
-          }
-        }
-      }
     },
     "detail.episodeLld.label": {
       "extractionState": "manual",
@@ -18355,334 +18273,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Których nie mam"
-          }
-        }
-      }
-    },
-    "rejection.alreadyImported": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already imported"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Już zaimportowane"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bereits importiert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya importado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Déjà importé"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Al geïmporteerd"
-          }
-        }
-      }
-    },
-    "rejection.blocklisted": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Blocklisted"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Na czarnej liście"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Auf der Sperrliste"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En la lista de bloqueo"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sur liste de blocage"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geblokkeerd"
-          }
-        }
-      }
-    },
-    "rejection.cutoff": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Below cutoff"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Poniżej progu"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Unter dem Grenzwert"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por debajo del umbral"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sous le seuil"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Onder de drempel"
-          }
-        }
-      }
-    },
-    "rejection.language": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wrong language"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zły język"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falsche Sprache"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Idioma incorrecto"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mauvaise langue"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Verkeerde taal"
-          }
-        }
-      }
-    },
-    "rejection.notAnUpgrade": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Not an upgrade"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie jest lepsze"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kein Upgrade"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No es una mejora"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pas une amélioration"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Geen upgrade"
-          }
-        }
-      }
-    },
-    "rejection.quality": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Quality not wanted"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niechciana jakość"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualität unerwünscht"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calidad no deseada"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Qualité non souhaitée"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kwaliteit niet gewenst"
-          }
-        }
-      }
-    },
-    "rejection.releaseGroup": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Group not wanted"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Niechciana grupa"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gruppe unerwünscht"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grupo no deseado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Groupe non souhaité"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Groep niet gewenst"
-          }
-        }
-      }
-    },
-    "rejection.size": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Size out of range"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozmiar poza zakresem"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Größe außerhalb des Bereichs"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tamaño fuera de rango"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Taille hors limites"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Grootte buiten bereik"
           }
         }
       }
@@ -30254,47 +29844,6 @@
         }
       }
     },
-    "discover.loading.resolving %lld %lld": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Checking titles: %1$lld of %2$lld"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sprawdzam tytuły: %1$lld z %2$lld"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titel werden geprüft: %1$lld von %2$lld"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comprobando títulos: %1$lld de %2$lld"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vérification des titres : %1$lld sur %2$lld"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titels controleren: %1$lld van %2$lld"
-          }
-        }
-      }
-    },
     "discover.loading.slow": {
       "extractionState": "manual",
       "localizations": {
@@ -30797,90 +30346,6 @@
         }
       }
     },
-    "wait.story.rated %@ %@": {
-      "comment": "Wait-screen story sentence (markdown, ** marks names/numbers). %1$@ title, %2$@ score.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** is rated **%2$@ out of 10**?"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** ma ocenę **%2$@ na 10**?"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** mit **%2$@ von 10** bewertet ist?"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** tiene una nota de **%2$@ sobre 10**?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** est noté **%2$@ sur 10** ?"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "…**%1$@** een **%2$@ van 10** scoort?"
-          }
-        }
-      }
-    },
-    "wait.story.genres %@": {
-      "comment": "Support line. %@ = genres.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filed under %@."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gatunki: %@."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Genres: %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Géneros: %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Genres : %@."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Genres: %@."
-          }
-        }
-      }
-    },
     "wait.story.premiereBy %@ %@ %@": {
       "comment": "Wait-screen story sentence (markdown, ** marks names/numbers). %1$@ title, %2$@ 'N years ago', %3$@ studio/network/artist.",
       "extractionState": "manual",
@@ -30961,90 +30426,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "…**%1$@** **%2$@** uitkwam?"
-          }
-        }
-      }
-    },
-    "wait.story.runtime %@": {
-      "comment": "Support line. %@ = formatted length.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It runs %@."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trwa %@."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es dauert %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dura %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il dure %@."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Het duurt %@."
-          }
-        }
-      }
-    },
-    "wait.story.episodeRuntime %@": {
-      "comment": "Support line. %@ = formatted episode length.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "An episode runs %@."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Odcinek trwa %@."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eine Folge dauert %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un episodio dura %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un épisode dure %@."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Een aflevering duurt %@."
           }
         }
       }
@@ -31133,90 +30514,6 @@
         }
       }
     },
-    "wait.story.premiereComposer %@ %@": {
-      "comment": "Support line. %1$@ 'N years ago', %2$@ composer.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It premiered %1$@; the score is by **%2$@**."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premiera była %1$@, a muzykę napisał **%2$@**."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premiere war %1$@, die Musik stammt von **%2$@**."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se estrenó %1$@; la música es de **%2$@**."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sorti %1$@ ; la musique est de **%2$@**."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Het kwam %1$@ uit; de muziek is van **%2$@**."
-          }
-        }
-      }
-    },
-    "wait.story.premiereShort %@": {
-      "comment": "Support line. %@ 'N years ago'.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It premiered %@."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premiera była %@."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Premiere war %@."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se estrenó %@."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sorti %@."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Het kwam %@ uit."
-          }
-        }
-      }
-    },
     "wait.story.crew %@ %@": {
       "comment": "Wait-screen story sentence (markdown, ** marks names/numbers). %1$@ writer, %2$@ cinematographer.",
       "extractionState": "manual",
@@ -31255,48 +30552,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "…**%1$@** het scenario schreef en **%2$@** de camera deed?"
-          }
-        }
-      }
-    },
-    "wait.story.tagline %@": {
-      "comment": "Support line. %@ = tagline.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Its tagline: “%@”."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hasło z plakatu: „%@”."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die Tagline: „%@“."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Su lema: «%@»."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Son accroche : « %@ »."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "De tagline: “%@”."
           }
         }
       }
@@ -31343,48 +30598,6 @@
         }
       }
     },
-    "wait.story.originalTitle %@": {
-      "comment": "Support line. %@ = original title.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Originally titled **%@**."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tytuł oryginalny: **%@**."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Originaltitel: **%@**."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Título original: **%@**."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Titre original : **%@**."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Originele titel: **%@**."
-          }
-        }
-      }
-    },
     "wait.story.alsoWatch %@ %@ %@": {
       "comment": "Wait-screen story sentence (markdown, ** marks names/numbers). %1$@ title, %2$@ and %3$@ recommended titles.",
       "extractionState": "manual",
@@ -31427,48 +30640,6 @@
         }
       }
     },
-    "wait.story.alsoOwned %@": {
-      "comment": "Support line. %@ = a recommended title already in the library.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You already have **%@**."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**%@** masz już w bibliotece."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**%@** hast du schon."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**%@** ya está en tu biblioteca."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vous avez déjà **%@**."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "**%@** heb je al."
-          }
-        }
-      }
-    },
     "wait.story.series %@ %@ %@ %@": {
       "comment": "Wait-screen story sentence (markdown, ** marks names/numbers). %1$@ title, %2$@ 'N seasons', %3$@ 'N episodes', %4$@ 'N years ago'.",
       "extractionState": "manual",
@@ -31507,132 +30678,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "…**%1$@** sinds de première %4$@ is gegroeid tot **%2$@** en %3$@?"
-          }
-        }
-      }
-    },
-    "wait.story.network %@": {
-      "comment": "Support line. %@ = TV network.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "It airs on **%@**."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Emituje go **%@**."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es läuft auf **%@**."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lo emite **%@**."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diffusé sur **%@**."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Het wordt uitgezonden door **%@**."
-          }
-        }
-      }
-    },
-    "wait.story.knownForYear %@ %@": {
-      "comment": "Support line. %1$@ other title, %2$@ its year.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Best known for **%1$@** (%2$@)."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Najbardziej znany tytuł: **%1$@** (%2$@)."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bekannt vor allem aus **%1$@** (%2$@)."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conocido sobre todo por **%1$@** (%2$@)."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Surtout connu pour **%1$@** (%2$@)."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vooral bekend van **%1$@** (%2$@)."
-          }
-        }
-      }
-    },
-    "wait.story.knownFor %@": {
-      "comment": "Support line. %@ other title.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Best known for **%@**."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Najbardziej znany tytuł: **%@**."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bekannt vor allem aus **%@**."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Conocido sobre todo por **%@**."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Surtout connu pour **%@**."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vooral bekend van **%@**."
           }
         }
       }
@@ -31885,90 +30930,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "…**%1$@** ook in **%2$@** speelt, dat in je bibliotheek staat?"
-          }
-        }
-      }
-    },
-    "wait.story.watched": {
-      "comment": "Support line after wait.story.library.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You have watched it already."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ten już obejrzany."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Den hast du schon gesehen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ese ya lo has visto."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vous l’avez déjà vu."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Die heb je al gezien."
-          }
-        }
-      }
-    },
-    "wait.story.notWatched": {
-      "comment": "Support line after wait.story.library.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Still unwatched."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wciąż nieobejrzany."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noch ungesehen."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aún sin ver."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Toujours pas vu."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nog niet gekeken."
           }
         }
       }
@@ -33821,90 +32782,6 @@
         }
       }
     },
-    "rejection.inQueue": {
-      "comment": "Short manual-search rejection: an equal or better release is already downloading.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Already in the queue"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Już jest w kolejce"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bereits in der Warteschlange"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya está en la cola"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Déjà dans la file"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Staat al in de wachtrij"
-          }
-        }
-      }
-    },
-    "rejection.lowerScore": {
-      "comment": "Short manual-search rejection: the file on disk already scores as high or higher.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your file scores higher"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twój plik ma wyższą ocenę"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Deine Datei ist höher bewertet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu archivo tiene más puntuación"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre fichier a un meilleur score"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Je bestand scoort hoger"
-          }
-        }
-      }
-    },
     "release.showRejected %lld": {
       "comment": "Toggle in the manual-search View menu that shows the releases the arr rejected; %lld is how many.",
       "extractionState": "manual",
@@ -34493,85 +33370,43 @@
         }
       }
     },
-    "release.filter.header": {
-      "comment": "Section header in the manual-search View menu, above the filters.",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtr"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtro"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filtre"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Filter"
-          }
-        }
-      }
-    },
     "Shelf": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Shelf"
+            "value": "Roulette"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Półka"
+            "value": "Ruletka"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Regal"
+            "value": "Roulette"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Estante"
+            "value": "Ruleta"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Étagère"
+            "value": "Roulette"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Plank"
+            "value": "Roulette"
           }
         }
       }
@@ -34582,37 +33417,37 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nothing on the shelf yet"
+            "value": "Nothing to spin yet"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Półka jest pusta"
+            "value": "Nie ma jeszcze czego losować"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Das Regal ist leer"
+            "value": "Noch nichts zum Drehen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "El estante está vacío"
+            "value": "Aún no hay nada que girar"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "L’étagère est vide"
+            "value": "Rien à faire tourner pour l’instant"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "De plank is leeg"
+            "value": "Nog niets om te draaien"
           }
         }
       }
@@ -35105,6 +33940,257 @@
           "stringUnit": {
             "state": "translated",
             "value": "Willekeurig"
+          }
+        }
+      }
+    },
+    "delete.fileOnlyWarning.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file will be permanently deleted from disk. The episode stays in your library."
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plik zostanie trwale usunięty z dysku. Odcinek zostanie w bibliotece."
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Die Datei wird endgültig von der Festplatte gelöscht. Die Episode bleibt in der Bibliothek."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El archivo se eliminará permanentemente del disco. El episodio seguirá en la biblioteca."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier sera définitivement supprimé du disque. L’épisode reste dans la bibliothèque."
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Het bestand wordt definitief van de schijf verwijderd. De aflevering blijft in de bibliotheek."
+          }
+        }
+      },
+      "comment": "Delete-file confirmation — only the file goes, not the library record"
+    },
+    "detail.deleteFile.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete file"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń plik"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Datei löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar archivo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer le fichier"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestand verwijderen"
+          }
+        }
+      },
+      "comment": "Episode detail menu and its confirmation — deletes only the episode's file"
+    },
+    "detail.deleteSeries.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete series"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usuń serial"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie löschen"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar serie"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer la série"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie verwijderen"
+          }
+        }
+      },
+      "comment": "Season detail menu — deletes the whole series from the library"
+    },
+    "detail.editArtist.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit artist"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edytuj artystę"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Künstler bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar artista"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier l’artiste"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artiest bewerken"
+          }
+        }
+      },
+      "comment": "Album detail menu — opens the edit panel for the album's artist"
+    },
+    "detail.editSeries.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit series"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edytuj serial"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie bearbeiten"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Editar serie"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier la série"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serie bewerken"
+          }
+        }
+      },
+      "comment": "Season detail menu — opens the edit panel for the whole series"
+    },
+    "discover.loading.matching": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Matching the picks…"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dopasowuję propozycje…"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorschläge werden zugeordnet…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando las propuestas…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche des suggestions…"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suggesties opzoeken…"
           }
         }
       }

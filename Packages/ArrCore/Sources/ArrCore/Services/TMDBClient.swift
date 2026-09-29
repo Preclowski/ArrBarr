@@ -171,8 +171,8 @@ nonisolated public struct TMDBClient: Sendable {
         guard let value = record.voteAverage, value > 0 else { return nil }
         return (value, record.voteCount ?? 0)
     }
-    public func movieDetails(movieId: Int) async throws -> TMDBDetails { try await read { $0.movie(id: movieId) } }
-    public func tvDetails(tvId: Int) async throws -> TMDBDetails { try await read { $0.tv(id: tvId) } }
+    public func movieDetails(movieId: Int, language: String? = nil) async throws -> TMDBDetails { try await read { $0.movie(id: movieId, language: language) } }
+    public func tvDetails(tvId: Int, language: String? = nil) async throws -> TMDBDetails { try await read { $0.tv(id: tvId, language: language) } }
     public func tvCreators(tvId: Int) async throws -> [TMDBPerson] { try await tvDetails(tvId: tvId).createdBy ?? [] }
 
     public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? { try await read { $0.find(tvdbID: tvdbId) }.tvResults.first?.id }
@@ -199,7 +199,9 @@ nonisolated public struct TMDBClient: Sendable {
         return english
     }
 
-    public func personMovieCredits(personId: Int) async throws -> TMDBPersonCredits<TMDBMovieSummary> { try await read { $0.personMovieCredits(id: personId) } }
+    public func personMovieCredits(personId: Int, language: String? = nil) async throws -> TMDBPersonCredits<TMDBMovieSummary> {
+        try await read { $0.personMovieCredits(id: personId, language: language) }
+    }
     public func personTVCredits(personId: Int) async throws -> TMDBPersonCredits<TMDBTVSummary> { try await read { $0.personTVCredits(id: personId) } }
 
     public func discoverMovies(genreIds: [Int] = [], startYear: Int? = nil, endYear: Int? = nil, sortBy: String = "popularity.desc", minVoteCount: Int = 50) async throws -> [TMDBMovieSummary] {
@@ -268,8 +270,8 @@ nonisolated public struct TMDBClient: Sendable {
         date.addingTimeInterval(TimeInterval(days) * 86_400).formatted(.iso8601.year().month().day())
     }
 
-    public func recommendedMovies(movieId: Int, page: Int = 1) async throws -> [TMDBMovieSummary] {
-        try await read { $0.movieRecommendations(id: movieId, page: page) }.results
+    public func recommendedMovies(movieId: Int, page: Int = 1, language: String? = nil) async throws -> [TMDBMovieSummary] {
+        try await read { $0.movieRecommendations(id: movieId, page: page, language: language) }.results
     }
 
     public func recommendedTV(seriesId: Int, page: Int = 1) async throws -> [TMDBTVSummary] {

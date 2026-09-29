@@ -217,12 +217,15 @@ struct DiscoverCardView: View {
 
     // MARK: - Swipe tint / stamp
 
+    /// `.secondary` vanished into the dimmed poster, so a left swipe read as no verdict at all.
+    private static let skipTint = Color.red
+
     @ViewBuilder
     private var swipeTint: some View {
         let progress = min(1.0, abs(dragOffset.width) / 180)
         if abs(dragOffset.width) > 4 {
             Rectangle()
-                .fill(dragOffset.width > 0 ? Color.accentColor : Color.secondary)
+                .fill(dragOffset.width > 0 ? Color.accentColor : Self.skipTint)
                 .opacity(progress * 0.40)
         }
     }
@@ -235,12 +238,12 @@ struct DiscoverCardView: View {
             Text(LocalizedStringKey(isAdd ? "Add" : "Skip"), bundle: .module)
                 .scaledFont(size: 28, weight: .heavy)
                 .textCase(.uppercase)
-                .foregroundStyle(isAdd ? Color.accentColor : Color.secondary)
+                .foregroundStyle(isAdd ? Color.accentColor : Self.skipTint)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
-                        .stroke(isAdd ? Color.accentColor : Color.secondary, lineWidth: 3)
+                        .stroke(isAdd ? Color.accentColor : Self.skipTint, lineWidth: 3)
                 )
                 .rotationEffect(.degrees(isAdd ? 15 : -15))
                 .opacity(progress)

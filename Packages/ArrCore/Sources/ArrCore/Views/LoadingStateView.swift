@@ -7,8 +7,9 @@ struct LoadingStateView: View {
 
     var body: some View {
         if let label {
-            VStack(spacing: 10) {
+            VStack(spacing: 8) {
                 ProgressView()
+                    .controlSize(.small)
                 Text(label, bundle: .module)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)

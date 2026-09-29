@@ -11,11 +11,22 @@ public final class DetailRouter: ObservableObject {
     }
 
     @Published public private(set) var request: Request?
+    /// Beside the request, not in it: hosts push `request.item` into details that don't know the router.
+    private var pendingIntent: (itemID: String, intent: DetailIntent)?
 
     private init() {}
 
-    public func open(_ item: QueueItem) {
+    public func open(_ item: QueueItem, intent: DetailIntent? = nil) {
+        pendingIntent = intent.map { (item.id, $0) }
         request = Request(item: item)
+    }
+
+    /// One-shot: any detail that finishes loading clears it, so an intent whose detail never
+    /// loaded can't fire on a later open.
+    func takeIntent(for itemID: String) -> DetailIntent? {
+        defer { pendingIntent = nil }
+        guard let pendingIntent, pendingIntent.itemID == itemID else { return nil }
+        return pendingIntent.intent
     }
 }
 

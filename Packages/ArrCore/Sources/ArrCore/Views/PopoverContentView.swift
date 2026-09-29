@@ -10,6 +10,7 @@ public struct PopoverContentView: View {
     /// `nil` in the menu-bar panel; in the detached window an × ends the tab bar (traffic lights are hidden).
     var onCloseWindow: (() -> Void)? = nil
     @Environment(\.isDetachedWindow) var isDetachedWindow
+    @Environment(\.colorScheme) var colorScheme
     /// Closes the MenuBarExtra popover; a no-op in the detached NSWindow.
     @Environment(\.dismiss) var dismiss
 
@@ -85,14 +86,6 @@ public struct PopoverContentView: View {
             queue: viewModel, library: libraryViewModel,
             sources: QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible },
             query: searchViewModel.query)
-    }
-
-    /// Episode rows (packs have `episodeNumber == nil`) skip the series chrome and open
-    /// `EpisodeQuickDetail`.
-    func isSonarrEpisodeRow(_ item: QueueItem) -> Bool {
-        item.source == .sonarr
-            && (item.episodeNumber ?? 0) > 0
-            && item.entityId != nil
     }
 
 

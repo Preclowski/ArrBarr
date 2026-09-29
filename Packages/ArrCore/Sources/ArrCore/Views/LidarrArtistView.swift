@@ -20,22 +20,27 @@ struct LidarrArtistView: View {
     @State private var albumDetail: QueueItem?
     /// Keyed by the server's type string; empty means all expanded.
     @State private var collapsedTypes: Set<String> = []
-    @State private var editRequest: MediaEditRequest?
-    @State private var deleteRequest: MediaDeleteRequest?
+    @State private var actionState = DetailActionState()
+    @State private var searchFeedback: SearchFeedback = .idle
 
-    private var editTarget: MediaEditRequest? {
-        guard let artistId = item.entityId else { return nil }
-        return MediaEditRequest(source: .lidarr, entityId: artistId)
+    private var actionsMenu: some View {
+        DetailActionsMenu(actions: detailActions, state: $actionState, feedback: searchFeedback)
     }
 
-    private var deleteTarget: MediaDeleteRequest? {
-        guard let artistId = item.entityId else { return nil }
-        return MediaDeleteRequest(source: .lidarr, entityId: artistId,
-                                  title: artist?.artistName ?? item.title)
+    private var detailActions: DetailActions {
+        var actions = DetailActions(webURL: artistWebURL)
+        guard let artistId = item.entityId else { return actions }
+        let name = artist?.artistName ?? item.title
+        actions.edit = MediaEditRequest(source: .lidarr, entityId: artistId)
+        actions.history = HistoryTarget(source: .lidarr, scope: .artist(artistId), title: name)
+        actions.search = DetailActions.Search(isSending: searchFeedback.isSending, onAutomatic: {
+            SearchFeedback.run($searchFeedback) { try await configStore.lidarrClient.searchArtist(artistId: artistId) }
+        })
+        actions.delete = MediaDeleteRequest(source: .lidarr, target: .record(artistId), title: name)
+        return actions
     }
 
     private func handleDeleted() {
-        deleteRequest = nil
         Task { await viewModel.refresh() }
         onBack()
     }
@@ -63,34 +68,9 @@ struct LidarrArtistView: View {
     }
 
     var body: some View {
-        ZStack {
-            mainContent
-
-            // iOS presents it as a sheet instead.
-            #if os(macOS)
-            if let req = editRequest {
-                MediaEditModalOverlay(request: req, onDismiss: { editRequest = nil })
-                    .zIndex(6)
-            }
-            if let req = deleteRequest {
-                MediaDeleteModalOverlay(request: req,
-                                        onDismiss: { deleteRequest = nil },
-                                        onDeleted: handleDeleted)
-                    .zIndex(7)
-            }
-            #endif
-        }
-        #if os(iOS)
-        .sheet(item: $editRequest) { req in
-            // Detents live inside the panel — see MediaEditPanel.
-            MediaEditPanel(request: req, onBack: { editRequest = nil })
-        }
-        .sheet(item: $deleteRequest) { req in
-            MediaDeletePanel(request: req,
-                             onCancel: { deleteRequest = nil },
-                             onDeleted: handleDeleted)
-        }
-        #endif
+        mainContent
+            .detailActionsHost($actionState) { _ in handleDeleted() }
+            .onDetailIntent(for: item.id, ready: !loading) { detailActions.carryOut($0, state: $actionState) }
     }
 
     private var mainContent: some View {
@@ -104,35 +84,7 @@ struct LidarrArtistView: View {
                     .scaledFont(size: 15, weight: .semibold)
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if let target = editTarget {
-                    Menu {
-                        Button { editRequest = target } label: {
-                            Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
-                        }
-                        Button(role: .destructive) { deleteRequest = deleteTarget } label: {
-                            Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
-                        }
-                    } label: {
-                        Image(systemName: "pencil")
-                            .scaledFont(size: 14, weight: .medium)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 22, height: 22)
-                            .contentShape(Rectangle())
-                    }
-                    .menuStyle(.button)
-                    .buttonStyle(.plain)
-                    .menuIndicator(.hidden)
-                    .help(Text("detail.editOrDelete.tooltip", bundle: .module))
-                }
-                if let url = artistWebURL {
-                    Button { PlatformURLOpener.open(url) } label: {
-                        Image(systemName: "safari")
-                            .scaledFont(size: 14, weight: .medium)
-                            .foregroundStyle(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                    .help(Text("detail.openInBrowser.button", bundle: .module))
-                }
+                actionsMenu
             }
             .padding(.horizontal, 12)
             .padding(.top, 10)
@@ -173,29 +125,7 @@ struct LidarrArtistView: View {
         .navigationTitle(artist?.artistName ?? item.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if let target = editTarget {
-                    Menu {
-                        Button { editRequest = target } label: {
-                            Label { Text("detail.edit.button", bundle: .module) } icon: { Image(systemName: "pencil") }
-                        }
-                        Section {
-                            Button(role: .destructive) { deleteRequest = deleteTarget } label: {
-                                Label { Text("detail.delete.button", bundle: .module) } icon: { Image(systemName: "trash") }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "pencil")
-                    }
-                    .accessibilityLabel(Text("detail.editOrDelete.tooltip", bundle: .module))
-                }
-                if let url = artistWebURL {
-                    Button { PlatformURLOpener.open(url) } label: {
-                        Image(systemName: "safari")
-                    }
-                    .help(Text("detail.openInBrowser.button", bundle: .module))
-                }
-            }
+            ToolbarItem(placement: .primaryAction) { actionsMenu }
         }
         #else
         .toolbar(.hidden, for: .windowToolbar)
@@ -204,7 +134,8 @@ struct LidarrArtistView: View {
             DetailView(
                 item: album,
                 onBack: { albumDetail = nil },
-                viewModel: viewModel
+                viewModel: viewModel,
+                onDeleted: { Task { await load() } }
             )
         }
     }
@@ -398,9 +329,7 @@ struct LidarrArtistView: View {
 
     /// Keyed by `foreignArtistId`, known only after the fetch.
     private var artistWebURL: URL? {
-        guard let foreign = artist?.foreignArtistId, !foreign.isEmpty else { return nil }
-        return URL(string: configStore.lidarr.baseURL)?
-            .appendingPathComponent("/artist/\(foreign)")
+        lidarrArtistWebURL(foreignArtistId: artist?.foreignArtistId, in: configStore)
     }
 
     // MARK: - Fetch

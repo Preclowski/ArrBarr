@@ -11,10 +11,10 @@ nonisolated extension ArrCredit {
 }
 
 nonisolated extension ArrCommand {
-    /// A search for this movie or album still queued or running.
+    /// A search for this movie, series or album still queued or running.
     func isSearch(for entityId: Int) -> Bool {
         guard isRunning, name?.lowercased().contains("search") == true, let body else { return false }
-        return body.movieIds?.contains(entityId) == true || body.movieId == entityId
+        return body.movieIds?.contains(entityId) == true || body.movieId == entityId || body.seriesId == entityId
             || body.albumIds?.contains(entityId) == true || body.albumId == entityId
     }
 }

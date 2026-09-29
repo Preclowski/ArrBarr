@@ -3,8 +3,8 @@ import SwiftUI
 struct HistoryView: View {
     /// nil = "All", merged across every configured arr (iOS filter).
     let source: QueueItem.Source?
-    /// One record's history; the arr filters server-side. Needs a concrete `source`.
-    var entityId: Int? = nil
+    /// One detail's history. Needs a concrete `source`.
+    var scope: HistoryScope? = nil
     var title: String? = nil
     var viewModel: QueueViewModel
     @EnvironmentObject var configStore: ConfigStore
@@ -21,7 +21,7 @@ struct HistoryView: View {
                 if showHeader { header }
             }
         // The feed outlives this view, so a reopened popover shows its rows at once; re-run when iOS swaps `source`.
-        .task(id: "\(source?.rawValue ?? "all")/\(entityId.map(String.init) ?? "")") { await feed.load() }
+        .task(id: "\(source?.rawValue ?? "all")/\(scope.map { String(describing: $0) } ?? "")") { await feed.load() }
     }
 
     private var availableSources: [QueueItem.Source] {
@@ -29,7 +29,7 @@ struct HistoryView: View {
     }
 
     private var feed: HistoryFeed {
-        viewModel.historyFeed(for: source.map { [$0] } ?? availableSources, entityId: entityId)
+        viewModel.historyFeed(for: source.map { [$0] } ?? availableSources, scope: scope)
     }
 
     private func shownItems(_ feed: HistoryFeed) -> [HistoryItem] {
@@ -142,12 +142,12 @@ struct HistoryView: View {
         }
     }
 
-    init(source: QueueItem.Source?, entityId: Int? = nil, title: String? = nil,
+    init(source: QueueItem.Source?, scope: HistoryScope? = nil, title: String? = nil,
          viewModel: QueueViewModel, showHeader: Bool = true,
          typeFilter: HistoryItem.EventType? = nil, onOpenDetail: ((QueueItem) -> Void)? = nil,
          onClose: @escaping () -> Void) {
         self.source = source
-        self.entityId = entityId
+        self.scope = scope
         self.title = title
         self.viewModel = viewModel
         self.showHeader = showHeader

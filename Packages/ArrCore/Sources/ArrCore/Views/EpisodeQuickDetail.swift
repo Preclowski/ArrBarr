@@ -81,7 +81,7 @@ struct EpisodeQuickDetail: View {
                 let client = configStore.sonarrClient
                 try await client.searchEpisodes(episodeIds: [episodeId])
             },
-            warningActionURL: arrWebURL(for: item, in: configStore),
+            seriesWebURL: arrWebURL(for: item, in: configStore),
             onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
             onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
             onDeleteEpisode: { q in Task { await viewModel.delete(q) } },
@@ -118,7 +118,9 @@ struct EpisodeQuickDetail: View {
                 } catch {
                     await load()
                 }
-            }
+            },
+            onFileDeleted: { Task { await load() } },
+            intentItemID: item.id
         )
         .conditionalNavTitle(sonarrDetail?.title ?? splitTitleAndYear(item.title).title, apply: !isDetachedWindow)
         .navigationDestination(item: $seriesPush) { req in
@@ -165,7 +167,12 @@ struct EpisodeQuickDetail: View {
                     } catch {
                         await load()
                     }
-                }
+                },
+                onSeriesDeleted: {
+                    Task { await viewModel.refresh() }
+                    onBack()
+                },
+                onEpisodeFileDeleted: { Task { await load() } }
             )
         }
         .task(id: item.id) { await load() }

@@ -43,13 +43,14 @@ public struct ServarrService: Sendable {
         return .json(plan("fetchCalendar", path: "/calendar", query: query), tags: [tag(.calendar)], freshness: .warm)
     }
 
-    public func history(page: Int = 1, pageSize: Int = 50) -> Resource<ArrPage<ArrHistoryRecord>> {
-        .json(plan("fetchHistory", path: "/history", query: historyQuery(page: page, pageSize: pageSize)), tags: [tag(.history)], freshness: .warm)
+    /// `filters` narrow the page server-side (`episodeId`, `artistIds`); an arr that ignores a key answers unfiltered.
+    public func history(page: Int = 1, pageSize: Int = 50, filters: [(String, String)] = []) -> Resource<ArrPage<ArrHistoryRecord>> {
+        .json(plan("fetchHistory", path: "/history", query: historyQuery(page: page, pageSize: pageSize) + filters), tags: [tag(.history)], freshness: .warm)
     }
 
-    public func historyFor(entityID: Int, pageSize: Int = 50) -> Resource<ArrPage<ArrHistoryRecord>> {
+    public func historyFor(entityID: Int, page: Int = 1, pageSize: Int = 50, filters: [(String, String)] = []) -> Resource<ArrPage<ArrHistoryRecord>> {
         let operation = "fetchHistoryFor" + (profile.kind == .lidarr ? "Album" : profile.entityNoun.capitalized)
-        let query = historyQuery(page: 1, pageSize: pageSize) + [(profile.historyIDsKey, String(entityID))]
+        let query = historyQuery(page: page, pageSize: pageSize) + [(profile.historyIDsKey, String(entityID))] + filters
         return .json(plan(operation, path: "/history", query: query), tags: [tag(.history), entityTag(entityID)], freshness: .warm)
     }
 
@@ -317,6 +318,23 @@ public struct ServarrService: Sendable {
                                    query: [("moveFiles", String(movedPath != nil))], body: try RequestBuilder.json(envelope))
             let r = try await ctx.send(put)
             return CommandReceipt(acceptedAt: ctx.clock.now, serverMessage: RequestBuilder.serverMessage(from: r.body))
+        }
+    }
+
+    /// The file on disk only; the record stays in the library. `parent` is the record whose file list changes.
+    public func deleteFile(id: Int, parent: Int) -> Command {
+        let p = plan("deleteFile", method: "DELETE", path: "/\(profile.fileNoun)/{id}", values: ["id": String(id)])
+        return command("deleteFile", invalidates: [tag(.library), entityTag(parent)]) { ctx in
+            _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now)
+        }
+    }
+
+    /// Lidarr: one album, its artist stays. `artistID` owns the album list that changes.
+    public func deleteAlbum(id: Int, artistID: Int, deleteFiles: Bool, addImportListExclusion: Bool) -> Command {
+        let p = plan("deleteAlbum", method: "DELETE", path: "/album/{id}", values: ["id": String(id)],
+                     query: [("deleteFiles", String(deleteFiles)), ("addImportListExclusion", String(addImportListExclusion))])
+        return command("deleteAlbum", invalidates: [tag(.library), .entity(instance, .album, id), entityTag(artistID), tag(.calendar)]) { ctx in
+            _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now)
         }
     }
 

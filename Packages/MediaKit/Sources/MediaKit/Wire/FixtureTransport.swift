@@ -7,6 +7,10 @@ public actor FixtureTransport: Transport, SocketTransport {
         let headers: [String: String]
         let body: JSONValue
         let synthetic: Bool?
+        /// The recording day: dates in the body move by whole days so it reads as today (calendars stay upcoming).
+        let anchor: Date?
+        /// A query key (`movieId`): rows carrying it answer only the request with the same value (credits per title).
+        let scope: String?
     }
 
     private let root: URL
@@ -50,8 +54,13 @@ public actor FixtureTransport: Transport, SocketTransport {
         if request.method == "GET", let remembered = putBodies[pathKey] {
             return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(remembered))
         }
+        if request.method == "GET", let record = record(in: table, template: request.pathTemplate, id: request.url.lastPathComponent) {
+            return HTTPResponse(status: 200, headers: ["Content-Type": "application/json"], body: try encode(record))
+        }
         if let entry = table["\(name)-\(slug)"] ?? table[name] {
-            let body = applyState(entry.body, kind: kind, name: name)
+            var body = applyState(entry.body, kind: kind, name: name)
+            if let scope = entry.scope { body = Self.scoped(body, by: scope, to: request.url) }
+            if let anchor = entry.anchor { body = Self.shift(body, byDays: Self.days(from: anchor, to: clock.now)) }
             return HTTPResponse(status: entry.status, headers: HTTPHeaders(entry.headers), body: try encode(body))
         }
         guard isWrite else { throw MediaKitError.fixtureMissing(request.operation) }
@@ -80,9 +89,51 @@ public actor FixtureTransport: Transport, SocketTransport {
         if let cached = files[kind] { return cached }
         let url = root.appendingPathComponent("\(kind.rawValue).json")
         guard let data = try? Data(contentsOf: url) else { files[kind] = [:]; return [:] }
-        let table = try JSONDecoder().decode([String: Entry].self, from: data)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let table = try decoder.decode([String: Entry].self, from: data)
         files[kind] = table
         return table
+    }
+
+    /// One recorded detail answers every id; a library that lists the requested id answers with that entry instead.
+    private func record(in table: [String: Entry], template: String, id: String) -> JSONValue? {
+        let sources = ["movie": ["fetchallmovies", "fetchcalendar"], "series": ["fetchallseries"],
+                       "artist": ["fetchallartists"], "album": ["fetchartistalbums", "fetchcalendar"]]
+        guard let noun = template.split(separator: "/").dropLast().last.map(String.init), template.hasSuffix("/{id}"),
+              let ops = sources[noun], let wanted = Double(id) else { return nil }
+        for op in ops {
+            guard case let .array(items)? = table[op]?.body else { continue }
+            if let hit = items.first(where: { $0["id"]?.intValue.map(Double.init) == wanted }) { return hit }
+        }
+        return nil
+    }
+
+    private static func scoped(_ body: JSONValue, by key: String, to url: URL) -> JSONValue {
+        guard case let .array(items) = body,
+              let id = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first(where: { $0.name == key })?.value.flatMap(Int.init)
+        else { return body }
+        return .array(items.filter { $0[key]?.intValue == id })
+    }
+
+    private static func days(from anchor: Date, to now: Date) -> Int {
+        var utc = Calendar(identifier: .gregorian)
+        utc.timeZone = TimeZone(identifier: "UTC")!
+        return utc.dateComponents([.day], from: utc.startOfDay(for: anchor), to: utc.startOfDay(for: now)).day ?? 0
+    }
+
+    private static func shift(_ value: JSONValue, byDays days: Int) -> JSONValue {
+        switch value {
+        case let .object(o): return .object(o.mapValues { shift($0, byDays: days) })
+        case let .array(a): return .array(a.map { shift($0, byDays: days) })
+        case let .string(s):
+            let full = ISO8601DateFormatter(), day = ISO8601DateFormatter()
+            day.formatOptions = [.withFullDate]
+            if s.count == 20, let d = full.date(from: s) { return .string(full.string(from: d.addingTimeInterval(Double(days) * 86_400))) }
+            if s.count == 10, let d = day.date(from: s) { return .string(day.string(from: d.addingTimeInterval(Double(days) * 86_400))) }
+            return value
+        default: return value
+        }
     }
 
     private func encode(_ value: JSONValue) throws -> Data {
