@@ -665,9 +665,7 @@ struct RatingPill: View {
             .buttonStyle(.plain)
             .help(Text(verbatim: helpText))
             #if os(macOS)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
+            .pointerStyle(.link)
             #endif
         } else if !helpText.isEmpty {
             pill.help(Text(verbatim: helpText))

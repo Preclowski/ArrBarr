@@ -173,9 +173,7 @@ struct DiscoverCardView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text("discover.moreDetails.button", bundle: .module))
         #if os(macOS)
-        .onHover { hovering in
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
+        .pointerStyle(.link)
         #endif
     }
 

@@ -119,7 +119,7 @@ struct ServiceFields: View {
             HStack(spacing: 8) {
                 ConnectionStatusDot(service: .arr(kind))
                 Button { runTest() } label: { Text("queue.testConnection.button", bundle: .module) }
-                    .modifier(GlassButtonStyle())
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(testState == .testing || !config.isConfigured)
 

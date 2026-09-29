@@ -58,7 +58,7 @@ struct PauseResumeButton: View {
             .padding(.vertical, Self.vPadding)
         }
         // Translucent glass, not the filled prominent style: a solid capsule over artwork reads as a slab.
-        .modifier(GlassTintedButtonStyle())
+        .modifier(GlassButtonStyle())
         .tint(tint)
         .disabled(inFlight)
     }

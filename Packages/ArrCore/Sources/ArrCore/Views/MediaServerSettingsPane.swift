@@ -120,7 +120,7 @@ struct MediaServerSettingsPane: View {
     private var testRow: some View {
         HStack(spacing: 8) {
             Button { runTest() } label: { Text("queue.testConnection.button", bundle: .module) }
-                .modifier(GlassButtonStyle())
+                .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(testState == .running || !configStore.mediaServer.isConfigured)
 
@@ -179,7 +179,7 @@ struct MediaServerSettingsPane: View {
                 Button { run(.scan, on: library) } label: {
                     Label { Text("settings.scan.button", bundle: .module) } icon: { Image(systemName: "arrow.clockwise") }
                 }
-                .modifier(GlassButtonStyle())
+                .buttonStyle(.bordered)
                 .controlSize(.small)
                 .disabled(state == .running)
 
@@ -188,7 +188,7 @@ struct MediaServerSettingsPane: View {
                     Button { run(.emptyTrash, on: library) } label: {
                         Label { Text("settings.emptyTrash.button", bundle: .module) } icon: { Image(systemName: "trash") }
                     }
-                    .modifier(GlassButtonStyle())
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                     .disabled(state == .running)
                 }

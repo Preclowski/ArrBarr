@@ -478,9 +478,7 @@ private struct TrailerClipTile: View {
         .buttonStyle(.plain)
         .accessibilityAddTraits(isPlaying ? .isSelected : [])
         #if os(macOS)
-        .onHover { hovering in
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
+        .pointerStyle(.link)
         #endif
     }
 }
@@ -508,9 +506,7 @@ struct TrailerPosterBadge: View {
         .help(Text("detail.trailer.button", bundle: .module))
         .accessibilityLabel(Text("detail.trailer.button", bundle: .module))
         #if os(macOS)
-        .onHover { hovering in
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
+        .pointerStyle(.link)
         #endif
     }
 }

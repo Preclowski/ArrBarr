@@ -22,7 +22,7 @@ struct ApiKeyTestButton: View {
             Button { Task { await run() } } label: {
                 Text("queue.testConnection.button", bundle: .module)
             }
-            .modifier(GlassButtonStyle())
+            .buttonStyle(.bordered)
             .controlSize(.small)
             .disabled(state == .testing)
 

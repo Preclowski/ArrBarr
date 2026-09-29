@@ -81,9 +81,7 @@ struct DirectedByLine: View {
             }
             .buttonStyle(.plain)
             #if os(macOS)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
+            .pointerStyle(.link)
             #endif
         } else {
             Text(verbatim: person.name)
@@ -135,9 +133,7 @@ private struct CastTile: View {
             }
             .buttonStyle(.plain)
             #if os(macOS)
-            .onHover { hovering in
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
+            .pointerStyle(.link)
             .hoverTooltip(arrowEdge: .top) {
                 CastTooltip(person: person, tmdbKey: configStore.tmdbApiKey)
             }

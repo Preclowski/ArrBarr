@@ -86,7 +86,7 @@ public struct AboutView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
-        .modifier(GlassButtonStyle())
+        .buttonStyle(.bordered)
         .controlSize(.small)
     }
 

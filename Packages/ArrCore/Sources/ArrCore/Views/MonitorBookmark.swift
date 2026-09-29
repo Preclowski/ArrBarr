@@ -87,9 +87,7 @@ struct MonitorPosterToggle: View {
                 .disabled(inFlight)
                 .opacity(inFlight ? 0.5 : 1)
                 #if os(macOS)
-                .onHover { hovering in
-                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                }
+                .pointerStyle(.link)
                 #endif
             } else {
                 plate
@@ -157,9 +155,7 @@ struct MonitorRowToggle: View {
                 .disabled(inFlight)
                 .opacity(inFlight ? 0.5 : 1)
                 #if os(macOS)
-                .onHover { hovering in
-                    if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-                }
+                .pointerStyle(.link)
                 #endif
                 .help(Text(LocalizedStringKey(helpKey), bundle: .module))
                 .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))

@@ -69,11 +69,7 @@ struct NeedsYouRow: View {
         .contentShape(Rectangle())
         .onTapGesture { onTap?() }
         #if os(macOS)
-        .onHover { hovering in
-            if onTap != nil {
-                if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-            }
-        }
+        .pointerStyle(onTap != nil ? .link : nil)
         #endif
         .help(Text("detail.openInBrowser.button", bundle: .module))
         .linkRowHover()

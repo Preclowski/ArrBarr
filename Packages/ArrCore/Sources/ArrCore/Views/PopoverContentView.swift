@@ -29,9 +29,8 @@ public struct PopoverContentView: View {
     }
 
     @State var selectedTab: Tab = .queue
-    #if os(macOS)
-    @State var commandKey = CommandKeyMonitor()
-    #endif
+    /// Shows the ⌘1…⌘9 hints on the tab bar.
+    @State var commandHeld = false
     @State var queueSelecting = false
     @State var historySource: QueueItem.Source?
     @State var searchViewModel = SearchViewModel()
@@ -132,16 +131,14 @@ public struct PopoverContentView: View {
                 chatHolder.reconfigure(store: configStore)
                 viewModel.startForegroundPolling()
                 focusInputForCurrentTab()
-                #if os(macOS)
-                commandKey.start()
-                #endif
             }
             .onDisappear {
                 viewModel.stopForegroundPolling()
-                #if os(macOS)
-                commandKey.stop()
-                #endif
+                commandHeld = false
             }
+            #if os(macOS)
+            .onModifierKeysChanged(mask: .command) { _, keys in commandHeld = keys.contains(.command) }
+            #endif
             .onChange(of: ChatViewModelHolder.signature(store: configStore)) { _, _ in
                 chatHolder.reconfigure(store: configStore)
             }

@@ -99,17 +99,9 @@ extension PopoverContentView {
         }
     }
 
-    private var commandHeld: Bool {
-        #if os(macOS)
-        commandKey.isHeld
-        #else
-        false
-        #endif
-    }
-
     private func commandHint(for tab: Tab) -> String? {
         #if os(macOS)
-        guard commandKey.isHeld, let index = visibleTabs.firstIndex(of: tab), index < 9 else { return nil }
+        guard commandHeld, let index = visibleTabs.firstIndex(of: tab), index < 9 else { return nil }
         return "⌘\(index + 1)"
         #else
         return nil
@@ -208,7 +200,7 @@ extension PopoverContentView {
         }
         .coordinateSpace(name: "tabPills")
         #if os(macOS)
-        .animation(.easeOut(duration: 0.12), value: commandKey.isHeld)
+        .animation(.easeOut(duration: 0.12), value: commandHeld)
         #endif
         .onPreferenceChange(TabFrames.self) { newFrames in
             // This preference fires out of band from the selection spring; animating with the same

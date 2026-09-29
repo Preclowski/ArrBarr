@@ -309,7 +309,7 @@ struct PersonView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(Text(verbatim: label))
         #if os(macOS)
-        .onHover { if $0 { NSCursor.pointingHand.push() } else { NSCursor.pop() } }
+        .pointerStyle(.link)
         #endif
     }
 

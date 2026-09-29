@@ -673,10 +673,8 @@ struct GlassCircleButton: View {
         .accessibilityLabel(Text(accessibilityKey, bundle: .module))
         .help(Text(accessibilityKey, bundle: .module))
         #if os(macOS)
-        .onHover { h in
-            hovering = h
-            if h { NSCursor.pointingHand.push() } else { NSCursor.pop() }
-        }
+        .onHover { hovering = $0 }
+        .pointerStyle(.link)
         #endif
     }
 

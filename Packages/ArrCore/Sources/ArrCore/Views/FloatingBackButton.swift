@@ -24,8 +24,8 @@ struct FloatingBackButton: View {
         #if os(macOS)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
-            if hovering { NSCursor.pointingHand.push() } else { NSCursor.pop() }
         }
+        .pointerStyle(.link)
         #endif
     }
 }

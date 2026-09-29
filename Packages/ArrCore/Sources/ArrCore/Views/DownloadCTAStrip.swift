@@ -37,7 +37,7 @@ struct DownloadCTAStrip: View {
                         // Must match `PauseResumeButton`'s padding, or the two buttons differ in height.
                         .padding(.vertical, Metrics.vPadding)
                 }
-                .modifier(GlassTintedButtonStyle())
+                .modifier(GlassButtonStyle())
                 .tint(.red)
                 .help(Text("queue.cancelDownload.button", bundle: .module))
                 .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
