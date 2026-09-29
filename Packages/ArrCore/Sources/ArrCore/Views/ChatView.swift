@@ -93,6 +93,17 @@ struct ChatView: View {
         }
     }
 
+    /// The quiz tool keeps resolving picks after the deck opens, and its card only lands when it
+    /// returns; until then this stands in, so a user who leaves the deck can get back to it.
+    private var liveQuizPosters: [URL]? {
+        let deck = DiscoverViewModel.shared
+        guard viewModel.isThinking, let turn = viewModel.turnStartedAt,
+              let dealt = deck.sessionStartedAt, dealt >= turn, deck.hasSession else { return nil }
+        let thisTurn = viewModel.messages.reversed().prefix { $0.role != .user }
+        if thisTurn.contains(where: { if case .discoverSession = $0.richContent { true } else { false } }) { return nil }
+        return Array(([deck.current].compactMap { $0 } + deck.queue).compactMap(\.result.posterURL).prefix(3))
+    }
+
     private var conversation: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -110,6 +121,9 @@ struct ChatView: View {
                     LazyVStack(alignment: .leading, spacing: 8) {
                         ForEach(visible) { msg in
                             MessageBubble(message: msg, richOverride: adjusted[msg.id] ?? nil).id(msg.id)
+                        }
+                        if let posters = liveQuizPosters {
+                            QuizResumeCard(mood: "", posterURLs: posters)
                         }
                         if viewModel.isThinking {
                             ThinkingRow()

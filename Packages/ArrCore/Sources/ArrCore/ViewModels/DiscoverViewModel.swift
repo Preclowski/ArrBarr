@@ -43,6 +43,8 @@ public final class DiscoverViewModel {
     public private(set) var sessionSkipped: [DiscoverItem] = []
     /// Doesn't shrink as the user swipes; progress is `total - remaining`.
     public private(set) var sessionTotal: Int = 0
+    /// When the current deck was dealt; the chat shows it live if that happened during its turn.
+    public private(set) var sessionStartedAt: Date?
     private static let mediaSelectionKey = "ArrBarr.discoverMediaSelection"
     private let defaults: UserDefaults
 
@@ -152,6 +154,7 @@ public final class DiscoverViewModel {
         sessionMatched.removeAll()
         sessionSkipped.removeAll()
         reset()
+        sessionStartedAt = Date()
         sessionTotal = items.count
         for item in items {
             if seenKeys.insert(item.dedupKey).inserted {

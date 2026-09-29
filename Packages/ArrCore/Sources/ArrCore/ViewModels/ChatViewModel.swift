@@ -9,6 +9,7 @@ final class ChatViewModel {
     private(set) var isThinking: Bool = false
     private(set) var pendingConfirm: ToolCall?
     private(set) var lastError: String?
+    private(set) var turnStartedAt: Date?
 
     private let provider: LLMProvider
     private let tools: [LLMTool]
@@ -41,6 +42,7 @@ final class ChatViewModel {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(ChatMessage(role: .user, content: trimmed))
+        turnStartedAt = Date()
         let task = Task { await runLoop(prompt: trimmed) }
         turnTask = task
         await task.value
