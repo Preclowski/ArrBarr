@@ -5,7 +5,7 @@ extension DetailView {
     var downloadCTAStrip: some View {
         if hasActiveDownloads, canControl, canPauseResume {
             let f = focused
-            let showsPlay = focusedShowsPlay
+            let showsPlay = focused.showsPlay
             DownloadCTAStrip(
                 isPaused: showsPlay,
                 progress: f.source == .sonarr ? 1 : f.progress,

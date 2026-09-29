@@ -14,6 +14,19 @@ public extension QueueItem.Status {
     }
 }
 
+extension QueueItem {
+    var canPauseResume: Bool { status == .downloading || status == .paused || status == .queued }
+
+    /// A queued item gets "play" too; for it that force-starts the download.
+    var showsPlay: Bool { isPaused || status == .queued }
+
+    /// The verb the play/pause control carries out.
+    var pauseResumeTitle: Text {
+        if status == .queued { return Text("queue.startNow.button", bundle: .module) }
+        return isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)
+    }
+}
+
 /// With a nil action the gesture is omitted, not a no-op, so it doesn't swallow the click
 /// `List(selection:)` needs in multi-select mode.
 struct RowTapToOpen: ViewModifier {
@@ -80,13 +93,12 @@ struct QueueRowView: View {
 
     private var canControl: Bool { configStore.canControlDownload(item) }
 
-    private var canPauseResume: Bool {
-        item.status == .downloading || item.status == .paused || item.status == .queued
-    }
+    private var canPauseResume: Bool { item.canPauseResume }
+    private var showsPlay: Bool { item.showsPlay }
+    private var pauseResumeTitle: Text { item.pauseResumeTitle }
 
-    /// A queued item gets "play" too; for it that force-starts the download.
-    private var showsPlay: Bool {
-        item.isPaused || item.status == .queued
+    private func togglePause() {
+        if showsPlay { onResume() } else { onPause() }
     }
 
     var body: some View {
@@ -168,19 +180,20 @@ struct QueueRowView: View {
         .accessibilityHint(onShowDetail != nil
                            ? Text("Show download details", bundle: .module)
                            : Text(verbatim: ""))
+        // The hover and swipe controls are out of VoiceOver's reach; these are its way to them.
+        .accessibilityActions {
+            if !isOffline {
+                if canControl && canPauseResume {
+                    Button(action: togglePause) { pauseResumeTitle }
+                }
+                Button(action: requestDeleteConfirm) { Text("queue.removeFromQueue.button", bundle: .module) }
+            }
+        }
         .contextMenu {
             if !isOffline {
                 if canControl && canPauseResume {
-                    Button {
-                        if showsPlay { onResume() } else { onPause() }
-                    } label: {
-                        if item.status == .queued {
-                            Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                        } else if item.isPaused {
-                            Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                        } else {
-                            Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
-                        }
+                    Button(action: togglePause) {
+                        Label { pauseResumeTitle } icon: { Image(systemName: showsPlay ? "play.fill" : "pause.fill") }
                     }
                 }
             }
@@ -227,9 +240,7 @@ struct QueueRowView: View {
     /// No delete button on macOS; iOS uses swipe actions (see QueueListView).
     @ViewBuilder
     private var posterControl: some View {
-        Button {
-            if showsPlay { onResume() } else { onPause() }
-        } label: {
+        Button(action: togglePause) {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
@@ -244,13 +255,9 @@ struct QueueRowView: View {
             }
         }
         .buttonStyle(.plain)
-        .help(item.status == .queued
-              ? Text("queue.startNow.button", bundle: .module)
-              : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        .help(pauseResumeTitle)
         // `.help` is a tooltip, not a label; without this the button announces as "play fill".
-        .accessibilityLabel(item.status == .queued
-                            ? Text("queue.startNow.button", bundle: .module)
-                            : (item.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        .accessibilityLabel(pauseResumeTitle)
     }
     #endif
 }

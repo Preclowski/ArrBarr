@@ -152,10 +152,6 @@ struct DetailView: View {
         return s == .downloading || s == .paused || s == .queued
     }
 
-    /// Queued (deferred) items get "play" like paused ones — resume force-starts them.
-    var focusedShowsPlay: Bool {
-        focused.isPaused || focused.status == .queued
-    }
 
     // MARK: - Monitored state
 

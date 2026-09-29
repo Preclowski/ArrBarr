@@ -29,12 +29,11 @@ struct QueueGroupRowView: View {
 
     private var canControl: Bool { configStore.canControlDownload(rep) }
 
-    private var canPauseResume: Bool {
-        rep.status == .downloading || rep.status == .paused || rep.status == .queued
-    }
+    private var canPauseResume: Bool { rep.canPauseResume }
+    private var showsPlay: Bool { rep.showsPlay }
 
-    private var showsPlay: Bool {
-        rep.isPaused || rep.status == .queued
+    private func togglePause() {
+        if showsPlay { onResume() } else { onPause() }
     }
 
     var body: some View {
@@ -125,19 +124,19 @@ struct QueueGroupRowView: View {
         .accessibilityHint(onShowDetail != nil
                            ? Text("Show download details", bundle: .module)
                            : Text(verbatim: ""))
+        .accessibilityActions {
+            if !isOffline {
+                if canControl && canPauseResume {
+                    Button(action: togglePause) { rep.pauseResumeTitle }
+                }
+                Button(action: requestDeleteConfirm) { Text("queue.removeFromQueue.button", bundle: .module) }
+            }
+        }
         .contextMenu {
             if !isOffline {
                 if canControl && canPauseResume {
-                    Button {
-                        if showsPlay { onResume() } else { onPause() }
-                    } label: {
-                        if rep.status == .queued {
-                            Label { Text("queue.startNow.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                        } else if rep.isPaused {
-                            Label { Text("queue.resume.button", bundle: .module) } icon: { Image(systemName: "play.fill") }
-                        } else {
-                            Label { Text("queue.pause.button", bundle: .module) } icon: { Image(systemName: "pause.fill") }
-                        }
+                    Button(action: togglePause) {
+                        Label { rep.pauseResumeTitle } icon: { Image(systemName: showsPlay ? "play.fill" : "pause.fill") }
                     }
                 }
             }
@@ -192,9 +191,7 @@ struct QueueGroupRowView: View {
     #if os(macOS)
     @ViewBuilder
     private var posterControl: some View {
-        Button {
-            if showsPlay { onResume() } else { onPause() }
-        } label: {
+        Button(action: togglePause) {
             ZStack {
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
                     .fill(.black.opacity(0.5))
@@ -207,13 +204,9 @@ struct QueueGroupRowView: View {
             }
         }
         .buttonStyle(.plain)
-        .help(rep.status == .queued
-              ? Text("queue.startNow.button", bundle: .module)
-              : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        .help(rep.pauseResumeTitle)
         // `.help` is a tooltip, not a label; the glyph alone would announce as "play fill".
-        .accessibilityLabel(rep.status == .queued
-                            ? Text("queue.startNow.button", bundle: .module)
-                            : (rep.isPaused ? Text("queue.resume.button", bundle: .module) : Text("queue.pause.button", bundle: .module)))
+        .accessibilityLabel(rep.pauseResumeTitle)
     }
     #endif
 

@@ -195,6 +195,7 @@ extension PopoverContentView {
                     )
                 }
                 .buttonStyle(.plain)
+                .accessibilityAddTraits(selectedTab == tab ? .isSelected : [])
                 Spacer(minLength: 0)
             }
         }

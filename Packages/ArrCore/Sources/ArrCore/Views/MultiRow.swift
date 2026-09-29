@@ -32,14 +32,8 @@ struct MultiRow: View {
         #endif
     }
 
-    // A queued item gets "play" too: `QueueViewModel.resume` force-starts it.
-    private var canPauseResume: Bool {
-        item.status == .downloading || item.status == .paused || item.status == .queued
-    }
-
-    private var showsPlay: Bool {
-        item.isPaused || item.status == .queued
-    }
+    private var canPauseResume: Bool { item.canPauseResume }
+    private var showsPlay: Bool { item.showsPlay }
 
     var body: some View {
         HStack(alignment: .center, spacing: 10) {
