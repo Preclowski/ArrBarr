@@ -1,22 +1,15 @@
 import os
 import Foundation
-#if canImport(FoundationModels)
 import FoundationModels
-#endif
+import MediaKit
 
 /// Apple Intelligence supported AND enabled, not just a recent-enough OS.
 enum FoundationModelsAvailability {
     nonisolated static var isSupported: Bool {
-        #if canImport(FoundationModels)
         if case .available = SystemLanguageModel.default.availability { return true }
-        #endif
         return false
     }
 }
-
-#if canImport(FoundationModels)
-import FoundationModels
-import MediaKit
 
 struct FoundationModelsProvider: LLMProvider {
 
@@ -32,10 +25,7 @@ struct FoundationModelsProvider: LLMProvider {
         self.confirmDestructive = confirmDestructive
     }
 
-    var isAvailable: Bool {
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
-    }
+    var isAvailable: Bool { FoundationModelsAvailability.isSupported }
 
     /// Tool calls already ran inside `DynamicMCPTool.call`; `toolResults` tells `ChatViewModel` to render,
     /// not re-execute.
@@ -45,14 +35,8 @@ struct FoundationModelsProvider: LLMProvider {
         history: [ChatMessage]
     ) async throws -> LLMResponse {
         let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
-        let instructions = Self.buildInstructions(tools: tools)
-        let session = LanguageModelSession(tools: toolImpls, instructions: instructions)
-
-        // Only user turns: replaying assistant messages via `respond(to:)` generates spurious replies.
-        for msg in history.suffix(6) where msg.role == .user {
-            _ = await Logger.extras.attempt("chat context replay") { try await session.respond(to: msg.content) }
-        }
-        // Tool calls triggered by the context replay would re-render as stale cards on every message.
+        let session = LanguageModelSession(tools: toolImpls, transcript: Self.transcript(tools: tools, toolImpls: toolImpls, history: history))
+        // A cancelled turn leaves its tool calls behind; they'd render as stale cards on this one.
         _ = await DynamicMCPToolBox.shared.drainResults()
 
         let result = try await session.respond(to: prompt)
@@ -66,7 +50,25 @@ struct FoundationModelsProvider: LLMProvider {
 
     // MARK: - Private
 
-    nonisolated private static func buildInstructions(tools: [LLMTool]) -> Instructions {
+    /// Earlier turns enter as transcript entries: replaying them through `respond(to:)` regenerated every
+    /// turn and re-ran its tools.
+    nonisolated private static func transcript(tools: [LLMTool], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
+        func text(_ content: String) -> [Transcript.Segment] { [.text(.init(content: content))] }
+        var entries: [Transcript.Entry] = [.instructions(.init(
+            segments: text(instructions(tools: tools)),
+            toolDefinitions: toolImpls.map { Transcript.ToolDefinition(tool: $0) }
+        ))]
+        for msg in history.suffix(6) where !msg.content.isEmpty {
+            switch msg.role {
+            case .user: entries.append(.prompt(.init(segments: text(msg.content))))
+            case .assistant where msg.toolCall == nil: entries.append(.response(.init(assetIDs: [], segments: text(msg.content))))
+            default: break
+            }
+        }
+        return Transcript(entries: entries)
+    }
+
+    nonisolated private static func instructions(tools: [LLMTool]) -> String {
         // Foundation Models sees one stringified `json` argument per tool, so each schema is spelled out here.
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
@@ -79,8 +81,7 @@ struct FoundationModelsProvider: LLMProvider {
             """
         }.joined(separator: "\n\n")
 
-        return Instructions(
-            """
+        return """
             You are ArrBarr's in-app assistant for \(SystemPromptComposer.arrsClause(tools: tools)) — and a film, TV and music obsessive at heart.
             \(tools.isEmpty ? "" : (LibraryStats.shared.promptBlock() ?? ""))
             \(tools.isEmpty ? "" : (TasteProfileStore.shared.promptBlock() ?? ""))
@@ -150,7 +151,6 @@ struct FoundationModelsProvider: LLMProvider {
             "Great effects — and ||the shark|| barely appears." Don't pipe
             ordinary, non-spoiler trivia (release year, cast, budget).
             """
-        )
     }
 }
 
@@ -246,29 +246,3 @@ struct DynamicMCPTool: Tool {
         return output.text
     }
 }
-
-#else
-
-// MARK: - Stub (no FoundationModels SDK)
-
-/// Stub for SDKs without FoundationModels; reports unavailable at runtime.
-public struct FoundationModelsProvider: LLMProvider {
-    public init(
-        invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
-    ) {}
-
-    public var isAvailable: Bool { false }
-
-    public func respond(
-        prompt: String,
-        tools: [LLMTool],
-        history: [ChatMessage]
-    ) async throws -> LLMResponse {
-        LLMResponse(
-            text: "Apple Intelligence / Foundation Models is not available on this OS version."
-        )
-    }
-}
-
-#endif

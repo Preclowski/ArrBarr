@@ -70,7 +70,7 @@ extension SettingsView {
                     }
                     .buttonStyle(.plain)
                 }
-                .onMove(perform: reorderable ? moveMediaManagers : nil)
+                .onMove(perform: reorderable ? { moveMediaManagers(from: $0, to: $1) } : nil)
                 // Prowlarr sits outside the `ForEach`, so it has no grip and never reorders.
                 if reorderable {
                     Button {

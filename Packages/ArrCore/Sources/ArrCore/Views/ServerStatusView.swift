@@ -289,6 +289,7 @@ struct ServerStatusView: View {
             .buttonStyle(.borderless)
             .disabled(status.isRefreshing)
             .help(Text("status.refresh.button", bundle: .module))
+        .accessibilityLabel(Text("status.refresh.button", bundle: .module))
         }
     }
 

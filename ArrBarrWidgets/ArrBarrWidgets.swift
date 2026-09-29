@@ -370,7 +370,7 @@ struct LibraryServiceWidget: Widget {
             provider: ServiceWidgetProvider()
         ) { entry in
             LibraryStatusView(entry: entry)
-                .widgetURL(URL(string: "arrbarr://library"))
+                .widgetURL(WidgetDeepLink.library.url)
         }
         .configurationDisplayName(Text("Library Service", bundle: .arrCore))
         .description(Text("One service at a glance.", bundle: .arrCore))
@@ -388,7 +388,7 @@ struct LibraryStatusGridWidget: Widget {
             provider: GridWidgetProvider()
         ) { entry in
             LibraryStatusView(entry: entry)
-                .widgetURL(URL(string: "arrbarr://library"))
+                .widgetURL(WidgetDeepLink.library.url)
         }
         .configurationDisplayName(Text("Library Status", bundle: .arrCore))
         .description(Text("Your library across services.", bundle: .arrCore))
@@ -596,7 +596,7 @@ struct UpNextWidget: Widget {
             provider: UpNextProvider()
         ) { entry in
             UpNextView(entry: entry)
-                .widgetURL(URL(string: "arrbarr://library"))
+                .widgetURL(WidgetDeepLink.upcoming.url)
         }
         .configurationDisplayName(Text("Up Next", bundle: .arrCore))
         .description(Text("Your next releases and episodes.", bundle: .arrCore))

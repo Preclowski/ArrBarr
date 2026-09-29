@@ -324,7 +324,7 @@ struct MediaServerSettingsPane: View {
                 refreshIndexSummary()
                 await loadLibraries()
             } catch {
-                testState = .failed(error.userFacingMessage)
+                testState = .failed(error.localizedDescription)
             }
         }
     }
@@ -336,7 +336,7 @@ struct MediaServerSettingsPane: View {
         do {
             libraries = .loaded(try await client.libraries())
         } catch {
-            libraries = .failed(error.userFacingMessage)
+            libraries = .failed(error.localizedDescription)
         }
     }
 
@@ -360,7 +360,7 @@ struct MediaServerSettingsPane: View {
                     libraryStates[library.id] = .succeeded(String(localized: "settings.trashEmptied.label", bundle: .module))
                 }
             } catch {
-                libraryStates[library.id] = .failed(error.userFacingMessage)
+                libraryStates[library.id] = .failed(error.localizedDescription)
             }
         }
     }

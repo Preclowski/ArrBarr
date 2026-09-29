@@ -82,7 +82,7 @@ public struct AboutView: View {
                 label.lineLimit(1)
                 Spacer(minLength: 0)
             }
-            .font(.system(size: 11, weight: .medium))
+            .scaledFont(size: 11, weight: .medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
         }
@@ -110,16 +110,16 @@ public struct AboutView: View {
                 }
             }
             Text(verbatim: "This product uses TMDB and the TMDB APIs but is not endorsed, certified, or otherwise approved by TMDB.")
-                .font(.system(size: 9))
+                .scaledFont(size: 9)
                 .multilineTextAlignment(.center)
                 .padding(.top, 1)
             if !Self.copyright.isEmpty {
                 Text(verbatim: Self.copyright)
-                    .font(.system(size: 9))
+                    .scaledFont(size: 9)
                     .multilineTextAlignment(.center)
             }
         }
-        .font(.system(size: 10))
+        .scaledFont(size: 10)
         .foregroundStyle(.tertiary)
     }
 }

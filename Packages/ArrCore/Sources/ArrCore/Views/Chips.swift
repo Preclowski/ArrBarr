@@ -23,7 +23,7 @@ struct InQueueBadge: View {
 
     var body: some View {
         Text("queue.queued.button", bundle: .module)
-            .font(.system(size: 9, weight: .semibold))
+            .scaledFont(size: 9, weight: .semibold)
             .textCase(.lowercase)
             .foregroundStyle(Color.orange)
             .padding(.horizontal, 5)

@@ -81,7 +81,7 @@ public final class ServiceGateway {
     /// gets an empty profile instead, so nothing reaches the owner's services from a test.
     public static func resolve() async -> ServiceGateway {
         if let override { return override }
-        if isRunningTests {
+        if TestProcess.isActive {
             if let testGateway { return testGateway }
             return await MainActor.run {
                 if let testGateway { return testGateway }
@@ -93,8 +93,6 @@ public final class ServiceGateway {
         if let current { return current }
         return await MainActor.run { current ?? ConfigStore.shared.gateway }
     }
-
-    static let isRunningTests = NSClassFromString("XCTestCase") != nil
 
     /// The gateway every facade resolves inside `withValue`: a fixture-backed run of the tools under test.
     @TaskLocal public static var override: ServiceGateway?
@@ -116,7 +114,7 @@ public final class ServiceGateway {
 
     /// A client built with a config that is not the saved one (a Settings draft, a test) gets its own instance.
     public func adopt(_ config: ServiceConfig, for kind: ServiceKind) async -> InstanceID {
-        if config == configStore.config(for: kind) { return kind.instanceID }
+        if config == configStore.config(for: kind) { return await saved(kind.instanceID) }
         let (ordinal, added): (Int, Bool) = adHoc.withLock { table in
             var list = table[kind] ?? []
             if let index = list.firstIndex(of: config) { return (index + 1, false) }
@@ -133,7 +131,7 @@ public final class ServiceGateway {
 
     /// A media server config that is not the saved one gets its own instance; the saved one stays ordinal 0.
     public func adopt(mediaServer config: MediaServerConfig) async -> InstanceID {
-        if config == configStore.mediaServer { return config.kind.instanceID }
+        if config == configStore.mediaServer { return await saved(config.kind.instanceID) }
         let (ordinal, added): (Int, Bool) = adHocServers.withLock { list in
             if let index = list.firstIndex(of: config) { return (index + 1, false) }
             list.append(config)
@@ -147,7 +145,7 @@ public final class ServiceGateway {
 
     /// A TMDB key that is not the saved one (Settings draft) gets its own instance.
     public func adopt(tmdbKey key: String) async -> InstanceID {
-        if key == configStore.tmdbApiKey { return InstanceID(.tmdb) }
+        if key == configStore.tmdbApiKey { return await saved(InstanceID(.tmdb)) }
         let (ordinal, added): (Int, Bool) = adHocTMDBKeys.withLock { list in
             if let index = list.firstIndex(of: key) { return (index + 1, false) }
             list.append(key)
@@ -156,6 +154,13 @@ public final class ServiceGateway {
         let instance = InstanceID(.tmdb, ordinal: ordinal)
         await ready()
         if added || kit.registry.descriptor(instance) == nil { await reconcileRegistry() }
+        return instance
+    }
+
+    /// Settings binds straight to the saved profile, so a Test can outrun the debounced reconcile.
+    private func saved(_ instance: InstanceID) async -> InstanceID {
+        await ready()
+        if descriptors().first(where: { $0.id == instance }) != kit.registry.descriptor(instance) { await reconcileRegistry() }
         return instance
     }
 
@@ -180,7 +185,7 @@ public final class ServiceGateway {
         let instances = descriptors()
         await kit.start(instances: instances)
         relayBreakers()
-        if !Self.isRunningTests {
+        if !TestProcess.isActive {
             await syncRealtime()
             #if DEBUG
             logTelemetryAfterLaunch()
@@ -215,16 +220,54 @@ public final class ServiceGateway {
                 reconcileAgain = false
                 changed.formUnion(await kit.reconcile(descriptors()))
             } while reconcileAgain
+            // Cleared in the same main-actor turn as the last check, so no caller can join a finished run.
+            reconcileTask = nil
             return changed
         }
         reconcileTask = task
-        let changed = await task.value
-        reconcileTask = nil
-        return changed
+        return await task.value
     }
 
+    /// iOS switches demo live (macOS relaunches). Transport and database belong to the stack, so it is replaced;
+    /// whoever subscribed to the old one's hub re-subscribes (`QueueViewModel.demoModeChanged`).
+    func rebuild(demo: Bool) async {
+        guard demo != self.demo else { return }
+        self.demo = demo
+        for forward in pumping.values { forward.cancel() }
+        pumping = [:]
+        let (queues, progress) = streams.withLock { (Array($0.queue.values), $0.progress?.stream) }
+        for stream in queues { await stream.stop() }
+        await progress?.stop()
+        await kit.stop()
+        realtime = [:]
+        let fresh = Self.makeKit(configStore: configStore, telemetry: telemetry, demo: demo, transport: transport)
+        kitLock.withLock { $0 = fresh }
+        guard started else { return }
+        await kit.start(instances: descriptors())
+        relayBreakers()
+        await syncRealtime()
+    }
+
+    private var liveQueuesTask: Task<Void, Never>?
+    private var wantedLiveQueues: (sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy)?
+
     /// Run these arrs' queue streams on their own clock and pushes. Idempotent: called on every panel open and close.
+    /// Calls overlap (panel, scene phase, config), and applying one awaits per stream, so the last request wins whole.
     public func setLiveQueues(sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy) async {
+        wantedLiveQueues = (sources, activity, policy)
+        if liveQueuesTask == nil {
+            liveQueuesTask = Task { @MainActor in
+                while let wanted = wantedLiveQueues {
+                    wantedLiveQueues = nil
+                    await applyLiveQueues(sources: wanted.sources, activity: wanted.activity, policy: wanted.policy)
+                }
+                liveQueuesTask = nil
+            }
+        }
+        await liveQueuesTask?.value
+    }
+
+    private func applyLiveQueues(sources: [QueueItem.Source], activity: LiveActivity, policy: LivePolicy) async {
         let events = kit.events
         await events.setForeground(activity == .foreground)
         let dropped = streams.withLock { streams in streams.queue.filter { !sources.contains($0.key) }.map(\.value) }
@@ -410,12 +453,12 @@ public final class ServiceGateway {
             configuration.readPolicyOverride = .mustRevalidate
         } else {
             // Tests reach a service only through an injected transport; `.shared` keeps the rest off the app's cookie jar.
-            let plain = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: false))
-            let cookies = URLSessionTransport(session: Self.isRunningTests ? .shared : URLSessionTransport.makeSession(cookies: true))
+            let plain = URLSessionTransport(session: TestProcess.isActive ? .shared : URLSessionTransport.makeSession(cookies: false))
+            let cookies = URLSessionTransport(session: TestProcess.isActive ? .shared : URLSessionTransport.makeSession(cookies: true))
             let transport = CookieSplittingTransport(plain: plain, cookies: cookies)
             configuration = MediaStack.Configuration(transport: transport, sockets: plain, credentials: credentials)
-            configuration.database = Self.isRunningTests ? .memory : databaseLocation()
-            if Self.isRunningTests { configuration.readPolicyOverride = .mustRevalidate }
+            configuration.database = TestProcess.isActive ? .memory : databaseLocation()
+            if TestProcess.isActive { configuration.readPolicyOverride = .mustRevalidate }
         }
         configuration.role = isAppExtension ? .snapshotReader : .app
         configuration.telemetry = telemetry
@@ -423,7 +466,7 @@ public final class ServiceGateway {
         configuration.signposts = OSSignposter(subsystem: AppLog.subsystem, category: "MediaKit")
         configuration.mediaServerUserID = configStore.mediaServer.userId.isEmpty ? nil : configStore.mediaServer.userId
         do { return try MediaStack(configuration) } catch {
-            log.error("MediaKit database unavailable, running in memory: \(error.localizedDescription, privacy: .public)")
+            log.error("MediaKit database unavailable, running in memory: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             configuration.database = .memory
             return try! MediaStack(configuration)
         }
@@ -452,7 +495,7 @@ public final class ServiceGateway {
                 continue
             }
             // A test registers the saved profile only on its own transport, so nothing reaches a real server.
-            if !Self.isRunningTests || transport != nil, let url = URL(string: config.baseURL), config.isConfigured {
+            if !TestProcess.isActive || transport != nil, let url = URL(string: config.baseURL), config.isConfigured {
                 let generation = SecretGenerations.generation(for: .apiKey(for: kind), in: configStore.defaultsForGateway)
                     + "." + SecretGenerations.generation(for: .password(for: kind), in: configStore.defaultsForGateway)
                 out.append(InstanceDescriptor(id: kind.instanceID, baseURL: url, enabled: config.isUsable(as: kind), generation: generation))
@@ -468,7 +511,7 @@ public final class ServiceGateway {
             out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: Self.demoURL(.tmdb), enabled: true, generation: "demo"))
             return out
         }
-        if !Self.isRunningTests, server.isConfigured, let url = URL(string: server.baseURL) {
+        if !TestProcess.isActive, server.isConfigured, let url = URL(string: server.baseURL) {
             out.append(InstanceDescriptor(id: server.kind.instanceID, baseURL: url, enabled: true,
                                           generation: SecretGenerations.generation(for: .mediaServerToken, in: configStore.defaultsForGateway)))
         }
@@ -477,12 +520,12 @@ public final class ServiceGateway {
             out.append(InstanceDescriptor(id: InstanceID(draft.kind.instanceID.kind, ordinal: index + 1), baseURL: url, enabled: true, generation: "draft"))
         }
         let prowlarr = configStore.prowlarr
-        if !Self.isRunningTests, prowlarr.isConfigured, let url = URL(string: prowlarr.baseURL) {
+        if !TestProcess.isActive, prowlarr.isConfigured, let url = URL(string: prowlarr.baseURL) {
             out.append(InstanceDescriptor(id: InstanceID(.prowlarr), baseURL: url, enabled: true,
                                           generation: SecretGenerations.generation(for: .prowlarrKey, in: configStore.defaultsForGateway)))
         }
         let tmdbURL = URL(string: "https://api.themoviedb.org")!
-        if !Self.isRunningTests, !configStore.tmdbApiKey.isEmpty {
+        if !TestProcess.isActive, !configStore.tmdbApiKey.isEmpty {
             out.append(InstanceDescriptor(id: InstanceID(.tmdb), baseURL: tmdbURL, enabled: true,
                                           generation: SecretGenerations.generation(for: .tmdbKey, in: configStore.defaultsForGateway)))
         }

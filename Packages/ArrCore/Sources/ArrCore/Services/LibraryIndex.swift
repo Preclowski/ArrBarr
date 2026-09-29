@@ -84,10 +84,10 @@ nonisolated public struct LibraryIndex: Sendable {
         guard config.isConfigured else { return Read(records: [], failed: false, stale: false) }
         do {
             let fetched = try await fetch()
-            log.notice("\(source.rawValue, privacy: .public) records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
+            log.debug("\(source.rawValue, privacy: .public) records: \(fetched.value.count, privacy: .public) from \(String(describing: fetched.origin), privacy: .public), stale \(fetched.isStale, privacy: .public)")
             return Read(records: fetched.value, failed: fetched.degraded != nil, stale: fetched.isStale)
         } catch {
-            log.debug("\(source.rawValue, privacy: .public) library read failed: \(error.localizedDescription, privacy: .public)")
+            log.debug("\(source.rawValue, privacy: .public) library read failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return Read(records: [], failed: true, stale: false)
         }
     }

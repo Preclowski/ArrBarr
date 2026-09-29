@@ -28,7 +28,7 @@ struct QueueEffectsTests {
         }
         return await MainActor.run {
             let hadCurrent = ServiceGateway.current != nil
-            let store = ConfigStore(defaults: UserDefaults(suiteName: "ArrCoreTests.effects.\(UUID())")!, secrets: InMemorySecretStore())
+            let store = ConfigStore(defaults: TestDefaults.suite("ArrCoreTests.effects.\(UUID())"), secrets: InMemorySecretStore())
             store.update(.sonarr, with: ServiceConfig(enabled: true, baseURL: "http://effects.test:8989", apiKey: "k", username: "", password: ""))
             let gateway = ServiceGateway(configStore: store, demo: false, transport: transport)
             store.gateway = gateway

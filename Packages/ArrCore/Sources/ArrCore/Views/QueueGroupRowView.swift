@@ -7,7 +7,7 @@ struct QueueGroupRowView: View {
     /// Applied to the representative; every member shares its downloadId, so the arr acts on the whole pack.
     let onPause: () -> Void
     let onResume: () -> Void
-    let onDelete: () -> Void
+    let onDelete: @MainActor () -> Void
     var onShowDetail: (() -> Void)? = nil
     var selectionState: RowSelectionState = .hidden
 
@@ -27,7 +27,7 @@ struct QueueGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
-    private var canControl: Bool { configStore.canControlDownload(rep.downloadProtocol) }
+    private var canControl: Bool { configStore.canControlDownload(rep) }
 
     private var canPauseResume: Bool {
         rep.status == .downloading || rep.status == .paused || rep.status == .queued

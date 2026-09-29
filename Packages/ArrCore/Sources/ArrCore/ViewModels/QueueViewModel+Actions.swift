@@ -28,7 +28,7 @@ extension QueueViewModel {
                 Task { await self.refreshQueue(source: source) }
             }
         } catch {
-            lastError = error.userFacingMessage
+            lastError = error.localizedDescription
         }
     }
 
@@ -41,11 +41,13 @@ extension QueueViewModel {
             // The command's effect paints the change at once; this refresh replaces it with a fact.
             Task { await self.refreshQueue(source: item.source) }
         } catch {
-            let message = error.userFacingMessage
+            let message = error.localizedDescription
             lastError = message
             // Pin the client red only when the failure proves it down: `canControl` is client-wide, so a single
             // rejected request would strip pause/resume from every row.
-            if actionFailureProvesClientDown(error), let kind = failedDownloadClientKind(for: item) {
+            // Delete, and continue without a download id, went to the arr: nothing proves the client down.
+            let reachedClient = action != .delete && item.downloadId?.isEmpty == false
+            if reachedClient, actionFailureProvesClientDown(error), let kind = configStore.downloadClient(for: item) {
                 ConnectionHealth.shared.forceDown(.arr(kind), message: message)
             }
         }

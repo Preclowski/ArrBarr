@@ -157,7 +157,7 @@ struct EpisodeQuickDetail: View {
                         try await configStore.sonarrClient.setSeasonMonitored(
                             seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
                     } catch {
-                        Self.log.error("season monitor flip failed: \(error.localizedDescription, privacy: .public)")
+                        Self.log.error("season monitor flip failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
                     }
                     // Refetch: the flip cascades to every episode flag.
                     await load()

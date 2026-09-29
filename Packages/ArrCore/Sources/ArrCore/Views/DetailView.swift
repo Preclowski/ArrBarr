@@ -144,7 +144,7 @@ struct DetailView: View {
     var canControl: Bool {
         // Needs a configured, reachable download client, and a reachable arr — stale data
         // means the action can't land.
-        configStore.canControlDownload(item.downloadProtocol) && !viewModel.lastUnreachable.contains(item.source)
+        configStore.canControlDownload(item) && !viewModel.lastUnreachable.contains(item.source)
     }
 
     var canPauseResume: Bool {
@@ -234,7 +234,7 @@ struct DetailView: View {
                 seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
         } catch {
             // The refetch below snaps the optimistic flip back; the reason only reaches the log.
-            Self.searchLog.error("season monitor flip failed: \(error.localizedDescription, privacy: .public)")
+            Self.searchLog.error("season monitor flip failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
         }
         await load(showSpinner: false)
     }

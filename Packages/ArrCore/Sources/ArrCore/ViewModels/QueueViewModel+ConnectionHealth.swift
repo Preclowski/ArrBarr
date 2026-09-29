@@ -81,11 +81,6 @@ extension QueueViewModel {
         }
     }
 
-    /// Same selection order as `QueueAggregator.performTorrent` / `performUsenet`.
-    func failedDownloadClientKind(for item: QueueItem) -> ServiceKind? {
-        configStore.selectedDownloadClient(for: item.downloadProtocol)
-    }
-
     /// Only unreachable/breaker-open/auth failures pin the client down. A rejection of this one item (a 404, a
     /// usenet `{status:false}`, an undecodable body) must not strip pause/resume from every row.
     func actionFailureProvesClientDown(_ error: Error) -> Bool {

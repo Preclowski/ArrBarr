@@ -102,6 +102,7 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
             "digital": "upcoming.type.digital",
             "physical": "upcoming.type.physical",
             "in cinemas": "library.release.inCinemas",
+            "album": "upcoming.type.album",
         ]
         if let key = keys[releaseType.lowercased()] {
             return AppLocalized.string(key, locale: locale)

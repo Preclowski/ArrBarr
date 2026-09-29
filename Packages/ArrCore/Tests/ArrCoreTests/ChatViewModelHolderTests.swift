@@ -17,9 +17,14 @@ struct ChatViewModelHolderTests {
         try body()
     }
 
+    /// Never `ConfigStore()`: that is the app's own App Group suite and Keychain.
+    private static func store() -> ConfigStore {
+        ConfigStore(defaults: TestDefaults.suite("ArrCoreTests.chatHolder.\(UUID().uuidString)"), secrets: InMemorySecretStore())
+    }
+
     @Test("demo mode changes the signature with everything else held constant")
     func demoModeIsASignatureInput() throws {
-        let store = ConfigStore()
+        let store = Self.store()
 
         var offSignature = ""
         withDemoFlag(false) { offSignature = ChatViewModelHolder.signature(store: store) }
@@ -32,7 +37,7 @@ struct ChatViewModelHolderTests {
 
     @Test("aiEnabled changes the signature")
     func aiEnabledIsASignatureInput() {
-        let store = ConfigStore()
+        let store = Self.store()
 
         store.aiEnabled = false
         let disabled = ChatViewModelHolder.signature(store: store)
@@ -45,7 +50,7 @@ struct ChatViewModelHolderTests {
 
     @Test("an unchanged store yields a stable signature")
     func signatureIsStable() {
-        let store = ConfigStore()
+        let store = Self.store()
         #expect(ChatViewModelHolder.signature(store: store) == ChatViewModelHolder.signature(store: store))
     }
 }

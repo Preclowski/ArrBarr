@@ -1,6 +1,5 @@
 import SwiftUI
 import ArrCore
-import AppIntents
 
 @main
 struct ArrBarrApp: App {
@@ -47,6 +46,12 @@ struct ArrBarrApp: App {
                     Text("\(active)")
                 }
             }
+            // The app's only entry point: an asset image would otherwise be announced by its file name.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: "ArrBarr"))
+            .accessibilityValue(active > 0
+                ? String.localizedStringWithFormat(String(localized: "queue.titleGroup.downloadsCount", bundle: .arrCore), active)
+                : "")
         }
         .menuBarExtraStyle(.window)
 
@@ -61,41 +66,5 @@ struct ArrBarrApp: App {
                     }
                 }
             }
-    }
-}
-
-/// `\(.applicationName)` is required in zero-config phrases. Lives in the app target
-/// so the App Intents metadata processor discovers it.
-struct ArrBarrAppShortcuts: AppShortcutsProvider {
-    static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: ShowDownloadQueueIntent(),
-            phrases: [
-                "What's downloading in \(.applicationName)",
-                "Show \(.applicationName) downloads",
-            ],
-            shortTitle: "Download queue",
-            systemImageName: "arrow.down.circle"
-        )
-        AppShortcut(
-            intent: ShowUpcomingIntent(),
-            phrases: [
-                "What's coming up in \(.applicationName)",
-                "What's up next in \(.applicationName)",
-                "What's next in \(.applicationName)",
-                "Show \(.applicationName) upcoming",
-            ],
-            shortTitle: "Upcoming",
-            systemImageName: "calendar"
-        )
-        AppShortcut(
-            intent: CheckArrHealthIntent(),
-            phrases: [
-                "Is \(.applicationName) healthy",
-                "Check \(.applicationName) status",
-            ],
-            shortTitle: "Service health",
-            systemImageName: "stethoscope"
-        )
     }
 }

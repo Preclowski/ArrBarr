@@ -70,7 +70,7 @@ extension DetailView {
                 lidarrAlbum = try await a
                 lidarrTracks = try await ts
                 do { lidarrTrackFiles = try await fs } catch {
-                    Logger.extras.debug("lidarr track files failed: \(error.localizedDescription, privacy: .public)")
+                    Logger.extras.debug("lidarr track files failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
                     lidarrTrackFiles = []
                 }
             case .whisparr:
@@ -79,7 +79,7 @@ extension DetailView {
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }
         } catch {
-            loadError = "Couldn't load details: \(error.localizedDescription)"
+            loadError = String(format: String(localized: "Couldn't load details: %@", bundle: .module), error.localizedDescription)
         }
     }
 }

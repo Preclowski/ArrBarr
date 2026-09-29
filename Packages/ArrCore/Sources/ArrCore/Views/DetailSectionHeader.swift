@@ -49,5 +49,7 @@ struct DetailSectionHeader: View {
                     .foregroundStyle(total > 0 && have >= total ? AnyShapeStyle(Color.green) : AnyShapeStyle(.tertiary))
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
     }
 }

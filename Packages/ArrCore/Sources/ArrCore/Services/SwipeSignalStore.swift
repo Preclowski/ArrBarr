@@ -37,7 +37,7 @@ public final class SwipeSignalStore {
     private let defaults: UserDefaults
     private var signals: [SwipeSignal]
 
-    public init(defaults: UserDefaults = .standard) {
+    public init(defaults: UserDefaults = DemoMode.profileDefaults) {
         self.defaults = defaults
         if let data = defaults.data(forKey: Self.storageKey),
            let decoded = try? JSONDecoder().decode([SwipeSignal].self, from: data) {

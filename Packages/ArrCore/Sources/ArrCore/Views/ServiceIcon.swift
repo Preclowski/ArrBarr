@@ -1,10 +1,10 @@
 import SwiftUI
 
-public extension QueueItem.Source {
+nonisolated public extension QueueItem.Source {
     var brandIconName: String { rawValue }
 }
 
-public extension ServiceKind {
+nonisolated public extension ServiceKind {
     /// `nil` → SF Symbol fallback (only rTorrent today).
     var brandIconName: String? {
         switch self {
@@ -28,7 +28,7 @@ public extension ServiceKind {
     }
 }
 
-public extension MediaServerKind {
+nonisolated public extension MediaServerKind {
     var brandIconName: String { rawValue }
 }
 
@@ -38,23 +38,28 @@ public struct ServiceIcon: View {
     private let brandName: String?
     private let fallbackSymbol: String
     private let size: CGFloat
+    /// Read by VoiceOver instead of the asset's file name.
+    private let name: String
 
     public init(source: QueueItem.Source, size: CGFloat) {
         self.brandName = source.brandIconName
         self.fallbackSymbol = source.symbol
         self.size = size
+        self.name = source.displayName
     }
 
     public init(kind: ServiceKind, size: CGFloat) {
         self.brandName = kind.brandIconName
         self.fallbackSymbol = kind.symbol
         self.size = size
+        self.name = kind.displayName
     }
 
     public init(mediaServer kind: MediaServerKind, size: CGFloat) {
         self.brandName = kind.brandIconName
         self.fallbackSymbol = "play.tv"
         self.size = size
+        self.name = kind.displayName
     }
 
     /// Prowlarr has no `ServiceKind`. The asset is selfh.st's monochrome line art,
@@ -63,18 +68,22 @@ public struct ServiceIcon: View {
         self.brandName = "prowlarr"
         self.fallbackSymbol = "magnifyingglass.circle"
         self.size = size
+        self.name = "Prowlarr"
     }
 
     public var body: some View {
-        if let brandName {
-            Image(brandName, bundle: .module)
-                .renderingMode(.template)
-                .resizable()
-                .scaledToFit()
-                .frame(width: size * scale, height: size * scale)
-        } else {
-            Image(systemName: fallbackSymbol).scaledFont(size: size)
+        Group {
+            if let brandName {
+                Image(brandName, bundle: .module)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: size * scale, height: size * scale)
+            } else {
+                Image(systemName: fallbackSymbol).scaledFont(size: size)
+            }
         }
+        .accessibilityLabel(Text(verbatim: name))
     }
 }
 

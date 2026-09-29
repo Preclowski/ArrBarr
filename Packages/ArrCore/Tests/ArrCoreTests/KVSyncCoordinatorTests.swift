@@ -15,15 +15,14 @@ final class FakeKVStore: KeyValueSyncing, @unchecked Sendable {
 @Suite("KVSyncCoordinator")
 struct KVSyncCoordinatorSuite {
 
-    private func makeDefaults() -> (UserDefaults, String) {
+    private func makeDefaults() -> UserDefaults {
         let name = "test.kvsync.\(UUID().uuidString)"
-        return (UserDefaults(suiteName: name)!, name)
+        return TestDefaults.suite(name)
     }
 
     @Test("Outbound: pushing copies only allowlisted keys to KVS")
     @MainActor func outboundAllowlist() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         defaults.set(["needsyou", "radarr"], forKey: "ArrBarr.arrOrder")
         defaults.set(5.0, forKey: "ArrBarr.foregroundInterval")
 
@@ -37,8 +36,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("Inbound: applying writes allowlisted KVS keys into defaults and reloads")
     @MainActor func inboundApplies() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let kv = FakeKVStore()
         kv.storage["ArrBarr.showTonight"] = false
         kv.storage["ArrBarr.fontScale"] = 2.0
@@ -54,8 +52,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("Loop guard: a local push does not re-enter on the inbound path")
     @MainActor func loopGuard() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let kv = FakeKVStore()
         var reloadCount = 0
         let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: { reloadCount += 1 })
@@ -68,8 +65,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("start(): inbound apply does not echo back to KVS (loop guard covers the async observer)")
     @MainActor func startLoopGuardNoEcho() async {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let kv = FakeKVStore()
         kv.storage["ArrBarr.showTonight"] = false
         let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: {})
@@ -89,8 +85,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("setEnabled(true) marks running and stamps lastSyncDate")
     @MainActor func setEnabledStarts() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let kv = FakeKVStore()
         // `lastSyncDate` is only stamped when an iCloud account is present, so
         // the default `identityCheck` would make this assertion depend on
@@ -108,8 +103,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("setEnabled(false) stops outbound pushes")
     @MainActor func setEnabledStops() async {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let kv = FakeKVStore()
         let coord = KVSyncCoordinator(defaults: defaults, kv: kv, reload: {})
         coord.setEnabled(true)
@@ -125,8 +119,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("accountAvailable updates live when the iCloud identity changes")
     @MainActor func accountAvailabilityReactsToIdentityChange() async {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         // A Sendable box the injected identity check reads, so we can flip the
         // simulated sign-in state from the test without a real iCloud account.
@@ -149,8 +142,7 @@ struct KVSyncCoordinatorSuite {
 
     @Test("setEnabled is idempotent — repeated enables are no-ops")
     @MainActor func setEnabledIdempotent() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
         let coord = KVSyncCoordinator(defaults: defaults, kv: FakeKVStore(), reload: {})
         coord.setEnabled(true)
         coord.setEnabled(true)

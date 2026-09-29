@@ -306,5 +306,6 @@ extension PopoverContentView {
         .frame(width: Self.glyphButton, height: Self.glyphButton)
         .contentShape(Capsule())
         .help(Text("common.moreOptions.button", bundle: .module))
+        .accessibilityLabel(Text("common.moreOptions.button", bundle: .module))
     }
 }

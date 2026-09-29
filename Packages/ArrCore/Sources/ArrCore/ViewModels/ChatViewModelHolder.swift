@@ -20,6 +20,7 @@ final class ChatViewModelHolder {
         // The old VM may hold an unanswered confirm continuation; dropping it
         // unresumed hangs the tool call forever, so cancel first.
         vm.cancelPending()
+        vm.cancelTurn()
         vm = ChatViewModelFactory.make(
             sonarr: store.sonarr,
             radarr: store.radarr,

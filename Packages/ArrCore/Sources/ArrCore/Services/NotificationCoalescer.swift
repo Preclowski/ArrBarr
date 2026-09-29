@@ -56,19 +56,19 @@ public final class NotificationCoalescer {
     nonisolated private static let log = Logger(category: "Notifications")
     /// Multi-item batches: only "Open in browser", since one tap can't
     /// meaningfully pause/remove a batch.
-    public static let categoryIdentifier = "ARRBARR_QUEUE_EVENT"
+    nonisolated public static let categoryIdentifier = "ARRBARR_QUEUE_EVENT"
     /// Single-item categories, so the action matches the item's current state.
-    public static let downloadingCategoryIdentifier = "ARRBARR_QUEUE_DOWNLOADING"
-    public static let pausedCategoryIdentifier = "ARRBARR_QUEUE_PAUSED"
+    nonisolated public static let downloadingCategoryIdentifier = "ARRBARR_QUEUE_DOWNLOADING"
+    nonisolated public static let pausedCategoryIdentifier = "ARRBARR_QUEUE_PAUSED"
 
-    public static let openActionIdentifier = "ARRBARR_OPEN"
-    public static let pauseActionIdentifier = "ARRBARR_PAUSE"
-    public static let resumeActionIdentifier = "ARRBARR_RESUME"
-    public static let removeActionIdentifier = "ARRBARR_REMOVE"
+    nonisolated public static let openActionIdentifier = "ARRBARR_OPEN"
+    nonisolated public static let pauseActionIdentifier = "ARRBARR_PAUSE"
+    nonisolated public static let resumeActionIdentifier = "ARRBARR_RESUME"
+    nonisolated public static let removeActionIdentifier = "ARRBARR_REMOVE"
 
-    public static let userInfoBaseURLKey = "arrBaseURL"
-    public static let userInfoSourceKey = "arrSource"
-    public static let userInfoQueueIdKey = "arrQueueId"
+    nonisolated public static let userInfoBaseURLKey = "arrBaseURL"
+    nonisolated public static let userInfoSourceKey = "arrSource"
+    nonisolated public static let userInfoQueueIdKey = "arrQueueId"
 
     /// Short: it only collapses a burst's tail, not the headline banner.
     private let burstWindow: TimeInterval

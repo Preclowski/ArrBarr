@@ -113,7 +113,7 @@ struct UpcomingRowView: View {
     private var ratingSegments: [String] {
         [
             item.releaseTypeText(locale: configStore.currentLocale),
-            item.runtime.flatMap { $0 > 0 ? "\($0) min" : nil },
+            item.runtime.flatMap { $0 > 0 ? $0.runtimeText : nil },
         ].compactMap { $0 }
     }
 
@@ -283,7 +283,7 @@ struct UpcomingItemTooltip: View {
 
     private var runtimeCertLine: String {
         var parts: [String] = []
-        if let r = item.runtime, r > 0 { parts.append("\(r) min") }
+        if let r = item.runtime, r > 0 { parts.append(r.runtimeText) }
         if let c = item.certification, !c.isEmpty { parts.append(c) }
         parts.append(contentsOf: CountryProvider.displayNames(countries, locale: locale))
         return parts.joined(separator: " · ")

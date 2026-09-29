@@ -1,15 +1,8 @@
 import SwiftUI
 
-/// Lights a `LinkChevron` whenever the cursor is over the row, not only the 9pt glyph.
-private struct LinkRowHoveringKey: EnvironmentKey {
-    static let defaultValue = false
-}
-
 extension EnvironmentValues {
-    var linkRowHovering: Bool {
-        get { self[LinkRowHoveringKey.self] }
-        set { self[LinkRowHoveringKey.self] = newValue }
-    }
+    /// Lights a `LinkChevron` whenever the cursor is over the row, not only the 9pt glyph.
+    @Entry var linkRowHovering = false
 }
 
 public extension View {
@@ -51,5 +44,6 @@ struct LinkChevron: View {
             .foregroundStyle(rowHovering ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
             .offset(x: rowHovering ? 1.5 : 0)
             .animation(.easeInOut(duration: 0.12), value: rowHovering)
+            .accessibilityHidden(true)
     }
 }

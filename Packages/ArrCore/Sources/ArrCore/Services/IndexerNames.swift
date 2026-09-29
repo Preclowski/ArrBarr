@@ -31,7 +31,7 @@ enum IndexerNames {
             }
         } catch {
             // Prowlarr being down only costs the nicer spelling.
-            log.debug("Prowlarr indexer list unavailable: \(error.localizedDescription, privacy: .public)")
+            log.debug("Prowlarr indexer list unavailable: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return [:]
         }
     }

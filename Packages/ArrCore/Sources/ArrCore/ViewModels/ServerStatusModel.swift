@@ -45,7 +45,7 @@ final class ServerStatusModel {
             for await (kind, outcome) in group {
                 switch outcome {
                 case let .success(disks): all += disks
-                case let .failure(error): failed.append((kind, error.userFacingMessage))
+                case let .failure(error): failed.append((kind, error.localizedDescription))
                 }
             }
             return (all, failed)

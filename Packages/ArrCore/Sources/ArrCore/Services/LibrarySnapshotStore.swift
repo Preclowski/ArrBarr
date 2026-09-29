@@ -50,7 +50,7 @@ nonisolated enum LibrarySnapshotStore {
             do {
                 try data.write(to: url, options: .atomic)
             } catch {
-                log.error("library snapshot write failed: \(error.localizedDescription, privacy: .public)")
+                log.error("library snapshot write failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             }
         }
     }

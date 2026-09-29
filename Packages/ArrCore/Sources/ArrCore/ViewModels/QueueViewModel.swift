@@ -37,7 +37,8 @@ public final class QueueViewModel {
 
     var configuredArrs: Set<QueueItem.Source> {
         Set(QueueItem.Source.allCases.filter {
-            configStore.config(for: $0.serviceKind).isConfigured
+            // An arr without its key is registered disabled; counting it would read as a failed refresh.
+            configStore.config(for: $0.serviceKind).isVisible
         })
     }
 
@@ -68,8 +69,10 @@ public final class QueueViewModel {
     private var configValidatedTask: Task<Void, Never>?
     private var artworkChangedTask: Task<Void, Never>?
     public internal(set) var isRefreshing = false
+    enum PendingRefresh { case queues, full }
     /// A refresh requested mid-flight re-runs once from the in-flight `defer`, so a SignalR push is never dropped.
-    var pendingRefresh = false
+    /// A full one wins over a queues-only one, whichever is running.
+    var pendingRefresh: PendingRefresh?
     @ObservationIgnored
     lazy var notificationTracker = Self.loadNotificationTracker(from: notificationDefaults)
 
@@ -124,7 +127,7 @@ public final class QueueViewModel {
 
     public init(
         configStore: ConfigStore,
-        notificationDefaults: UserDefaults = .standard
+        notificationDefaults: UserDefaults = DemoMode.profileDefaults
     ) {
         self.configStore = configStore
         self.notificationDefaults = notificationDefaults
@@ -159,7 +162,7 @@ public final class QueueViewModel {
                 // A live refresh may have finished during the read; it is fresher, so the cache defers to it.
                 guard self.upcoming.isEmpty else { return }
                 self.upcoming = cached
-                self.tonight = Self.tonightSlice(from: cached, hours: self.configStore.tonightHours)
+                self.tonight = Self.tonightSlice(from: cached)
             }
         }
         // Coalesce bursts (Sonarr emits several queue events within milliseconds during an import).
@@ -176,20 +179,12 @@ public final class QueueViewModel {
             }
         }
 
-        configStore.$tonightHours
-            .dropFirst()
-            .sink { [weak self] hours in
-                guard let self else { return }
-                self.tonight = Self.tonightSlice(from: self.upcoming, hours: hours)
-            }
-            .store(in: &intervalObservers)
-
         // An arr added or removed starts or stops its queue stream. Probes are debounced because Settings
         // writes to `ConfigStore` per keystroke.
         for source in QueueItem.Source.allCases {
             configStore.publisher(for: source.serviceKind)
                 .dropFirst()
-                .map(\.isConfigured)
+                .map(\.isVisible)
                 .removeDuplicates()
                 .sink { [weak self] _ in Task { await self?.updateLiveQueues() } }
                 .store(in: &intervalObservers)
@@ -267,7 +262,7 @@ public final class QueueViewModel {
         return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize, scope: scope)
     }
 
-    /// Kept for the app's lifetime: the popover rebuilds its History view on every open.
+    /// Kept across opens: the popover rebuilds its History view every time.
     @ObservationIgnored private var historyFeeds: [HistoryFeedKey: HistoryFeed] = [:]
 
     private struct HistoryFeedKey: Hashable {
@@ -282,6 +277,8 @@ public final class QueueViewModel {
         let feed = HistoryFeed(sources: sources) { [weak self] source, page in
             await self?.fetchHistory(for: source, page: page, scope: scope) ?? HistoryResult(items: [], error: nil)
         }
+        // One detail's history is on screen at a time; older per-title feeds would pile up for the app's lifetime.
+        if scope != nil { historyFeeds = historyFeeds.filter { $0.key.scope == nil } }
         historyFeeds[key] = feed
         return feed
     }

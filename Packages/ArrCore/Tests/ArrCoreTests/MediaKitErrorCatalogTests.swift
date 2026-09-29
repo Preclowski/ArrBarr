@@ -27,7 +27,7 @@ struct MediaKitErrorCatalogTests {
         for error in Self.cases {
             let key = error.caseName == "notConfigured" ? "common.arrbarrIsNotConfigured.label" : "mediakit.error.\(error.caseName)"
             #expect(strings[key] != nil, Comment(rawValue: key))
-            #expect(!MediaKitErrorPresenter.message(for: error).isEmpty)
+            #expect(!error.localizedDescription.isEmpty)
         }
     }
 
@@ -43,6 +43,14 @@ struct MediaKitErrorCatalogTests {
     @Test("A rejection shows the arr's own reason")
     func rejectionShowsServerReason() {
         let error = MediaKitError.rejected(InstanceID(.sonarr), status: 400, serverMessage: "This series has already been added")
-        #expect(error.userFacingMessage == "This series has already been added")
+        #expect(error.localizedDescription == "This series has already been added")
+    }
+
+    @Test("Certificate and address failures name what to fix", arguments: [UnreachableKind.tls, .dns])
+    func fixableUnreachableKindsAreSpecific(kind: UnreachableKind) {
+        let host = Host(URL(string: "https://nas.lan:8989")!)
+        let generic = MediaKitError.unreachable(host, .refused).localizedDescription
+        let specific = MediaKitError.unreachable(host, kind).localizedDescription
+        #expect(specific != generic && specific.contains("nas.lan:8989"))
     }
 }

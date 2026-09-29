@@ -1,4 +1,5 @@
 import ArrCore
+import Foundation
 import MCP
 import Logging
 import MediaKit
@@ -13,7 +14,7 @@ struct MCPCallRouter {
     func makeServer() async -> Server {
         let server = Server(
             name: "ArrBarr",
-            version: "1.0.0",
+            version: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0",
             capabilities: .init(tools: .init(listChanged: false))
         )
 
@@ -25,7 +26,8 @@ struct MCPCallRouter {
 
         let backend = self.backend
         let logger = self.logger
-        await server.withMethodHandler(CallTool.self) { [backend, disabled, logger] params in
+        // Weak: the handler is stored on `server`, so a strong capture would keep every closed session alive.
+        await server.withMethodHandler(CallTool.self) { [backend, disabled, logger, weak server] params in
             let name = params.name
             guard !disabled.contains(name) else {
                 return CallTool.Result(
@@ -37,7 +39,9 @@ struct MCPCallRouter {
 
             // Fails closed: without elicitation support or with a decline, a destructive tool
             // does not run, so an unattended client can never trigger downloads.
+            let session = server
             let confirm: ToolConfirmationHandler = { call in
+                guard let server = session else { return .unavailable }
                 do {
                     let result = try await server.requestElicitation(
                         message: "Run \(call.name)? This may start downloads or change library state.",

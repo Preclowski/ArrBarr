@@ -4,7 +4,7 @@ import Logging
 import Foundation
 
 public actor MCPServerController {
-    public struct Config: Sendable {
+    public struct Config: Sendable, Equatable {
         public let hostPort: String
         public let requireAuth: Bool
         public let token: String
@@ -17,7 +17,7 @@ public actor MCPServerController {
         }
     }
 
-    public struct BackendInputs: Sendable {
+    public struct BackendInputs: Sendable, Equatable {
         public let sonarr, radarr, lidarr, whisparr: ServiceConfig
         public let aiKnowsAboutWhisparr: Bool
         public let tmdbApiKey: String
@@ -78,11 +78,12 @@ public actor MCPServerController {
     private func performRestart(with config: Config) async {
         await performStop()
 
-        let parts = config.hostPort.split(separator: ":")
-        guard parts.count == 2, let port = Int(parts[1]) else {
+        // The last colon: an IPv6 host ("[::1]:8080") has colons of its own.
+        guard let colon = config.hostPort.lastIndex(of: ":"),
+              let port = Int(config.hostPort[config.hostPort.index(after: colon)...]) else {
             emit(.failed(message: "Invalid bind address: \(config.hostPort)")); return
         }
-        let bindHost = String(parts[0])
+        let bindHost = config.hostPort[..<colon].trimmingCharacters(in: CharacterSet(charactersIn: "[]"))
 
         // Never expose the tool surface beyond loopback without a bearer token. The Origin check below only
         // stops browser-based DNS rebinding — a direct client just omits the header.
@@ -120,7 +121,7 @@ public actor MCPServerController {
         }
 
         var validators: [any HTTPRequestValidator] = [
-            OriginValidator.localhost(port: port),
+            loopback ? OriginValidator.localhost(port: port) : BrowserOriginValidator(),
             AcceptHeaderValidator(mode: .sseRequired),
             ContentTypeValidator(),
             ProtocolVersionValidator(),
@@ -138,7 +139,7 @@ public actor MCPServerController {
         self.host = host
         do {
             try await host.start()
-            let url = "http://\(bindHost):\(port)/mcp"
+            let url = "http://\(config.hostPort)/mcp"
             emit(.running(url: url))
             logger.notice("MCP server started", metadata: ["url": .string(url)])
         } catch {

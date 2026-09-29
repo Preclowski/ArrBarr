@@ -10,7 +10,6 @@
 		1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64DC7B599FC995056A674DBF /* AppDelegate.swift */; };
 		A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */; };
 		480D5987EC1F1302ADC060C2 /* AppDelegate+MCP.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */; };
-		4344F5B4AC072E228FE72ECC /* AppDelegate+Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */; };
 		2F55EE30E5C5C10CCAE09450 /* AppDelegate+Downloads.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */; };
 		57305E782FFC672A99056CF8 /* AppDelegate+Windows.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */; };
 		7A1D7C162F00000100000005 /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
@@ -22,11 +21,16 @@
 		FBP00001FBP00001FBP0001A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = PRD00001PRD00001PRD0001A /* ArrCore */; };
 		IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */; };
 		IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = IOS00012IOS00012IOS0012A /* Assets.xcassets */; };
+		IPX00020IPX00020IPX0020A /* InfoPlist.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = IPX00010IPX00010IPX0010A /* InfoPlist.xcstrings */; };
 		IOS00003IOS00003IOS0003A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = IOS00020IOS00020IOS0020A /* ArrCore */; };
 		IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 7A1D7C152F00000100000005 /* AppIcon.icon */; };
 		MCP00001MCP00001MCP0001A /* ArrMCPServer in Frameworks */ = {isa = PBXBuildFile; productRef = MCPPD001MCPPD001MCPPD01A /* ArrMCPServer */; };
 		SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
 		SKB00030SKB00030SKB0030A /* StoreKitBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */; };
+		SHC00020SHC00020SHC0020A /* ArrBarrAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHC00010SHC00010SHC0010A /* ArrBarrAppShortcuts.swift */; };
+		SHC00030SHC00030SHC0030A /* ArrBarrAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHC00010SHC00010SHC0010A /* ArrBarrAppShortcuts.swift */; };
+		ASX00020ASX00020ASX0020A /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = ASX00010ASX00010ASX0010A /* AppShortcuts.xcstrings */; };
+		ASX00030ASX00030ASX0030A /* AppShortcuts.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = ASX00010ASX00010ASX0010A /* AppShortcuts.xcstrings */; };
 		WDGBF001WDGBF001WDGBF01A /* ArrBarrWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */; };
 		WDGBF002WDGBF002WDGBF02A /* ArrCore in Frameworks */ = {isa = PBXBuildFile; productRef = WDGPD020WDGPD020WDGPD02A /* ArrCore */; };
 		WDGBF003WDGBF003WDGBF03A /* ArrBarrWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = WDGFR013WDGFR013WDGFR13A /* ArrBarrWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -66,7 +70,6 @@
 		64DC7B599FC995056A674DBF /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatusItemDropTarget.swift; sourceTree = "<group>"; };
 		3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+MCP.swift"; sourceTree = "<group>"; };
-		BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Notifications.swift"; sourceTree = "<group>"; };
 		8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Downloads.swift"; sourceTree = "<group>"; };
 		E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppDelegate+Windows.swift"; sourceTree = "<group>"; };
 		7A1D7C152F00000100000005 /* AppIcon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = AppIcon.icon; sourceTree = "<group>"; };
@@ -78,6 +81,9 @@
 		IOS00013IOS00013IOS0013A /* ArrBarr.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ArrBarr.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitBackend.swift; sourceTree = "<group>"; };
 		LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		IPX00010IPX00010IPX0010A /* InfoPlist.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = InfoPlist.xcstrings; sourceTree = "<group>"; };
+		SHC00010SHC00010SHC0010A /* ArrBarrAppShortcuts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrAppShortcuts.swift; sourceTree = "<group>"; };
+		ASX00010ASX00010ASX0010A /* AppShortcuts.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = AppShortcuts.xcstrings; sourceTree = "<group>"; };
 		SKB00040SKB00040SKB0040A /* ArrBarr.storekit */ = {isa = PBXFileReference; lastKnownFileType = text; path = ArrBarr.storekit; sourceTree = "<group>"; };
 		WDGFR010WDGFR010WDGFR01A /* ArrBarrWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArrBarrWidgets.swift; sourceTree = "<group>"; };
 		WDGFR011WDGFR011WDGFR11A /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -133,7 +139,6 @@
 				64DC7B599FC995056A674DBF /* AppDelegate.swift */,
 				A1B2C3D40001STATUSDROP01 /* StatusItemDropTarget.swift */,
 				3B0ACA0465E8398C527934B5 /* AppDelegate+MCP.swift */,
-				BF3628151B41840CB90E3A5D /* AppDelegate+Notifications.swift */,
 				8278F0D78DEF646FEBAF99EB /* AppDelegate+Downloads.swift */,
 				E7C4CCB87746FA39462B3CF9 /* AppDelegate+Windows.swift */,
 				7A1D7C152F00000100000005 /* AppIcon.icon */,
@@ -163,6 +168,7 @@
 			children = (
 				IOS00010IOS00010IOS0010A /* ArrBarriOSApp.swift */,
 				IOS00011IOS00011IOS0011A /* Info.plist */,
+				IPX00010IPX00010IPX0010A /* InfoPlist.xcstrings */,
 				IOS00012IOS00012IOS0012A /* Assets.xcassets */,
 				PRVFR002PRVFR002PRVFR02A /* PrivacyInfo.xcprivacy */,
 			);
@@ -174,6 +180,8 @@
 			children = (
 				SKB00010SKB00010SKB0010A /* StoreKitBackend.swift */,
 				LOCFR001LOCFR001LOCFR01A /* Localizable.xcstrings */,
+				SHC00010SHC00010SHC0010A /* ArrBarrAppShortcuts.swift */,
+				ASX00010ASX00010ASX0010A /* AppShortcuts.xcstrings */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -315,6 +323,7 @@
 				7A1D7C162F00000100000005 /* AppIcon.icon in Resources */,
 				PRV0B001PRV0B001PRV0B01A /* PrivacyInfo.xcprivacy in Resources */,
 				LOCBF001LOCBF001LOCBF01A /* Localizable.xcstrings in Resources */,
+				ASX00020ASX00020ASX0020A /* AppShortcuts.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -323,9 +332,11 @@
 			buildActionMask = 2147483647;
 			files = (
 				IOS00002IOS00002IOS0002A /* Assets.xcassets in Resources */,
+				IPX00020IPX00020IPX0020A /* InfoPlist.xcstrings in Resources */,
 				IOS00099IOS00099IOS0099A /* AppIcon.icon in Resources */,
 				PRV0B002PRV0B002PRV0B02A /* PrivacyInfo.xcprivacy in Resources */,
 				LOCBF002LOCBF002LOCBF02A /* Localizable.xcstrings in Resources */,
+				ASX00030ASX00030ASX0030A /* AppShortcuts.xcstrings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,11 +359,11 @@
 				1F0B1A9D78DA2F2F554BA54D /* AppDelegate.swift in Sources */,
 				A1B2C3D40002STATUSDROP02 /* StatusItemDropTarget.swift in Sources */,
 				480D5987EC1F1302ADC060C2 /* AppDelegate+MCP.swift in Sources */,
-				4344F5B4AC072E228FE72ECC /* AppDelegate+Notifications.swift in Sources */,
 				2F55EE30E5C5C10CCAE09450 /* AppDelegate+Downloads.swift in Sources */,
 				57305E782FFC672A99056CF8 /* AppDelegate+Windows.swift in Sources */,
 				D2FECFB6447CD596A4FC0207 /* ArrBarrApp.swift in Sources */,
 				SKB00020SKB00020SKB0020A /* StoreKitBackend.swift in Sources */,
+				SHC00020SHC00020SHC0020A /* ArrBarrAppShortcuts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -362,6 +373,7 @@
 			files = (
 				IOS00001IOS00001IOS0001A /* ArrBarriOSApp.swift in Sources */,
 				SKB00030SKB00030SKB0030A /* StoreKitBackend.swift in Sources */,
+				SHC00030SHC00030SHC0030A /* ArrBarrAppShortcuts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

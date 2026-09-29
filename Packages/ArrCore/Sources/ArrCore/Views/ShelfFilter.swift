@@ -65,14 +65,14 @@ struct ShelfFilterMenu: View {
     private var label: some View {
         HStack(spacing: 6) {
             Image(systemName: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
-                .font(.system(size: 13, weight: .semibold))
+                .scaledFont(size: 13, weight: .semibold)
             if let summary {
                 Text(verbatim: summary)
-                    .font(.system(size: 11, weight: .medium))
+                    .scaledFont(size: 11, weight: .medium)
                     .lineLimit(1)
             }
             if filter.unwatchedOnly {
-                Image(systemName: "eye.slash").font(.system(size: 11, weight: .medium))
+                Image(systemName: "eye.slash").scaledFont(size: 11, weight: .medium)
             }
         }
         .foregroundStyle(.primary)

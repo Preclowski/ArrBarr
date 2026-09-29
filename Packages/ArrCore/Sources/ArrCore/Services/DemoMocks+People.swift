@@ -1,7 +1,7 @@
 import Foundation
 import MediaKit
 
-extension DemoMocks {
+nonisolated extension DemoMocks {
 
     /// Far outside any real range, so a demo id never collides with live data after a mode switch.
     enum DemoPerson: Int, CaseIterable {

@@ -86,7 +86,7 @@ extension AppDelegate {
         }
 
         let view = SettingsView(
-            onShowWelcome: { [weak self] in self?.openWelcome(force: true) },
+            onShowWelcome: { [weak self] in self?.openWelcome() },
             onTestNotification: { [weak self] in self?.queueVM.fireTestNotification() },
             onSetDemoMode: { [weak self] enabled in self?.setDemoModeAndRelaunch(enabled) ?? false }
         ).environmentObject(configStore)
@@ -102,7 +102,8 @@ extension AppDelegate {
         // Full-size content + transparent titlebar so the custom sidebar material reaches the top-left under the traffic lights.
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
-        win.title = ""
+        // Hidden, but still what VoiceOver and the Window menu call it.
+        win.title = String(localized: "common.settings.button", bundle: .arrCore)
         win.center()
 
         NotificationCenter.default.addObserver(
@@ -128,8 +129,8 @@ extension AppDelegate {
             configStore.welcomeSeenVersion = WelcomeContent.currentVersion
             return
         }
-        guard let variant = WelcomeContent.variant(seen: configStore.welcomeSeenVersion) else { return }
-        openWelcome(variant: variant)
+        guard WelcomeContent.shouldShow(seen: configStore.welcomeSeenVersion) else { return }
+        openWelcome()
     }
 
     private var hasAnyConfiguredArr: Bool {
@@ -139,15 +140,7 @@ extension AppDelegate {
             || !configStore.lidarr.baseURL.isEmpty
     }
 
-    private func openWelcome(force: Bool = false) {
-        let variant: WelcomeContent.Variant = {
-            if force { return .firstRun }
-            return WelcomeContent.variant(seen: configStore.welcomeSeenVersion) ?? .firstRun
-        }()
-        openWelcome(variant: variant)
-    }
-
-    private func openWelcome(variant: WelcomeContent.Variant) {
+    private func openWelcome() {
         if let win = welcomeWindow {
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
@@ -155,7 +148,6 @@ extension AppDelegate {
         }
 
         let view = WelcomeView(
-            variant: variant,
             onDismiss: { [weak self] in self?.welcomeWindow?.performClose(nil) },
             onAddService: { [weak self] in
                 self?.openSettings()

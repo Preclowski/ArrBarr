@@ -18,6 +18,7 @@ final class ChatViewModel {
     private var pendingResume: CheckedContinuation<JSONValue?, Never>?
     private let onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)?
     private let onTurnEnded: (@Sendable () -> Void)?
+    private let onClear: (@Sendable () -> Void)?
     private var turnTask: Task<Void, Never>?
 
     /// Never logs prompts, replies or tool arguments — they are the user's words. Records turn, provider and outcome.
@@ -29,16 +30,18 @@ final class ChatViewModel {
                 tools: [LLMTool],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
                 onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
-                onTurnEnded: (@Sendable () -> Void)? = nil) {
+                onTurnEnded: (@Sendable () -> Void)? = nil,
+                onClear: (@Sendable () -> Void)? = nil) {
         self.onToolCallStream = onToolCallStream
         self.onTurnEnded = onTurnEnded
+        self.onClear = onClear
         self.provider = provider
         self.tools = tools
         self.invokeTool = invokeTool
     }
 
     func send(_ text: String) async {
-        guard pendingResume == nil else { return }
+        guard pendingResume == nil, turnTask == nil else { return }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         messages.append(ChatMessage(role: .user, content: trimmed))
@@ -59,8 +62,10 @@ final class ChatViewModel {
     /// Refuses while a confirm gate is pending so the CheckedContinuation isn't leaked.
     func clear() {
         guard pendingResume == nil else { return }
+        turnTask?.cancel()
         messages = []
         lastError = nil
+        onClear?()
     }
 
     func confirmPending() {
@@ -109,9 +114,11 @@ final class ChatViewModel {
             while let p = nextPrompt, roundsLeft > 0 {
                 roundsLeft -= 1
                 Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
+                // The first round's prompt is the user message `send` just appended; history must not repeat it.
+                let history = p.isEmpty ? messages : Array(messages.dropLast())
                 let response = try await timedRound {
                     try await ToolCallStreamContext.$observer.withValue(observer) {
-                        try await provider.respond(prompt: p, tools: tools, history: messages)
+                        try await provider.respond(prompt: p, tools: tools, history: history)
                     }
                 }
                 try Task.checkCancellation()
@@ -216,9 +223,9 @@ final class ChatViewModel {
         } catch where Task.isCancelled {
             Self.log.notice("turn cancelled by the user")
         } catch {
-            // The description is the provider's sanitized message; the underlying error can quote the user's prompt, so `.private`.
+            // The underlying error can quote the user's prompt, so only its kind is public.
             Self.log.error(
-                "turn failed: \(error.localizedDescription, privacy: .public) | \(String(reflecting: error), privacy: .private)"
+                "turn failed: \(error.logKind, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
             lastError = error.localizedDescription
             messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.failed \(error.localizedDescription)", bundle: .module)))

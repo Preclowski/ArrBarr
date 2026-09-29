@@ -353,7 +353,7 @@ struct SearchAddPanel: View {
                 ? RatingSiteLink.tvdbSeries(id: result.externalId, title: result.title)
                 : RatingSiteLink.tmdbMovie(id: result.externalId, title: result.title)
             chips.append(RatingChip(label: isSeries ? "TVDB" : "TMDB",
-                                    value: String(format: "%.1f", v), color: isSeries ? .blue : .teal,
+                                    value: v.ratingText, color: isSeries ? .blue : .teal,
                                     url: url, iconName: isSeries ? "rating-tvdb" : "rating-tmdb"))
         }
         if let v = result.rottenTomatoes {

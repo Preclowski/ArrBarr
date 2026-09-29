@@ -42,11 +42,9 @@ public struct iOSAppRoot: View {
         Task { await chatHolder.vm.send(prompt) }
     }
 
-    public init(viewModel: QueueViewModel? = nil, configStore: ConfigStore? = nil) {
-        let vm = viewModel ?? QueueViewModel(configStore: .shared)
-        let cs = configStore ?? .shared
-        self._viewModel = State(initialValue: vm)
-        self._configStore = ObservedObject(wrappedValue: cs)
+    public init() {
+        self._viewModel = State(initialValue: .shared)
+        self._configStore = ObservedObject(wrappedValue: .shared)
         let library = LibraryViewModel()
         let search = SearchViewModel()
         search.library = library
@@ -93,7 +91,7 @@ public struct iOSAppRoot: View {
             }
 
             Tab(value: RootTab.settings) {
-                NavigationStack { SettingsTab(viewModel: viewModel) }
+                NavigationStack { SettingsTab() }
             } label: {
                 Label { Text("common.settings.button", bundle: .module) } icon: { Image(systemName: "gearshape") }
             }
@@ -165,6 +163,8 @@ public struct iOSAppRoot: View {
         }
         // `effectiveFontScale` bumps the baseline on iOS; shared sizes read small on a phone.
         .appFontScale(configStore)
+        // Dense queue rows hold up to here; past it they'd wrap into unreadable columns.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .preferredColorScheme(configStore.preferredColorScheme)
         // Stopped when backgrounded: iOS suspends the timer anyway, but this avoids a stale burst on resume.
         .onAppear {
@@ -180,6 +180,13 @@ public struct iOSAppRoot: View {
                 SpotlightIndexer.reindex(configStore: configStore)
             case .inactive, .background: viewModel.stopForegroundPolling()
             @unknown default: break
+            }
+        }
+        .onOpenURL { url in
+            switch WidgetDeepLink(url: url) {
+            case .library: selectedTab = .library
+            case .upcoming: selectedTab = .upcoming
+            case nil: break
             }
         }
         .onContinueUserActivity(CSSearchableItemActionType) { activity in
@@ -571,22 +578,10 @@ private struct ChatTab: View {
 // MARK: - Settings tab
 
 private struct SettingsTab: View {
-    var viewModel: QueueViewModel
-    @EnvironmentObject var configStore: ConfigStore
-
     var body: some View {
         SettingsView(
             onSetDemoMode: { enable in
-                // iOS can't relaunch itself, so re-point ConfigStore to the demo suite live; demo edits
-                // never reach the real profile.
-                UserDefaults.standard.set(enable, forKey: DemoMode.key)
-                configStore.useDemoStore(enable)
-                if enable {
-                    DemoMode.seedConfigsIfNeeded(configStore)
-                } else {
-                    DemoMode.resetDemoStore()
-                }
-                Task { await viewModel.refresh() }
+                Task { await DemoMode.switchLive(enable) }
                 return true
             }
         )

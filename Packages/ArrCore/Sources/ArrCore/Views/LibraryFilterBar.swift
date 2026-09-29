@@ -183,5 +183,6 @@ struct LibraryFilterBar: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .help(Text("library.sort.help", bundle: .module))
+        .accessibilityLabel(Text("library.sort.help", bundle: .module))
     }
 }

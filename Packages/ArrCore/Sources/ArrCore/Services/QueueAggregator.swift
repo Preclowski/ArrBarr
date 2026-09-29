@@ -61,7 +61,7 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             case .noDownloadId: return String(localized: "queue.noDownloadIdItem.tooltip", bundle: .module)
             case .downloadProtocolUnknown: return String(localized: "queue.unknownDownloadProtocol.label", bundle: .module)
             case .downloadClientNotConfigured(let p):
-                return String(format: String(localized: "common.clientIsNotConfigured.label", bundle: .module), p.rawValue)
+                return String(localized: p == .usenet ? "queue.usenetClientNotConfigured.label" : "queue.torrentClientNotConfigured.label", bundle: .module)
             }
         }
     }
@@ -134,10 +134,8 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             let error = (error as? ArrQueueLoader.LiveFailure)?.underlying ?? error
             if error is CancellationError { return ([], nil, false, nil, nil) }
             if case MediaKitError.notConfigured = error { return ([], nil, false, nil, revision) }
-            let message = MediaKitErrorPresenter.message(for: error)
-            // The message carries the host and the server's own text; only the case is public.
-            let kind = (error as? MediaKitError)?.caseName ?? String(describing: type(of: error))
-            Self.logger.error("queue fetch failed: \(kind, privacy: .public) | \(message, privacy: .private)")
+            let message = error.localizedDescription
+            Self.logger.error("queue fetch failed: \(error.logKind, privacy: .public) | \(message, privacy: .private)")
             return ([], message, MediaKitErrorPresenter.isUnreachable(error), nil, revision)
         }
     }
@@ -207,7 +205,7 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
                     guard self.gateway.isConfigured(source) else { return (source, []) }
                     do { return (source, try await self.gateway.store.read(self.gateway.servarr(source).health(), policy: .mustRevalidate).value) }
                     catch {
-                        Self.logger.debug("health for \(source.rawValue, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
+                        Self.logger.debug("health for \(source.rawValue, privacy: .public) failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
                         return (source, nil)
                     }
                 }
@@ -226,7 +224,7 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             let result = try await ArrQueueLoader.history(source: source, gateway: gateway, baseURL: baseURL, page: page, pageSize: pageSize, scope: scope)
             return HistoryResult(items: result.items, hasMore: result.hasMore, error: nil)
         } catch {
-            return HistoryResult(items: [], error: MediaKitErrorPresenter.message(for: error))
+            return HistoryResult(items: [], error: error.localizedDescription)
         }
     }
 
@@ -263,10 +261,7 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         }
         guard let downloadId = item.downloadId, !downloadId.isEmpty else { throw AggregateError.noDownloadId }
         guard item.downloadProtocol != .unknown else { throw AggregateError.downloadProtocolUnknown }
-        let configured = await MainActor.run {
-            Self.candidateKinds(for: item.downloadProtocol).filter { MonitoredService.arr($0).isConfigured(in: configStore) }
-        }
-        guard let kind = Self.route(clientNamed: item.downloadClient, among: configured),
+        guard let kind = await MainActor.run(body: { configStore.downloadClient(for: item) }),
               let service = gateway.download(kind) else {
             throw AggregateError.downloadClientNotConfigured(item.downloadProtocol)
         }
@@ -335,7 +330,7 @@ nonisolated struct HistoryResult: Equatable {
     }
 }
 
-nonisolated public struct HealthResult: Equatable {
+nonisolated public struct HealthResult: Equatable, Sendable {
     public let radarr: [ArrHealth]
     public let sonarr: [ArrHealth]
     public let lidarr: [ArrHealth]

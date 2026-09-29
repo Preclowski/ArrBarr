@@ -22,7 +22,7 @@ struct LocalToolBackendFixtureTests {
         Call(name: "sonarr_search_episodes", arguments: .object(["episodeIds": .array([.number(1)])])),
         Call(name: "radarr_search", arguments: .object(["query": .string("Big Buck Bunny")]), expects: "The 39 Steps"),
         Call(name: "radarr_get_movies", arguments: .object([:]), expects: "Big Buck Bunny"),
-        Call(name: "radarr_search_movie", arguments: .object(["movieId": .number(1)])),
+        Call(name: "radarr_search_movie", arguments: .object(["movieId": .number(3031)])),
         Call(name: "lidarr_search", arguments: .object(["query": .string("Nine Inch Nails")]), expects: "Nine Inch Nails"),
         Call(name: "lidarr_get_artists", arguments: .object([:]), expects: "Brad Sucks"),
         Call(name: "lidarr_get_artist_albums", arguments: .object(["artistId": .number(1)])),
@@ -30,12 +30,13 @@ struct LocalToolBackendFixtureTests {
         Call(name: "lidarr_search_album", arguments: .object(["albumId": .number(1)])),
         Call(name: "whisparr_search", arguments: .object(["query": .string("Open Movie")])),
         Call(name: "whisparr_get_movies", arguments: .object([:])),
-        Call(name: "tmdb_search_person", arguments: .object(["query": .string("Ton Roosendaal")])),
+        Call(name: "tmdb_search_person", arguments: .object(["query": .string("Open Series 66")])),
         Call(name: "tmdb_discover_movies", arguments: .object([:])),
         Call(name: "tmdb_discover_series", arguments: .object([:])),
-        Call(name: "suggest_titles", arguments: .object(["kind": .string("movie"), "items": .array([.object(["title": .string("Big Buck Bunny")])])])),
+        Call(name: "suggest_titles", arguments: .object(["kind": .string("movie"), "items": .array([.object(["title": .string("The 39 Steps"), "year": .number(1935)])])])),
         Call(name: "check_titles", arguments: .object(["titles": .array([.string("Big Buck Bunny")])])),
-        Call(name: "discover_in_quiz", arguments: .object(["mood": .string("cozy"), "kind": .string("movie")])),
+        Call(name: "discover_in_quiz", arguments: .object(["mood": .string("cozy"), "kind": .string("movie"),
+                                                           "items": .array([.object(["title": .string("The 39 Steps"), "year": .number(1935)])])])),
         Call(name: "get_calendar", arguments: .object([:]), expects: "The General"),
         Call(name: "health", arguments: .object([:])),
         Call(name: "get_title_details", arguments: .object(["service": .string("radarr"), "id": .number(1)])),
@@ -45,6 +46,9 @@ struct LocalToolBackendFixtureTests {
         Call(name: "media_server_now_playing", arguments: .object([:])),
         Call(name: "media_server_scan_library", arguments: .object([:])),
     ]
+
+    static let failureMarkers = ["not configured", "error:", "failed:", "failed to", "couldn't", "not in the", "no people found",
+                                 "none of those picks resolved", "(tool error"]
 
     @MainActor
     private static func demo() -> (ServiceGateway, LocalToolBackend) {
@@ -77,7 +81,10 @@ struct LocalToolBackendFixtureTests {
         }
         let text = output.text.lowercased()
         #expect(!text.isEmpty)
-        #expect(!text.contains("not configured"), Comment(rawValue: output.text))
+        // Tools report failure as text, so an answer is only a pass when it isn't one of these.
+        for marker in Self.failureMarkers {
+            #expect(!text.contains(marker), Comment(rawValue: output.text))
+        }
         if let expects = call.expects { #expect(output.text.contains(expects), Comment(rawValue: output.text)) }
         await gateway.kit.stop()
     }

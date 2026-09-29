@@ -55,10 +55,7 @@ nonisolated public enum MonitoredService: Hashable, Sendable, Identifiable {
     public func isConfigured(in store: ConfigStore) -> Bool {
         switch self {
         case .arr(let kind):
-            let cfg = store.config(for: kind)
-            guard cfg.isConfigured else { return false }
-            if kind.requiresApiKey { return !cfg.apiKey.isEmpty }
-            return true
+            return store.config(for: kind).isUsable(as: kind)
         case .openai:
             return store.openai.isConfigured
         case .tmdb:

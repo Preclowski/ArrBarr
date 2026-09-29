@@ -188,7 +188,7 @@ struct ServiceFields: View {
                     AppMessages.post(AppMessages.ConfigValidated())
                 }
             } catch {
-                let message = error.userFacingMessage
+                let message = error.localizedDescription
                 await MainActor.run {
                     testState = .failure(message)
                     ConnectionHealth.shared.forceDown(.arr(kind), message: message)

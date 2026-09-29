@@ -56,6 +56,11 @@ extension LocalToolBackend {
         await pipeline.feed(picks)
     }
 
+    /// "New chat": picks surfaced in the old conversation are no longer on screen.
+    public func resetConversation() {
+        surfacedSuggestionIds = []
+    }
+
     /// A streamed deck the tool never claimed is dead.
     public func chatTurnEnded() async {
         quizStreamCloses = 0
@@ -107,7 +112,7 @@ extension LocalToolBackend {
                 return ToolCallOutput(text: "ERROR: source 'now' needs TMDB, which isn't configured. Tell the user you can't see what is in cinemas or airing today — do NOT build this deck from memory, your training data predates it.")
             }
             do { items = try await nowPicks(kind: kind) } catch {
-                return ToolCallOutput(text: "ERROR: couldn't reach TMDB (\(error.userFacingMessage)). Tell the user; do NOT build this deck from memory.")
+                return ToolCallOutput(text: "ERROR: couldn't reach TMDB (\(error.localizedDescription)). Tell the user; do NOT build this deck from memory.")
             }
             guard !items.isEmpty else {
                 return ToolCallOutput(text: "TMDB lists nothing \(kind == "movie" ? "in cinemas" : "airing") right now. Tell the user; do not substitute older titles.")

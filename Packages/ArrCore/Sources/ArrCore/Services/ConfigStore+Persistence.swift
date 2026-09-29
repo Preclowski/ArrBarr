@@ -14,7 +14,6 @@ extension ConfigStore {
     private static let whisparrAgeConfirmedKey = "ArrBarr.whisparrAgeConfirmed"
     private static let fontScaleKey = "ArrBarr.fontScale"
     private static let aiKnowsAboutWhisparrKey = "ArrBarr.aiKnowsAboutWhisparr"
-    private static let launchAtLoginKey = "ArrBarr.launchAtLogin"
     private static let detachedWindowKey = "ArrBarr.detachedWindow"
     private static let spotlightOpensInAppKey = "ArrBarr.spotlightOpensInApp"
     nonisolated static let iCloudSyncEnabledKey = "ArrBarr.iCloudSyncEnabled"
@@ -23,7 +22,6 @@ extension ConfigStore {
     private static let arrOrderKey = "ArrBarr.arrOrder"
     private static let showTonightKey = "ArrBarr.showTonight"
     private static let showNeedsYouKey = "ArrBarr.showNeedsYou"
-    private static let tonightHoursKey = "ArrBarr.tonightHours"
     private static let tonightVisibleCountKey = "ArrBarr.tonightVisibleCount"
     private static let showIndexerIssuesKey = "ArrBarr.showIndexerIssues"
     private static let welcomeSeenVersionKey = "ArrBarr.welcomeSeenVersion"
@@ -63,7 +61,6 @@ extension ConfigStore {
         let storedScale = defaults.double(forKey: Self.fontScaleKey)
         self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = defaults.object(forKey: Self.aiKnowsAboutWhisparrKey) != nil ? defaults.bool(forKey: Self.aiKnowsAboutWhisparrKey) : false
-        self.launchAtLogin = defaults.object(forKey: Self.launchAtLoginKey) != nil ? defaults.bool(forKey: Self.launchAtLoginKey) : false
         self.detachedWindow = defaults.bool(forKey: Self.detachedWindowKey)
         self.spotlightOpensInApp = defaults.object(forKey: Self.spotlightOpensInAppKey) != nil
             ? defaults.bool(forKey: Self.spotlightOpensInAppKey) : true
@@ -84,7 +81,6 @@ extension ConfigStore {
         self.showWarnings = false
         self.appearance = "system"
         #endif
-        self.tonightHours = 168
         self.tonightVisibleCount = defaults.object(forKey: Self.tonightVisibleCountKey) != nil
             ? defaults.integer(forKey: Self.tonightVisibleCountKey) : 3
         self.welcomeSeenVersion = defaults.string(forKey: Self.welcomeSeenVersionKey)
@@ -165,10 +161,6 @@ extension ConfigStore {
         $aiKnowsAboutWhisparr.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.aiKnowsAboutWhisparrKey)
         }.store(in: &cancellables)
-        $launchAtLogin.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.launchAtLoginKey)
-            LaunchAtLogin.set(enabled: val)
-        }.store(in: &cancellables)
         $detachedWindow.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.detachedWindowKey)
         }.store(in: &cancellables)
@@ -193,9 +185,6 @@ extension ConfigStore {
         }.store(in: &cancellables)
         $showWarnings.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.showIndexerIssuesKey)
-        }.store(in: &cancellables)
-        $tonightHours.dropFirst().sink { [weak self] val in
-            self?.defaults.set(val, forKey: Self.tonightHoursKey)
         }.store(in: &cancellables)
         $tonightVisibleCount.dropFirst().sink { [weak self] val in
             self?.defaults.set(val, forKey: Self.tonightVisibleCountKey)
@@ -287,12 +276,15 @@ extension ConfigStore {
     }
 
     /// Extension-safe: the widget must not construct `ConfigStore.shared` (MainActor,
-    /// Combine sinks, Keychain migration, LaunchAtLogin).
+    /// Combine sinks, Keychain migration).
     public nonisolated static func decodeServiceConfig(_ kind: ServiceKind, from defaults: UserDefaults) -> ServiceConfig {
         load(kind, from: defaults)
     }
 
+    /// Every service sink re-saves both of its secrets; rewriting an unchanged one would bump its
+    /// generation, and MediaKit drops that instance's cache and sessions on a new generation.
     private func setOrDelete(_ value: String, for key: SecretKey) {
+        guard (secrets.read(key) ?? "") != value else { return }
         if value.isEmpty { secrets.delete(key) } else { secrets.set(value, for: key) }
         SecretGenerations.bump(key, in: defaults)
     }

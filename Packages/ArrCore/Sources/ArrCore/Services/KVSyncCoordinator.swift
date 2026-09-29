@@ -161,7 +161,7 @@ public final class KVSyncCoordinator: ObservableObject {
         if let value = defaults.object(forKey: key) { kv.set(value, forKey: key) }
     }
 
-    deinit {
+    isolated deinit {
         observers.forEach { NotificationCenter.default.removeObserver($0) }
         if let identityObserver { NotificationCenter.default.removeObserver(identityObserver) }
     }

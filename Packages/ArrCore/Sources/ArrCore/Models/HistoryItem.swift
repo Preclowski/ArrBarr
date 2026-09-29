@@ -1,6 +1,6 @@
 import Foundation
 
-nonisolated public struct HistoryItem: Identifiable, Equatable {
+nonisolated public struct HistoryItem: Identifiable, Equatable, Sendable {
     public let id: String
     public let source: QueueItem.Source
     public let date: Date
@@ -57,7 +57,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         self.deleteReason = deleteReason; self.fileOnDisk = fileOnDisk; self.hadFileOnDisk = hadFileOnDisk
     }
 
-    public struct FileSnapshot: Equatable {
+    public struct FileSnapshot: Equatable, Sendable {
         public let quality: String?
         public let score: Int?
         public let size: Int64?
@@ -76,7 +76,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
     }
 
     /// `collapsedSubtitle` replaces the per-file subtitle on the folded row (nil keeps the newest row's).
-    public struct GroupHint: Equatable {
+    public struct GroupHint: Equatable, Sendable {
         public let key: String
         public let collapsedSubtitle: String?
 
@@ -193,7 +193,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
         return byBucket.keys.sorted().map { TimeGroup(bucket: $0, items: byBucket[$0] ?? []) }
     }
 
-    public enum EventType: String {
+    public enum EventType: String, Sendable {
         case grabbed
         case imported
         case failed
@@ -240,7 +240,7 @@ nonisolated public struct HistoryItem: Identifiable, Equatable {
 }
 
 /// Raw per-file rows, not yet paired or folded (`HistoryFeed` does that).
-nonisolated struct HistoryPage {
+nonisolated struct HistoryPage: Sendable {
     let items: [HistoryItem]
     let hasMore: Bool
 }

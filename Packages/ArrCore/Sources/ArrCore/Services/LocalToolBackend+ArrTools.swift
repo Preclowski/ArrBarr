@@ -88,9 +88,10 @@ extension LocalToolBackend {
         let droppedAsOwned = tagged.count - afterOwned.count
 
         // Cross-call memory: in a big library every retry otherwise resurfaces the same lone unowned pick.
-        let results = afterOwned.filter { !surfacedSuggestionIds.contains($0.id) }
+        // MCP has no cards and outlives any one client conversation, so it keeps none.
+        let results = headlessSurface ? afterOwned : afterOwned.filter { !surfacedSuggestionIds.contains($0.id) }
         let repeatCount = afterOwned.count - results.count
-        for r in results { surfacedSuggestionIds.insert(r.id) }
+        if !headlessSurface { surfacedSuggestionIds.formUnion(results.map(\.id)) }
 
         if results.isEmpty {
             if repeatCount > 0 {
@@ -741,7 +742,7 @@ extension LocalToolBackend {
             var lines: [String] = []
             for item in top {
                 let pct = Int((item.progress * 100).rounded())
-                let tag = item.source == .sonarr ? "[Sonarr]" : "[Radarr]"
+                let tag = "[\(item.source.displayName)]"
                 var line = "• \(tag) \(item.title) — \(item.status.displayName) \(pct)%"
                 if item.isUpgrade, let diff = upgradeDiffFragment(item) {
                     line += "\n    \(diff)"

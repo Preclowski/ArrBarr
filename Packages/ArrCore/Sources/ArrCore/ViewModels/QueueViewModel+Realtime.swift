@@ -27,6 +27,14 @@ extension QueueViewModel {
         await updateLiveQueues()
     }
 
+    /// The gateway swapped its stack; every subscription to the old one is redone.
+    func demoModeChanged(_ on: Bool) async {
+        await configStore.gateway.rebuild(demo: on)
+        bootstrapCalendarInvalidation()
+        await bootstrapRealtime()
+        await refresh()
+    }
+
     func updateLiveQueues() async {
         guard liveQueuesStarted else { return }
         var policy = LivePolicy.queue
@@ -137,9 +145,10 @@ extension QueueViewModel {
     /// `.common` mode keeps firing while the menu-bar panel tracks events; `Timer.scheduledTimer`'s
     /// `.default` mode pauses during scroll.
     private static func commonModeTimer(
-        interval: TimeInterval, repeats: Bool, _ fire: @escaping () -> Void
+        interval: TimeInterval, repeats: Bool, _ fire: @escaping @MainActor @Sendable () -> Void
     ) -> Timer {
-        let timer = Timer(timeInterval: interval, repeats: repeats) { _ in fire() }
+        // Added to the main run loop below, so it fires on the main thread.
+        let timer = Timer(timeInterval: interval, repeats: repeats) { _ in MainActor.assumeIsolated { fire() } }
         RunLoop.main.add(timer, forMode: .common)
         return timer
     }

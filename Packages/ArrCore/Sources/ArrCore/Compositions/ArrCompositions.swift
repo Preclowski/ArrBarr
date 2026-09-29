@@ -300,6 +300,9 @@ nonisolated enum MediaKitErrorPresenter {
                 return String(localized: "common.arrbarrIsNotConfigured.label", bundle: .module)
             }
             return text("mediakit.error.notConfigured", kind.displayName)
+        // The two a user can fix from Settings get their own sentence.
+        case let .unreachable(host, .tls): return text("mediakit.error.unreachable.tls", host.description)
+        case let .unreachable(host, .dns): return text("mediakit.error.unreachable.dns", host.description)
         case let .unreachable(host, _): return text("mediakit.error.unreachable", host.description)
         case let .breakerOpen(host, _): return text("mediakit.error.breakerOpen", host.description)
         case let .rateLimited(host, _): return text("mediakit.error.rateLimited", host.description)
@@ -320,11 +323,6 @@ nonisolated enum MediaKitErrorPresenter {
         String(format: String(localized: String.LocalizationValue(key), bundle: .module), arguments: arguments)
     }
 
-    static func message(for error: any Error) -> String {
-        if let mk = error as? MediaKitError { return message(for: mk) }
-        return (error as? LocalizedError)?.errorDescription ?? error.localizedDescription
-    }
-
     /// Unreachable in the aggregator's sense: the host, not the request, is the problem.
     static func isUnreachable(_ error: any Error) -> Bool {
         guard let mk = error as? MediaKitError else { return false }
@@ -337,9 +335,9 @@ nonisolated enum MediaKitErrorPresenter {
     }
 }
 
-nonisolated public extension Error {
-    /// `localizedDescription` alone drops a `LocalizedError`'s text and the arr's reason a `MediaKitError` carries.
-    var userFacingMessage: String { MediaKitErrorPresenter.message(for: self) }
+/// Every `localizedDescription` of a MediaKit failure carries the arr's own reason, not "error N".
+nonisolated extension MediaKitError: @retroactive LocalizedError {
+    public var errorDescription: String? { MediaKitErrorPresenter.message(for: self) }
 }
 
 /// The title a row wears when the arr sent none.

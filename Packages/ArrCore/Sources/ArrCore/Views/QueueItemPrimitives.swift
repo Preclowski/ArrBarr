@@ -98,21 +98,21 @@ struct ScoreLabel: View {
     // Table and grid cells lay out their own text but take signs and colours from here.
 
     /// Rendered verbatim so a locale's grouping separator can't sneak into a score.
-    static func text(_ score: Int) -> String {
+    nonisolated static func text(_ score: Int) -> String {
         "\(score > 0 ? "+" : "")\(score)"
     }
 
-    static func color(_ score: Int) -> Color {
+    nonisolated static func color(_ score: Int) -> Color {
         score > 0 ? .green : (score < 0 ? .red : .secondary)
     }
 
     /// `±0` rather than `0` so a wash reads as "compared, no movement".
-    static func deltaText(_ delta: Int) -> String {
+    nonisolated static func deltaText(_ delta: Int) -> String {
         delta == 0 ? "±0" : "\(delta > 0 ? "+" : "")\(delta)"
     }
 
     /// By direction, not sign: −200 replacing −500 is a gain and reads green.
-    static func deltaColor(_ delta: Int) -> Color {
+    nonisolated static func deltaColor(_ delta: Int) -> Color {
         delta > 0 ? .green : (delta < 0 ? .red : .secondary)
     }
 }
@@ -368,7 +368,7 @@ struct StatusIconLabel: View {
     }
 
     var body: some View {
-        Text(LocalizedStringKey(status.displayName))
+        Text(verbatim: status.displayName)
             .scaledFont(size: labelSize, weight: labelWeight)
             .foregroundStyle(status.tint)
             .padding(.horizontal, 5)

@@ -27,7 +27,7 @@ public actor DownloadDropService {
             } catch {
                 // Swallowed on purpose — one unreachable arr must not cost the
                 // user the other two — but never silently.
-                dropLog.notice("\(arr.rawValue, privacy: .public): download clients unavailable — \(error.localizedDescription, privacy: .public)")
+                dropLog.notice("\(arr.rawValue, privacy: .public): download clients unavailable — \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
                 continue
             }
             if !clients.contains(where: { $0.kind == kind }) {

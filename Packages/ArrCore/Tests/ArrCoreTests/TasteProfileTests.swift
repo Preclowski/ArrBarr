@@ -7,8 +7,7 @@ struct TasteProfileStoreTests {
 
     private func freshStore() -> TasteProfileStore {
         let suite = "TasteProfileTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
+        let defaults = TestDefaults.suite(suite)
         return TasteProfileStore(defaults: defaults)
     }
 
@@ -32,8 +31,7 @@ struct TasteProfileStoreTests {
     @Test("The note survives a store reload from the same defaults")
     func persistsAcrossReload() {
         let suite = "TasteProfileTests-\(UUID().uuidString)"
-        let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
+        let defaults = TestDefaults.suite(suite)
         TasteProfileStore(defaults: defaults).setUserNote("subtitles fine")
         #expect(TasteProfileStore(defaults: defaults).userNote == "subtitles fine")
     }

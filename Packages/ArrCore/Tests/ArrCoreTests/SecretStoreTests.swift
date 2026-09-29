@@ -70,20 +70,15 @@ extension ProcessGlobalsSuite {
         @Test("baseQuery: synchronizable follows isAppStore, data protection does not")
         func keychainGatingRuntime() {
             let originalAppStore = AppCapabilities.isAppStore
-            let originalProvider = KeychainSecretStore.syncEnabledProvider
-            defer {
-                AppCapabilities.configure(isAppStore: originalAppStore)
-                KeychainSecretStore.syncEnabledProvider = originalProvider
-            }
-            KeychainSecretStore.syncEnabledProvider = { true }
+            defer { AppCapabilities.configure(isAppStore: originalAppStore) }
 
             AppCapabilities.configure(isAppStore: true)
-            let on = KeychainSecretStore.baseQuery(for: .openAIKey)
+            let on = KeychainSecretStore.$syncEnabledProvider.withValue({ true }) { KeychainSecretStore.baseQuery(for: .openAIKey) }
             #expect(on[kSecAttrSynchronizable as String] as? Bool == true)
             #expect(KeychainSecretStore.baseQuery(for: .mcpBearer)[kSecAttrSynchronizable as String] as? Bool == false)
 
             AppCapabilities.configure(isAppStore: false)
-            let off = KeychainSecretStore.baseQuery(for: .openAIKey)
+            let off = KeychainSecretStore.$syncEnabledProvider.withValue({ true }) { KeychainSecretStore.baseQuery(for: .openAIKey) }
             #expect(off[kSecAttrSynchronizable as String] as? Bool == false)
 
             // The attribute that must NOT track the flavor. Dropping it in any build
@@ -107,16 +102,15 @@ extension ProcessGlobalsSuite {
         @Test("synchronizable also honors the runtime sync provider when isAppStore")
         func keychainSynchronizableRespectsProvider() {
             let originalAppStore = AppCapabilities.isAppStore
-            let originalProvider = KeychainSecretStore.syncEnabledProvider
-            defer {
-                AppCapabilities.configure(isAppStore: originalAppStore)
-                KeychainSecretStore.syncEnabledProvider = originalProvider
-            }
+            defer { AppCapabilities.configure(isAppStore: originalAppStore) }
             AppCapabilities.configure(isAppStore: true)
-            KeychainSecretStore.syncEnabledProvider = { false }
-            #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == false)
-            KeychainSecretStore.syncEnabledProvider = { true }
-            #expect(KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool == true)
+            func synchronizable(_ enabled: Bool) -> Bool? {
+                KeychainSecretStore.$syncEnabledProvider.withValue({ enabled }) {
+                    KeychainSecretStore.baseQuery(for: .openAIKey)[kSecAttrSynchronizable as String] as? Bool
+                }
+            }
+            #expect(synchronizable(false) == false)
+            #expect(synchronizable(true) == true)
         }
 
         @Test("Real Keychain round-trips a non-conflicting key",
@@ -137,24 +131,25 @@ extension ProcessGlobalsSuite {
             #expect(store.read(key) == nil)
         }
 
-        @Test("syncable lists every per-service key plus openai/tmdb, excludes mcpBearer")
+        @Test("syncable is every secret but the device-only MCP bearer")
         func syncableContents() {
             let accounts = Set(SecretKey.syncable.map(\.account))
             for kind in ServiceKind.allCases {
                 #expect(accounts.contains("secret.\(kind.rawValue).apiKey"))
                 #expect(accounts.contains("secret.\(kind.rawValue).password"))
             }
-            #expect(accounts.contains("secret.openai.apiKey"))
-            #expect(accounts.contains("secret.tmdb.apiKey"))
-            #expect(!accounts.contains("secret.mcp.bearer"))
+            for key in [SecretKey.openAIKey, .tmdbKey, .prowlarrKey, .mediaServerToken] {
+                #expect(accounts.contains(key.account))
+            }
+            #expect(!accounts.contains(SecretKey.mcpBearer.account))
+            #expect(SecretKey.all.count == Set(SecretKey.all.map(\.account)).count)
             #expect(SecretKey.syncable.allSatisfy { $0.synced && !$0.deviceOnly })
         }
 
         @Test("defaultSyncEnabled reads the device-local flag, defaulting true")
         func defaultSyncEnabledReadsFlag() {
             let suite = "test.icloudflag.\(UUID().uuidString)"
-            let d = UserDefaults(suiteName: suite)!
-            defer { UserDefaults.standard.removePersistentDomain(forName: suite) }
+            let d = TestDefaults.suite(suite)
             #expect(KeychainSecretStore.syncEnabled(in: d) == true)   // unset → true
             d.set(false, forKey: KeychainSecretStore.iCloudSyncEnabledKey)
             #expect(KeychainSecretStore.syncEnabled(in: d) == false)

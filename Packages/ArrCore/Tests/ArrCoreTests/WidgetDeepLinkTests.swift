@@ -7,6 +7,7 @@ struct WidgetDeepLinkTests {
     @Test("arrbarr://library parses to .library")
     func library() {
         #expect(WidgetDeepLink(url: URL(string: "arrbarr://library")!) == .library)
+        #expect(WidgetDeepLink(url: WidgetDeepLink.upcoming.url) == .upcoming)
     }
 
     @Test("Unknown host parses to nil")

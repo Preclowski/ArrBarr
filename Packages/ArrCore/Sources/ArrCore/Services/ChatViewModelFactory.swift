@@ -53,11 +53,11 @@ enum ChatViewModelFactory {
             try await backend.callTool(name: name, arguments: args)
         }
 
-        // The FM path runs tools inside `DynamicMCPTool.call`, so the gate reaches back into a view
-        // model that doesn't exist yet: captured weakly and back-filled after construction.
-        var vmRef: ChatViewModel? = nil
-        let confirm: @Sendable (ToolCall) async -> JSONValue? = { [weak vmRef] call in
-            guard let vm = vmRef else { return nil }
+        // The FM path runs tools inside `DynamicMCPTool.call`, so the gate reaches back into a view model
+        // that doesn't exist yet. A capture list copies the value, so it goes through a box filled afterwards.
+        let vmRef = WeakChatViewModel()
+        let confirm: @Sendable (ToolCall) async -> JSONValue? = { call in
+            guard let vm = await vmRef.vm else { return nil }
             return await vm.awaitConfirm(call)
         }
 
@@ -65,9 +65,7 @@ enum ChatViewModelFactory {
         // Demo short-circuits both real backends: OpenAI needs a key and the on-device model can't see the canned arrs.
         if DemoMode.isActive {
             provider = DemoChatProvider()
-            let vm = ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke)
-            vmRef = vm
-            return vm
+            return ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke)
         }
         switch chatProvider {
         case .foundationModels:
@@ -88,9 +86,10 @@ enum ChatViewModelFactory {
                 guard name == "discover_in_quiz" else { return }
                 Task { await backend.quizArgumentsStreamed(arguments) }
             },
-            onTurnEnded: { Task { await backend.chatTurnEnded() } }
+            onTurnEnded: { Task { await backend.chatTurnEnded() } },
+            onClear: { Task { await backend.resetConversation() } }
         )
-        vmRef = vm
+        vmRef.vm = vm
         return vm
     }
 
@@ -107,4 +106,8 @@ enum ChatViewModelFactory {
         }
         return english.localizedString(forLanguageCode: appLanguage) ?? "English"
     }
+}
+
+private final class WeakChatViewModel {
+    weak var vm: ChatViewModel?
 }

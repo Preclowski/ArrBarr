@@ -4,7 +4,7 @@ import MediaKit
 extension QueueViewModel {
     public func refresh() async {
         guard !isRefreshing else {
-            pendingRefresh = true
+            pendingRefresh = .full
             return
         }
         isRefreshing = true
@@ -15,13 +15,8 @@ extension QueueViewModel {
             isLoading = false
             hasLoadedOnce = true
             isRefreshing = false
-            if pendingRefresh {
-                pendingRefresh = false
-                Task { await self.refresh() }
-            }
+            runPendingRefresh()
         }
-        // The repeating foreground tick calls `refreshQueues()` instead, so calendars and health are not
-        // re-pulled every 5 seconds.
         async let queueResult = aggregator.fetch()
         async let upcomingResult = aggregator.fetchUpcoming()
         async let healthResult = aggregator.fetchHealth()
@@ -53,23 +48,20 @@ extension QueueViewModel {
             .filter { $0.airDate >= startOfToday }
             .sorted { $0.airDate < $1.airDate }
         upcoming = merged
-        tonight = Self.tonightSlice(from: merged, hours: configStore.tonightHours)
+        tonight = Self.tonightSlice(from: merged)
         WidgetDataStore.saveUpcoming(merged)
     }
 
     /// The calendar and health have their own clocks.
     public func refreshQueues() async {
         guard !isRefreshing else {
-            pendingRefresh = true
+            if pendingRefresh == nil { pendingRefresh = .queues }
             return
         }
         isRefreshing = true
         defer {
             isRefreshing = false
-            if pendingRefresh {
-                pendingRefresh = false
-                Task { await self.refreshQueues() }
-            }
+            runPendingRefresh()
         }
         let queue = await aggregator.fetch()
         if Task.isCancelled { return }
@@ -171,5 +163,11 @@ extension QueueViewModel {
             result.insert(source)
         }
         return result
+    }
+
+    private func runPendingRefresh() {
+        guard let pending = pendingRefresh else { return }
+        pendingRefresh = nil
+        Task { pending == .full ? await self.refresh() : await self.refreshQueues() }
     }
 }

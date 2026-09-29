@@ -108,13 +108,9 @@ extension QueueListView {
     /// The swipe button must not hard-delete N downloads without the header's confirm.
     private func requestGroupDeleteConfirm(_ group: QueueTitleGroup) {
         let items = group.allItems
-        ConfirmCenter.request(PendingConfirm(
-            title: "Remove \(group.downloadCount) downloads?",
-            message: "This will remove every download of this title from the client.",
-            confirmLabel: "Remove All",
-            isDestructive: true,
-            onConfirm: { [weak viewModel] in Task { await viewModel?.deleteAll(items) } }
-        ))
+        ConfirmCenter.request(.removeAllDownloads(count: group.downloadCount, locale: configStore.currentLocale) { [weak viewModel] in
+            Task { await viewModel?.deleteAll(items) }
+        })
     }
     #endif
 
@@ -249,7 +245,7 @@ extension QueueListView {
         }
     }
 
-    private func deleteClosure(for entry: QueueRowEntry) -> () -> Void {
+    private func deleteClosure(for entry: QueueRowEntry) -> @MainActor () -> Void {
         switch entry {
         case .single(let item):
             return { [weak viewModel] in Task { await viewModel?.delete(item) } }
@@ -268,7 +264,7 @@ extension QueueListView {
         }
     }
 
-    private func canControl(_ item: QueueItem) -> Bool { configStore.canControlDownload(item.downloadProtocol) }
+    private func canControl(_ item: QueueItem) -> Bool { configStore.canControlDownload(item) }
 
     /// A season pack shares its downloadId, so acting on the rep covers it.
     private func pauseResumeClosure(for entry: QueueRowEntry) -> () -> Void {

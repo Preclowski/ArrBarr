@@ -74,10 +74,10 @@ struct QuizFeatureCard: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("onboarding.quiz.button", bundle: .module)
-                        .font(.system(size: 17, weight: .semibold))
+                        .scaledFont(size: 17, weight: .semibold)
                         .foregroundStyle(.primary)
                     Text("onboarding.swipeThroughPicksAdd.tooltip", bundle: .module)
-                        .font(.system(size: 12.5))
+                        .scaledFont(size: 12.5)
                         .foregroundStyle(.secondary)
                         // Squeezed for space, SwiftUI would truncate this to one line rather than drop a suggestion row.
                         .fixedSize(horizontal: false, vertical: true)
@@ -108,9 +108,9 @@ struct QuizFeatureCard: View {
             Button { onStart(kind, .newToMe) } label: {
                 HStack(spacing: 6) {
                     Image(systemName: symbol)
-                        .font(.system(size: 12, weight: .semibold))
+                        .scaledFont(size: 12, weight: .semibold)
                     Text(labelKey, bundle: .module)
-                        .font(.system(size: 13, weight: .medium))
+                        .scaledFont(size: 13, weight: .medium)
                 }
                 .frame(maxWidth: .infinity, minHeight: 32)
                 .contentShape(Rectangle())
@@ -133,7 +133,7 @@ struct QuizFeatureCard: View {
                 }
             } label: {
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .semibold))
+                    .scaledFont(size: 10, weight: .semibold)
                     .frame(width: 26, height: 32)
                     .contentShape(Rectangle())
             }
@@ -210,7 +210,7 @@ struct QuizFeatureCard: View {
             .frame(width: Self.posterSize.width, height: Self.posterSize.height)
             .overlay(
                 Image(systemName: "sparkles")
-                    .font(.system(size: 14, weight: .semibold))
+                    .scaledFont(size: 14, weight: .semibold)
                     .foregroundStyle(.white.opacity(index == 0 ? 0.9 : 0.4))
             )
             .shadow(color: .black.opacity(0.2), radius: 3, y: 1)

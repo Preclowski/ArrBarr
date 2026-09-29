@@ -1,6 +1,5 @@
 import SwiftUI
 import ArrCore
-import AppIntents
 import UserNotifications
 import WidgetKit
 
@@ -44,21 +43,11 @@ struct ArrBarriOSApp: App {
                 .task {
                     if ProcessInfo.processInfo.environment["ARRBARR_DEMO_SUITE"] == "1",
                        !DemoMode.isActive {
-                        UserDefaults.standard.set(true, forKey: DemoMode.key)
-                        ConfigStore.shared.useDemoStore(true)
-                        DemoMode.seedConfigsIfNeeded(ConfigStore.shared)
+                        await DemoMode.switchLive(true)
                     }
                     // `useDemoStore` covers live toggles, not booting into a persisted demo state.
                     WidgetDataStore.setDemoActive(DemoMode.isActive)
                     WidgetCenter.shared.reloadAllTimelines()
-                }
-                .onOpenURL { url in
-                    switch WidgetDeepLink(url: url) {
-                    case .library:
-                        break
-                    case nil:
-                        break
-                    }
                 }
         }
         // Nudge WidgetKit so config or demo changes show on the home screen.
@@ -67,40 +56,5 @@ struct ArrBarriOSApp: App {
                 WidgetCenter.shared.reloadAllTimelines()
             }
         }
-    }
-}
-
-/// `\(.applicationName)` is required in zero-config phrases; lives in the app target for App Intents discovery.
-struct ArrBarrAppShortcuts: AppShortcutsProvider {
-    static var appShortcuts: [AppShortcut] {
-        AppShortcut(
-            intent: ShowDownloadQueueIntent(),
-            phrases: [
-                "What's downloading in \(.applicationName)",
-                "Show \(.applicationName) downloads",
-            ],
-            shortTitle: "Download queue",
-            systemImageName: "arrow.down.circle"
-        )
-        AppShortcut(
-            intent: ShowUpcomingIntent(),
-            phrases: [
-                "What's coming up in \(.applicationName)",
-                "What's up next in \(.applicationName)",
-                "What's next in \(.applicationName)",
-                "Show \(.applicationName) upcoming",
-            ],
-            shortTitle: "Upcoming",
-            systemImageName: "calendar"
-        )
-        AppShortcut(
-            intent: CheckArrHealthIntent(),
-            phrases: [
-                "Is \(.applicationName) healthy",
-                "Check \(.applicationName) status",
-            ],
-            shortTitle: "Service health",
-            systemImageName: "stethoscope"
-        )
     }
 }

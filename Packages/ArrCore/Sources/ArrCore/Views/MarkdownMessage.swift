@@ -2,16 +2,9 @@ import SwiftUI
 import Markdown
 
 /// Ids the tools returned in this conversation; links to anything else render as plain text.
-private struct ChatKnownLinkKeysKey: EnvironmentKey {
-    /// nil (outside the chat) means nothing to verify against, so links behave as written.
-    static let defaultValue: Set<String>? = nil
-}
-
 public extension EnvironmentValues {
-    var chatKnownLinkKeys: Set<String>? {
-        get { self[ChatKnownLinkKeysKey.self] }
-        set { self[ChatKnownLinkKeysKey.self] = newValue }
-    }
+    /// nil (outside the chat) means nothing to verify against, so links behave as written.
+    @Entry var chatKnownLinkKeys: Set<String>? = nil
 }
 
 // Assistant messages via swift-markdown (cmark-gfm). Emphasis is baked into per-run fonts
@@ -301,7 +294,7 @@ struct MarkdownMessage: View {
         return ChatLinkVerification.isVerified(link, against: knownLinkKeys)
     }
 
-    static func namingPersonLinks(_ url: URL, label: String) -> URL {
+    nonisolated static func namingPersonLinks(_ url: URL, label: String) -> URL {
         let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
               case .person(let id, let existing)? = ChatLink(url: url), existing.isEmpty,

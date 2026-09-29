@@ -324,7 +324,7 @@ public actor PosterStore {
             }
             return data
         } catch {
-            Self.logger.debug("poster fetch failed: \(error.localizedDescription, privacy: .public)")
+            Self.logger.debug("poster fetch failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
             return nil
         }
     }

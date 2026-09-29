@@ -51,7 +51,7 @@ struct PopoverEmptyState<MoreMenu: View>: View {
             Text(verbatim: "\(number).")
                 .scaledFont(size: 11, weight: .semibold, monospacedDigit: true)
                 .foregroundStyle(.tertiary)
-            Text(text)
+            Text(text, bundle: .module)
         }
     }
 }

@@ -16,15 +16,14 @@ struct QueueUIStateTests {
     /// version of this file — flushes cfprefsd for the whole process and was
     /// enough to push the suite's timing-sensitive network tests over their
     /// timeouts when they ran alongside.
-    private func makeDefaults() -> (UserDefaults, String) {
+    private func makeDefaults() -> UserDefaults {
         let name = "ArrBarrTests.\(UUID().uuidString)"
-        return (UserDefaults(suiteName: name)!, name)
+        return TestDefaults.suite(name)
     }
 
     @Test("Writes land on the same keys ConfigStore used")
     func writesUseTheSharedKeys() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
         state.queueTitleGrouping = .expanded
@@ -36,8 +35,7 @@ struct QueueUIStateTests {
 
     @Test("A fresh instance reads what the previous one wrote")
     func roundTrips() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let first = QueueUIState(defaults: defaults)
         first.queueTitleGrouping = .off
@@ -50,8 +48,7 @@ struct QueueUIStateTests {
 
     @Test("An inbound iCloud change is picked up by a reload")
     func reloadPicksUpExternalWrites() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
         #expect(state.queueTitleGrouping == .collapsed)
@@ -67,8 +64,7 @@ struct QueueUIStateTests {
 
     @Test("A reload writes nothing back")
     func reloadDoesNotPersist() {
-        let (defaults, name) = makeDefaults()
-        defer { UserDefaults.standard.removePersistentDomain(forName: name) }
+        let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
         state.queueTitleGrouping = .expanded

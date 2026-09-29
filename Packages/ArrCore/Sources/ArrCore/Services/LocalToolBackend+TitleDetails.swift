@@ -51,7 +51,7 @@ extension LocalToolBackend {
     private func movieCast(movieId: Int) async -> CastSection {
         let credits: [ArrCredit]
         do { credits = try await radarrClient.fetchCredits(movieId: movieId) } catch {
-            return ("\n\nCast: couldn't load (\(error.userFacingMessage)).", [])
+            return ("\n\nCast: couldn't load (\(error.localizedDescription)).", [])
         }
         // Same ordering the detail surfaces render, so chat and detail agree on top billing.
         let members = CastMember.from(radarrCredits: credits)
@@ -69,7 +69,7 @@ extension LocalToolBackend {
         }
         let credits: TMDBCredits
         do { credits = try await tmdbClient.tvCredits(tvId: tmdbId) } catch {
-            return ("\n\nCast: couldn't load (\(error.userFacingMessage)).", [])
+            return ("\n\nCast: couldn't load (\(error.localizedDescription)).", [])
         }
         guard !credits.cast.isEmpty else { return ("\n\nCast: (TMDB returned none).", []) }
         let members = CastMember.from(tmdbCast: credits.cast)

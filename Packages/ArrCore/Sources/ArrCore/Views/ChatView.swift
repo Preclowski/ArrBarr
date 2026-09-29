@@ -248,7 +248,7 @@ private struct MessageBubble: View {
         case .llmTool:
             if rich != nil {
                 row(trailing: false, fullWidth: true) {
-                    carouselSection(headerKey: "Tool call: \(message.content)")
+                    carouselSection(header: "Tool call: \(message.content)")
                 }
             } else {
                 row(trailing: false) { llmToolBubble }
@@ -312,7 +312,7 @@ private struct MessageBubble: View {
                     Image(systemName: "wrench.and.screwdriver")
                         .scaledFont(size: 10)
                         .foregroundStyle(.blue)
-                    Text(verbatim: "Tool call: \(message.content)")
+                    Text("Tool call: \(message.content)", bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                     Image(systemName: expanded ? "chevron.down" : "chevron.right")
@@ -324,7 +324,7 @@ private struct MessageBubble: View {
             .buttonStyle(.plain)
             if expanded, let result = message.toolResult, !result.isEmpty {
                 Text(result)
-                    .font(.system(size: 11).monospaced())
+                    .scaledFont(size: 11, design: .monospaced)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                     .fixedSize(horizontal: false, vertical: true)
@@ -335,14 +335,14 @@ private struct MessageBubble: View {
     }
 
     @ViewBuilder
-    private func carouselSection(headerKey: String) -> some View {
+    private func carouselSection(header: LocalizedStringKey) -> some View {
         if let rich {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Image(systemName: "wrench.and.screwdriver")
                         .scaledFont(size: 10)
                         .foregroundStyle(.blue)
-                    Text(verbatim: headerKey)
+                    Text(header, bundle: .module)
                         .scaledFont(size: 11, weight: .semibold)
                         .foregroundStyle(.secondary)
                 }

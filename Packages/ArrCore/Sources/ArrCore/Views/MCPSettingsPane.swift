@@ -195,7 +195,7 @@ struct MCPSettingsPane: View {
     private func toolIcons(_ tool: ChatToolCatalog.MCPToolInfo) -> some View {
         if let systemImage = tool.systemImage, tool.services.isEmpty {
             Image(systemName: systemImage)
-                .font(.system(size: 13))
+                .scaledFont(size: 13)
                 .foregroundStyle(.secondary)
                 .accessibilityLabel(Text("settings.mediaServer.label", bundle: .module))
         } else {

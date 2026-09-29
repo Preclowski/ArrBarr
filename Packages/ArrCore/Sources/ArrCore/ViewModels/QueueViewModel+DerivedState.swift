@@ -3,7 +3,7 @@ import Foundation
 extension QueueViewModel {
     // MARK: - Derived state
 
-    static func tonightSlice(from upcoming: [UpcomingItem], hours: Int) -> [UpcomingItem] {
+    static func tonightSlice(from upcoming: [UpcomingItem], hours: Int = 168) -> [UpcomingItem] {
         // From the start of today, like the Upcoming tab: date-only movie releases parse to midnight.
         let startOfToday = Calendar.current.startOfDay(for: Date())
         let cutoff = Date().addingTimeInterval(TimeInterval(hours) * 3600)

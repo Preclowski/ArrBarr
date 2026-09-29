@@ -321,7 +321,7 @@ struct ShelfView: View {
             ForEach(ShelfMode.allCases) { m in
                 Button { mode = m } label: {
                     Image(systemName: m.symbol)
-                        .font(.system(size: 13, weight: .semibold))
+                        .scaledFont(size: 13, weight: .semibold)
                         .frame(width: 36, height: 30)
                         .background(Capsule().fill(Color.white.opacity(mode == m ? 0.22 : 0)))
                         .contentShape(Capsule())
@@ -339,7 +339,7 @@ struct ShelfView: View {
         .overlay(alignment: .top) {
             if let hoveredMode {
                 Text(hoveredMode.title, bundle: .module)
-                    .font(.system(size: 11, weight: .semibold))
+                    .scaledFont(size: 11, weight: .semibold)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .glassEffect(.regular, in: .capsule)

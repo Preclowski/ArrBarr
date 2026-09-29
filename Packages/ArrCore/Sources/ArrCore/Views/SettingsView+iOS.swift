@@ -90,7 +90,7 @@ extension SettingsView {
                         serviceFields(spec)
                     }
                 }
-                .onMove(perform: reorderable ? moveMediaManagers : nil)
+                .onMove(perform: reorderable ? { moveMediaManagers(from: $0, to: $1) } : nil)
                 // Outside the `ForEach`: Prowlarr is no queue source, nothing to reorder against.
                 if reorderable {
                     NavigationLink {

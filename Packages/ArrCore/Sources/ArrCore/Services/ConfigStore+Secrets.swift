@@ -24,13 +24,7 @@ extension ConfigStore {
                 recoveredAny = true
             }
         }
-        for kind in ServiceKind.allCases {
-            move(.apiKey(for: kind))
-            move(.password(for: kind))
-        }
-        move(.openAIKey)
-        move(.tmdbKey)
-        move(.mediaServerToken)
+        SecretKey.syncable.forEach(move)
         if recoveredAny { defaults.set(false, forKey: secretsMigratedKey) }
     }
 
@@ -112,14 +106,7 @@ extension ConfigStore {
 
         for suite in suites {
             let plaintext = UserDefaultsSecretStore(defaults: suite)
-            for kind in ServiceKind.allCases {
-                lift(.apiKey(for: kind), from: plaintext)
-                lift(.password(for: kind), from: plaintext)
-            }
-            lift(.openAIKey, from: plaintext)
-            lift(.tmdbKey, from: plaintext)
-            lift(.mediaServerToken, from: plaintext)
-            lift(.mcpBearer, from: plaintext)
+            for key in SecretKey.all { lift(key, from: plaintext) }
         }
     }
 }

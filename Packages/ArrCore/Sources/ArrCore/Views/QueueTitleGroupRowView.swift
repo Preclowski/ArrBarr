@@ -9,7 +9,7 @@ struct QueueTitleGroupRowView: View {
     var onShowDetail: (() -> Void)? = nil
     let onPauseAll: () -> Void
     let onResumeAll: () -> Void
-    let onDeleteAll: () -> Void
+    let onDeleteAll: @MainActor () -> Void
 
     @EnvironmentObject var configStore: ConfigStore
     @Environment(\.queueOffline) private var isOffline
@@ -19,7 +19,7 @@ struct QueueTitleGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
-    private var canControl: Bool { configStore.canControlDownload(rep.downloadProtocol) }
+    private var canControl: Bool { configStore.canControlDownload(rep) }
 
     private var downloadCountText: String {
         String.localizedStringWithFormat(
@@ -29,13 +29,7 @@ struct QueueTitleGroupRowView: View {
     }
 
     private func requestDeleteAllConfirm() {
-        ConfirmCenter.request(PendingConfirm(
-            title: "Remove \(group.downloadCount) downloads?",
-            message: "This will remove every download of this title from the client.",
-            confirmLabel: "Remove All",
-            isDestructive: true,
-            onConfirm: onDeleteAll
-        ))
+        ConfirmCenter.request(.removeAllDownloads(count: group.downloadCount, locale: configStore.currentLocale, onConfirm: onDeleteAll))
     }
 
     var body: some View {

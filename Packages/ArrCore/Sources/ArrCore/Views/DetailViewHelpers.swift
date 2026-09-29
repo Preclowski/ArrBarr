@@ -88,8 +88,8 @@ enum SearchFeedback: Equatable {
                 feedback.wrappedValue = .queued
                 shown = .seconds(1.6)
             } catch {
-                log.error("search command failed: \(error.localizedDescription, privacy: .public)")
-                feedback.wrappedValue = .failed(error.userFacingMessage)
+                log.error("search command failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
+                feedback.wrappedValue = .failed(error.localizedDescription)
                 shown = .seconds(4)
             }
             try? await Task.sleep(for: shown)
