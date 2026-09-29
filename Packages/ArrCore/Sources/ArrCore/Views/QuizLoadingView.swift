@@ -16,29 +16,23 @@ struct QuizLoadingView: View {
 
     var body: some View {
         let shown = posters.isEmpty ? Array(library.prefix(3)) : Array(posters.suffix(3).reversed())
-        let fan = shown.map { WaitPoster(url: $0) }
-        ZStack {
-            WaitBackdrop(poster: fan.first)
-            WaitStage(center: fan.first, sides: Array(fan.dropFirst()), pending: posters.isEmpty, stories: stories) {
-                VStack(spacing: 10) {
-                    LoadingStateView(label: phaseKey)
-                        .contentTransition(.opacity)
-                        .animation(.smooth(duration: 0.2), value: phase)
-                    slowHint
-                    Button(action: onCancel) {
-                        Text("Cancel", bundle: .module)
-                            .scaledFont(size: 13, weight: .medium)
-                            .foregroundStyle(.white.opacity(0.85))
-                            .padding(.horizontal, 18)
-                            .padding(.vertical, 8)
-                            .background(.white.opacity(0.12), in: Capsule())
-                    }
-                    .buttonStyle(.plain)
+        WaitStage(covers: shown.map { WaitPoster(url: $0) }, pending: posters.isEmpty, stories: stories) {
+            VStack(spacing: 10) {
+                LoadingStateView(label: phaseKey)
+                    .contentTransition(.opacity)
+                    .animation(.smooth(duration: 0.2), value: phase)
+                slowHint
+                Button(action: onCancel) {
+                    Text("Cancel", bundle: .module)
+                        .scaledFont(size: 13, weight: .medium)
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 8)
+                        .background(Color.primary.opacity(0.08), in: Capsule())
                 }
+                .buttonStyle(.plain)
             }
         }
-        // The deck it hands over to is always dark.
-        .environment(\.colorScheme, .dark)
         .task {
             stories = WaitFacts.watching().shuffled().map { WaitStory(sentence: $0.text) }
             let owned = await WaitFacts.library(configStore: configStore)

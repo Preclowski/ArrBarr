@@ -74,8 +74,6 @@ struct ReleaseListView: View {
             #endif
             content
         }
-        // The wait stage runs under the header too.
-        .background { if loading { WaitBackdrop(poster: waitContext.poster) } }
         #if os(iOS)
         .navigationTitle(target.title)
         .navigationBarTitleDisplayMode(.inline)

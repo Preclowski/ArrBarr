@@ -192,7 +192,7 @@ struct WaitStories: View {
     @State private var stories: [WaitStory] = []
 
     var body: some View {
-        WaitStage(center: context.poster, stories: stories) {
+        WaitStage(covers: [context.poster], stories: stories) {
             LoadingStateView(label: "wait.releases.heading")
         }
         .task {
