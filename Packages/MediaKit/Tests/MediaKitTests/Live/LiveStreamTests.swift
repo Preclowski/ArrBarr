@@ -63,6 +63,29 @@ struct Item: Codable, Sendable, Equatable, LivePatchable {
         #expect(s.last()?.elements.first?.status == "new")
     }
 
+    @Test func thePumpWaitingOnAnotherCallersFetchLetsEffectsIn() async throws {
+        let kit = try await TestKit()
+        kit.clock.autoAdvance = false
+        let gate = Gate()
+        let s = stream(kit) { _, _, _ in await gate.wait(); return [Item(id: "a", status: "paused")] }
+        let refresh = Task { await s.refreshNow() }
+        try await Task.sleep(for: .milliseconds(20))
+        await s.start()
+        try await Task.sleep(for: .milliseconds(20))
+        await gate.open()
+        let done = Flag()
+        Task.detached {
+            await refresh.value
+            for _ in 0..<20 { await s.apply(PendingEffect(elementID: "a", change: .status("downloading"))) }
+            done.value = true
+        }
+        try await Task.sleep(for: .milliseconds(300))
+        // No `await s…` before this: a livelocked actor would hang the suite instead of failing it.
+        try #require(done.value)
+        #expect(s.last()?.elements.first?.status == "downloading")
+        await s.stop()
+    }
+
     @Test func aPushDuringACycleRunsAnotherCycleWithoutWaitingForTheInterval() async throws {
         let kit = try await TestKit()
         kit.clock.autoAdvance = false

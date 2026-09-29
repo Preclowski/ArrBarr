@@ -201,6 +201,9 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
             // Someone is already fetching (a refreshNow at launch or panel open): that fetch is this tick.
             if let running {
                 await running.task.value
+                // A finished task's value returns without suspending: left set, this loop would spin
+                // and starve the continuation that clears it, and every other call into the actor.
+                if self.running?.seq == running.seq { self.running = nil }
                 continue
             }
             let interval = activity == .foreground ? policy.foregroundInterval : policy.backgroundInterval

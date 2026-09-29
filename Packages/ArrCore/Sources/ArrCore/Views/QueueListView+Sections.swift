@@ -72,11 +72,11 @@ extension QueueListView {
             // section lists every sibling.
             onShowDetail: { onShowDetail(group.representative.seasonContext()) },
             onPauseAll: { [weak viewModel] in
-                let items = group.allItems
+                let items = Self.oneRowPerDownload(group.allItems.filter { $0.canPauseResume && !$0.isPaused })
                 Task { for item in items { await viewModel?.pause(item) } }
             },
             onResumeAll: { [weak viewModel] in
-                let items = group.allItems
+                let items = Self.oneRowPerDownload(group.allItems.filter(\.isPaused))
                 Task { for item in items { await viewModel?.resume(item) } }
             },
             onDeleteAll: { [weak viewModel] in
@@ -102,6 +102,15 @@ extension QueueListView {
         #else
         header.plainQueueRow()
         #endif
+    }
+
+    /// Season-pack members share one download: one client call covers them all.
+    static func oneRowPerDownload(_ items: [QueueItem]) -> [QueueItem] {
+        var seen = Set<String>()
+        return items.filter { item in
+            guard let id = item.downloadId, !id.isEmpty else { return true }
+            return seen.insert(id.lowercased()).inserted
+        }
     }
 
     #if os(iOS)

@@ -1,4 +1,7 @@
 import Foundation
+import os
+
+private let actionLog = Logger(category: "QueueAction")
 
 extension QueueViewModel {
     // MARK: - Actions
@@ -35,6 +38,7 @@ extension QueueViewModel {
     private func runAction(_ action: QueueAggregator.Action, on item: QueueItem) async {
         guard !isFullyOffline else { return }
         guard StoreManager.shared.requirePro(.queueAction) else { return }
+        actionLog.notice("\(String(describing: action), privacy: .public) \(item.source.rawValue, privacy: .public) queue \(item.arrQueueId, privacy: .public)")
         do {
             try await aggregator.perform(action, on: item)
             lastError = nil
@@ -43,6 +47,7 @@ extension QueueViewModel {
         } catch {
             let message = error.localizedDescription
             lastError = message
+            actionLog.error("\(String(describing: action), privacy: .public) queue \(item.arrQueueId, privacy: .public) failed: \(message, privacy: .private)")
             // Pin the client red only when the failure proves it down: `canControl` is client-wide, so a single
             // rejected request would strip pause/resume from every row.
             // Delete, and continue without a download id, went to the arr: nothing proves the client down.
