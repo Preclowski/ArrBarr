@@ -97,23 +97,28 @@ extension PopoverContentView {
         .animation(.smooth(duration: 0.22), value: discoverViewModel.isPresented)
         .personDestination($personRef)
         .navigationDestination(item: $detailItem) { item in
-            // Episode rows open the episode; the series is reachable via its "series name >" tap.
-            if item.opensEpisodeDetail {
-                // EpisodeQuickDetail owns the series push, so back returns to the episode.
-                EpisodeQuickDetail(
-                    item: item,
-                    viewModel: viewModel,
-                    onBack: { self.detailItem = nil }
-                )
-            } else {
-                DetailView(
-                    item: item,
-                    onBack: { self.detailItem = nil },
-                    viewModel: viewModel
-                )
+            Group {
+                // Episode rows open the episode; the series is reachable via its "series name >" tap.
+                if item.opensEpisodeDetail {
+                    // EpisodeQuickDetail owns the series push, so back returns to the episode.
+                    EpisodeQuickDetail(
+                        item: item,
+                        viewModel: viewModel,
+                        onBack: { self.detailItem = nil }
+                    )
+                } else {
+                    DetailView(
+                        item: item,
+                        onBack: { self.detailItem = nil },
+                        viewModel: viewModel
+                    )
+                }
             }
+            .dropInEntrance()
         }
         }
+        // The page animates its own entrance; the stack's side slide would fight it.
+        .transaction(value: detailItem?.id) { $0.disablesAnimations = true }
         .frame(width: 400, height: 600)
         // Transparent so NSPopover's native chrome shows through, one step darker than the backdrop.
         // A rim-light overlay cut through where the popover's arrow attaches.
