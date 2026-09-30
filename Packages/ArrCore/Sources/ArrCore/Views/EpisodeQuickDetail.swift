@@ -102,6 +102,7 @@ struct EpisodeQuickDetail: View {
             seriesTvdbId: sonarrDetail?.tvdbId,
             profileName: profileName,
             mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
+            series: sonarrDetail,
             isLoadingDetails: fullEpisode == nil && loadError == nil,
             // The stub carries `monitored: nil`, so no bookmark until the real record lands.
             monitored: displayEpisode.monitored,

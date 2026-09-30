@@ -198,6 +198,7 @@ struct SeasonDetailView: View {
                 seriesTvdbId: sonarrDetail?.tvdbId,
                 profileName: profileName,
                 mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
+                series: sonarrDetail,
                 // The pushed `ep` is a snapshot frozen at tap time.
                 monitored: episodes.first { $0.id == ep.id }?.monitored,
                 onToggleMonitored: onSetEpisodeMonitored.map { toggle in { m in await toggle(ep.id, m) } },

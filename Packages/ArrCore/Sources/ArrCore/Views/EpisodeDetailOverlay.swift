@@ -32,6 +32,8 @@ struct EpisodeDetailOverlay: View {
     var profileName: String? = nil
     /// Provider ids of the SERIES, for the media server's watch state.
     var mediaServerKeys: [MediaServerExternalKey] = []
+    /// Feeds the manual search's wait stories: an episode has none of its own.
+    var series: ArrSeries? = nil
     /// The SERIES cast (TMDB has no per-episode credits worth the extra call).
     var cast: [CastMember] = []
     /// The series in the arr's web UI: "Open in browser", and the warning banners, whose
@@ -110,6 +112,7 @@ struct EpisodeDetailOverlay: View {
         seriesTvdbId: Int? = nil,
         profileName: String? = nil,
         mediaServerKeys: [MediaServerExternalKey] = [],
+        series: ArrSeries? = nil,
         isLoadingDetails: Bool = false,
         monitored: Bool? = nil,
         onToggleMonitored: ((Bool) async -> Void)? = nil,
@@ -139,6 +142,7 @@ struct EpisodeDetailOverlay: View {
         self.seriesTvdbId = seriesTvdbId
         self.profileName = profileName
         self.mediaServerKeys = mediaServerKeys
+        self.series = series
         self.isLoadingDetails = isLoadingDetails
         self.monitored = monitored
         self.onToggleMonitored = onToggleMonitored
@@ -200,7 +204,7 @@ struct EpisodeDetailOverlay: View {
         .navigationDestination(item: $manualSearchTarget) { wrapper in
             ReleaseListView(target: wrapper.target,
                             existing: episodeFile.map(UpgradeDiffView.side(file:)),
-                            waitContext: WaitCardContext(seriesYear: seriesYear, cast: cast, posterURL: posterURL,
+                            waitContext: WaitCardContext(series: series, seriesYear: seriesYear, cast: cast, posterURL: posterURL,
                                                          posterApiKey: posterRequiresAuth ? apiKey : nil),
                             onBack: { manualSearchTarget = nil })
         }
