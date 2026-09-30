@@ -52,7 +52,12 @@ final class HistoryFeed {
         defer { isBusy = false }
         let firstLoad = items.isEmpty
         if firstLoad { isLoading = true }
-        let result = await batch(from: Self.freshCursors(for: sources), rows: [])
+        // As deep as what's shown: a shorter list would throw a scrolled reader somewhere else.
+        let walked = cursors.values.map { $0.nextPage - 1 }.max() ?? 0
+        let result = await batch(
+            from: Self.freshCursors(for: sources), rows: [],
+            target: max(items.count, rowsPerBatch), pageCap: max(walked, maxPagesPerBatch)
+        )
         if firstLoad || !result.rows.isEmpty {
             apply(result)
             loadedAt = Date()
@@ -76,10 +81,14 @@ final class HistoryFeed {
         Task { await loadMore() }
     }
 
-    private func batch(from start: [QueueItem.Source: Cursor], rows startRows: [HistoryItem]) async -> Batch {
+    private func batch(
+        from start: [QueueItem.Source: Cursor], rows startRows: [HistoryItem],
+        target: Int? = nil, pageCap: Int? = nil
+    ) async -> Batch {
         var cursors = start
         var rows = startRows
-        let target = rows.count + rowsPerBatch
+        let target = target ?? rows.count + rowsPerBatch
+        let maxPagesPerBatch = pageCap ?? maxPagesPerBatch
         var pages = 0
         // Past the cap only while the batch has added nothing: a narrow scope can page through
         // empty stretches, and a batch that brings no row leaves the list's end spinner waiting for good.

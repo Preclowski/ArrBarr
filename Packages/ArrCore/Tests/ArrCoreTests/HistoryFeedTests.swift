@@ -102,6 +102,20 @@ struct HistoryFeedTests {
         #expect(feed.items.count == 4)
     }
 
+    @Test("A reload keeps the depth already scrolled to")
+    func reloadKeepsDepth() async {
+        let feed = HistoryFeed(sources: [.radarr], rowsPerBatch: 2, maxPagesPerBatch: 1) { _, page in
+            HistoryResult(items: Self.plainPage(page, rows: 2), hasMore: page < 5, error: nil)
+        }
+        await feed.load()
+        await feed.loadMore()
+        await feed.loadMore()
+        #expect(feed.items.count == 6)
+        await feed.load()
+        #expect(feed.items.count == 6)
+        #expect(feed.hasMore)
+    }
+
     @Test("An album split across two pages folds into one row once both are loaded")
     func batchAcrossPagesFolds() async {
         let feed = HistoryFeed(sources: [.lidarr], rowsPerBatch: 1) { _, page in
