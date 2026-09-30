@@ -165,3 +165,27 @@ static float shelfFbm3(float3 p) {
     col += half3(0.25h, 0.5h, 1.0h) * half(rim * 0.45);
     return half4(col, 1.0h) * color.a;
 }
+
+// MARK: - Poster light sweep
+
+// A soft band of light crossing the art along `dir`; the image under it swells like through a lens,
+// with a faint colour fringe. Gaussian, so the band has no edge.
+[[stitchable]] half4 posterSweep(float2 p, SwiftUI::Layer layer, float2 size, float2 dir, float progress) {
+    float2 n = normalize(dir);
+    float sigma = 0.2 * max(size.x, size.y);
+    float4 corners = float4(0.0, dot(float2(size.x, 0.0), n), dot(float2(0.0, size.y), n), dot(size, n));
+    float from = min(min(corners.x, corners.y), min(corners.z, corners.w)) - 1.5 * sigma;
+    float to = max(max(corners.x, corners.y), max(corners.z, corners.w)) + 1.5 * sigma;
+    float d = dot(p, n) - mix(from, to, progress);
+    float g = exp(-(d * d) / (sigma * sigma));
+
+    float2 lo = float2(0.5, 0.5);
+    float2 hi = size - 0.5;
+    float2 pull = n * d * g;
+    half4 r = layer.sample(clamp(p - pull * 0.22, lo, hi));
+    half4 c = layer.sample(clamp(p - pull * 0.18, lo, hi));
+    half4 b = layer.sample(clamp(p - pull * 0.14, lo, hi));
+    half a = layer.sample(p).a;
+    half3 rgb = half3(r.r, c.g, b.b) + half3(0.16 * g);
+    return half4(rgb * a, a);
+}

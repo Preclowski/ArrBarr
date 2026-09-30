@@ -347,6 +347,29 @@ struct MediaHeaderCard: View {
 
 // MARK: - Poster lightbox
 
+/// One pass of light across the art as the lightbox opens.
+private struct LightSweep: ViewModifier, Animatable {
+    var progress: CGFloat
+    let size: CGSize
+    /// Travel direction, a unit vector.
+    let direction: CGVector
+    let enabled: Bool
+
+    nonisolated var animatableData: CGFloat {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    func body(content: Content) -> some View {
+        // Off outside the pass: a layer effect rasterises at 1×, which would blur the 5× zoom.
+        content.layerEffect(
+            ShaderLibrary.bundle(.module).posterSweep(.float2(size), .float2(direction.dx, direction.dy), .float(Float(progress))),
+            maxSampleOffset: CGSize(width: 40, height: 40),
+            isEnabled: enabled && progress > 0 && progress < 1
+        )
+    }
+}
+
 struct PosterLightbox: View {
     let url: URL
     var apiKey: String?
@@ -368,6 +391,13 @@ struct PosterLightbox: View {
 
     /// Updated in `.onChanged` (more reliable than `@GestureState` here); `baseZoom`/`baseOffset`
     /// hold the committed value so successive gestures compound.
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var sweep: CGFloat = 0
+    /// A new heading on every open.
+    @State private var sweepDirection: CGVector = {
+        let angle = Double.random(in: 0..<(2 * .pi))
+        return CGVector(dx: cos(angle), dy: sin(angle))
+    }()
     @State private var zoom: CGFloat = 1
     @State private var baseZoom: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -493,6 +523,8 @@ struct PosterLightbox: View {
                     cornerRadius: fullBleed ? 0 : Tokens.Radius.panel,
                     fallbackSymbol: "photo"
                 )
+                .modifier(LightSweep(progress: sweep, size: CGSize(width: posterW, height: posterH),
+                                     direction: sweepDirection, enabled: !reduceMotion))
                 .frame(width: posterW, height: posterH)
                 .scaleEffect(zoom)
                 .offset(offset)
@@ -561,6 +593,10 @@ struct PosterLightbox: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             .padding(.bottom, 16)
             #endif
+        }
+        .onAppear {
+            // Enters within ~0.15 s and takes about a second to cross; the rest is the band easing out past the edge.
+            withAnimation(.timingCurve(0.1, 0.3, 0.5, 1, duration: 1.7)) { sweep = 1 }
         }
         #if os(macOS)
         .onAppear { startScrollZoom() }
