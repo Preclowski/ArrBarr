@@ -260,6 +260,39 @@ nonisolated public struct TMDBClient: Sendable {
         return airing.filter { fresh.contains($0.id) }
     }
 
+    /// Most popular first, `pages` deep; a title that moved between pages mid-fetch shows once.
+    public func popularMovies(pages: Int = 3) async throws -> [TMDBMovieSummary] {
+        let all = try await firstPages(pages) { page in
+            try await self.read { $0.discoverMovies(page: page) }.results
+        }
+        var seen = Set<Int>()
+        return all.filter { seen.insert($0.id).inserted }
+    }
+
+    /// Without kids, news, reality, soap and talk shows, which otherwise crowd the top.
+    public func popularSeries(pages: Int = 3) async throws -> [TMDBTVSummary] {
+        let extra = [("without_genres", "10762,10763,10764,10766,10767")]
+        let all = try await firstPages(pages) { page in
+            try await self.read { $0.discoverTV(minVotes: 20, page: page, extra: extra) }.results
+        }
+        var seen = Set<Int>()
+        return all.filter { seen.insert($0.id).inserted }
+    }
+
+    /// Fetched together, returned in page order. Only the first page must answer.
+    private func firstPages<T>(_ count: Int, _ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
+        async let first = fetch(1)
+        let rest = await withTaskGroup(of: (Int, [T]).self) { group in
+            for page in stride(from: 2, through: count, by: 1) {
+                group.addTask { (page, (try? await fetch(page)) ?? []) }
+            }
+            var pages: [Int: [T]] = [:]
+            for await (page, items) in group { pages[page] = items }
+            return pages.keys.sorted().flatMap { pages[$0] ?? [] }
+        }
+        return try await first + rest
+    }
+
     private func twoPages<T>(_ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
         async let first = fetch(1)
         async let second = try? fetch(2)

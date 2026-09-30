@@ -93,18 +93,32 @@ final class ShelfPosters {
         }
     }
 
+    /// `prefetch` that returns once the covers are in, so a new set appears whole instead of filling in.
+    func warm(_ entries: [LibraryEntry], around center: Int, apiKey: String) async {
+        guard !entries.isEmpty else { return }
+        let entry = { (k: Int) in entries[(center + k).shelfWrapped(into: entries.count)] }
+        await withTaskGroup(of: Void.self) { group in
+            for k in [0] + (1...20).flatMap({ [$0, -$0] }) {
+                let e = entry(k)
+                group.addTask { await self.load(e, tier: abs(k) <= 4 ? .card : .icon, apiKey: apiKey) }
+            }
+        }
+    }
+
     private func fetch(_ entry: LibraryEntry, tier: PosterTier, apiKey: String) {
+        Task { await load(entry, tier: tier, apiKey: apiKey) }
+    }
+
+    private func load(_ entry: LibraryEntry, tier: PosterTier, apiKey: String) async {
         let key = "\(tier.rawValue)|\(entry.id)"
         let have = tier == .card ? large[entry.id] : small[entry.id]
         guard have == nil, !inFlight.contains(key), let url = entry.posterURL else { return }
         inFlight.insert(key)
         let auth = entry.posterRequiresAuth ? apiKey : nil
-        Task {
-            let image = await PosterStore.shared.image(for: url, tier: tier, apiKey: auth)
-            inFlight.remove(key)
-            guard let image else { return }
-            if tier == .card { large[entry.id] = image } else { small[entry.id] = image }
-        }
+        let image = await PosterStore.shared.image(for: url, tier: tier, apiKey: auth)
+        inFlight.remove(key)
+        guard let image else { return }
+        if tier == .card { large[entry.id] = image } else { small[entry.id] = image }
     }
 }
 
@@ -123,17 +137,30 @@ struct ShelfView: View {
     private let initialPosition: Double?
     @State private var start = CACurrentMediaTime()
     @State private var hoveredMode: ShelfMode?
+    @State private var pickerExpanded = false
+    @State private var pickerOrder: [ShelfMode] = ShelfMode.allCases
+    /// The expand animation has finished; the name tooltip waits for it.
+    @State private var pickerSettled = false
+    @State private var pickerCollapse: Task<Void, Never>?
     @State private var filter = ShelfFilter(source: .radarr)
+    @State private var collection: ShelfCollection = .library
+    @State private var remote = ShelfRemoteLists()
+    /// A TMDB set is being fetched and its covers loaded; the stage stays on the spinner meanwhile.
+    @State private var warming = false
     /// Sources whose first load in this Shelf has finished; until then every empty state is a loading screen.
     @State private var settled: Set<QueueItem.Source> = []
     /// Set once the first centre poster has landed (or after a timeout), so the opening frame is never placeholders.
     @State private var revealed = false
 
-    init(isObscured: Bool, initialMode: ShelfMode = .warp, initialPosition: Double? = nil, onClose: (() -> Void)? = nil) {
+    private static let modeKey = "shelfMode"
+
+    /// `initialMode` is the debug harness's; otherwise the last mode picked.
+    init(isObscured: Bool, initialMode: ShelfMode? = nil, initialPosition: Double? = nil, onClose: (() -> Void)? = nil) {
         self.isObscured = isObscured
         self.initialPosition = initialPosition
         self.onClose = onClose
-        _mode = State(initialValue: initialMode)
+        let saved = UserDefaults.standard.string(forKey: Self.modeKey).flatMap(ShelfMode.init(rawValue:))
+        _mode = State(initialValue: initialMode ?? saved ?? .warp)
     }
 
     /// Scroll points per poster. Smaller than the visual spacing so one flick crosses dozens of posters.
@@ -155,8 +182,21 @@ struct ShelfView: View {
 
     private var apiKey: String { configStore.config(for: source.serviceKind).apiKey }
 
+    private var remoteKey: ShelfRemoteLists.Key? {
+        collection.isRemote ? .init(collection: collection, source: source) : nil
+    }
+
+    private var availableCollections: [ShelfCollection] {
+        ShelfCollection.available(for: source, tmdbConfigured: !configStore.tmdbApiKey.isEmpty)
+    }
+
     private var entries: [LibraryEntry] {
         let f = filter
+        if let remoteKey {
+            // A few dozen titles: sorted per pass, no cache needed.
+            let all = (remote.items[remoteKey] ?? []).map(\.entry).sorted(by: f.areInIncreasingOrder)
+            return f.isNarrowed ? all.filter(f.matches) : all
+        }
         let sorted = library.sorted(f.source, cacheKey: f.sortKey, using: f.areInIncreasingOrder)
         guard f.isNarrowed else { return sorted }
         return library.visible(f.source, cacheKey: f.key, from: sorted, where: f.matches)
@@ -165,7 +205,7 @@ struct ShelfView: View {
     private var centerIndex: Int { motion.center.shelfWrapped(into: entries.count) }
 
     private func sceneReady(_ entries: [LibraryEntry]) -> Bool {
-        revealed || (!entries.isEmpty && posters.image(for: entries[centerIndex].id) != nil)
+        !warming && (revealed || (!entries.isEmpty && posters.image(for: entries[centerIndex].id) != nil))
     }
 
     var body: some View {
@@ -189,7 +229,7 @@ struct ShelfView: View {
                 }
                 scrollDriver(entries, size: geo.size)
                 chrome(entries)
-                if entries.isEmpty {
+                if entries.isEmpty && !warming {
                     emptyState
                 } else if !sceneReady(entries) {
                     LoadingStateView()
@@ -225,6 +265,34 @@ struct ShelfView: View {
             let loading = filter.source
             await library.loadIfNeeded(source: loading, config: configStore.config(for: loading.serviceKind))
             settled.insert(loading)
+        }
+        .task(id: remoteKey) {
+            guard let remoteKey else { warming = false; return }
+            warming = true
+            await remote.load(remoteKey, configStore: configStore)
+            guard !Task.isCancelled else { return }
+            let set = entries
+            // Warmed around the first title, which is where the recentre lands.
+            await posters.warm(set, around: 0, apiKey: apiKey)
+            guard !Task.isCancelled else { return }
+            recenter(set.count)
+            try? await Task.sleep(for: .milliseconds(80))
+            guard !Task.isCancelled else { return }
+            warming = false
+        }
+        .onChange(of: mode) { _, new in
+            UserDefaults.standard.set(new.rawValue, forKey: Self.modeKey)
+        }
+        .onChange(of: availableCollections) { _, available in
+            if !available.contains(collection) { collection = available.contains(.popular) ? .popular : .library }
+        }
+        .onChange(of: collection) { _, new in
+            // A genre or sort from the other set could empty or scramble this one.
+            filter.clearNarrowing()
+            if !ShelfView.sortModes(for: new, source: source).contains(filter.sort), filter.shuffleSeed == nil {
+                filter.shuffleSeed = Int.random(in: 1...Int(Int32.max))
+            }
+            if !new.isRemote { recenter(entries.count) }
         }
         .onChange(of: filter) { _, _ in
             recenter(entries.count)
@@ -293,16 +361,24 @@ struct ShelfView: View {
             }
             Spacer()
             if entries.indices.contains(centerIndex), sceneReady(entries) {
-                ShelfInfo(entry: entries[centerIndex])
+                ShelfInfo(entry: entries[centerIndex], tmdbId: remoteItem(entries[centerIndex])?.tmdbId)
                     .padding(.horizontal, 20)
                     .id(entries[centerIndex].id)
                     .transition(.opacity)
             }
             modePicker
                 .frame(maxWidth: .infinity)
+                .overlay(alignment: .leading) {
+                    if availableCollections.count > 1 {
+                        ShelfCollectionMenu(collection: $collection, available: availableCollections)
+                            .padding(.leading, 12)
+                    }
+                }
                 .overlay(alignment: .trailing) {
-                    ShelfFilterMenu(filter: $filter, sources: sources, library: library.entries[source] ?? [],
-                                    watchStateKnown: configStore.mediaServer.isConfigured)
+                    ShelfFilterMenu(filter: $filter, sources: sources,
+                                    library: remoteKey.map { (remote.items[$0] ?? []).map(\.entry) } ?? library.entries[source] ?? [],
+                                    sortModes: Self.sortModes(for: collection, source: source),
+                                    watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured)
                         .padding(.trailing, 12)
                 }
                 .padding(.top, 12)
@@ -316,14 +392,35 @@ struct ShelfView: View {
         .animation(.easeOut(duration: 0.15), value: centerIndex)
     }
 
+    /// Collapsed to the current mode; hover (or a tap, where there is no pointer) fans the rest out upwards,
+    /// so no translation of the corner menus can crowd it. The column floats over the info block: the row's
+    /// height stays the collapsed button's.
     private var modePicker: some View {
-        HStack(spacing: 2) {
-            ForEach(ShelfMode.allCases) { m in
-                Button { mode = m } label: {
+        Color.clear
+            .frame(width: 42, height: 36)
+            .overlay(alignment: .bottom) { modeColumn }
+    }
+
+    /// Top to bottom; the current mode sits at the bottom, where the collapsed button is.
+    private var pickerColumn: [ShelfMode] { pickerExpanded ? pickerOrder : [mode] }
+
+    private var modeColumn: some View {
+        VStack(spacing: 2) {
+            ForEach(pickerColumn) { m in
+                Button {
+                    if pickerExpanded {
+                        mode = m
+                        #if os(iOS)
+                        pickerExpanded = false
+                        #endif
+                    } else {
+                        expandPicker()
+                    }
+                } label: {
                     Image(systemName: m.symbol)
                         .scaledFont(size: 13, weight: .semibold)
                         .frame(width: 36, height: 30)
-                        .background(Capsule().fill(Color.white.opacity(mode == m ? 0.22 : 0)))
+                        .background(Capsule().fill(Color.white.opacity(mode == m && pickerExpanded ? 0.22 : 0)))
                         .contentShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -331,30 +428,86 @@ struct ShelfView: View {
                 .onHover { inside in
                     if inside { hoveredMode = m } else if hoveredMode == m { hoveredMode = nil }
                 }
+                .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: .bottom)))
             }
         }
         .padding(3)
         .glassEffect(.regular, in: .capsule)
-        // `.help` never shows in the menu-bar panel, so the name floats above the picker instead.
-        .overlay(alignment: .top) {
-            if let hoveredMode {
-                Text(hoveredMode.title, bundle: .module)
-                    .scaledFont(size: 11, weight: .semibold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .glassEffect(.regular, in: .capsule)
-                    .fixedSize()
-                    .offset(y: -34)
-                    .transition(.opacity)
-                    .allowsHitTesting(false)
+        // `.help` never shows in the menu-bar panel, so the name floats beside the hovered icon instead,
+        // on a twin of the column: outside the glass, which would clip it.
+        .overlay(alignment: .bottom) {
+            VStack(spacing: 2) {
+                ForEach(pickerColumn) { m in
+                    Color.clear
+                        .frame(width: 36, height: 30)
+                        .overlay(alignment: .leading) {
+                            if hoveredMode == m, pickerSettled {
+                                Text(m.title, bundle: .module)
+                                    .scaledFont(size: 11, weight: .semibold)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .glassEffect(.regular, in: .capsule)
+                                    .fixedSize()
+                                    .offset(x: 36 + 12)
+                                    .transition(.opacity)
+                            }
+                        }
+                }
+            }
+            .padding(3)
+            .allowsHitTesting(false)
+        }
+        .onHover { inside in
+            pickerCollapse?.cancel()
+            if inside {
+                if !pickerExpanded { expandPicker() }
+            } else {
+                // A pointer skimming the edge of the growing column must not make it flicker.
+                pickerCollapse = Task {
+                    try? await Task.sleep(for: .milliseconds(250))
+                    guard !Task.isCancelled else { return }
+                    pickerExpanded = false
+                }
             }
         }
+        .animation(.smooth(duration: 0.28), value: pickerExpanded)
+        .task(id: pickerExpanded) {
+            guard pickerExpanded else { pickerSettled = false; return }
+            try? await Task.sleep(for: .milliseconds(280))
+            if !Task.isCancelled { pickerSettled = true }
+        }
         .animation(.easeOut(duration: 0.12), value: hoveredMode)
+        .animation(.easeOut(duration: 0.12), value: pickerSettled)
+    }
+
+    /// The order is fixed for the whole expansion, so picking a mode doesn't reshuffle icons under the pointer.
+    private func expandPicker() {
+        pickerOrder = ShelfMode.allCases.filter { $0 != mode } + [mode]
+        pickerExpanded = true
+    }
+
+    /// TMDB lists have no dates added, sizes or arr ratings.
+    static func sortModes(for collection: ShelfCollection, source: QueueItem.Source) -> [SortMode] {
+        collection.isRemote ? [.title, .releaseDate, .tmdb] : SortMode.available(for: source)
+    }
+
+    private func remoteItem(_ entry: LibraryEntry) -> ShelfRemoteItem? {
+        remoteKey.flatMap { remote.items[$0]?.first { $0.entry.id == entry.id } }
     }
 
     private var emptyState: some View {
         Group {
-            if !settled.contains(source) || library.loading.contains(source) || library.entries[source] == nil {
+            if let remoteKey {
+                if remote.failed.contains(remoteKey) {
+                    Text("library.error.title", bundle: .module).foregroundStyle(.secondary)
+                } else if remote.items[remoteKey] == nil {
+                    LoadingStateView()
+                } else if filter.isNarrowed {
+                    Text("Every result is filtered out.", bundle: .module).foregroundStyle(.secondary)
+                } else {
+                    Text("shelf.empty", bundle: .module).foregroundStyle(.secondary)
+                }
+            } else if !settled.contains(source) || library.loading.contains(source) || library.entries[source] == nil {
                 if library.loadFailed.contains(source), settled.contains(source) {
                     Text("library.error.title", bundle: .module).foregroundStyle(.secondary)
                 } else {
@@ -394,6 +547,10 @@ struct ShelfView: View {
         if screenX > size.width / 2 + half { step(1, count: entries.count); return }
         guard entries.indices.contains(centerIndex) else { return }
         let entry = entries[centerIndex]
+        if let item = remoteItem(entry), item.result.inLibraryArrId == nil {
+            SearchAddRequest.post(item.result)
+            return
+        }
         DetailRequest.post(DetailRequest.syntheticItem(
             source: entry.source, entityId: entry.arrId, title: entry.title,
             posterURL: entry.posterURL, posterRequiresAuth: entry.posterRequiresAuth))
@@ -423,6 +580,8 @@ public struct ShelfDebugView: View {
 private struct ShelfInfo: View {
     @Environment(ConfigStore.self) var configStore
     let entry: LibraryEntry
+    /// Set for TMDB lists: their series carry no tvdbId, and their films may not be in Radarr.
+    var tmdbId: Int? = nil
     @State private var directors: [CastMember] = []
     @State private var creditsLoading = true
 
@@ -460,8 +619,9 @@ private struct ShelfInfo: View {
             try? await Task.sleep(for: .milliseconds(300))
             guard !Task.isCancelled else { return }
             let credits = entry.source == .sonarr
-                ? await CastProvider.seriesCredits(tmdbId: nil, tvdbId: entry.externalId, configStore: configStore)
-                : await CastProvider.movieCredits(radarrMovieId: entry.arrId, tmdbId: entry.externalId, configStore: configStore)
+                ? await CastProvider.seriesCredits(tmdbId: tmdbId, tvdbId: entry.externalId, configStore: configStore)
+                : await CastProvider.movieCredits(radarrMovieId: entry.arrId > 0 ? entry.arrId : nil,
+                                                  tmdbId: entry.externalId, configStore: configStore)
             guard !Task.isCancelled else { return }
             directors = credits.directors
             creditsLoading = false
@@ -479,7 +639,7 @@ private struct ShelfInfo: View {
                 entry.ratingMetacritic.flatMap { RatingChip.metacritic($0) },
             ].compactMap { $0 }
         case .sonarr:
-            [entry.ratingArr.flatMap { RatingChip.tvdb($0) }].compactMap { $0 }
+            [entry.ratingArr.flatMap { RatingChip.tvdb($0) }, entry.ratingTmdb.flatMap { RatingChip.tmdb($0) }].compactMap { $0 }
         case .lidarr:
             []
         }

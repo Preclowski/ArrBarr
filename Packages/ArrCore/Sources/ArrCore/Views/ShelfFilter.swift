@@ -50,6 +50,7 @@ struct ShelfFilterMenu: View {
     let sources: [QueueItem.Source]
     /// The whole library of the current source, for the genre and decade lists.
     let library: [LibraryEntry]
+    let sortModes: [SortMode]
     let watchStateKnown: Bool
     @Environment(\.locale) private var locale
 
@@ -59,6 +60,7 @@ struct ShelfFilterMenu: View {
             .buttonStyle(.plain)
             .menuIndicator(.hidden)
             .fixedSize()
+            .shelfCornerHover()
             .accessibilityLabel(Text("common.filter.button", bundle: .module))
     }
 
@@ -121,7 +123,7 @@ struct ShelfFilterMenu: View {
         }
         .pickerStyle(.menu)
         Menu {
-            ForEach(SortMode.available(for: filter.source), id: \.self) { mode in
+            ForEach(sortModes, id: \.self) { mode in
                 let selected = filter.shuffleSeed == nil && filter.sort == mode
                 Button {
                     if selected { filter.descending.toggle() } else { filter.sort = mode }
