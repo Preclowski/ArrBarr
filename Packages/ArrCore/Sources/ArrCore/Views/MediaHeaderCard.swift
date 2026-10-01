@@ -697,7 +697,10 @@ struct RatingPill: View {
     var body: some View {
         if let url = chip.url {
             Button { PlatformURLOpener.open(url) } label: {
-                pill.contentShape(Rectangle())
+                pillContent
+                    .hoverChipOutline(chip.color, opacity: 0.30,
+                                      shape: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .help(Text(verbatim: helpText))
@@ -723,6 +726,10 @@ struct RatingPill: View {
     }
 
     private var pill: some View {
+        pillContent.chipOutline(chip.color)
+    }
+
+    private var pillContent: some View {
         HStack(spacing: 3) {
             if let iconName = chip.iconName {
                 // Non-template so the brand colours show.
@@ -741,7 +748,6 @@ struct RatingPill: View {
         }
         .padding(.horizontal, 6)
         .padding(.vertical, 2)
-        .chipOutline(chip.color)
     }
 }
 

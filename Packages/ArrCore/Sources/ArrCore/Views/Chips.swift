@@ -186,6 +186,13 @@ extension View {
         )
     }
 
+    /// For a chip that is a link: the outline steps away from what it looks like on screen under the pointer,
+    /// darker when it reads light, lighter when it reads dark. `inset` strokes inside the shape.
+    func hoverChipOutline<S: InsettableShape>(_ color: Color, opacity: Double, shape: S,
+                                              inset: Bool = false) -> some View {
+        modifier(HoverChipOutline(color: color, opacity: opacity, shape: shape, inset: inset))
+    }
+
     /// Outlined chips centre a 0.75 pt stroke on their edge, so the fill grows by half of it to match size.
     func filledChipBackground() -> some View {
         background(
@@ -193,6 +200,38 @@ extension View {
                 .fill(Color.primary.opacity(0.08))
                 .padding(-0.375)
         )
+    }
+}
+
+private struct HoverChipOutline<S: InsettableShape>: ViewModifier {
+    let color: Color
+    let opacity: Double
+    let shape: S
+    let inset: Bool
+    @State private var hovering = false
+    @Environment(\.self) private var environment
+
+    func body(content: Content) -> some View {
+        let stroke = hovering ? hoverColor : color.opacity(opacity)
+        content
+            .overlay {
+                if inset {
+                    shape.strokeBorder(stroke, lineWidth: 0.75)
+                } else {
+                    shape.stroke(stroke, lineWidth: 0.75)
+                }
+            }
+            .onHover { over in withAnimation(.easeOut(duration: 0.15)) { hovering = over } }
+    }
+
+    /// Judged as composited over the panel, so a faint outline in dark mode counts as dark.
+    private var hoverColor: Color {
+        let c = color.resolve(in: environment)
+        let backdrop: Float = environment.colorScheme == .dark ? 0.12 : 0.96
+        let a = Float(opacity)
+        func over(_ v: Float) -> Float { v * a + backdrop * (1 - a) }
+        let luminance = 0.2126 * over(c.red) + 0.7152 * over(c.green) + 0.0722 * over(c.blue)
+        return color.mix(with: luminance > 0.5 ? .black : .white, by: 0.35).opacity(0.8)
     }
 }
 
