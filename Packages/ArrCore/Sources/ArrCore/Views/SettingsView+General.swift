@@ -52,6 +52,11 @@ extension SettingsView {
                     Text("settings.interfaceMode.menuBar", bundle: .module).tag(false)
                     Text("settings.interfaceMode.window", bundle: .module).tag(true)
                 } label: { Text("settings.interfaceMode.label", bundle: .module) }
+                Picker(selection: Bindable(configStore).launchTab) {
+                    ForEach(PopoverContentView.Tab.allCases.filter { $0 != .chat || configStore.aiConfigured }, id: \.self) { tab in
+                        Text(LocalizedStringKey(tab.rawValue), bundle: .module).tag(tab.rawValue)
+                    }
+                } label: { Text("settings.launchTab.label", bundle: .module) }
                 #endif
                 Picker(selection: Bindable(configStore).appLanguage) {
                     ForEach(ConfigStore.appLanguageOptions, id: \.code) { opt in

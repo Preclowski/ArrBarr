@@ -41,7 +41,7 @@ extension SettingsView {
     private var sidebarColumn: some View {
         VStack(spacing: 0) {
             // Clears the traffic lights.
-            Color.clear.frame(height: 30)
+            Color.clear.frame(height: 40)
             sidebarSearchField
                 .padding(.horizontal, 10)
                 .padding(.bottom, 6)

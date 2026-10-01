@@ -457,14 +457,7 @@ struct MediaEditModalOverlay: View {
 
             // Same chrome as SearchAddPanel's sticky footer.
             MediaEditPanel(request: request, onBack: onDismiss, onReady: { ready = true })
-                .background(
-                    Rectangle()
-                        .fill(.clear)
-                        .glassEffect(.regular, in: .rect)
-                        .overlay(alignment: .top) { Divider().opacity(0.4) }
-                        .ignoresSafeArea(edges: .bottom)
-                )
-                .shadow(color: .black.opacity(0.25), radius: 14, y: -2)
+                .floatingPanelCard()
         }
         .opacity(ready ? 1 : 0)
         .allowsHitTesting(ready)

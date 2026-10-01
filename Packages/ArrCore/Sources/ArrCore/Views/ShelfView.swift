@@ -378,7 +378,8 @@ struct ShelfView: View {
                     ShelfFilterMenu(filter: $filter, sources: sources,
                                     library: remoteKey.map { (remote.items[$0] ?? []).map(\.entry) } ?? library.entries[source] ?? [],
                                     sortModes: Self.sortModes(for: collection, source: source),
-                                    watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured)
+                                    watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured,
+                                    showsLibraryToggle: collection.isRemote)
                         .padding(.trailing, 12)
                 }
                 .padding(.top, 12)

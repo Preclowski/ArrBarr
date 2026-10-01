@@ -45,6 +45,8 @@ public final class ConfigStore {
     public var aiKnowsAboutWhisparr: Bool = false { didSet { persist(aiKnowsAboutWhisparr, oldValue, Keys.aiKnowsAboutWhisparr) } }
     /// macOS only: run as a regular Dock app with a real window and no menu-bar icon.
     public var detachedWindow: Bool = false { didSet { persist(detachedWindow, oldValue, Keys.detachedWindow) } }
+    /// Raw value of the popover tab selected when the panel is built.
+    public var launchTab: String = "Queue" { didSet { persist(launchTab, oldValue, Keys.launchTab) } }
     /// macOS only: a clicked Spotlight result opens the detail in-app instead of the arr's web UI.
     public var spotlightOpensInApp: Bool = true { didSet { persist(spotlightOpensInApp, oldValue, Keys.spotlightOpensInApp) } }
     public var iCloudSyncEnabled: Bool = true {

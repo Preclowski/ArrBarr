@@ -15,6 +15,7 @@ extension ConfigStore {
         static let fontScale = "ArrBarr.fontScale"
         static let aiKnowsAboutWhisparr = "ArrBarr.aiKnowsAboutWhisparr"
         static let detachedWindow = "ArrBarr.detachedWindow"
+        static let launchTab = "ArrBarr.launchTab"
         static let spotlightOpensInApp = "ArrBarr.spotlightOpensInApp"
         static let appearance = "ArrBarr.appearance"
         static let arrOrder = "ArrBarr.arrOrder"
@@ -70,6 +71,7 @@ extension ConfigStore {
         self.fontScale = storedScale > 0 ? storedScale : 1.0
         self.aiKnowsAboutWhisparr = value(Keys.aiKnowsAboutWhisparr, false)
         self.detachedWindow = value(Keys.detachedWindow, false)
+        self.launchTab = value(Keys.launchTab, "Queue")
         self.spotlightOpensInApp = value(Keys.spotlightOpensInApp, true)
         self.iCloudSyncEnabled = value(Self.iCloudSyncEnabledKey, true)
         self.appLanguage = value(Self.appLanguageKey, "system")

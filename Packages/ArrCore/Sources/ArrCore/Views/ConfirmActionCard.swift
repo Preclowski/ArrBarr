@@ -204,24 +204,7 @@ struct ConfirmAlertOverlay: View {
     }
 
     var body: some View {
-        ZStack {
-            // The card is small and centred in the content it interrupts; the dimming separates them.
-            Rectangle()
-                .fill(.black.opacity(0.32))
-                .contentShape(Rectangle())
-                .onTapGesture { onCancel() }
-                .ignoresSafeArea()
-
-            card
-                .frame(maxWidth: 270)
-                .padding(.horizontal, 24)
-        }
-        .transition(.opacity.combined(with: .scale(scale: 0.96)))
-    }
-
-    private var card: some View {
-        // Mimics the macOS 26 system alert, which can't be used: dismissing it closes the MenuBarExtra panel.
-        VStack(alignment: .leading, spacing: 16) {
+        AlertCard(onCancel: onCancel) {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title, bundle: .module)
                     .scaledFont(size: 13, weight: .bold)
@@ -243,32 +226,61 @@ struct ConfirmAlertOverlay: View {
             }
 
             HStack(spacing: 8) {
-                answerButton(cancelLabelKey, weight: .medium,
-                             foreground: .primary, background: Color.primary.opacity(0.1),
-                             action: onCancel)
-                    .keyboardShortcut(.escape, modifiers: [])
-                answerButton(confirmLabelKey, weight: .medium,
-                             foreground: destructive ? .red : .white,
-                             background: destructive ? Color.red.opacity(0.22) : Color.accentColor,
-                             action: {
-                                 if suppress { onSuppress() }
-                                 onConfirm()
-                             })
-                    .keyboardShortcut(.return, modifiers: [])
+                AlertAnswerButton(foreground: .primary, background: Color.primary.opacity(0.1), action: onCancel) {
+                    Text(cancelLabelKey, bundle: .module)
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                AlertAnswerButton(foreground: destructive ? .red : .white,
+                                  background: destructive ? Color.red.opacity(0.22) : Color.accentColor,
+                                  action: {
+                                      if suppress { onSuppress() }
+                                      onConfirm()
+                                  }) {
+                    Text(confirmLabelKey, bundle: .module)
+                }
+                .keyboardShortcut(.return, modifiers: [])
             }
         }
-        .padding(20)
-        // Liquid Glass, not a material: the alert should refract the list beneath it.
-        .glassEffect(.regular, in: .rect(cornerRadius: 26, style: .continuous))
-        .shadow(color: .black.opacity(0.30), radius: 18, y: 4)
     }
+}
 
-    private func answerButton(_ key: LocalizedStringKey, weight: Font.Weight,
-                              foreground: Color, background: Color,
-                              action: @escaping () -> Void) -> some View {
+/// The in-panel alert: dimmed content and a small centred card. `.alert` doesn't render in a MenuBarExtra panel.
+struct AlertCard<Content: View>: View {
+    let onCancel: () -> Void
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ZStack {
+            // The card is small and centred in the content it interrupts; the dimming separates them.
+            Rectangle()
+                .fill(.black.opacity(0.32))
+                .contentShape(Rectangle())
+                .onTapGesture { onCancel() }
+                .ignoresSafeArea()
+
+            // Mimics the macOS 26 system alert, which can't be used: dismissing it closes the MenuBarExtra panel.
+            VStack(alignment: .leading, spacing: 16, content: content)
+                .padding(20)
+                // Liquid Glass, not a material: the alert should refract the list beneath it.
+                .glassEffect(.regular, in: .rect(cornerRadius: 26, style: .continuous))
+                .shadow(color: .black.opacity(0.30), radius: 18, y: 4)
+                .frame(maxWidth: 270)
+                .padding(.horizontal, 24)
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.96)))
+    }
+}
+
+struct AlertAnswerButton<Label: View>: View {
+    let foreground: Color
+    let background: Color
+    let action: () -> Void
+    @ViewBuilder var label: () -> Label
+
+    var body: some View {
         Button(action: action) {
-            Text(key, bundle: .module)
-                .scaledFont(size: 13, weight: weight)
+            label()
+                .scaledFont(size: 13, weight: .medium)
                 .foregroundStyle(foreground)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 8)

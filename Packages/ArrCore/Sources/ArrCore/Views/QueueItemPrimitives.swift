@@ -380,3 +380,23 @@ struct StatusIconLabel: View {
         .fixedSize()
     }
 }
+
+/// The poster half of the delete animation: dims the artwork and pops a trash glyph.
+struct PosterLeavingMark: ViewModifier {
+    @Environment(\.queueRowLeaving) private var leaving
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            ZStack {
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .fill(.black.opacity(0.5))
+                Image(systemName: "trash.fill")
+                    .scaledFont(size: 13, weight: .semibold)
+                    .foregroundStyle(.white)
+                    .scaleEffect(leaving ? 1 : 0.5)
+            }
+            .opacity(leaving ? 1 : 0)
+            .allowsHitTesting(false)
+        }
+    }
+}

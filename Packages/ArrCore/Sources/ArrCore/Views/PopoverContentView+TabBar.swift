@@ -50,45 +50,17 @@ extension PopoverContentView {
 
     /// Sized from the tab cluster's measured height so the two capsules cannot drift apart.
     private var accessoryIsland: some View {
-        #if os(macOS)
-        let hasClose = isDetachedWindow && onCloseWindow != nil
-        #else
-        let hasClose = false
-        #endif
         let side = barHeight
-        return HStack(spacing: 0) {
-            moreMenu
-            #if os(macOS)
-            // The traffic lights are hidden; the menu-bar panel dismisses itself on focus loss.
-            if isDetachedWindow, let onCloseWindow {
-                windowCloseButton(action: onCloseWindow)
-            }
-            #endif
-        }
-        .frame(width: hasClose ? side * 2 : side, height: side)
-        // Explicit circle: the glass pads its bounds and a capsule re-derives its radius from that.
-        .glassyFloatingBar(circular: !hasClose)
-        .glassEffectID("accessory", in: barGlass)
+        return moreMenu
+            .frame(width: side, height: side)
+            // Explicit circle: the glass pads its bounds and a capsule re-derives its radius from that.
+            .glassyFloatingBar(circular: true)
+            .glassEffectID("accessory", in: barGlass)
     }
 
     private var barHeight: CGFloat {
         tabFrames.values.map(\.height).max() ?? 32
     }
-
-    #if os(macOS)
-    private func windowCloseButton(action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: "xmark")
-                .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(.secondary)
-                .frame(width: Self.glyphButton, height: Self.glyphButton)
-                .contentShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .help(Text("Close window", bundle: .module))
-        .accessibilityLabel(Text("Close window", bundle: .module))
-    }
-    #endif
 
     /// Measured frames, because localized labels range from "Chat" (~25 pt) to "Nadchodzące"
     /// (~80 pt) and equal-width segments truncated.

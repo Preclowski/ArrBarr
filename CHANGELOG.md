@@ -9,16 +9,27 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
-## [3.1.0] — 2026-09-30
+## [3.1.0] — 2026-10-01
 
 ### Added
 
+- Roulette spins popular and in-cinema titles (needs a TMDB key), with an "In library" filter.
+- Settings: choose the tab the app opens on.
 - Automatic and manual search in queue, library and Upcoming row menus.
 - The quiz card shows in chat as soon as its deck is dealt.
+- Confetti when a quiz pick lands in the library.
+- Ended series show an "Ended" tag.
 - VoiceOver actions on queue rows: pause, resume, remove.
 
 ### Changed
 
+- Removing a queue row animates: red tint, trash on the poster, slide out.
+- Deleting a title asks in the centred alert; add and edit forms float as a card.
+- Adding from the quiz throws the card aside and opens the add panel.
+- Trailers play in a wider panel; fullscreen only in the detached window.
+- Roulette corner buttons show their label on hover.
+- Detail pages fade in instead of sliding.
+- "Add import exclusion" is now "Don't re-add from lists".
 - Search is ⌘F (was ⌘N).
 - Quiz and release search load over the title's cover instead of a spinner.
 - Filmography scores show as rating chips.
@@ -28,6 +39,9 @@ Releases before 0.10.0 are described on the
 ### Fixed
 
 - Resume all / Pause all on a grouped series stopped after a few episodes.
+- Reopened history keeps the depth it was scrolled to.
+- Episode manual search shows the series' wait stories.
+- The Settings search field no longer crowds the window buttons.
 - Apple Intelligence silently cancelled tools that ask for confirmation.
 - OpenAI chat sent each message twice and returned empty replies at the token
   limit.

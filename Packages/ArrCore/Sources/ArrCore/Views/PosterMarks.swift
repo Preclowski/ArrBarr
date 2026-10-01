@@ -6,15 +6,26 @@ import SwiftUI
 struct WatchedCornerBadge: View {
     /// Default suits the library grid's 104–160pt tiles.
     var side: CGFloat = 26
+    /// A solid tint instead of glass, for covers drawn inside the Roulette's shaders, where glass has no
+    /// backdrop to refract and would cost a pass per poster per frame.
+    var flat = false
 
     var body: some View {
         // The hairline keeps the fold's edge on busy art.
-        Color.clear
+        wedge
             .frame(width: side, height: side)
-            .glassEffect(.regular.tint(Color.accentColor.opacity(0.7)), in: Triangle())
             .overlay(Triangle().stroke(Color.white.opacity(0.35), lineWidth: 0.5))
             .accessibilityLabel(Text("library.watched.badge", bundle: .module))
             .help(Text("library.watched.badge", bundle: .module))
+    }
+
+    @ViewBuilder
+    private var wedge: some View {
+        if flat {
+            Triangle().fill(Color.accentColor.opacity(0.85))
+        } else {
+            Color.clear.glassEffect(.regular.tint(Color.accentColor.opacity(0.7)), in: Triangle())
+        }
     }
 
     nonisolated private struct Triangle: Shape {

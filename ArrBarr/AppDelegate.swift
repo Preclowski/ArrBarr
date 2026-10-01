@@ -208,8 +208,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             viewModel: queueVM,
             onOpenSettings: { [weak self] in self?.openSettings() },
             onShowAbout: { [weak self] in self?.showAbout() },
-            onQuit: { NSApp.terminate(nil) },
-            onCloseWindow: { [weak self] in self?.mainWindow?.close() }
+            onQuit: { NSApp.terminate(nil) }
         )
         .environment(configStore)
         .background(WindowGlassBackground().ignoresSafeArea())

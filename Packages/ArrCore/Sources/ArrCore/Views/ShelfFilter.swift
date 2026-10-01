@@ -10,8 +10,10 @@ struct ShelfFilter: Equatable {
     var genre: String?
     var decade: Int?
     var unwatchedOnly = false
+    /// TMDB lists only: titles the arr already has.
+    var inLibraryOnly = false
 
-    var isNarrowed: Bool { genre != nil || decade != nil || unwatchedOnly }
+    var isNarrowed: Bool { genre != nil || decade != nil || unwatchedOnly || inLibraryOnly }
     var sortKey: String { shuffleSeed.map { "shelf|random|\($0)" } ?? "shelf|\(sort.cacheKey)|\(descending)" }
 
     func areInIncreasingOrder(_ a: LibraryEntry, _ b: LibraryEntry) -> Bool {
@@ -27,12 +29,13 @@ struct ShelfFilter: Equatable {
         for byte in id.utf8 { h = (h ^ UInt64(byte)) &* 1099511628211 }
         return h
     }
-    var key: String { "\(sortKey)|\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)" }
+    var key: String { "\(sortKey)|\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)|\(inLibraryOnly)" }
 
     func matches(_ entry: LibraryEntry) -> Bool {
         if let genre, !entry.genres.contains(genre) { return false }
         if let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
         if unwatchedOnly, entry.watched { return false }
+        if inLibraryOnly, entry.arrId == 0 { return false }
         return true
     }
 
@@ -40,6 +43,7 @@ struct ShelfFilter: Equatable {
         genre = nil
         decade = nil
         unwatchedOnly = false
+        inLibraryOnly = false
     }
 }
 
@@ -52,44 +56,28 @@ struct ShelfFilterMenu: View {
     let library: [LibraryEntry]
     let sortModes: [SortMode]
     let watchStateKnown: Bool
+    var showsLibraryToggle = false
     @Environment(\.locale) private var locale
 
     var body: some View {
-        Menu { content } label: { label }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .fixedSize()
-            .shelfCornerHover()
-            .accessibilityLabel(Text("common.filter.button", bundle: .module))
-    }
-
-    private var label: some View {
-        HStack(spacing: 6) {
-            Image(systemName: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
-                .scaledFont(size: 13, weight: .semibold)
-            if let summary {
-                Text(verbatim: summary)
-                    .scaledFont(size: 11, weight: .medium)
-                    .lineLimit(1)
-            }
-            if filter.unwatchedOnly {
-                Image(systemName: "eye.slash").scaledFont(size: 11, weight: .medium)
-            }
+        ShelfCornerButton(
+            symbol: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease",
+            title: Text(verbatim: summary),
+            titleLeading: true
+        ) {
+            content
         }
-        .foregroundStyle(.primary)
-        .padding(.horizontal, summary == nil && !filter.unwatchedOnly ? 0 : 10)
-        .frame(minWidth: 32, minHeight: 32)
-        .glassEffect(.regular, in: .capsule)
-        .contentShape(Capsule())
     }
 
-    private var summary: String? {
+    /// What's narrowed, or the menu's name when nothing is.
+    private var summary: String {
         var parts: [String] = []
         if sources.count > 1 { parts.append(filter.source.displayName) }
         if let genre = filter.genre { parts.append(GenreName.localized(genre, locale: locale)) }
         if let decade = filter.decade { parts.append("\(decade)–\(decade + 9)") }
-        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        if filter.unwatchedOnly { parts.append(AppLocalized.string("shelf.filter.unwatched", locale: locale)) }
+        if filter.inLibraryOnly { parts.append(AppLocalized.string("shelf.filter.inLibrary", locale: locale)) }
+        return parts.isEmpty ? AppLocalized.string("common.filter.button", locale: locale) : parts.joined(separator: " · ")
     }
 
     @ViewBuilder
@@ -153,6 +141,11 @@ struct ShelfFilterMenu: View {
         if watchStateKnown {
             Toggle(isOn: $filter.unwatchedOnly) {
                 Text("shelf.filter.unwatched", bundle: .module)
+            }
+        }
+        if showsLibraryToggle {
+            Toggle(isOn: $filter.inLibraryOnly) {
+                Text("shelf.filter.inLibrary", bundle: .module)
             }
         }
         if filter.isNarrowed {

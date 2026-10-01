@@ -50,6 +50,7 @@ struct QueueGroupRowView: View {
             }
             .posterMarks(watched: rep.watched, monitored: nil,
                          cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
+            .modifier(PosterLeavingMark())
             // Suppressed while selecting: the poster is the checkbox then.
             #if os(macOS)
             .overlay {

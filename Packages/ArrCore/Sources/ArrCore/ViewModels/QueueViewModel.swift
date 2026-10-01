@@ -23,7 +23,8 @@ public final class QueueViewModel {
     public func setTonightExpanded(_ expanded: Bool) { tonightExpanded = expanded }
 
     public func items(for source: QueueItem.Source) -> [QueueItem] {
-        queues[source, default: []]
+        let items = queues[source, default: []]
+        return removedIDs.isEmpty ? items : items.filter { !removedIDs.contains($0.id) }
     }
 
     public func error(for source: QueueItem.Source) -> String? {
@@ -54,6 +55,12 @@ public final class QueueViewModel {
         didSet { if hasLoadedOnce, !oldValue { Self.logFirstLoad() } }
     }
     public internal(set) var lastError: String?
+    /// Rows playing the delete animation: `leavingIDs` drives the tint, `slidingIDs` the slide. Two sets because
+    /// each needs its own `withAnimation` curve. Kept until the server drops them, so a row never slides back.
+    public internal(set) var leavingIDs: Set<QueueItem.ID> = []
+    public internal(set) var slidingIDs: Set<QueueItem.ID> = []
+    /// Deleted rows hidden ahead of the server, so a commit that still lists them can't bring them back.
+    var removedIDs: Set<QueueItem.ID> = []
 
     let aggregator: QueueDataProviding
     let configStore: ConfigStore
@@ -110,7 +117,7 @@ public final class QueueViewModel {
 
 
     public var activeCount: Int {
-        queues.values.lazy.flatMap { $0 }.filter { $0.status != .completed }.count
+        queues.values.lazy.flatMap { $0 }.filter { $0.status != .completed && !self.removedIDs.contains($0.id) }.count
     }
 
     public func fireTestNotification() {

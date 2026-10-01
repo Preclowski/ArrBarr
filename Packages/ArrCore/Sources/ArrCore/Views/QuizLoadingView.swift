@@ -7,6 +7,8 @@ struct QuizLoadingView: View {
     let startedAt: Date?
     /// Covers of the picks resolved so far; the newest takes over the backdrop.
     let posters: [URL]
+    /// Replaces the phase line, for a top-up round that has no phases of its own.
+    var label: LocalizedStringKey?
     let onCancel: () -> Void
 
     @Environment(ConfigStore.self) private var configStore
@@ -21,7 +23,7 @@ struct QuizLoadingView: View {
             WaitPosterLayer(poster: (posters.last ?? library.first).map { WaitPoster(url: $0) })
             WaitStage(stories: stories) {
                 VStack(alignment: .leading, spacing: 6) {
-                    WaitStatusLine(label: phaseKey)
+                    WaitStatusLine(label: label ?? phaseKey)
                         .animation(.smooth(duration: 0.3), value: phase)
                     slowHint
                 }

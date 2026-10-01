@@ -79,17 +79,15 @@ public final class TrailerSession {
 // YouTube's embed is the only legal way to play these clips — feeding the stream to
 // AVPlayer breaks YouTube's terms.
 
-private let trailerFullscreenMessage = "trailerFullscreen"
-
-private func trailerWebConfiguration() -> WKWebViewConfiguration {
+/// `allowsFullscreen` is off only in the menu-bar panel: WebKit's fullscreen had to hide and re-show it by
+/// hand, which MenuBarExtra then counted as closed (dead content, no outside-click dismissal).
+private func trailerWebConfiguration(allowsFullscreen: Bool) -> WKWebViewConfiguration {
     let config = WKWebViewConfiguration()
     config.mediaTypesRequiringUserActionForPlayback = []
     #if os(iOS)
     config.allowsInlineMediaPlayback = true
     #endif
-    // WebKit's element fullscreen works from the non-activating popover
-    // (`document.fullscreenEnabled` is true there) and keeps the player's controls.
-    config.preferences.isElementFullscreenEnabled = true
+    config.preferences.isElementFullscreenEnabled = allowsFullscreen
     return config
 }
 
@@ -100,13 +98,14 @@ private let trailerEmbedOrigin = "https://arrbarr.app"
 
 /// Wraps the embed in an iframe: loading `…/embed/KEY` directly has no origin (the view starts
 /// at `about:blank`) and every clip fails with error 153.
-private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
+private func trailerEmbedHTML(key: String, autoplay: Bool, allowsFullscreen: Bool) -> String {
     let query = [
         "autoplay=\(autoplay ? 1 : 0)",
         "playsinline=1",
         // `rel=0` keeps end-of-clip suggestions inside the same channel.
         "rel=0",
-        "fs=1",
+        // See `trailerWebConfiguration`.
+        "fs=\(allowsFullscreen ? 1 : 0)",
         // No annotation / card overlays on the video.
         "iv_load_policy=3",
         "cc_load_policy=0",
@@ -132,173 +131,95 @@ private func trailerEmbedHTML(key: String, autoplay: Bool) -> String {
         <iframe src="\(trailerEmbedHost)/embed/\(key)?\(query)"
                 allow="autoplay; encrypted-media; picture-in-picture"
                 allowfullscreen></iframe>
-        <script>
-          // The popover floats above WebKit's fullscreen window, so native code has to hide it.
-          document.addEventListener("fullscreenchange", function () {
-            window.webkit?.messageHandlers?.\(trailerFullscreenMessage)
-              ?.postMessage(!!document.fullscreenElement);
-          });
-        </script>
       </body>
     </html>
     """
 }
 
 #if os(macOS)
-/// WebKit's element fullscreen moves the web view into its own window; this hook fires even
-/// when the cross-origin iframe's `fullscreenchange` never reaches our page.
-private final class TrailerBackingWebView: WKWebView {
-    var onWindowChange: ((NSWindow?) -> Void)?
-
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        onWindowChange?(window)
-    }
-}
-
 private struct TrailerWebView: NSViewRepresentable {
     let key: String
+    var allowsFullscreen = true
 
-    func makeNSView(context: Context) -> WKWebView {
+    /// Returns a host, not the web view: WebKit's fullscreen takes the web view away and puts it back at the
+    /// size it had on screen, and SwiftUI never resizes a view it didn't place, so it overflowed the window.
+    func makeNSView(context: Context) -> TrailerHostView {
+        let host = TrailerHostView()
+        host.embed(webView())
+        return host
+    }
+
+    func updateNSView(_ host: TrailerHostView, context: Context) {
+        // updateNSView fires on every parent redraw; reloading would restart playback.
+        guard TrailerSession.shared.loadedKey != key, let view = host.webView else { return }
+        load(into: view)
+    }
+
+    /// Releasing the web view is not enough — WebKit keeps the audio playing until the page goes.
+    static func dismantleNSView(_ host: TrailerHostView, coordinator: ()) {
+        // The tree died mid-clip while the session owns the player: leave it so the clip survives.
+        guard let view = host.webView, !TrailerSession.shared.keepsAlive(view) else { return }
+        view.loadHTMLString("<html><body></body></html>", baseURL: nil)
+    }
+
+    private func webView() -> WKWebView {
         let session = TrailerSession.shared
-        let coordinator = context.coordinator
-        if let existing = session.webView as? TrailerBackingWebView {
-            // A still-playing player from a torn-down tree: adopt it without touching the page.
-            // Remove-then-add because `add` with a duplicate handler name raises.
-            existing.configuration.userContentController
-                .removeScriptMessageHandler(forName: trailerFullscreenMessage)
-            existing.configuration.userContentController
-                .add(coordinator, name: trailerFullscreenMessage)
-            coordinator.webView = existing
-            existing.onWindowChange = { [weak coordinator] window in
-                coordinator?.webViewMoved(to: window)
-            }
+        if let existing = session.webView {
+            // A still-playing player from a torn-down tree: adopt it without touching the page. Moved from
+            // the detached window into the panel, its YouTube button may stay, but it no longer does anything.
+            existing.configuration.preferences.isElementFullscreenEnabled = allowsFullscreen
             if session.loadedKey != key { load(into: existing) }
             return existing
         }
-        let config = trailerWebConfiguration()
-        config.userContentController.add(coordinator, name: trailerFullscreenMessage)
-        let view = TrailerBackingWebView(frame: .zero, configuration: config)
+        let view = WKWebView(frame: .zero, configuration: trailerWebConfiguration(allowsFullscreen: allowsFullscreen))
         view.setValue(false, forKey: "drawsBackground")
-        coordinator.webView = view
-        view.onWindowChange = { [weak coordinator] window in
-            coordinator?.webViewMoved(to: window)
-        }
         session.webView = view
         load(into: view)
         return view
     }
 
-    func updateNSView(_ view: WKWebView, context: Context) {
-        // updateNSView fires on every parent redraw; reloading would restart playback.
-        guard TrailerSession.shared.loadedKey != key else { return }
-        load(into: view)
-    }
-
-    static func dismantleNSView(_ view: WKWebView, coordinator: Coordinator) {
-        // The tree died mid-clip while the session owns the player: leave the page and its
-        // handler alone so the clip survives to be re-presented.
-        if TrailerSession.shared.keepsAlive(view) { return }
-        view.configuration.userContentController
-            .removeScriptMessageHandler(forName: trailerFullscreenMessage)
-        coordinator.hostTornDown()
-    }
-
-    func makeCoordinator() -> Coordinator { Coordinator() }
-
-    /// Hides the popover while the player is fullscreen. Ordered out, not closed: closing tore
-    /// down the tree holding the player and left a dead black overlay on return.
-    final class Coordinator: NSObject, WKScriptMessageHandler {
-        weak var webView: WKWebView?
-        /// The popover or detached window; captured the first time we are placed.
-        private weak var hostWindow: NSWindow?
-        private var retainedDuringFullscreen: WKWebView?
-        /// Restored on return: AppKit otherwise puts the panel back at a frame it computed off-screen
-        /// while the fullscreen window owned the display.
-        private var hostFrameBeforeFullscreen: NSRect?
-
-        func webViewMoved(to window: NSWindow?) {
-            // No window at all is teardown, handled by `hostTornDown()`.
-            guard let window else { return }
-            guard let hostWindow else {
-                hostWindow = window
-                return
-            }
-            if window !== hostWindow {
-                beginFullscreen(hostWindow: hostWindow)
-            } else {
-                endFullscreen(hostWindow: hostWindow)
-            }
-        }
-
-        private func beginFullscreen(hostWindow: NSWindow) {
-            // The tree stays alive behind the hidden window, but a strong reference guarantees nothing
-            // pulls the player out from under WebKit mid-clip.
-            retainedDuringFullscreen = webView
-            hostFrameBeforeFullscreen = hostWindow.frame
-            hostWindow.orderOut(nil)
-        }
-
-        /// Releasing the web view is not enough — WebKit keeps the audio playing until the page goes.
-        func hostTornDown() {
-            guard retainedDuringFullscreen == nil else { return }   // fullscreen owns it
-            webView?.loadHTMLString("<html><body></body></html>", baseURL: nil)
-        }
-
-        /// Leaves the clip alone — it is still playing, and the small player is where the user expects to land.
-        private func endFullscreen(hostWindow: NSWindow) {
-            retainedDuringFullscreen = nil
-            guard hostFrameBeforeFullscreen != nil else { return }
-            hostWindow.orderFrontRegardless()
-            restoreHostFrame()
-        }
-
-        /// Re-applied over a few runloop turns: AppKit re-places the panel itself as it returns, and
-        /// a single restore races it.
-        private func restoreHostFrame() {
-            guard hostFrameBeforeFullscreen != nil else { return }
-            for delay in [0, 0.05, 0.2, 0.5] {
-                DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                    self?.applySavedFrame(clearing: delay == 0.5)
-                }
-            }
-        }
-
-        private func applySavedFrame(clearing: Bool) {
-            defer { if clearing { hostFrameBeforeFullscreen = nil } }
-            guard let hostWindow, let saved = hostFrameBeforeFullscreen,
-                  hostWindow.frame != saved else { return }
-            let visible = (hostWindow.screen ?? NSScreen.main)?.visibleFrame
-            var frame = saved
-            if let visible {
-                frame.origin.x = min(max(frame.minX, visible.minX), visible.maxX - frame.width)
-                frame.origin.y = min(max(frame.minY, visible.minY), visible.maxY - frame.height)
-            }
-            hostWindow.setFrame(frame, display: true)
-        }
-
-        /// Second signal, for when the page does see the change; harmless after `webViewMoved(to:)`.
-        func userContentController(_ controller: WKUserContentController,
-                                   didReceive message: WKScriptMessage) {
-            // JS booleans arrive as NSNumber; `as? Bool` alone relies on a bridging detail.
-            guard message.name == trailerFullscreenMessage,
-                  let entered = (message.body as? NSNumber)?.boolValue
-                      ?? (message.body as? Bool),
-                  entered, let hostWindow, hostWindow.isVisible else { return }
-            beginFullscreen(hostWindow: hostWindow)
-        }
-    }
-
     private func load(into view: WKWebView) {
         TrailerSession.shared.loadedKey = key
-        view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true),
+        view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true, allowsFullscreen: allowsFullscreen),
                             baseURL: URL(string: trailerEmbedOrigin))
+    }
+}
+
+/// Keeps the web view at its own bounds, including when WebKit hands it back after fullscreen.
+final class TrailerHostView: NSView {
+    private(set) weak var webView: WKWebView?
+
+    func embed(_ view: WKWebView) {
+        webView = view
+        addSubview(view)
+    }
+
+    override func didAddSubview(_ subview: NSView) {
+        super.didAddSubview(subview)
+        subview.frame = bounds
+    }
+
+    /// `layout()` alone isn't called on a plain resize of a view without constraints.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        fit()
+    }
+
+    override func layout() {
+        super.layout()
+        fit()
+    }
+
+    /// A newer host may have adopted the web view since.
+    private func fit() {
+        if let webView, webView.superview === self { webView.frame = bounds }
     }
 }
 
 #else
 private struct TrailerWebView: UIViewRepresentable {
     let key: String
+    var allowsFullscreen = true
 
     func makeUIView(context: Context) -> WKWebView {
         let session = TrailerSession.shared
@@ -307,7 +228,7 @@ private struct TrailerWebView: UIViewRepresentable {
             if session.loadedKey != key { load(into: existing) }
             return existing
         }
-        let view = WKWebView(frame: .zero, configuration: trailerWebConfiguration())
+        let view = WKWebView(frame: .zero, configuration: trailerWebConfiguration(allowsFullscreen: allowsFullscreen))
         view.isOpaque = false
         view.backgroundColor = .clear
         view.scrollView.isScrollEnabled = false
@@ -333,7 +254,7 @@ private struct TrailerWebView: UIViewRepresentable {
 
     private func load(into view: WKWebView) {
         TrailerSession.shared.loadedKey = key
-        view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true),
+        view.loadHTMLString(trailerEmbedHTML(key: key, autoplay: true, allowsFullscreen: allowsFullscreen),
                             baseURL: URL(string: trailerEmbedOrigin))
     }
 }
@@ -366,9 +287,10 @@ private struct TrailerStageInsets: ViewModifier {
 
 extension View {
     /// Over the whole surface, like the poster lightbox — inline, the player pushed everything
-    /// else out of the narrow popover.
+    /// else out of the narrow popover. `fillsWindow`: the window has grown to the clip's shape, so the
+    /// clip runs edge to edge at the top with the reel under it.
     @ViewBuilder
-    func trailerOverlay(key: Binding<String?>) -> some View {
+    func trailerOverlay(key: Binding<String?>, fillsWindow: Bool = false, allowsFullscreen: Bool = true) -> some View {
         overlay {
             if let presented = key.wrappedValue {
                 // Top-leading: the ✕ matches the lightbox's corner and every back chevron.
@@ -376,18 +298,34 @@ extension View {
                     // One near-black layer, not a material: measured over bright content even a dark ultra-thick
                     // material only reaches 0.37 luminance; video wants ~0.09.
                     Rectangle()
-                        .fill(Color.black.opacity(0.92))
+                        .fill(Color.black.opacity(fillsWindow ? 1 : 0.92))
                         .ignoresSafeArea()
                         .contentShape(Rectangle())
                         .onTapGesture {
                             withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                         }
-                    VStack(spacing: 14) {
-                        TrailerPlayerCard(key: presented)
-                            .modifier(TrailerStageInsets())
-                        TrailerReelStrip(playing: presented)
+                    if fillsWindow {
+                        VStack(spacing: 0) {
+                            TrailerWebView(key: presented, allowsFullscreen: allowsFullscreen)
+                                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                                .background(Color.black)
+                            // Pinned to the height the panel was sized for, and absent with one clip.
+                            if TrailerWindowSize.showsStrip {
+                                TrailerReelStrip(playing: presented)
+                                    .frame(height: TrailerWindowSize.stripHeight, alignment: .top)
+                                    .padding(.vertical, TrailerWindowSize.stripPadding)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                        .ignoresSafeArea()
+                    } else {
+                        VStack(spacing: 14) {
+                            TrailerPlayerCard(key: presented)
+                                .modifier(TrailerStageInsets())
+                            TrailerReelStrip(playing: presented)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     LightboxCloseButton(labelKey: "detail.trailerClose.button") {
                         withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                     }

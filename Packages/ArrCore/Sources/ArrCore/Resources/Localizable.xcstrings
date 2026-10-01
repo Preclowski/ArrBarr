@@ -1205,47 +1205,6 @@
         }
       }
     },
-    "Close window": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Close window"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zamknij okno"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fenster schließen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar ventana"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fermer la fenêtre"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Venster sluiten"
-          }
-        }
-      }
-    },
     "Collapse section": {
       "extractionState": "manual",
       "localizations": {
@@ -6331,7 +6290,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lepsze"
+            "value": "Upgrade"
           }
         },
         "de": {
@@ -9678,37 +9637,37 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Add import exclusion"
+            "value": "Don't re-add from lists"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dodaj wykluczenie importu"
+            "value": "Nie dodawaj ponownie z list"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importausschluss hinzufügen"
+            "value": "Nicht erneut aus Listen hinzufügen"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Añadir exclusión de importación"
+            "value": "No volver a añadir desde listas"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ajouter une exclusion d’import"
+            "value": "Ne pas rajouter depuis les listes"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Importuitsluiting toevoegen"
+            "value": "Niet opnieuw toevoegen via lijsten"
           }
         }
       }
@@ -9750,6 +9709,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uit bibliotheek verwijderen"
+          }
+        }
+      }
+    },
+    "delete.alert.title %@": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete %@?"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usunąć %@?"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ löschen?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar %@?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer %@ ?"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ verwijderen?"
           }
         }
       }
@@ -11765,7 +11765,7 @@
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ulepszenie"
+            "value": "Upgrade"
           }
         },
         "de": {
@@ -25036,6 +25036,47 @@
       },
       "comment": "Label in settings"
     },
+    "settings.launchTab.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start tab"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Karta startowa"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start-Tab"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pestaña inicial"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglet de départ"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Starttabblad"
+          }
+        }
+      }
+    },
     "settings.launchAtLogin.button": {
       "extractionState": "manual",
       "localizations": {
@@ -34594,6 +34635,47 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sorteren op"
+          }
+        }
+      }
+    },
+    "shelf.filter.inLibrary": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In library"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In bibliotheek"
           }
         }
       }

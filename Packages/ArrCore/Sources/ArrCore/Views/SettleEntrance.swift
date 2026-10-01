@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A pushed page that settles into place (a short fade up from slightly smaller) instead of sliding in from the side.
-private struct DropInEntrance: ViewModifier {
+private struct SettleEntrance: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = false
 
@@ -16,5 +16,5 @@ private struct DropInEntrance: ViewModifier {
 }
 
 extension View {
-    func dropInEntrance() -> some View { modifier(DropInEntrance()) }
+    func settleEntrance() -> some View { modifier(SettleEntrance()) }
 }

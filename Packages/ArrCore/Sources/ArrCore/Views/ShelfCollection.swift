@@ -43,7 +43,7 @@ struct ShelfRemoteItem {
         self.result = result
         self.tmdbId = tmdbId
         let owned = result.inLibraryArrId
-        entry = LibraryEntry(
+        var entry = LibraryEntry(
             id: "tmdb-\(result.source.rawValue)-\(tmdbId)", source: result.source, arrId: owned ?? 0,
             // Sonarr's slot is a tvdbId, which TMDB doesn't give.
             externalId: result.source == .sonarr ? nil : tmdbId,
@@ -55,6 +55,8 @@ struct ShelfRemoteItem {
             releaseStatus: nil, searchIndex: result.title.lowercased(),
             releaseDate: releaseDate.flatMap(Self.day)
         )
+        entry.watched = MediaServerIndex.shared.isWatched(result.mediaServerKeys)
+        self.entry = entry
     }
 
     private static func day(_ s: String) -> Date? {
@@ -109,7 +111,7 @@ struct ShelfCollectionMenu: View {
     let available: [ShelfCollection]
 
     var body: some View {
-        Menu {
+        ShelfCornerButton(symbol: collection.symbol, title: Text(collection.title, bundle: .module), titleLeading: false) {
             Picker(selection: $collection) {
                 ForEach(available) { c in
                     Label { Text(c.title, bundle: .module) } icon: { Image(systemName: c.symbol) }
@@ -119,44 +121,55 @@ struct ShelfCollectionMenu: View {
                 EmptyView()
             }
             .pickerStyle(.inline)
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: collection.symbol)
-                    .scaledFont(size: 13, weight: .semibold)
-                if collection.isRemote {
-                    Text(collection.title, bundle: .module)
-                        .scaledFont(size: 11, weight: .medium)
-                        .lineLimit(1)
-                }
-            }
-            .foregroundStyle(.primary)
-            .padding(.horizontal, collection.isRemote ? 10 : 0)
-            .frame(minWidth: 32, minHeight: 32)
-            .glassEffect(.regular, in: .capsule)
-            .contentShape(Capsule())
         }
-        .menuStyle(.button)
-        .buttonStyle(.plain)
-        .menuIndicator(.hidden)
-        .fixedSize()
-        .shelfCornerHover()
-        .accessibilityLabel(Text(collection.title, bundle: .module))
     }
 }
 
-/// The Roulette's corner menus lift a touch under the pointer.
-private struct ShelfCornerHover: ViewModifier {
+/// A glass corner button of the Roulette. Its title opens on hover toward the middle; the icon never moves.
+struct ShelfCornerButton<Items: View>: View {
+    let symbol: String
+    let title: Text
+    /// Right corner: the title sits left of the icon.
+    let titleLeading: Bool
+    @ViewBuilder var items: () -> Items
     @State private var hovering = false
 
-    func body(content: Content) -> some View {
-        content
-            .scaleEffect(hovering ? 1.06 : 1)
-            .brightness(hovering ? 0.08 : 0)
-            .animation(.smooth(duration: 0.18), value: hovering)
-            .onHover { hovering = $0 }
+    var body: some View {
+        HStack(spacing: 0) {
+            if titleLeading { titleView }
+            Image(systemName: symbol)
+                .scaledFont(size: 13, weight: .semibold)
+                .frame(width: 32, height: 32)
+            if !titleLeading { titleView }
+        }
+        .foregroundStyle(.primary)
+        .clipShape(.capsule)
+        .glassEffect(.regular, in: .capsule)
+        .brightness(hovering ? 0.08 : 0)
+        // The menu only takes the click: an AppKit-backed Menu label resizes without animating.
+        .overlay {
+            Menu(content: items) {
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Capsule())
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .accessibilityLabel(title)
+        }
+        .fixedSize()
+        .onHover { over in withAnimation(.smooth(duration: 0.32)) { hovering = over } }
     }
-}
 
-extension View {
-    func shelfCornerHover() -> some View { modifier(ShelfCornerHover()) }
+    @ViewBuilder
+    private var titleView: some View {
+        if hovering {
+            title
+                .scaledFont(size: 11, weight: .medium)
+                .lineLimit(1)
+                .padding(titleLeading ? .leading : .trailing, 12)
+                .transition(.opacity.combined(with: .offset(x: titleLeading ? 10 : -10)))
+        }
+    }
 }

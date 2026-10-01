@@ -110,6 +110,12 @@ extension QueueViewModel {
         var newQueues = queues
         newQueues[source] = committed
 
+        if result.error == nil, !removedIDs.isEmpty {
+            let gone = Set(queues[source, default: []].map(\.id)).subtracting(committed.map(\.id))
+            removedIDs.subtract(gone)
+            leavingIDs.subtract(gone)
+            slidingIDs.subtract(gone)
+        }
         notifyNewItems(source: source, items: committed, errored: result.error != nil)
         queues = newQueues
         errors = newErrors

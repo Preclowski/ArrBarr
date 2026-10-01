@@ -88,7 +88,9 @@ extension PopoverContentView {
 
             if searchResult != nil {
                 searchAddOverlay
-                    .transition(.opacity)
+                    // Only a quiz open animates: the card has just flown off, and the panel settles in its place.
+                    .transition(.asymmetric(insertion: .scale(scale: 0.9).combined(with: .opacity),
+                                            removal: .scale(scale: 0.96).combined(with: .opacity)))
             }
 
         }
@@ -114,31 +116,34 @@ extension PopoverContentView {
                     )
                 }
             }
-            .dropInEntrance()
+            .settleEntrance()
         }
         }
-        // The page animates its own entrance; the stack's side slide would fight it.
-        .transaction(value: detailItem?.id) { $0.disablesAnimations = true }
+        // A push animates its own entrance; the stack's side slide would fight it. Back keeps the slide.
+        .transaction(value: detailItem?.id) { if detailItem != nil { $0.disablesAnimations = true } }
         .frame(width: 400, height: 600)
         // Transparent so NSPopover's native chrome shows through, one step darker than the backdrop.
         // A rim-light overlay cut through where the popover's arrow attaches.
         .background(Color.black.opacity(0.10))
     }
 
-    /// Back branches on `searchAddFromChat`: chat origins return to chat.
+    /// Back branches on `searchAddOrigin`: chat origins return to chat.
     @ViewBuilder
     private var searchAddOverlay: some View {
         if let result = searchResult {
             SearchAddPanel(result: result, viewModel: searchViewModel) {
-                if searchAddFromChat {
-                    searchAddFromChat = false
+                switch searchAddOrigin {
+                case .chat:
                     searchResult = nil
                     withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
                         selectedTab = .chat
                     }
-                } else {
+                case .quiz:
+                    withAnimation(QuizMotion.panelOut) { searchResult = nil }
+                default:
                     searchResult = nil
                 }
+                searchAddOrigin = nil
             }
         }
     }

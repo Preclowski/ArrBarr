@@ -34,6 +34,8 @@ public final class DiscoverViewModel {
     /// Covers of the picks resolved so far, in pick order, for the wait screen's fan.
     public private(set) var loadingPosters: [URL] = []
     public private(set) var loadStartedAt: Date?
+    /// Bumped per title the deck sent to the library; the deck celebrates on change.
+    public private(set) var addedCount = 0
     /// Never unregistered: the view model lives as long as the Quiz does.
     private var addObserver: Task<Void, Never>?
     private var openObserver: Task<Void, Never>?
@@ -146,6 +148,7 @@ public final class DiscoverViewModel {
     /// the signal the top-up round feeds on.
     public func didAddToLibrary(foreignId: String) {
         guard let item = current, item.result.foreignId == foreignId else { return }
+        addedCount += 1
         current = nil
         advanceIfNeeded()
     }

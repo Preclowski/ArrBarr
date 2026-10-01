@@ -44,39 +44,3 @@ enum WaitFacts {
         return facts
     }
 }
-
-/// Draws nothing for an empty list.
-struct WaitFactTicker: View {
-    let facts: [WaitFact]
-    var interval: TimeInterval = 4
-
-    @State private var index = 0
-
-    var body: some View {
-        if !facts.isEmpty {
-            // A fact completes the lead ("…you finished 40 titles…?"), so it never stands alone.
-            VStack(spacing: 3) {
-                Text("wait.story.lead", bundle: .module)
-                    .scaledFont(size: 10, weight: .semibold)
-                    .textCase(.uppercase)
-                    .kerning(0.8)
-                Text((try? AttributedString(markdown: facts[index % facts.count].text)) ?? AttributedString(facts[index % facts.count].text))
-                    .scaledFont(size: 12)
-                    .lineLimit(2)
-            }
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .id(index)
-                .transition(.opacity)
-                .frame(maxWidth: .infinity)
-                .task(id: facts) {
-                    guard facts.count > 1 else { return }
-                    while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(interval))
-                        guard !Task.isCancelled else { return }
-                        withAnimation(.easeInOut(duration: 0.35)) { index += 1 }
-                    }
-                }
-        }
-    }
-}

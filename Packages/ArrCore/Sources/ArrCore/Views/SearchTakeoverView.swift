@@ -37,8 +37,9 @@ struct SearchTakeoverView<Surface: View>: View {
             Spacer()
         }
         .padding(.horizontal, 12)
-        .padding(.top, 8)
-        .padding(.bottom, 2)
+        // Same as every detail header, so pushing a result's detail doesn't shift the bar.
+        .padding(.top, 10)
+        .padding(.bottom, 4)
     }
 
     private var loadingIndicator: some View {

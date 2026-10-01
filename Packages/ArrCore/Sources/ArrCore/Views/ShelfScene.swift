@@ -280,6 +280,12 @@ struct ShelfPoster: View {
             }
         }
         .frame(width: width, height: width * 1.5)
+        .overlay(alignment: .topTrailing) {
+            if entry.watched && ConfigStore.shared.showWatchedIndicator {
+                // The detail hero's size (`RemotePoster`'s 12 pt ribbon), smaller on the far posters.
+                WatchedCornerBadge(side: min(12 * 1.6, width * 0.14), flat: true)
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: width * 0.04, style: .continuous))
     }
 }

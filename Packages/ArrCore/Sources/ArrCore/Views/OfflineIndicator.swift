@@ -51,4 +51,6 @@ struct OfflineIndicator: View {
 public extension EnvironmentValues {
     /// Rows hide their mutating controls, which can't succeed without the LAN.
     @Entry var queueOffline: Bool = false
+    /// The row's delete animation is playing; the poster shows a trash mark.
+    @Entry var queueRowLeaving: Bool = false
 }

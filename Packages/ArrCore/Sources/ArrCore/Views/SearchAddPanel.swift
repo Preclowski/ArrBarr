@@ -120,15 +120,7 @@ struct SearchAddPanel: View {
                     .padding(.bottom, 10)
             }
             .padding(.top, 8)
-            .background(
-                Rectangle()
-                    .fill(.clear)
-                    .glassEffect(.regular, in: .rect)
-                    .overlay(alignment: .top) {
-                        Divider().opacity(0.4)
-                    }
-                    .ignoresSafeArea(edges: .bottom)
-            )
+            .floatingPanelCard()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {

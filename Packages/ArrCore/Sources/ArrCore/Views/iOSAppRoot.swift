@@ -18,6 +18,7 @@ public struct iOSAppRoot: View {
     @State private var chatHolder = ChatViewModelHolder()
     @State private var discoverViewModel = DiscoverViewModel.shared
     @State private var quizAddResult: SearchResult?
+    @Namespace private var quizAddTransition
     /// `Router.detail` requests reach every listening stack; listeners check this so hidden tabs
     /// don't push a stale copy.
     @State private var selectedTab: RootTab = .queue
@@ -128,7 +129,8 @@ public struct iOSAppRoot: View {
                     chatHolder.vm.cancelTurn()
                     discoverViewModel.endLoading()
                 },
-                onRequestMore: requestMoreQuizPicks
+                onRequestMore: requestMoreQuizPicks,
+                addTransitionNamespace: quizAddTransition
             )
             .environment(configStore)
             .sheet(item: $quizAddResult) { result in
@@ -137,6 +139,7 @@ public struct iOSAppRoot: View {
                         quizAddResult = nil
                     }
                 }
+                .navigationTransition(.zoom(sourceID: result.id, in: quizAddTransition))
                 // A sheet inside a fullScreenCover doesn't inherit its environment; without this
                 // `SearchAddPanel.loadCast` traps on a missing ConfigStore.
                 .environment(configStore)

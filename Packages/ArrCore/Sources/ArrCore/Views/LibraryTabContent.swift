@@ -114,6 +114,9 @@ struct LibraryTabContent: View {
     /// Not reset on axis change: only picking the selected axis again flips it.
     @State private var sortDescending = false
     @AppStorage("libraryViewMode") private var viewModeRaw = ViewMode.grid.rawValue
+    /// A real `ScrollPosition`, not an id binding: SwiftUI read an id binding back as a scroll
+    /// request and snapped the grid to each row it crossed.
+    @State private var gridPosition = ScrollPosition(idType: LibraryEntry.ID.self)
 
     private var viewMode: ViewMode {
         ViewMode(rawValue: viewModeRaw) ?? .grid
@@ -170,9 +173,12 @@ struct LibraryTabContent: View {
                     source = first
                 }
             }
+            restoreGridPosition()
             Task { await load() }
         }
-        .onChange(of: source) { _, _ in
+        .onChange(of: source) { old, _ in
+            saveGridPosition(for: old)
+            restoreGridPosition()
             // An axis the new arr doesn't offer (IMDb on Sonarr) resets rather than sorting on nils.
             if !SortMode.available(for: source).contains(sort) { sort = .title }
             Task { await load() }
@@ -236,19 +242,27 @@ struct LibraryTabContent: View {
                 // Keeps the last row clear of the floating capsule.
                 .padding(.bottom, 58)
             }
+            .scrollPosition($gridPosition, anchor: .top)
             // The host tears this view down on tab switch, so the position lives on the view model.
-            .scrollPosition(id: gridAnchor, anchor: .top)
+            .onScrollPhaseChange { _, phase in
+                if phase == .idle { saveGridPosition(for: source) }
+            }
             .scrollBounceBehavior(.basedOnSize)
             .scrollEdgeEffectStyle(.soft, for: .top)
             .frame(maxHeight: .infinity)
         }
     }
 
-    /// Not `@State`: the scroll view writes this every drag frame, and the model stores it
-    /// `@ObservationIgnored` so those writes invalidate nothing.
-    private var gridAnchor: Binding<LibraryEntry.ID?> {
-        Binding(get: { viewModel.gridAnchor[source] },
-                set: { viewModel.gridAnchor[source] = $0 })
+    private func saveGridPosition(for source: QueueItem.Source) {
+        viewModel.gridAnchor[source] = gridPosition.viewID(type: LibraryEntry.ID.self)
+    }
+
+    private func restoreGridPosition() {
+        if let anchor = viewModel.gridAnchor[source] {
+            gridPosition.scrollTo(id: anchor, anchor: .top)
+        } else {
+            gridPosition.scrollTo(edge: .top)
+        }
     }
 
     private var gridColumns: [GridItem] {

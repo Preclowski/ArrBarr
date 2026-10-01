@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import os
 
 private let actionLog = Logger(category: "QueueAction")
@@ -24,6 +25,7 @@ extension QueueViewModel {
         // The UI hides these controls when fully offline; this also blocks Siri / Shortcuts callers.
         guard !isFullyOffline else { return }
         guard StoreManager.shared.requirePro(.queueAction) else { return }
+        await beginLeaving(items)
         do {
             try await aggregator.deleteAll(items)
             lastError = nil
@@ -32,6 +34,29 @@ extension QueueViewModel {
             }
         } catch {
             lastError = error.localizedDescription
+            endLeaving(items)
+        }
+    }
+
+    /// Explicit `withAnimation` only: inside macOS `List` cells implicit `.animation` and `visualEffect` don't
+    /// animate. The List's own removal closes the gap (fixed ~0.3 s; a manual height collapse snaps), and the
+    /// request goes out after, so the server only confirms it.
+    private func beginLeaving(_ items: [QueueItem]) async {
+        let ids = items.map(\.id)
+        withAnimation(.timingCurve(0.2, 0.8, 0.3, 1, duration: 0.28)) { leavingIDs.formUnion(ids) }
+        // Two withAnimation calls in one update merge into the first curve; a frame apart keeps them separate.
+        try? await Task.sleep(for: .milliseconds(20))
+        withAnimation(.timingCurve(0.6, 0, 0.85, 0.3, duration: 0.76)) { slidingIDs.formUnion(ids) }
+        try? await Task.sleep(for: .milliseconds(700))
+        withAnimation { removedIDs.formUnion(ids) }
+    }
+
+    private func endLeaving(_ items: [QueueItem]) {
+        let ids = items.map(\.id)
+        withAnimation(.smooth(duration: 0.4)) {
+            removedIDs.subtract(ids)
+            leavingIDs.subtract(ids)
+            slidingIDs.subtract(ids)
         }
     }
 
@@ -39,6 +64,7 @@ extension QueueViewModel {
         guard !isFullyOffline else { return }
         guard StoreManager.shared.requirePro(.queueAction) else { return }
         actionLog.notice("\(String(describing: action), privacy: .public) \(item.source.rawValue, privacy: .public) queue \(item.arrQueueId, privacy: .public)")
+        if action == .delete { await beginLeaving([item]) }
         do {
             try await aggregator.perform(action, on: item)
             lastError = nil
@@ -47,6 +73,7 @@ extension QueueViewModel {
         } catch {
             let message = error.localizedDescription
             lastError = message
+            if action == .delete { endLeaving([item]) }
             actionLog.error("\(String(describing: action), privacy: .public) queue \(item.arrQueueId, privacy: .public) failed: \(message, privacy: .private)")
             // Pin the client red only when the failure proves it down: `canControl` is client-wide, so a single
             // rejected request would strip pause/resume from every row.

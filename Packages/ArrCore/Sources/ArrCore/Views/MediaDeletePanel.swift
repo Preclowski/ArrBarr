@@ -22,7 +22,7 @@ struct MediaDeleteRequest: Identifiable, Hashable {
     }
 }
 
-/// macOS hosts it in `MediaDeleteModalOverlay` because `.sheet` doesn't render in a MenuBarExtra popover;
+/// macOS hosts it as an in-panel alert (`MediaDeleteModalOverlay`): `.sheet` doesn't render in a MenuBarExtra popover;
 /// iOS uses a native sheet. Both flags default off like the arr's, so nothing loads first.
 struct MediaDeletePanel: View {
     let request: MediaDeleteRequest
@@ -116,82 +116,70 @@ struct MediaDeletePanel: View {
 
     // MARK: - macOS
 
+    #if os(macOS)
+    /// The alert's content; `MediaDeleteModalOverlay` gives it the alert chrome.
     private var macCard: some View {
-        // Same skeleton as the edit card: both live under the same glyph and must read as one surface.
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(headingKey, bundle: .module)
-                    .scaledFont(size: 14, weight: .semibold)
-                Text(verbatim: request.title)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                Spacer(minLength: 0)
-                PanelCloseButton(action: onCancel)
+        VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("delete.alert.title \(request.title)", bundle: .module)
+                    .scaledFont(size: 13, weight: .bold)
+                    .fixedSize(horizontal: false, vertical: true)
+                if !request.offersOptions {
+                    Text("delete.fileOnlyWarning.label", bundle: .module)
+                        .scaledFont(size: 12)
+                        .foregroundStyle(.orange)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if request.offersOptions {
-                VStack(spacing: 4) {
-                    ModalFormToggle(label: "delete.filesFromDisk.button", isOn: $deleteFiles)
-                    ModalFormToggle(label: "delete.addExclusion.button", isOn: $addExclusion)
+                VStack(alignment: .leading, spacing: 6) {
+                    Toggle(isOn: $deleteFiles) {
+                        Text("delete.filesFromDisk.button", bundle: .module).scaledFont(size: 12)
+                    }
+                    Toggle(isOn: $addExclusion) {
+                        Text("delete.addExclusion.button", bundle: .module).scaledFont(size: 12)
+                    }
+                    if deleteFiles {
+                        Text("delete.filesWarning.label", bundle: .module)
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.orange)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-                .padding(.horizontal, 14)
-            } else {
-                Text("delete.fileOnlyWarning.label", bundle: .module)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 14)
-            }
-
-            if deleteFiles {
-                Text("delete.filesWarning.label", bundle: .module)
-                    .scaledFont(size: 10)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 14)
+                .toggleStyle(.checkbox)
             }
             if let err = deleteError {
                 Text(err)
-                    .font(.caption)
+                    .scaledFont(size: 11)
                     .foregroundStyle(.red)
-                    .padding(.horizontal, 14)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            deleteButton
+
+            HStack(spacing: 8) {
+                AlertAnswerButton(foreground: .primary, background: Color.primary.opacity(0.1), action: onCancel) {
+                    Text("common.cancel.button", bundle: .module)
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                AlertAnswerButton(foreground: .red, background: Color.red.opacity(0.22),
+                                  action: { Task { await performDelete() } }) {
+                    if deleting {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        HStack(spacing: 4) {
+                            if !storeManager.isPro { Image(systemName: "lock.fill") }
+                            Text(headingKey, bundle: .module)
+                        }
+                    }
+                }
+                .keyboardShortcut(.return, modifiers: [])
+                .disabled(deleting)
+            }
         }
-        .padding(.top, 10)
-        .padding(.bottom, 10)
     }
 
-    private var deleteButton: some View {
-        Button {
-            Task { await performDelete() }
-        } label: {
-            Group {
-                if deleting {
-                    ProgressView().controlSize(.small)
-                } else {
-                    HStack(spacing: 6) {
-                        if !storeManager.isPro {
-                            Image(systemName: "lock.fill")
-                        }
-                        Image(systemName: "trash")
-                            .scaledFont(size: 11, weight: .semibold)
-                        Text(request.offersOptions ? "delete.confirm.button" : "detail.deleteFile.button", bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
-        }
-        .modifier(GlassProminentButtonStyle())
-        .tint(.red)
-        .disabled(deleting)
-        .padding(.horizontal, 14)
-        .padding(.top, 4)
-    }
+    #endif
 
     private var headingKey: LocalizedStringKey {
         request.offersOptions ? "detail.delete.button" : "detail.deleteFile.button"
@@ -232,22 +220,8 @@ struct MediaDeleteModalOverlay: View {
     let onDeleted: () -> Void
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Rectangle()
-                .fill(.black.opacity(0.20))
-                .contentShape(Rectangle())
-                .onTapGesture { onDismiss() }
-                .ignoresSafeArea()
-
+        AlertCard(onCancel: onDismiss) {
             MediaDeletePanel(request: request, onCancel: onDismiss, onDeleted: onDeleted)
-                .background(
-                    Rectangle()
-                        .fill(.clear)
-                        .glassEffect(.regular, in: .rect)
-                        .overlay(alignment: .top) { Divider().opacity(0.4) }
-                        .ignoresSafeArea(edges: .bottom)
-                )
-                .shadow(color: .black.opacity(0.25), radius: 14, y: -2)
         }
     }
 }

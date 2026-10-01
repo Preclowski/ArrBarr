@@ -7,8 +7,6 @@ public struct PopoverContentView: View {
     let onOpenSettings: () -> Void
     let onShowAbout: () -> Void
     let onQuit: () -> Void
-    /// `nil` in the menu-bar panel; in the detached window an × ends the tab bar (traffic lights are hidden).
-    var onCloseWindow: (() -> Void)? = nil
     @Environment(\.isDetachedWindow) var isDetachedWindow
     @Environment(\.colorScheme) var colorScheme
     /// Closes the MenuBarExtra popover; a no-op in the detached NSWindow.
@@ -18,17 +16,15 @@ public struct PopoverContentView: View {
         viewModel: QueueViewModel,
         onOpenSettings: @escaping () -> Void,
         onShowAbout: @escaping () -> Void = {},
-        onQuit: @escaping () -> Void,
-        onCloseWindow: (() -> Void)? = nil
+        onQuit: @escaping () -> Void
     ) {
         self.viewModel = viewModel
         self.onOpenSettings = onOpenSettings
         self.onShowAbout = onShowAbout
         self.onQuit = onQuit
-        self.onCloseWindow = onCloseWindow
     }
 
-    @State var selectedTab: Tab = .queue
+    @State var selectedTab: Tab = .launch(ConfigStore.shared)
     /// Shows the ⌘1…⌘9 hints on the tab bar.
     @State var commandHeld = false
     @State var queueSelecting = false
@@ -44,8 +40,8 @@ public struct PopoverContentView: View {
     /// Owned here because ⌘F and the Add/search intents aim at it from outside any tab.
     @FocusState var searchFieldFocused: Bool
 
-    /// Opened from chat: Back returns to chat instead of the Add tab.
-    @State var searchAddFromChat = false
+    /// Chat returns to chat on Back; a quiz card animates in and out over the deck.
+    @State var searchAddOrigin: SearchAddRoute.Origin?
     /// Deck and presentation live in the view-model, which outlives this view — the panel
     /// rebuilds constantly and a chat turn can open the quiz while it's shut.
     @State var discoverViewModel = DiscoverViewModel.shared
@@ -96,6 +92,12 @@ public struct PopoverContentView: View {
         case chat = "Chat"
 
         var hostsSearch: Bool { self != .chat && self != .shelf }
+
+        /// The Settings choice, or Queue when it is gone (chat without an AI provider).
+        static func launch(_ store: ConfigStore) -> Tab {
+            guard let tab = Tab(rawValue: store.launchTab), tab != .chat || store.aiConfigured else { return .queue }
+            return tab
+        }
 
         /// Only the active tab shows its label: four labels ("Nadchodzące", "Warteschlange")
         /// never fit the 400 pt bar.
@@ -187,8 +189,12 @@ public struct PopoverContentView: View {
                 // Back returns to chat only for the chat origin; a quiz card returns to the parked deck.
                 historySource = nil
                 detailItem = nil
-                searchAddFromChat = route.origin == .chat
-                searchResult = route.result
+                searchAddOrigin = route.origin
+                if route.origin == .quiz {
+                    withAnimation(QuizMotion.panelIn) { searchResult = route.result }
+                } else {
+                    searchResult = route.result
+                }
                 return true
             }
             // The deck seeds itself (`DiscoverViewModel.open`); this only clears what it comes up over.
@@ -200,13 +206,25 @@ public struct PopoverContentView: View {
             }
             // Rendered at the root, not in the surfaces that start it, so a clip survives the popover
             // rebuilding per open. Below the confirm overlay: a confirmation outranks entertainment.
+            #if os(macOS)
+            .modifier(TrailerWindowSizing(sizer: isDetachedWindow ? .detached : .panel))
+            #endif
             .trailerOverlay(key: Binding(
                 get: { trailerSession.key },
                 set: { if $0 == nil { trailerSession.dismiss() } }
-            ))
+            ), fillsWindow: trailerFillsWindow, allowsFullscreen: isDetachedWindow)
             .confirmCenterHost()
             // No paywall here: the MenuBarExtra panel resigns key when StoreKit's UI appears and
             // would abort the purchase. AppDelegate hosts it in an NSWindow.
+    }
+
+    /// Both Mac windows grow to the clip.
+    private var trailerFillsWindow: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
     }
 
     /// Lifted out of `body`, which is already at the type-checker's limit.

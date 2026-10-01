@@ -13,6 +13,8 @@ struct DiscoverTabView: View {
     let onClose: () -> Void
     let onCancelLoading: () -> Void
     let onRequestMore: () -> Void
+    /// iOS: the add sheet zooms out of the card that asked for it.
+    var addTransitionNamespace: Namespace.ID?
 
     @State private var dragOffset: CGSize = .zero
     @State private var isDragging: Bool = false
@@ -24,6 +26,8 @@ struct DiscoverTabView: View {
     @State private var moreTimeout: Task<Void, Never>?
     /// Each dry tail gets exactly one silent retry; cleared when cards land.
     @State private var emptyRoundRetried = false
+    /// Drives the wait's "taking longer" hint for a top-up.
+    @State private var moreStartedAt: Date?
     @State private var trailer: TrailerReel?
     /// While this lags the top card the button stays but is inert — it would play the
     /// previous card's clip.
@@ -37,6 +41,12 @@ struct DiscoverTabView: View {
     /// Pinned for the whole verdict: `viewModel` is `@Observable` and `dragOffset` is `@State`,
     /// so a live `queue.first` can point one card too far for a frame and flash it.
     @State private var pinnedIncomingBackdrop: URL?
+    /// The card thrown right while its add panel is up. By id, not `dragOffset`: after a real add
+    /// the deck advances under the panel and the next card must not inherit the throw.
+    @State private var flungCardId: String?
+    /// A panel took the thrown card. State, not `isObscured`: a delayed task sees a stale `let`.
+    @State private var flungCardCovered = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(viewModel: DiscoverViewModel,
                 llmAvailable: Bool,
@@ -45,7 +55,8 @@ struct DiscoverTabView: View {
                 isObscured: Bool = false,
                 onClose: @escaping () -> Void,
                 onCancelLoading: @escaping () -> Void = {},
-                onRequestMore: @escaping () -> Void = {}) {
+                onRequestMore: @escaping () -> Void = {},
+                addTransitionNamespace: Namespace.ID? = nil) {
         self.viewModel = viewModel
         self.llmAvailable = llmAvailable
         self.radarrAvailable = radarrAvailable
@@ -54,6 +65,7 @@ struct DiscoverTabView: View {
         self.onClose = onClose
         self.onCancelLoading = onCancelLoading
         self.onRequestMore = onRequestMore
+        self.addTransitionNamespace = addTransitionNamespace
     }
 
     var body: some View {
@@ -75,7 +87,7 @@ struct DiscoverTabView: View {
 
     /// Split into three stages because as one chain it exceeds the type-checker's patience.
     private var swipeSurface: some View {
-        deckWithKeyboard
+        deckOrTopUpWait
             // Top up from the second-to-last card: the refill is a slow chat round-trip, so waiting
             // for the empty state means seconds of spinner.
             .onChange(of: viewModel.queue.count) { _, remaining in
@@ -103,6 +115,36 @@ struct DiscoverTabView: View {
                 if !inFlight { repinIncomingBackdrop() }
             }
             .onDisappear { moreTimeout?.cancel() }
+    }
+
+    /// An emptied deck waiting on a top-up gets the same wait as the first deal, and its cards
+    /// develop out of it the same way.
+    private var deckOrTopUpWait: some View {
+        ZStack {
+            if isWaitingForTopUp {
+                QuizLoadingView(phase: .askingModel,
+                                startedAt: moreStartedAt,
+                                // The kept picks are what this round asks for more of.
+                                posters: viewModel.sessionMatched.compactMap(\.result.posterURL),
+                                label: "discover.lookingForMore.label",
+                                onCancel: cancelTopUp)
+                    .transition(.blurReplace)
+            } else {
+                deckWithKeyboard
+                    .transition(.blurReplace)
+            }
+        }
+        .animation(.smooth(duration: 0.9), value: isWaitingForTopUp)
+    }
+
+    private var isWaitingForTopUp: Bool { viewModel.current == nil && isLookingForMore }
+
+    /// Also settles `requestingMore`, which a dropped request would hold for the whole timeout,
+    /// and spends the dry-tail retry so the cancel isn't answered with a fresh round.
+    private func cancelTopUp() {
+        emptyRoundRetried = true
+        onCancelLoading()
+        finishRequestingMore()
     }
 
     private var decoratedDeck: some View {
@@ -133,6 +175,17 @@ struct DiscoverTabView: View {
                 }
             }
             .task(id: viewModel.current?.id) { await resolveTrailer(for: viewModel.current) }
+            .overlay { addedConfetti }
+            .sensoryFeedback(.success, trigger: viewModel.addedCount)
+    }
+
+    /// Fires from the + button once the title really landed in the library, not on the swipe.
+    private var addedConfetti: some View {
+        ConfettiBurst(trigger: viewModel.addedCount,
+                      origin: .bottom,
+                      originOffset: CGSize(width: (QuizLayout.buttonSpacing + QuizLayout.buttonDiameter) / 2,
+                                           height: -(QuizLayout.buttonBottomPadding + QuizLayout.buttonDiameter / 2)))
+            .ignoresSafeArea()
     }
 
     /// Same fly-off as a skip; only the memory of it differs.
@@ -147,7 +200,14 @@ struct DiscoverTabView: View {
             .onKeyPress(.leftArrow) { keyVerdict(skip: true) }
             .onKeyPress(.rightArrow) { keyVerdict(skip: false) }
             .onAppear { deckFocused = true }
-            .onChange(of: isObscured) { _, obscured in deckFocused = !obscured }
+            .onChange(of: isObscured) { _, obscured in
+                deckFocused = !obscured
+                if obscured {
+                    if flungCardId != nil { flungCardCovered = true }
+                } else {
+                    returnFlungCard(after: .milliseconds(150))
+                }
+            }
             // Refocus when the deck is live again (after an add or a dismissed trailer), so keys work
             // without clicking the poster first.
             .onChange(of: viewModel.current?.id) { _, _ in deckFocused = true }
@@ -190,6 +250,7 @@ struct DiscoverTabView: View {
     private func requestMore() {
         moreTimeout?.cancel()
         requestingMore = true
+        moreStartedAt = Date()
         onRequestMore()
         moreTimeout = Task {
             try? await Task.sleep(for: .seconds(90))
@@ -326,7 +387,7 @@ struct DiscoverTabView: View {
     }
 
     private var centeredVerdictButtons: some View {
-        HStack(spacing: 30) {
+        HStack(spacing: QuizLayout.buttonSpacing) {
             GlassCircleButton(
                 systemName: "xmark",
                 tint: .secondary,
@@ -390,6 +451,8 @@ struct DiscoverTabView: View {
                         cardWidth: proxy.size.width,
                         cardHeight: proxy.size.height,
                         dragOffset: dragOffset,
+                        flung: isTop && flungCardId == item.id,
+                        transitionNamespace: addTransitionNamespace,
                         bottomInset: QuizLayout.cardBottomInset,
                         animationKey: viewModel.current?.dedupKey,
                         gesture: isTop ? dragGesture : nil,
@@ -433,12 +496,47 @@ struct DiscoverTabView: View {
     }
 
     /// Records the pick but does not advance: add or cancel both return to this card.
+    /// macOS throws the card right and opens the panel as it leaves; iOS zooms the sheet out of it.
     private func handleAdd() {
-        guard let item = viewModel.current else { return }
+        guard let item = viewModel.current, !verdictInFlight else { return }
         isDragging = false
-        dragOffset = .zero
         viewModel.markPicked()
+        #if os(macOS)
+        guard !reduceMotion else {
+            dragOffset = .zero
+            openCard(for: item)
+            return
+        }
+        verdictInFlight = true
+        withAnimation(QuizMotion.fling) {
+            flungCardId = item.id
+            dragOffset = .zero
+        } completion: {
+            verdictInFlight = false
+            openCard(for: item)
+            // Nothing took the card (no host answered): bring it back rather than leave an empty deck.
+            returnFlungCard(after: .milliseconds(400), unlessCovered: true)
+        }
+        #else
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) { dragOffset = .zero }
         openCard(for: item)
+        #endif
+    }
+
+    /// Delayed so a real add, which advances the deck a beat after the panel closes, drops the
+    /// thrown card instead of flying it back in first.
+    private func returnFlungCard(after delay: Duration, unlessCovered: Bool = false) {
+        guard flungCardId != nil else { return }
+        if !unlessCovered { flungCardCovered = false }
+        Task {
+            try? await Task.sleep(for: delay)
+            guard let flung = flungCardId, !(unlessCovered && flungCardCovered) else { return }
+            guard flung == viewModel.current?.id else {
+                flungCardId = nil
+                return
+            }
+            withAnimation(QuizMotion.cardReturn) { flungCardId = nil }
+        }
     }
 
     /// Ignored, not queued, mid-fly-off or with the trailer up, so a held arrow can't burn the deck.
@@ -457,6 +555,7 @@ struct DiscoverTabView: View {
         }
         dragOffset = .zero
         isDragging = false
+        flungCardId = nil
     }
 
     private func handleSkip() { flyOff(then: viewModel.skip) }
@@ -494,69 +593,56 @@ struct DiscoverTabView: View {
 
     // MARK: - Empty stack
 
-    /// Two states, never mixed: while a round is in flight the surface only says it's looking.
-    @ViewBuilder
+    /// The deck is spent and no round is in flight; a running top-up shows the wait instead.
     private var emptyStackState: some View {
         VStack(spacing: 10) {
             Spacer()
-            if isLookingForMore {
-                ProgressView()
-                    .controlSize(.small)
-                Text("discover.lookingForMore.label", bundle: .module)
-                    .scaledFont(size: 13, weight: .medium)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                WaitFactTicker(facts: WaitFacts.watching())
-                    .padding(.horizontal, 24)
-            } else {
-                Image(systemName: "rectangle.stack.fill")
-                    .scaledFont(size: 26, weight: .light)
-                    .foregroundStyle(.tertiary)
-                Text("discover.noMoreCards.button", bundle: .module)
-                    .scaledFont(size: 15, weight: .semibold)
-                    .foregroundStyle(.primary)
-                Text("discover.thatsEverything.label", bundle: .module)
-                    .scaledFont(size: 11)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
-                // A mis-swipe hurts most at the end of the deck, so offer the rewind here too.
-                if viewModel.canUndoSkip {
-                    Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                            viewModel.undoSkip()
-                        }
-                    } label: {
-                        Label {
-                            Text("discover.undo.button", bundle: .module)
-                        } icon: {
-                            Image(systemName: "arrow.uturn.backward")
-                        }
-                        .scaledFont(size: 12, weight: .medium)
+            Image(systemName: "rectangle.stack.fill")
+                .scaledFont(size: 26, weight: .light)
+                .foregroundStyle(.tertiary)
+            Text("discover.noMoreCards.button", bundle: .module)
+                .scaledFont(size: 15, weight: .semibold)
+                .foregroundStyle(.primary)
+            Text("discover.thatsEverything.label", bundle: .module)
+                .scaledFont(size: 11)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+            // A mis-swipe hurts most at the end of the deck, so offer the rewind here too.
+            if viewModel.canUndoSkip {
+                Button {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                        viewModel.undoSkip()
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
-                    .padding(.top, 2)
-                }
-                // The agent fetches the round, so without an LLM the tap goes nowhere.
-                if llmAvailable && viewModel.hasSessionEngagement {
-                    Button {
-                        requestMore()
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "sparkles")
-                                .scaledFont(size: 12, weight: .semibold)
-                            Text("discover.morePicksLikeThese.button", bundle: .module)
-                                .scaledFont(size: 13, weight: .semibold)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
+                } label: {
+                    Label {
+                        Text("discover.undo.button", bundle: .module)
+                    } icon: {
+                        Image(systemName: "arrow.uturn.backward")
                     }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .padding(.top, 4)
+                    .scaledFont(size: 12, weight: .medium)
                 }
+                .buttonStyle(.plain)
+                .foregroundStyle(Color.accentColor)
+                .padding(.top, 2)
+            }
+            // The agent fetches the round, so without an LLM the tap goes nowhere.
+            if llmAvailable && viewModel.hasSessionEngagement {
+                Button {
+                    requestMore()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .scaledFont(size: 12, weight: .semibold)
+                        Text("discover.morePicksLikeThese.button", bundle: .module)
+                            .scaledFont(size: 13, weight: .semibold)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                }
+                .buttonStyle(.borderedProminent)
+                .buttonBorderShape(.capsule)
+                .padding(.top, 4)
             }
             Button {
                 onClose()
@@ -567,25 +653,22 @@ struct DiscoverTabView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 2)
-            // Setup hints explain an empty deck; mid-round they'd contradict the "looking" state.
-            if !isLookingForMore {
-                if !radarrAvailable {
-                    Text("discover.configureRadarrInSettings.tooltip",
-                         bundle: .module)
-                        .scaledFont(size: 10)
-                        .foregroundStyle(.tertiary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                        .padding(.top, 4)
-                }
-                if !llmAvailable {
-                    Text("discover.configureAnLlmProvider.tooltip",
-                         bundle: .module)
-                        .scaledFont(size: 12)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
-                }
+            if !radarrAvailable {
+                Text("discover.configureRadarrInSettings.tooltip",
+                     bundle: .module)
+                    .scaledFont(size: 10)
+                    .foregroundStyle(.tertiary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+                    .padding(.top, 4)
+            }
+            if !llmAvailable {
+                Text("discover.configureAnLlmProvider.tooltip",
+                     bundle: .module)
+                    .scaledFont(size: 12)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
             }
             Spacer()
         }
@@ -606,6 +689,16 @@ enum QuizLayout {
     static let buttonBottomPadding: CGFloat = 24
     #endif
     static let cardBottomInset: CGFloat = buttonDiameter + buttonBottomPadding + 20
+    static let buttonSpacing: CGFloat = 30
+    /// How far past the edge a thrown card travels; the popover is 400 pt wide.
+    static let flingDistance: CGFloat = 560
+}
+
+enum QuizMotion {
+    static let fling = Animation.easeIn(duration: 0.24)
+    static let panelIn = Animation.spring(response: 0.42, dampingFraction: 0.86)
+    static let panelOut = Animation.smooth(duration: 0.24)
+    static let cardReturn = Animation.spring(response: 0.5, dampingFraction: 0.78)
 }
 
 // MARK: - Card stack item
@@ -617,29 +710,51 @@ private struct DiscoverCardStackItem<G: Gesture>: View {
     let cardWidth: CGFloat
     let cardHeight: CGFloat
     let dragOffset: CGSize
+    /// Thrown right while its add panel is up; adds on top of the drag so the throw keeps its line.
+    var flung = false
+    var transitionNamespace: Namespace.ID?
     let bottomInset: CGFloat
     let animationKey: String?
     let gesture: G?
     let onMore: () -> Void
 
     var body: some View {
-        let dragProgress = min(1, abs(dragOffset.width) / 90)
+        let offset = isTop
+            ? CGSize(width: dragOffset.width + (flung ? QuizLayout.flingDistance : 0),
+                     height: dragOffset.height - (flung ? 60 : 0))
+            : .zero
+        let dragProgress = min(1, abs(offset.width) / 90)
         let scale: CGFloat = isTop ? 1.0 : (0.94 + 0.06 * dragProgress)
         DiscoverCardView(item: item,
-                         dragOffset: isTop ? dragOffset : .zero,
+                         dragOffset: offset,
                          bottomInset: bottomInset,
                          onMore: onMore)
             .frame(width: cardWidth, height: cardHeight)
             .scaleEffect(scale)
-            .offset(x: isTop ? dragOffset.width : 0,
-                    y: isTop ? dragOffset.height * 0.3 : 0)
-            .rotationEffect(isTop ? .degrees(Double(dragOffset.width / 22)) : .zero,
-                            anchor: .center)
+            .offset(x: offset.width, y: offset.height * 0.3)
+            .rotationEffect(.degrees(Double(offset.width / 22)), anchor: .center)
             .allowsHitTesting(isTop)
             .zIndex(isTop ? 1 : 0)
             .gesture(gesture)
             .animation(.spring(response: 0.32, dampingFraction: 0.85),
                        value: animationKey)
+            // On every card, not just the top: toggling it would remount the peek card as it rises.
+            .addTransitionSource(id: item.result.id, in: transitionNamespace)
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func addTransitionSource(id: String, in namespace: Namespace.ID?) -> some View {
+        #if os(iOS)
+        if let namespace {
+            matchedTransitionSource(id: id, in: namespace)
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
     }
 }
 

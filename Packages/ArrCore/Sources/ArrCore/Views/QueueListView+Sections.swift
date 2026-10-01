@@ -131,6 +131,10 @@ extension QueueListView {
             // Per-section offline: the List-level value only covers all-arrs being down.
             .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
             .opacity(rowOpacity(isStale: isStale, items: entry.allItems))
+            .modifier(LeavingRow(
+                leaving: entry.allItems.contains { viewModel.leavingIDs.contains($0.id) },
+                sliding: entry.allItems.contains { viewModel.slidingIDs.contains($0.id) }
+            ))
             // Group members keep the shared leading edge; a trailing inset marks them as children.
             .padding(.trailing, indented ? 24 : 0)
         #if os(iOS)
@@ -286,4 +290,24 @@ extension QueueListView {
         }
     }
     #endif
+}
+
+/// Tint and poster trash, then a slide out past the trailing edge. Animated by the model's `withAnimation`.
+private struct LeavingRow: ViewModifier {
+    let leaving: Bool
+    let sliding: Bool
+    @State private var width: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            .environment(\.queueRowLeaving, leaving)
+            .background {
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .fill(Color.red.opacity(0.22))
+                    .opacity(leaving ? 1 : 0)
+            }
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+            .offset(x: sliding ? width : 0)
+            .allowsHitTesting(!leaving)
+    }
 }

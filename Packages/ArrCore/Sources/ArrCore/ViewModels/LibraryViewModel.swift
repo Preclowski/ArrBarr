@@ -82,8 +82,7 @@ public final class LibraryViewModel {
     @ObservationIgnored private var filterCache: [QueueItem.Source: [String: [LibraryEntry]]] = [:]
     @ObservationIgnored private var countCache: [QueueItem.Source: [String: Int]] = [:]
 
-    /// Lives here because the tab view is torn down on tab switch; `@ObservationIgnored` because it is
-    /// written every frame of a drag.
+    /// Lives here because the tab view is torn down on tab switch; saved when a scroll settles.
     @ObservationIgnored public var gridAnchor: [QueueItem.Source: LibraryEntry.ID] = [:]
 
     /// The grid re-unifies when, and only when, the index's version for the source moves.
