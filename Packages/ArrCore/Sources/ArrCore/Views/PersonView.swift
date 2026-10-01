@@ -395,8 +395,10 @@ private struct PersonFilmographyRow: View {
 
     var body: some View {
         let row = PosterMetadataRow(
+            // An owned title shows the library's cover, which may sit behind the arr's key.
             posterURL: result.posterURL,
-            posterAPIKey: nil,
+            posterAPIKey: result.posterRequiresAuth
+                ? configStore.config(for: result.source.serviceKind).apiKey : nil,
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,

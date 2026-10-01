@@ -4,10 +4,15 @@ import Foundation
 /// read off the shared `LibraryIndex` snapshot.
 nonisolated enum ArrLibraryMaps {
     /// Empty when Radarr isn't configured or the fetch fails; callers proceed untagged.
-    static func radarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    /// `posters`: carry the library's artwork for surfaces that pass the arr's key when it needs one.
+    static func radarrByTMDBId(config: ServiceConfig, posters: Bool = false) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.movies(config: config) {
-            if let tmdb = rec.tmdbId, let owned = rec.ownership { map[tmdb] = owned }
+            if let tmdb = rec.tmdbId, let owned = rec.ownership {
+                map[tmdb] = posters
+                    ? owned.withPoster(images: rec.images, mediaServerKeys: rec.mediaServerKeys, baseURL: config.baseURL)
+                    : owned
+            }
         }
         return map
     }
@@ -22,10 +27,14 @@ nonisolated enum ArrLibraryMaps {
     }
 
     /// An id match instead of a title + year join, which two shows can share.
-    static func sonarrByTMDBId(config: ServiceConfig) async -> [Int: LibraryOwnership] {
+    static func sonarrByTMDBId(config: ServiceConfig, posters: Bool = false) async -> [Int: LibraryOwnership] {
         var map: [Int: LibraryOwnership] = [:]
         for rec in await LibraryIndex.shared.series(config: config) {
-            if let tmdb = rec.tmdbId, tmdb > 0, let owned = rec.ownership { map[tmdb] = owned }
+            if let tmdb = rec.tmdbId, tmdb > 0, let owned = rec.ownership {
+                map[tmdb] = posters
+                    ? owned.withPoster(images: rec.images, mediaServerKeys: rec.mediaServerKeys, baseURL: config.baseURL)
+                    : owned
+            }
         }
         return map
     }

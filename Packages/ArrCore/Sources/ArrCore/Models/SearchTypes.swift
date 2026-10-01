@@ -91,6 +91,10 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         var copy = self
         copy.inLibraryArrId = ownership?.arrId
         copy.libraryDownloaded = ownership?.isDownloaded ?? false
+        if let ownership, let poster = ownership.poster {
+            copy.posterURL = poster
+            copy.posterRequiresAuth = ownership.posterRequiresAuth
+        }
         return copy
     }
 
