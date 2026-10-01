@@ -17,6 +17,11 @@ struct WaitPosterLayer: View {
 
     @State private var shown: Shown?
     @State private var lastChange = Date.distantPast
+    @State private var appeared = Date()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The blur breathes like a lens hunting for focus: one breath in 2.5 s, so a 3–5 s search sees one or two.
+    private static let breathPeriod: TimeInterval = 2.5
 
     /// Picks can land several a second; a cover stays at least this long.
     private static var hold: TimeInterval { 2 }
@@ -28,8 +33,11 @@ struct WaitPosterLayer: View {
                 Color.black
                 // Driven by the clock, not an animation: a repeating animation also caught the first
                 // layout pass and grew the cover out of the top-left corner.
-                TimelineView(.animation(minimumInterval: 1 / 20)) { context in
+                TimelineView(.animation(minimumInterval: 1 / 30)) { context in
                     let drift = (1 - cos(context.date.timeIntervalSinceReferenceDate * .pi / 18)) / 2
+                    // From the open, sharpening first, so it reads as focusing rather than drifting off.
+                    let breath = reduceMotion ? 0
+                        : sin(context.date.timeIntervalSince(appeared) * 2 * .pi / Self.breathPeriod)
                     ZStack {
                         if let shown {
                             Image(platformImage: shown.image)
@@ -47,8 +55,8 @@ struct WaitPosterLayer: View {
                     .frame(width: size.width, height: size.height)
                     .scaleEffect(1.18 + 0.08 * drift)
                     .offset(x: -size.width * 0.03 * drift, y: size.height * 0.02 * drift)
+                    .blur(radius: 28 - 4 * breath, opaque: true)
                 }
-                .blur(radius: 28, opaque: true)
                 .saturation(1.25)
                 Color.black.opacity(0.22)
                 scrim(size)
