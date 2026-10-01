@@ -15,7 +15,8 @@ struct TrailerRow: View {
         VStack(alignment: .leading, spacing: 6) {
             DetailSectionHeader("detail.trailers.label", count: reel.clips.count)
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(alignment: .top, spacing: 10) {
+                // Lazy: a blockbuster lists a hundred clips, and each tile fetches its still.
+                LazyHStack(alignment: .top, spacing: 10) {
                     ForEach(reel.clips) { clip in
                         let tile = TrailerTile(clip: clip, isPlaying: false) {
                             withAnimation(.smooth(duration: 0.4)) { session.present(reel, startingAt: clip) }
