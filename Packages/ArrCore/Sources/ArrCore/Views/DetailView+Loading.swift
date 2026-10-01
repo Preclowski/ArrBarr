@@ -10,10 +10,14 @@ extension DetailView {
         return await SearchClient.profileNameMap(config: config, source: source)[id]
     }
 
+    /// Two batches (the arr's record, then TMDB's credits and countries), each landing in one animated
+    /// change: assigned field by field, every await reflowed the page and the overview jumped.
+    static let landing: Animation = .smooth(duration: 0.28)
+
     func load(showSpinner: Bool = true) async {
         if showSpinner { loading = true }
         loadError = nil
-        defer { if showSpinner { loading = false } }
+        defer { if showSpinner { withAnimation(Self.landing) { loading = false } } }
         guard let entityId = item.entityId else {
             loadError = "No entity id"
             return
@@ -26,42 +30,58 @@ extension DetailView {
                 // `/movie/{id}` omits customFormats on the inline movieFile; on failure (older Radarr)
                 // the inline one still backs the banner.
                 async let file = (try? client.fetchMovieFile(movieId: entityId)) ?? nil
-                radarrDetail = try await detail
-                radarrMovieFile = await file
-                qualityProfileName = await Self.profileName(
-                    id: radarrDetail?.qualityProfileId, config: configStore.radarr, source: .radarr)
-                async let movieCountries = CountryProvider.movieCountries(
-                    tmdbId: radarrDetail?.tmdbId, configStore: configStore)
+                async let profiles = SearchClient.profileNameMap(config: configStore.radarr, source: .radarr)
+                let movie = try await detail
+                let movieFile = await file
+                let profileNames = await profiles
+                withAnimation(Self.landing) {
+                    radarrDetail = movie
+                    radarrMovieFile = movieFile
+                    qualityProfileName = movie.qualityProfileId.flatMap { profileNames[$0] }
+                }
+                async let movieCountries = CountryProvider.movieCountries(tmdbId: movie.tmdbId, configStore: configStore)
                 let movieCredits = await CastProvider.movieCredits(
-                    radarrMovieId: entityId, tmdbId: radarrDetail?.tmdbId, configStore: configStore)
-                cast = movieCredits.cast
-                directors = movieCredits.directors
-                countries = await movieCountries
+                    radarrMovieId: entityId, tmdbId: movie.tmdbId, configStore: configStore)
+                let names = await movieCountries
+                withAnimation(Self.landing) {
+                    cast = movieCredits.cast
+                    directors = movieCredits.directors
+                    countries = names
+                }
             case .sonarr:
                 let client = configStore.sonarrClient
                 async let d = client.fetchSeriesDetails(id: entityId)
                 async let eps = client.fetchEpisodes(seriesId: entityId)
                 async let files = (try? client.fetchEpisodeFileMap(seriesId: entityId)) ?? [:]
-                sonarrDetail = try await d
-                sonarrEpisodes = try await eps
-                episodeIdBySlot = Dictionary(
-                    sonarrEpisodes.compactMap { ep in
-                        guard let sn = ep.seasonNumber, let en = ep.episodeNumber else { return nil }
-                        return (EpisodeSlot(season: sn, episode: en), ep.id)
-                    },
-                    // A duplicated slot keeps the first record — the one the episode list renders.
-                    uniquingKeysWith: { first, _ in first }
-                )
-                sonarrEpisodeFiles = await files
-                qualityProfileName = await Self.profileName(
-                    id: sonarrDetail?.qualityProfileId, config: configStore.sonarr, source: .sonarr)
+                async let profiles = SearchClient.profileNameMap(config: configStore.sonarr, source: .sonarr)
+                let series = try await d
+                let episodes = try await eps
+                let fileMap = await files
+                let profileNames = await profiles
+                withAnimation(Self.landing) {
+                    sonarrDetail = series
+                    sonarrEpisodes = episodes
+                    episodeIdBySlot = Dictionary(
+                        episodes.compactMap { ep in
+                            guard let sn = ep.seasonNumber, let en = ep.episodeNumber else { return nil }
+                            return (EpisodeSlot(season: sn, episode: en), ep.id)
+                        },
+                        // A duplicated slot keeps the first record — the one the episode list renders.
+                        uniquingKeysWith: { first, _ in first }
+                    )
+                    sonarrEpisodeFiles = fileMap
+                    qualityProfileName = series.qualityProfileId.flatMap { profileNames[$0] }
+                }
                 async let seriesCountries = CountryProvider.seriesCountries(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
+                    tmdbId: series.tmdbId, tvdbId: series.tvdbId, configStore: configStore)
                 let seriesCredits = await CastProvider.seriesCredits(
-                    tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
-                cast = seriesCredits.cast
-                directors = seriesCredits.directors
-                countries = await seriesCountries
+                    tmdbId: series.tmdbId, tvdbId: series.tvdbId, configStore: configStore)
+                let names = await seriesCountries
+                withAnimation(Self.landing) {
+                    cast = seriesCredits.cast
+                    directors = seriesCredits.directors
+                    countries = names
+                }
             case .lidarr:
                 let client = configStore.lidarrClient
                 async let a = client.fetchAlbumDetails(id: entityId)

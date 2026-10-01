@@ -95,10 +95,10 @@ struct SearchAddPanel: View {
 
             VStack(spacing: 6) {
                 if viewModel.isLoadingOptions {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                    // The form's own rows, so the card doesn't grow when the options land.
+                    SkeletonRows(count: formRowCount, rowHeight: 26, spacing: 4)
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 4)
                 } else {
                     if result.source == .radarr {
                         radarrForm
@@ -378,6 +378,13 @@ struct SearchAddPanel: View {
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 4)
+    }
+
+    private var formRowCount: Int {
+        switch result.source {
+        case .sonarr, .lidarr: 4
+        default: 3
+        }
     }
 
     // MARK: - Radarr form

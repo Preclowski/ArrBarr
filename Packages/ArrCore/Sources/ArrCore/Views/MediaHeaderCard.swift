@@ -145,6 +145,8 @@ struct MediaHeaderCard: View {
     /// A movie's director(s) or a series' creator(s).
     var directedBy: [CastMember] = []
     var directedByKey: LocalizedStringKey = "detail.directedBy.label"
+    /// Credits are still on their way: hold the director's line so the overview doesn't drop when it lands.
+    var directedByLoading = false
     /// nil renders the names as plain text.
     var onTapPerson: ((CastMember) -> Void)?
 
@@ -180,6 +182,7 @@ struct MediaHeaderCard: View {
         metadataLoading: Bool = false,
         directedBy: [CastMember] = [],
         directedByKey: LocalizedStringKey = "detail.directedBy.label",
+        directedByLoading: Bool = false,
         onTapPerson: ((CastMember) -> Void)? = nil
     ) {
         self.title = title
@@ -210,6 +213,7 @@ struct MediaHeaderCard: View {
         self.metadataLoading = metadataLoading
         self.directedBy = directedBy
         self.directedByKey = directedByKey
+        self.directedByLoading = directedByLoading
         self.onTapPerson = onTapPerson
     }
 
@@ -270,6 +274,8 @@ struct MediaHeaderCard: View {
                 }
                 if !directedBy.isEmpty {
                     directedByLine
+                } else if directedByLoading {
+                    SkeletonBar(width: 130, height: 11)
                 }
                 if let overview, !overview.isEmpty {
                     ExpandableOverview(text: overview)

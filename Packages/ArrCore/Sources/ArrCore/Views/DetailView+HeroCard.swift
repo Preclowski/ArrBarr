@@ -152,8 +152,14 @@ extension DetailView {
             metadataLoading: metadataLoading,
             directedBy: directors,
             directedByKey: directedByKey,
+            directedByLoading: metadataLoading && directors.isEmpty && expectsCredits,
             onTapPerson: openPerson
         )
+    }
+
+    /// Radarr serves its own credits; a series' come from TMDB only.
+    private var expectsCredits: Bool {
+        item.source == .radarr || (item.source == .sonarr && !configStore.tmdbApiKey.isEmpty)
     }
 
     /// Falls back to the queue row's precomputed answer until the record lands.

@@ -152,17 +152,20 @@ struct SeasonDetailView: View {
         .posterLightbox(url: $enlargedPoster, apiKey: posterAPIKey, aspectRatio: 2.0 / 3.0)
         // Lazy: one request per series, cached by the index for the session.
         .task(id: drill.seriesId) {
-            countries = await CountryProvider.seriesCountries(
+            let names = await CountryProvider.seriesCountries(
                 tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
+            withAnimation(DetailView.landing) { countries = names }
         }
         // `CastProvider` caches per title, so coming from the series detail this is a cache hit.
         .task(id: drill.seriesId) {
-            cast = await CastProvider.seriesCredits(
-                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore).cast
+            let credits = await CastProvider.seriesCredits(
+                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
+            withAnimation(DetailView.landing) { cast = credits.cast }
         }
         .task(id: sonarrDetail?.qualityProfileId) {
             guard let id = sonarrDetail?.qualityProfileId else { return }
-            profileName = await SearchClient.profileNameMap(config: configStore.sonarr, source: .sonarr)[id]
+            let name = await SearchClient.profileNameMap(config: configStore.sonarr, source: .sonarr)[id]
+            withAnimation(DetailView.landing) { profileName = name }
         }
         .task(id: drill.seriesId) {
             let keys = sonarrDetail?.mediaServerKeys ?? []
