@@ -50,6 +50,7 @@ struct PersonView: View {
     @State private var loadError: String?
     @State private var kind: Kind = .movie
     @State private var enlargedPoster: URL?
+    @State private var portraitHovering = false
     /// Local pushes: routing through the root `DetailRequest` tears the stack down, so back lands on the wrong tab.
     @State private var titleDetail: QueueItem?
     @State private var titleAdd: SearchResult?
@@ -164,6 +165,23 @@ struct PersonView: View {
 
     // MARK: - Header
 
+    /// The detail poster's hover hint, on a round portrait.
+    @ViewBuilder
+    private var portraitEnlargeHint: some View {
+        if portraitHovering, photoURL != nil {
+            ZStack {
+                Circle().fill(Color.black.opacity(0.28))
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 96 * 0.22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+            .transition(.opacity)
+        }
+    }
+
     private var header: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 12) {
@@ -178,9 +196,16 @@ struct PersonView: View {
                         cornerRadius: 48,
                         fallbackSymbol: "person.fill"
                     )
+                    .overlay { portraitEnlargeHint }
                 }
                 .buttonStyle(.plain)
                 .disabled(photoURL == nil)
+                .help(Text("person.showPhoto.button", bundle: .module))
+                .accessibilityLabel(Text("person.showPhoto.button", bundle: .module))
+                #if os(macOS)
+                .onHover { portraitHovering = $0 }
+                .animation(.easeOut(duration: 0.12), value: portraitHovering)
+                #endif
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(displayName)
@@ -303,7 +328,7 @@ struct PersonView: View {
             }
             .padding(.horizontal, 7)
             .padding(.vertical, 3)
-            .overlay(Capsule().strokeBorder(Color.primary.opacity(0.18), lineWidth: 0.75))
+            .hoverChipOutline(.primary, opacity: 0.18, shape: Capsule(), inset: true)
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
