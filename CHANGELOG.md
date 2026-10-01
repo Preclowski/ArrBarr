@@ -9,6 +9,25 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.2.1] — 2026-10-01
+
+### Added
+
+- Trailers sit in a row under the cast; their tiles fly into the player and back.
+
+### Changed
+
+- Hover previews on the monitor ribbon, bookmark, cast heads, link chips and person portrait.
+- The poster lightbox opens with a flare.
+- The release-search wait cover's blur pulses like a lens finding focus.
+- Detail pages load in two steps without layout jumps.
+- Long trailer rows scroll smoothly.
+
+### Fixed
+
+- TMDB rows and filmographies show the same cover as the detail page.
+- Trailer tiles no longer vanish mid-flight.
+
 ## [3.2.0] — 2026-10-01
 
 ### Added
