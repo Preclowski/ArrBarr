@@ -175,24 +175,27 @@ struct SearchAddPanel: View {
         // Dismiss only OUR previous clip — a fresh mount must not kill a session restored across a reopen.
         if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         trailer = nil
+        var reel: TrailerReel?
         switch result.mediaRef {
         case .tmdb(let id):
-            trailer = await TrailerProvider.movieReel(
+            reel = await TrailerProvider.movieReel(
                 radarrTrailerId: nil, tmdbId: id, configStore: configStore
             )
         case .tvdb(let id):
             // Pass the TMDB id when there is one: one request instead of `/find` plus one.
-            trailer = await TrailerProvider.seriesReel(
+            reel = await TrailerProvider.seriesReel(
                 tmdbId: result.tmdbTVId, tvdbId: id, configStore: configStore
             )
         case .tmdbTV(let id):
             // Not yet resolved to a tvdbId — only TMDB knows this show.
-            trailer = await TrailerProvider.seriesReel(
+            reel = await TrailerProvider.seriesReel(
                 tmdbId: id, tvdbId: nil, configStore: configStore
             )
         case .musicBrainz, .imdb:
             break
         }
+        await reel?.prefetchThumbnails()
+        withAnimation(DetailView.landing) { trailer = reel }
     }
 
     private var navTitleString: String {

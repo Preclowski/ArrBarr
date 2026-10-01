@@ -8,7 +8,12 @@ nonisolated public struct TrailerClip: Hashable, Sendable, Identifiable {
     public let name: String?
     public var id: String { key }
 
+    /// `mqdefault` is YouTube's native 16:9 still (320×180, no letterbox bars). It goes through the shared
+    /// `PosterStore` icon tier like any cover, so one cached file serves every tile.
     var thumbnailURL: URL? { URL(string: "https://i.ytimg.com/vi/\(key)/mqdefault.jpg") }
+
+    /// Both the detail row and the player's reel strip, so they share one look and one cached image.
+    static let thumbnailSize = CGSize(width: 128, height: 72)
 }
 
 nonisolated public struct TrailerReel: Hashable, Sendable {

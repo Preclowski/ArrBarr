@@ -38,6 +38,7 @@ extension DetailView {
         case .lidarr:
             reel = nil
         }
+        await reel?.prefetchThumbnails()
         withAnimation(DetailView.landing) { trailer = reel }
     }
 

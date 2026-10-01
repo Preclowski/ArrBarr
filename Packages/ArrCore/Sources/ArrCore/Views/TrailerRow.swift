@@ -22,13 +22,34 @@ struct TrailerRow: View {
     }
 }
 
+extension TrailerReel {
+    /// Warms the first tiles' stills before the row shows, so it lands with its pictures instead of empty
+    /// frames. Waits at most `within`; a slow image host keeps filling the cache in the background.
+    func prefetchThumbnails(limit: Int = 6, within: Duration = .milliseconds(1500)) async {
+        let urls = clips.prefix(limit).compactMap(\.thumbnailURL)
+        let warm = Task {
+            await withTaskGroup(of: Void.self) { group in
+                for url in urls {
+                    group.addTask { _ = await PosterStore.shared.image(for: url, tier: .icon) }
+                }
+            }
+        }
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await warm.value }
+            group.addTask { try? await Task.sleep(for: within) }
+            await group.next()
+            group.cancelAll()
+        }
+    }
+}
+
 private struct TrailerTile: View {
     let clip: TrailerClip
     let isPlaying: Bool
     let action: () -> Void
     @State private var hovering = false
 
-    private static let thumbnail = CGSize(width: 136, height: 76.5)
+    private static let thumbnail = TrailerClip.thumbnailSize
 
     var body: some View {
         Button(action: action) {
@@ -63,6 +84,7 @@ private struct TrailerTile: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(clip.name.map { Text(verbatim: $0) } ?? Text("detail.trailer.button", bundle: .module))
         .onHover { over in withAnimation(.smooth(duration: 0.15)) { hovering = over } }
         .accessibilityAddTraits(isPlaying ? .isSelected : [])
         #if os(macOS)

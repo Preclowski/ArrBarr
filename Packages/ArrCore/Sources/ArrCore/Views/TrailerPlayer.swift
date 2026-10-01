@@ -391,7 +391,7 @@ private struct TrailerClipTile: View {
     let isPlaying: Bool
     let action: () -> Void
 
-    private static let thumbnail = CGSize(width: 128, height: 72)
+    private static let thumbnail = TrailerClip.thumbnailSize
 
     var body: some View {
         Button(action: action) {
