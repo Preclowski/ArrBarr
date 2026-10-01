@@ -116,7 +116,8 @@ struct DiscoverViewModelTests {
         // process, so no surface has to be on screen at the right moment.
         let vm = freshVM()
         AppMessages.post(AppMessages.OpenDiscoverQuiz(items: [makeItem(1), makeItem(2)], append: false))
-        try await waitUntil { vm.current != nil }
+        // Generous: on a loaded CI runner the main actor can be busy for seconds.
+        try await waitUntil(within: .seconds(10)) { vm.current != nil }
 
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.sessionTotal == 2)
