@@ -37,8 +37,8 @@ public final class DiscoverViewModel {
     /// Bumped per title the deck sent to the library; the deck celebrates on change.
     public private(set) var addedCount = 0
     /// Never unregistered: the view model lives as long as the Quiz does.
-    private var addObserver: Task<Void, Never>?
-    private var openObserver: Task<Void, Never>?
+    private var addObserver: NotificationCenter.ObservationToken?
+    private var openObserver: NotificationCenter.ObservationToken?
     public private(set) var queue: [DiscoverItem] = []
     /// Cleared when a new session starts so "more picks" feedback carries only fresh signal.
     public private(set) var sessionMatched: [DiscoverItem] = []
@@ -71,21 +71,19 @@ public final class DiscoverViewModel {
         self.hasPickedKind = defaults.bool(forKey: Self.hasPickedKindKey)
         // Not in the view: the deck is hidden while the add panel is up, so a view-level
         // listener would be torn down exactly when "added" arrives.
-        addObserver = Task { [weak self] in
-            for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.DidAddToLibrary.self) {
-                self?.didAddToLibrary(foreignId: message.foreignId)
-            }
+        // `addObserver`, not a `for await` Task: it registers before init returns, so a message
+        // posted right after construction is never lost.
+        addObserver = NotificationCenter.default.addObserver(of: nil as AppMessageBus?, for: AppMessages.DidAddToLibrary.self) { [weak self] message in
+            await self?.didAddToLibrary(foreignId: message.foreignId)
         }
-        openObserver = Task { [weak self] in
-            for await message in NotificationCenter.default.messages(of: nil as AppMessageBus?, for: AppMessages.OpenDiscoverQuiz.self) {
-                self?.open(items: message.items, append: message.append)
-            }
+        openObserver = NotificationCenter.default.addObserver(of: nil as AppMessageBus?, for: AppMessages.OpenDiscoverQuiz.self) { [weak self] message in
+            await self?.open(items: message.items, append: message.append)
         }
     }
 
     isolated deinit {
-        addObserver?.cancel()
-        openObserver?.cancel()
+        if let addObserver { NotificationCenter.default.removeObserver(addObserver) }
+        if let openObserver { NotificationCenter.default.removeObserver(openObserver) }
     }
 
     /// The chat resume card sends no picks; it only wants the deck back on screen.
