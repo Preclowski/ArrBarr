@@ -379,6 +379,8 @@ private struct TrailerReelStrip: View {
                     }
                     .padding(.horizontal, 12)
                 }
+                // Tiles fly in from the detail's row; clipped, they'd show only once inside the strip.
+                .scrollClipDisabled(tileNamespace != nil)
                 .onAppear { proxy.scrollTo(playing, anchor: .center) }
                 .onChange(of: playing) { _, key in
                     withAnimation(.smooth(duration: 0.25)) { proxy.scrollTo(key, anchor: .center) }

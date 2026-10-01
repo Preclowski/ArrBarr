@@ -5,6 +5,11 @@ struct TrailerRow: View {
     let reel: TrailerReel
     private var session: TrailerSession { .shared }
     @Environment(\.trailerTileNamespace) private var tileNamespace
+    /// A flying tile is drawn by the scroll view it lands in, which clips it to its own bounds: off while the
+    /// player has the tiles and for the flight back, on otherwise so the row stops at the margin like the cast.
+    @State private var tilesAway = false
+
+    private var showing: Bool { session.isShowing(reel) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -16,7 +21,7 @@ struct TrailerRow: View {
                             withAnimation(.smooth(duration: 0.4)) { session.present(reel, startingAt: clip) }
                         }
                         // While the player has them, the tiles live in its reel strip; the row keeps their room.
-                        if tileNamespace != nil && session.isShowing(reel) && reel.clips.count > 1 {
+                        if tileNamespace != nil && showing && reel.clips.count > 1 {
                             tile.hidden()
                         } else {
                             tile.trailerTileMatch(clip, in: tileNamespace)
@@ -24,6 +29,17 @@ struct TrailerRow: View {
                     }
                 }
                 .padding(.vertical, 2)
+            }
+            .scrollClipDisabled(showing || tilesAway)
+        }
+        .onChange(of: showing) { _, now in
+            if now {
+                tilesAway = true
+            } else {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(600))
+                    tilesAway = false
+                }
             }
         }
     }
