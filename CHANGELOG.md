@@ -9,6 +9,8 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.2.0] — 2026-10-01
+
 ### Added
 
 - Roulette spins popular and in-cinema titles (needs a TMDB key), with an "In library" filter.
