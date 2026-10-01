@@ -23,7 +23,7 @@ enum People {
         if DemoMode.isActive { return DemoMocks.personMovies(personId: personId) }
         guard !key.isEmpty else { return [] }
         let credits = try await TMDBClient(apiKey: key).personMovieCredits(personId: personId)
-        let libraryMap = await ArrLibraryMaps.radarrByTMDBId(config: radarrConfig, posters: true)
+        let libraryMap = await ArrLibraryMaps.radarrByTMDBId(config: radarrConfig)
         let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
         return TMDBSearchMapping.movies(PersonCreditMerge.byPopularity(merged.credits), libraryMap: libraryMap, roles: merged.roles)
     }
@@ -35,7 +35,7 @@ enum People {
         guard !key.isEmpty else { return [] }
         let credits = try await TMDBClient(apiKey: key).personTVCredits(personId: personId)
         // Ownership by TMDB id off the shared `LibraryIndex`, never by title + year.
-        let libraryMap = await ArrLibraryMaps.sonarrByTMDBId(config: sonarrConfig, posters: true)
+        let libraryMap = await ArrLibraryMaps.sonarrByTMDBId(config: sonarrConfig)
         let merged = PersonCreditMerge.merge(cast: credits.cast, crew: credits.crew ?? [])
         let rows = TMDBSearchMapping.series(
             PersonCreditMerge.byPopularity(merged.credits),

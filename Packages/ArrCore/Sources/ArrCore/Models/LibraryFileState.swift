@@ -60,18 +60,16 @@ nonisolated extension ArrSeries {
 nonisolated struct LibraryOwnership: Equatable, Sendable {
     let arrId: Int
     let isDownloaded: Bool
-    /// The library's own artwork (arr, or the media server's override), so a TMDB row of an owned title shows
-    /// the cover its detail does. Nil where the caller has no base URL to resolve it.
+    /// The cover the title's detail shows (the media server's, else the arr's), so a TMDB row of an owned
+    /// title matches it. Only a key-free URL: many surfaces drawing these rows never hold an arr's key.
     var poster: URL? = nil
-    var posterRequiresAuth = false
 }
 
 nonisolated extension LibraryOwnership {
     func withPoster(images: [ArrImage]?, mediaServerKeys: [MediaServerExternalKey], baseURL: String) -> LibraryOwnership {
         let (url, needsKey) = (images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: mediaServerKeys)
         var copy = self
-        copy.poster = url
-        copy.posterRequiresAuth = needsKey
+        copy.poster = needsKey ? nil : url
         return copy
     }
 }

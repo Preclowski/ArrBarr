@@ -91,9 +91,12 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
         var copy = self
         copy.inLibraryArrId = ownership?.arrId
         copy.libraryDownloaded = ownership?.isDownloaded ?? false
-        if let ownership, let poster = ownership.poster {
+        // One choice of cover for every row, whatever produced it: the library's, then the media server's by
+        // identity (it may hold a title the arr doesn't), else the row's own.
+        if let poster = ownership?.poster ?? MediaServerIndex.shared.posterURL(for: copy.mediaServerKeys),
+           poster != copy.posterURL {
             copy.posterURL = poster
-            copy.posterRequiresAuth = ownership.posterRequiresAuth
+            copy.posterRequiresAuth = false
         }
         return copy
     }
