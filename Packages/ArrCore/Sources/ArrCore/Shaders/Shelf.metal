@@ -166,26 +166,43 @@ static float shelfFbm3(float3 p) {
     return half4(col, 1.0h) * color.a;
 }
 
-// MARK: - Poster light sweep
+// MARK: - Lightbox ignition
 
-// A soft band of light crossing the art along `dir`; the image under it swells like through a lens,
-// with a faint colour fringe. Gaussian, so the band has no edge.
-[[stitchable]] half4 posterSweep(float2 p, SwiftUI::Layer layer, float2 size, float2 dir, float progress) {
-    float2 n = normalize(dir);
-    float sigma = 0.2 * max(size.x, size.y);
-    float4 corners = float4(0.0, dot(float2(size.x, 0.0), n), dot(float2(0.0, size.y), n), dot(size, n));
-    float from = min(min(corners.x, corners.y), min(corners.z, corners.w)) - 1.5 * sigma;
-    float to = max(max(corners.x, corners.y), max(corners.z, corners.w)) + 1.5 * sigma;
-    float d = dot(p, n) - mix(from, to, progress);
-    float g = exp(-(d * d) / (sigma * sigma));
+/// The art catches at many points at once and the reveal spreads from each, like paper alight across its
+/// whole surface; the burning edge is a diffraction fringe (split channels, a spectral sheen) instead of fire.
+[[stitchable]] half4 posterIgnite(float2 p, SwiftUI::Layer layer, float2 size, float progress, float seed) {
+    const float band = 0.12;
+    float scale = max(size.x, size.y);
+    float2 offset = float2(seed * 17.0, seed * 31.0);
+
+    // Broad patches decide where it catches first; a fine grain frays the edge like burning paper. fBm sits
+    // mostly in 0.28…0.72, so it is stretched to the full range or the reveal would stall, then rush.
+    float2 uv = p / scale;
+    float coarse = clamp((shelfFbm(uv * 4.0 + offset) - 0.28) / 0.44, 0.0, 1.0);
+    float n = coarse + 0.08 * (shelfNoise(uv * 38.0 + offset) - 0.5);
+
+    float front = mix(-band, 1.0 + band, progress);
+    float edge = (front - n) / band;               // < 0 not yet alight, 0…1 the fringe, > 1 revealed
+    if (edge <= 0.0) { return half4(0.0); }
+    if (edge >= 1.0) { return layer.sample(p); }
+
+    float glow = sin(edge * M_PI_F);               // strongest mid-fringe, zero at both ends
+    float2 e = float2(2.0 / scale, 0.0);
+    float2 grad = float2(shelfFbm((uv + e.xy) * 4.0 + offset), shelfFbm((uv + e.yx) * 4.0 + offset))
+                - shelfFbm(uv * 4.0 + offset);
+    float2 dir = length(grad) > 1e-6 ? normalize(grad) : float2(0.0, 1.0);
+    float spread = 6.0 * glow;
 
     float2 lo = float2(0.5, 0.5);
     float2 hi = size - 0.5;
-    float2 pull = n * d * g;
-    half4 r = layer.sample(clamp(p - pull * 0.22, lo, hi));
-    half4 c = layer.sample(clamp(p - pull * 0.18, lo, hi));
-    half4 b = layer.sample(clamp(p - pull * 0.14, lo, hi));
-    half a = layer.sample(p).a;
-    half3 rgb = half3(r.r, c.g, b.b) + half3(0.16 * g);
-    return half4(rgb * a, a);
+    half4 base = layer.sample(p);
+    half r = layer.sample(clamp(p + dir * spread, lo, hi)).r;
+    half b = layer.sample(clamp(p - dir * spread, lo, hi)).b;
+
+    // A thin spectrum that runs along the fringe as it advances.
+    float hue = fract(n * 2.0 + progress);
+    half3 spectrum = half3(0.5 + 0.5 * cos(6.28318 * (hue + float3(0.0, 0.33, 0.67))));
+    half3 rgb = half3(r, base.g, b) + spectrum * half(0.28 * glow);
+    half alpha = base.a * half(smoothstep(0.0, 0.5, edge));
+    return half4(rgb * alpha, alpha);
 }
