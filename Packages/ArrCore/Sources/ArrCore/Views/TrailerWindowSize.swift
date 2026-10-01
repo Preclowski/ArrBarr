@@ -39,14 +39,13 @@ struct TrailerWindowSizing: ViewModifier {
     let sizer: TrailerWindowSizer
 
     func body(content: Content) -> some View {
-        // The clip's overlay leaves at once while the window still has 0.4 s to shrink: black until then,
-        // not the 400 pt content adrift in a wide window.
-        let shrinking = sizer.size != TrailerWindowSize.standard && TrailerSession.shared.key == nil
+        // Pinned to the edge the window hangs from, so the 400 pt content holds still on screen while the
+        // window grows and shrinks around it, and the trailer tiles can fly back into a visible row.
+        let resized = sizer.size != TrailerWindowSize.standard
         content
-            .opacity(shrinking ? 0 : 1)
-            .frame(width: sizer.size.width, height: sizer.size.height)
-            .background(Color.black.opacity(shrinking ? 1 : 0))
-            .animation(.easeOut(duration: 0.15), value: shrinking)
+            .frame(width: sizer.size.width, height: sizer.size.height,
+                   alignment: sizer.growsLeft ? .topTrailing : .topLeading)
+            .background(Color.black.opacity(resized ? 1 : 0))
             .background(WindowReader { sizer.attach($0) })
     }
 }
@@ -62,7 +61,7 @@ final class TrailerWindowSizer {
     private(set) var size = TrailerWindowSize.standard
 
     @ObservationIgnored private weak var window: NSWindow?
-    @ObservationIgnored private let growsLeft: Bool
+    @ObservationIgnored let growsLeft: Bool
     /// Where the window hangs from while it isn't standard size: its top edge, and the side edge that stays.
     @ObservationIgnored private var anchor: (top: CGFloat, x: CGFloat)?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []

@@ -312,7 +312,7 @@ extension View {
                             .ignoresSafeArea()
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
+                                withAnimation(.smooth(duration: 0.4)) { key.wrappedValue = nil }
                             }
                         if fillsWindow {
                             TrailerWebView(key: presented, allowsFullscreen: allowsFullscreen)
@@ -329,7 +329,7 @@ extension View {
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
                         LightboxCloseButton(labelKey: "detail.trailerClose.button") {
-                            withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
+                            withAnimation(.smooth(duration: 0.4)) { key.wrappedValue = nil }
                         }
                     }
                     .transition(.opacity)
