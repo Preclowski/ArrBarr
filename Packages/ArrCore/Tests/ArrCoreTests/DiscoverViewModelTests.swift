@@ -117,7 +117,7 @@ struct DiscoverViewModelTests {
         let vm = freshVM()
         AppMessages.post(AppMessages.OpenDiscoverQuiz(items: [makeItem(1), makeItem(2)], append: false))
         // Generous: on a loaded CI runner the main actor can be busy for seconds.
-        try await waitUntil(within: .seconds(10)) { vm.current != nil }
+        try await waitUntil({ vm.current != nil }, within: .seconds(10))
 
         #expect(vm.current?.dedupKey == "tmdb:1")
         #expect(vm.sessionTotal == 2)
