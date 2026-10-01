@@ -97,9 +97,8 @@ private struct CastTile: View {
     let person: CastMember
     var onTapPerson: ((CastMember) -> Void)?
     @Environment(ConfigStore.self) private var configStore
-
-    #if os(macOS)
-    #endif
+    /// Only a head that opens the person's page reacts.
+    @State private var hovering = false
 
     private var tile: some View {
         VStack(spacing: 4) {
@@ -111,6 +110,17 @@ private struct CastTile: View {
                 cornerRadius: 26,
                 fallbackSymbol: "person.fill"
             )
+            .overlay {
+                ZStack {
+                    Circle().fill(.black.opacity(0.4))
+                    Image(systemName: "person.fill")
+                        .scaledFont(size: 16, weight: .semibold)
+                        .foregroundStyle(.white)
+                        .scaleEffect(hovering ? 1 : 0.7)
+                }
+                .opacity(hovering ? 1 : 0)
+                .allowsHitTesting(false)
+            }
             Text(person.name)
                 .scaledFont(size: 10, weight: .semibold)
                 .lineLimit(2)
@@ -132,6 +142,7 @@ private struct CastTile: View {
                 tile.contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .onHover { over in withAnimation(.smooth(duration: 0.18)) { hovering = over } }
             #if os(macOS)
             .pointerStyle(.link)
             .hoverTooltip(arrowEdge: .top) {
