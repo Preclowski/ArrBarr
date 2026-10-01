@@ -207,12 +207,13 @@ public struct PopoverContentView: View {
             // Rendered at the root, not in the surfaces that start it, so a clip survives the popover
             // rebuilding per open. Below the confirm overlay: a confirmation outranks entertainment.
             #if os(macOS)
+            .environment(\.trailerTileNamespace, trailerTiles)
             .modifier(TrailerWindowSizing(sizer: isDetachedWindow ? .detached : .panel))
             #endif
             .trailerOverlay(key: Binding(
                 get: { trailerSession.key },
                 set: { if $0 == nil { trailerSession.dismiss() } }
-            ), fillsWindow: trailerFillsWindow, allowsFullscreen: isDetachedWindow)
+            ), fillsWindow: trailerFillsWindow, allowsFullscreen: isDetachedWindow, tileNamespace: trailerTiles)
             .confirmCenterHost()
             // No paywall here: the MenuBarExtra panel resigns key when StoreKit's UI appears and
             // would abort the purchase. AppDelegate hosts it in an NSWindow.
@@ -260,5 +261,7 @@ public struct PopoverContentView: View {
     @State var tabFrames: [Tab: CGRect] = [:]
 
     @Namespace var barGlass
+    /// The detail's trailer tiles travel into the player's reel strip.
+    @Namespace var trailerTiles
 
 }

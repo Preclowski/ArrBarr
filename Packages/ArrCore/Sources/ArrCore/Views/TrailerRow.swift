@@ -4,6 +4,7 @@ import SwiftUI
 struct TrailerRow: View {
     let reel: TrailerReel
     private var session: TrailerSession { .shared }
+    @Environment(\.trailerTileNamespace) private var tileNamespace
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -11,8 +12,14 @@ struct TrailerRow: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 10) {
                     ForEach(reel.clips) { clip in
-                        TrailerTile(clip: clip, isPlaying: session.key == clip.key && session.isShowing(reel)) {
-                            withAnimation(.smooth(duration: 0.22)) { session.present(reel, startingAt: clip) }
+                        let tile = TrailerTile(clip: clip, isPlaying: false) {
+                            withAnimation(.smooth(duration: 0.4)) { session.present(reel, startingAt: clip) }
+                        }
+                        // While the player has them, the tiles live in its reel strip; the row keeps their room.
+                        if tileNamespace != nil && session.isShowing(reel) && reel.clips.count > 1 {
+                            tile.hidden()
+                        } else {
+                            tile.trailerTileMatch(clip, in: tileNamespace)
                         }
                     }
                 }
@@ -90,5 +97,21 @@ private struct TrailerTile: View {
         #if os(macOS)
         .pointerStyle(.link)
         #endif
+    }
+}
+
+extension EnvironmentValues {
+    /// Shared by the detail's trailer row and the player's reel strip (macOS window root).
+    @Entry var trailerTileNamespace: Namespace.ID?
+}
+
+extension View {
+    @ViewBuilder
+    func trailerTileMatch(_ clip: TrailerClip, in namespace: Namespace.ID?) -> some View {
+        if let namespace {
+            matchedGeometryEffect(id: "trailer-tile-\(clip.key)", in: namespace)
+        } else {
+            self
+        }
     }
 }

@@ -295,51 +295,60 @@ extension View {
     /// Over the whole surface, like the poster lightbox — inline, the player pushed everything
     /// else out of the narrow popover. `fillsWindow`: the window has grown to the clip's shape, so the
     /// clip runs edge to edge at the top with the reel under it.
+    /// `tileNamespace`: the detail's trailer row hands its tiles to the reel strip, so they travel into place
+    /// while the window grows.
     @ViewBuilder
-    func trailerOverlay(key: Binding<String?>, fillsWindow: Bool = false, allowsFullscreen: Bool = true) -> some View {
+    func trailerOverlay(key: Binding<String?>, fillsWindow: Bool = false, allowsFullscreen: Bool = true,
+                        tileNamespace: Namespace.ID? = nil) -> some View {
         overlay {
-            if let presented = key.wrappedValue {
-                // Top-leading: the ✕ matches the lightbox's corner and every back chevron.
-                ZStack(alignment: .topLeading) {
-                    // One near-black layer, not a material: measured over bright content even a dark ultra-thick
-                    // material only reaches 0.37 luminance; video wants ~0.09.
-                    Rectangle()
-                        .fill(Color.black.opacity(fillsWindow ? 1 : 0.92))
-                        .ignoresSafeArea()
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
-                        }
-                    if fillsWindow {
-                        VStack(spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                if let presented = key.wrappedValue {
+                    // Top-leading: the ✕ matches the lightbox's corner and every back chevron.
+                    ZStack(alignment: .topLeading) {
+                        // One near-black layer, not a material: measured over bright content even a dark ultra-thick
+                        // material only reaches 0.37 luminance; video wants ~0.09.
+                        Rectangle()
+                            .fill(Color.black.opacity(fillsWindow ? 1 : 0.92))
+                            .ignoresSafeArea()
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
+                            }
+                        if fillsWindow {
                             TrailerWebView(key: presented, allowsFullscreen: allowsFullscreen)
                                 .aspectRatio(16.0 / 9.0, contentMode: .fit)
                                 .background(Color.black)
-                            // Pinned to the height the panel was sized for, and absent with one clip.
-                            if TrailerWindowSize.showsStrip {
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                                .ignoresSafeArea()
+                        } else {
+                            VStack(spacing: 14) {
+                                TrailerPlayerCard(key: presented)
+                                    .modifier(TrailerStageInsets())
                                 TrailerReelStrip(playing: presented)
-                                    .frame(height: TrailerWindowSize.stripHeight, alignment: .top)
-                                    .padding(.vertical, TrailerWindowSize.stripPadding)
                             }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .ignoresSafeArea()
-                    } else {
-                        VStack(spacing: 14) {
-                            TrailerPlayerCard(key: presented)
-                                .modifier(TrailerStageInsets())
-                            TrailerReelStrip(playing: presented)
+                        LightboxCloseButton(labelKey: "detail.trailerClose.button") {
+                            withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
                         }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
-                    LightboxCloseButton(labelKey: "detail.trailerClose.button") {
-                        withAnimation(.smooth(duration: 0.2)) { key.wrappedValue = nil }
-                    }
+                    .transition(.opacity)
                 }
-                .transition(.opacity)
-                // Below the poster lightbox (10) so the two can't fight.
-                .zIndex(9)
+                // Outside the fading layer, pinned to the bottom of the window grown for it, so its tiles can
+                // travel in from the detail's row instead of fading.
+                if fillsWindow, let presented = key.wrappedValue, TrailerWindowSize.showsStrip {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        TrailerReelStrip(playing: presented, tileNamespace: tileNamespace)
+                            .frame(height: TrailerWindowSize.stripHeight, alignment: .top)
+                            .padding(.vertical, TrailerWindowSize.stripPadding)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .ignoresSafeArea()
+                }
             }
+            // Below the poster lightbox (10) so the two can't fight.
+            .zIndex(9)
         }
     }
 }
@@ -349,6 +358,7 @@ extension View {
 /// Hidden with a single clip, and in landscape, where the clip owns the glass.
 private struct TrailerReelStrip: View {
     let playing: String
+    var tileNamespace: Namespace.ID? = nil
     private var session: TrailerSession { .shared }
     #if os(iOS)
     @Environment(\.verticalSizeClass) private var verticalSizeClass
@@ -363,6 +373,7 @@ private struct TrailerReelStrip: View {
                             TrailerClipTile(clip: clip, isPlaying: clip.key == playing) {
                                 withAnimation(.smooth(duration: 0.2)) { session.play(clip) }
                             }
+                            .trailerTileMatch(clip, in: tileNamespace)
                             .id(clip.key)
                         }
                     }
