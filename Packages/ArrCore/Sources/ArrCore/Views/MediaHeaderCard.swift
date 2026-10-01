@@ -131,9 +131,7 @@ struct MediaHeaderCard: View {
     var trailing: AnyView?
     var titleBadge: AnyView?
     var onPosterTap: ((URL?) -> Void)?
-    /// Pinned to the poster's bottom-right corner (the trailer badge).
-    var posterBadge: AnyView?
-    /// Pinned to the poster's top-right corner (the monitored bookmark), opposite `posterBadge`.
+    /// Pinned to the poster's top corner (the monitored bookmark).
     var posterCornerAction: AnyView?
     /// Rendered above the title (the episode header's series/season links).
     var aboveTitle: AnyView?
@@ -174,7 +172,6 @@ struct MediaHeaderCard: View {
         trailing: AnyView? = nil,
         titleBadge: AnyView? = nil,
         onPosterTap: ((URL?) -> Void)? = nil,
-        posterBadge: AnyView? = nil,
         posterCornerAction: AnyView? = nil,
         aboveTitle: AnyView? = nil,
         watched: Bool = false,
@@ -205,7 +202,6 @@ struct MediaHeaderCard: View {
         self.trailing = trailing
         self.titleBadge = titleBadge
         self.onPosterTap = onPosterTap
-        self.posterBadge = posterBadge
         self.posterCornerAction = posterCornerAction
         self.aboveTitle = aboveTitle
         self.watched = watched
@@ -317,7 +313,6 @@ struct MediaHeaderCard: View {
             blurred: blurred,
             cornerAction: posterCornerAction,
             watched: watched,
-            badge: posterBadge,
             onTap: onPosterTap
         )
     }

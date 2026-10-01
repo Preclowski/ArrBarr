@@ -24,6 +24,12 @@ public final class TrailerSession {
         Self.syncInterfaceOrientations()
     }
 
+    /// Opens the reel on a clip other than the featured one.
+    func present(_ reel: TrailerReel, startingAt clip: TrailerClip) {
+        present(reel)
+        play(clip)
+    }
+
     func play(_ clip: TrailerClip) {
         guard key != nil, reel?.clips.contains(clip) == true else { return }
         key = clip.key
@@ -421,33 +427,6 @@ private struct TrailerClipTile: View {
     }
 }
 
-// MARK: - Poster badge
-
-/// Only this corner opens the trailer; the rest of the poster keeps its lightbox tap.
-struct TrailerPosterBadge: View {
-    let isPlaying: Bool
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            // The mark carries its own contrast; the shadow keeps its edge on a light or busy poster.
-            Image("brand-youtube", bundle: .module)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 21)
-                .shadow(color: .black.opacity(0.55), radius: 2, y: 0.5)
-                .opacity(isPlaying ? 1 : 0.88)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .padding(6)
-        .help(Text("detail.trailer.button", bundle: .module))
-        .accessibilityLabel(Text("detail.trailer.button", bundle: .module))
-        #if os(macOS)
-        .pointerStyle(.link)
-        #endif
-    }
-}
 
 // MARK: - Inline card
 

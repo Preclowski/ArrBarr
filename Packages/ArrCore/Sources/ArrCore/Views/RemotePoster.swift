@@ -32,7 +32,6 @@ struct DetailHeroPoster: View {
     /// Top-left, tucked into the same corner as the watched wedge.
     var cornerAction: AnyView?
     var watched: Bool = false
-    var badge: AnyView?
     /// `nil` renders the poster inert; a nil `url` disables the button.
     var onTap: ((URL?) -> Void)?
 
@@ -46,7 +45,6 @@ struct DetailHeroPoster: View {
         blurred: Bool = false,
         cornerAction: AnyView? = nil,
         watched: Bool = false,
-        badge: AnyView? = nil,
         onTap: ((URL?) -> Void)? = nil
     ) {
         self.url = url
@@ -56,7 +54,6 @@ struct DetailHeroPoster: View {
         self.blurred = blurred
         self.cornerAction = cornerAction
         self.watched = watched
-        self.badge = badge
         self.onTap = onTap
     }
 
@@ -66,7 +63,6 @@ struct DetailHeroPoster: View {
             // host hands down as `cornerAction`, not a drawn-on marker.
             .posterMarks(watched: watched, monitored: nil,
                          cornerRadius: Tokens.Radius.card, ribbonWidth: 12)
-            .overlay(alignment: .bottomTrailing) { badge }
             .overlay(alignment: .topLeading) { cornerAction }
     }
 

@@ -170,17 +170,6 @@ struct SearchAddPanel: View {
         .padding(.bottom, 8)
     }
 
-    private var trailerBadge: AnyView? {
-        guard let trailer else { return nil }
-        return AnyView(
-            TrailerPosterBadge(isPlaying: trailerSession.isShowing(trailer)) {
-                withAnimation(.smooth(duration: 0.22)) {
-                    trailerSession.toggle(trailer)
-                }
-            }
-        )
-    }
-
     /// `mediaRef` already knows the foreign key, so no second source check.
     private func resolveTrailer() async {
         // Dismiss only OUR previous clip — a fresh mount must not kill a session restored across a reopen.
@@ -236,7 +225,6 @@ struct SearchAddPanel: View {
                         enlargedPoster = url ?? result.posterURL
                     }
                 },
-                posterBadge: trailerBadge,
                 // Title + year live in the nav-bar title.
                 showTitle: false,
                 directedBy: directors,
@@ -251,6 +239,9 @@ struct SearchAddPanel: View {
                 })
             } else if castLoading {
                 SkeletonCastRow()
+            }
+            if let trailer {
+                TrailerRow(reel: trailer)
             }
         }
     }

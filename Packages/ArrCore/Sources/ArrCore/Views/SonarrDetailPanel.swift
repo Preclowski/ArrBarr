@@ -12,6 +12,7 @@ struct SonarrDetailPanel<Header: View>: View {
     /// TMDB only: Sonarr has no cast endpoint.
     var cast: [CastMember] = []
     var onTapPerson: ((CastMember) -> Void)? = nil
+    var trailer: TrailerReel? = nil
     @Binding var sonarrDetail: ArrSeries?
     let onTapSeason: (ArrSeason) -> Void
     /// The host owns the write (optimistic flip, Sonarr call, refetch).
@@ -34,6 +35,10 @@ struct SonarrDetailPanel<Header: View>: View {
             } else if isLoading, !configStore.tmdbApiKey.isEmpty {
                 // Without a TMDB key the cast never loads, so no skeleton.
                 SkeletonCastRow()
+            }
+
+            if let trailer {
+                TrailerRow(reel: trailer)
             }
 
             if let next = nextEpisode {

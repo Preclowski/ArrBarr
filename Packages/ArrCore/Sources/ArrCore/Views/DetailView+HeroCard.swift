@@ -21,34 +21,24 @@ extension DetailView {
         // a popover reopen must be left alone.
         if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         trailer = nil
+        let reel: TrailerReel?
         switch item.source {
         case .radarr, .whisparr:
-            trailer = await TrailerProvider.movieReel(
+            reel = await TrailerProvider.movieReel(
                 radarrTrailerId: radarrDetail?.youTubeTrailerId,
                 tmdbId: radarrDetail?.tmdbId,
                 configStore: configStore
             )
         case .sonarr:
-            trailer = await TrailerProvider.seriesReel(
+            reel = await TrailerProvider.seriesReel(
                 tmdbId: sonarrDetail?.tmdbId,
                 tvdbId: sonarrDetail?.tvdbId,
                 configStore: configStore
             )
         case .lidarr:
-            break
+            reel = nil
         }
-    }
-
-    /// Only once a clip is known, so it never sits there dead.
-    private var trailerBadge: AnyView? {
-        guard let trailer else { return nil }
-        return AnyView(
-            TrailerPosterBadge(isPlaying: trailerSession.isShowing(trailer)) {
-                withAnimation(.smooth(duration: 0.22)) {
-                    trailerSession.toggle(trailer)
-                }
-            }
-        )
+        withAnimation(DetailView.landing) { trailer = reel }
     }
 
     func movieRatingChipsFor(_ detail: ArrMovie?) -> [RatingChip] {
@@ -144,7 +134,6 @@ extension DetailView {
                     enlargedPoster = url ?? item.posterURL
                 }
             },
-            posterBadge: trailerBadge,
             posterCornerAction: monitorPosterToggle,
             watched: isWatched,
             // Title + year live in the nav-bar title.

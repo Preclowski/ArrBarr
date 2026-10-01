@@ -16,6 +16,7 @@ struct RadarrDetailPanel<Header: View>: View {
     /// From Radarr `/credit`.
     var cast: [CastMember] = []
     var onTapPerson: ((CastMember) -> Void)? = nil
+    var trailer: TrailerReel? = nil
     let arrWebURLForItem: (QueueItem) -> URL?
     /// The header CTA only controls the focused row, so two grabs of one movie need per-row controls.
     var onPauseItem: ((QueueItem) -> Void)? = nil
@@ -38,6 +39,10 @@ struct RadarrDetailPanel<Header: View>: View {
                 CastRow(cast: cast, onTapPerson: onTapPerson)
             } else if isLoading {
                 SkeletonCastRow()
+            }
+
+            if let trailer {
+                TrailerRow(reel: trailer)
             }
 
             if hasActiveDownloads {
