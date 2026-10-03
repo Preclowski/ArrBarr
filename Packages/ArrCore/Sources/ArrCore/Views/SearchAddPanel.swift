@@ -81,7 +81,8 @@ struct SearchAddPanel: View {
         VStack(spacing: 0) {
             header
 
-            // The form + CTA sit in a sticky footer so a tall overview never hides the action.
+            // The form + CTA sit in a sticky footer so a tall overview never hides the action;
+            // a safe-area inset lets the overview scroll under the card instead of clipping above it.
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     hero
@@ -92,35 +93,36 @@ struct SearchAddPanel: View {
             }
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
-
-            VStack(spacing: 6) {
-                if viewModel.isLoadingOptions {
-                    // The form's own rows, so the card doesn't grow when the options land.
-                    SkeletonRows(count: formRowCount, rowHeight: 26, spacing: 4)
-                        .padding(.horizontal, 14)
-                        .padding(.bottom, 4)
-                } else {
-                    if result.source == .radarr {
-                        radarrForm
-                    } else if result.source == .sonarr {
-                        sonarrForm
-                    } else if result.source == .whisparr {
-                        whisparrForm
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 6) {
+                    if viewModel.isLoadingOptions {
+                        // The form's own rows, so the card doesn't grow when the options land.
+                        SkeletonRows(count: formRowCount, rowHeight: 26, spacing: 4)
+                            .padding(.horizontal, 14)
+                            .padding(.bottom, 4)
                     } else {
-                        lidarrForm
+                        if result.source == .radarr {
+                            radarrForm
+                        } else if result.source == .sonarr {
+                            sonarrForm
+                        } else if result.source == .whisparr {
+                            whisparrForm
+                        } else {
+                            lidarrForm
+                        }
                     }
+                    if let err = viewModel.addError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 14)
+                    }
+                    addButtons
+                        .padding(.bottom, 10)
                 }
-                if let err = viewModel.addError {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 14)
-                }
-                addButtons
-                    .padding(.bottom, 10)
+                .padding(.top, 8)
+                .floatingPanelCard()
             }
-            .padding(.top, 8)
-            .floatingPanelCard()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
