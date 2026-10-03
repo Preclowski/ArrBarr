@@ -108,13 +108,33 @@ enum ArrQueueLoader {
     }
 
     static func upcoming(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String, policy: ReadPolicy = .staleWhileRevalidate) async throws -> [UpcomingItem] {
+        let now = Date()
+        let end = Calendar.current.date(byAdding: .day, value: 30, to: now)!
+        return try await calendar(source: source, gateway: gateway, service: service, baseURL: baseURL, start: now, end: end, policy: policy)
+    }
+
+    static func calendar(source: QueueItem.Source, gateway: ServiceGateway, service: ServarrService? = nil, baseURL: String, start: Date, end: Date, policy: ReadPolicy = .staleWhileRevalidate) async throws -> [UpcomingItem] {
         await gateway.ready()
         let service = service ?? gateway.servarr(source)
         guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
-        let now = Date()
-        let end = Calendar.current.date(byAdding: .day, value: 30, to: now)!
-        let records = try await gateway.store.read(service.calendar(start: now, end: end), policy: policy).value
+        let records = try await gateway.store.read(service.calendar(start: start, end: end), policy: policy).value
         return records.compactMap { ArrCompositions.upcoming($0, source: source, baseURL: baseURL) }
+    }
+
+    /// The title's own history: a season reads the whole series', which only adds guids its releases can't match.
+    static func releaseHistory(source: QueueItem.Source, gateway: ServiceGateway, target: ReleaseTarget) async throws -> [String: ReleaseHistoryMark] {
+        await gateway.ready()
+        let service = gateway.servarr(source)
+        guard gateway.isConfigured(service.instance) else { throw MediaKitError.notConfigured(service.instance) }
+        let pageSize = 250
+        let resource: Resource<ArrPage<ArrHistoryRecord>> = switch target {
+        case let .movie(id), let .album(id): service.historyFor(entityID: id, pageSize: pageSize)
+        case let .season(seriesID, _): service.historyFor(entityID: seriesID, pageSize: pageSize)
+        case let .episode(id): service.history(pageSize: pageSize, filters: [("episodeId", String(id))])
+        }
+        // A grab made a minute ago must already show.
+        let page = try await gateway.store.read(resource, policy: .mustRevalidate).value
+        return ReleaseHistoryMark.marks(from: page.records)
     }
 
     static func history(source: QueueItem.Source, gateway: ServiceGateway, baseURL: String, page: Int, pageSize: Int, scope: HistoryScope?) async throws -> HistoryPage {

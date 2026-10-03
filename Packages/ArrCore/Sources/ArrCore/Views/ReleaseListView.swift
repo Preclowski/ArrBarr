@@ -34,6 +34,8 @@ struct ReleaseListView: View {
     @State private var showRejected = false
     /// Empty until it loads; the row falls back to the arr's own label meanwhile.
     @State private var indexerNames: [Int: String] = [:]
+    /// Releases grabbed or failed before, by guid; empty until the title's history answers.
+    @State private var historyMarks: [String: ReleaseHistoryMark] = [:]
 
     private enum ScopeFilter { case all, packs, episodes }
 
@@ -153,6 +155,7 @@ struct ReleaseListView: View {
                 isExpanded: isExpanded,
                 isGrabbing: grabbing.contains(release.guid),
                 isGrabbed: grabbed.contains(release.guid),
+                historyMark: historyMarks[release.guid],
                 onTap: {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         expanded = isExpanded ? nil : release.guid
@@ -284,6 +287,10 @@ struct ReleaseListView: View {
             releases = try await client.fetchReleases(target.release)
             loadedTargetId = target.id
             Task { indexerNames = await IndexerNames.names(for: target.source, configStore: configStore) }
+            Task {
+                historyMarks = (try? await ArrQueueLoader.releaseHistory(
+                    source: target.source, gateway: configStore.gateway, target: target.release)) ?? [:]
+            }
             // All rejected is normal for a complete season; hiding them all would show a blank screen.
             showRejected = releases.allSatisfy(\.isRejected)
         } catch is CancellationError {
@@ -339,9 +346,10 @@ private struct ReleaseRow: View {
     let isExpanded: Bool
     let isGrabbing: Bool
     let isGrabbed: Bool
+    let historyMark: ReleaseHistoryMark?
     let onTap: () -> Void
     let onGrab: () -> Void
-
+    @Environment(\.locale) private var locale
 
     var body: some View {
         HStack(spacing: 0) {
@@ -402,6 +410,9 @@ private struct ReleaseRow: View {
                 .lineLimit(1)
                 .truncationMode(.tail)
             Spacer(minLength: 4)
+            if let historyMark {
+                historyChip(historyMark)
+            }
             #if os(iOS)
             Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                 .scaledFont(size: 10, weight: .semibold)
@@ -452,6 +463,15 @@ private struct ReleaseRow: View {
             Spacer(minLength: 8)
             scoreCell
         }
+    }
+
+    /// "Grabbed 3 days ago" / "Failed …": the history marker the arrs put on a release in interactive search.
+    private func historyChip(_ mark: ReleaseHistoryMark) -> some View {
+        let label = AppLocalized.string(mark.event.labelKey, locale: locale)
+        let ago = CachedDateFormatters.relative(.abbreviated, locale: locale).localizedString(for: mark.date, relativeTo: Date())
+        return TagChip(text: "\(label) \(ago)", color: mark.event == .failed ? .red : .blue)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     @ViewBuilder
