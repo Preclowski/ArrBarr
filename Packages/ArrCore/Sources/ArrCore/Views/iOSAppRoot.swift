@@ -604,13 +604,10 @@ private struct HistoryTab: View {
     @Environment(ConfigStore.self) var configStore
     @State private var selected: QueueItem.Source?
     @State private var didSeedSource = false
-    /// nil = all. Types are unified across arrs, so one list serves every service.
-    @State private var selectedType: HistoryItem.EventType?
+    /// Empty = all. Types are unified across arrs, so one list serves every service.
+    @State private var selectedTypes: Set<HistoryItem.EventType> = []
     /// Pushed from here: the queue root's own detail destination would race this pushed view.
     @State private var detailItem: QueueItem?
-
-    /// `.other` is the catch-all, so it's not offered.
-    private let filterableTypes: [HistoryItem.EventType] = [.grabbed, .imported, .failed, .deleted]
 
     private var available: [QueueItem.Source] {
         QueueItem.Source.allCases.filter { configStore.config(for: $0.serviceKind).isVisible }
@@ -629,7 +626,7 @@ private struct HistoryTab: View {
                     source: selected,
                     viewModel: viewModel,
                     showHeader: false,
-                    typeFilter: selectedType,
+                    typeFilter: selectedTypes,
                     onOpenDetail: { detailItem = $0 },
                     onClose: {}
                 )
@@ -694,39 +691,23 @@ private struct HistoryTab: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
-                    Button {
-                        selectedType = nil
-                    } label: {
-                        Label {
-                            Text("search.all.button", bundle: .module)
-                        } icon: {
-                            Image(systemName: selectedType == nil ? "checkmark" : "line.3.horizontal.decrease")
-                        }
-                    }
-                    ForEach(filterableTypes, id: \.self) { type in
-                        Button {
-                            selectedType = type
-                        } label: {
-                            Label {
-                                Text(verbatim: type.displayName)
-                            } icon: {
-                                Image(systemName: selectedType == type ? "checkmark" : type.symbol)
-                            }
-                        }
-                    }
+                    HistoryTypeFilterItems(selection: $selectedTypes)
                 } label: {
                     HStack(spacing: 4) {
-                        if let t = selectedType {
+                        if selectedTypes.count == 1, let t = selectedTypes.first {
                             Image(systemName: t.symbol)
                             Text(verbatim: t.displayName)
                         } else {
-                            Image(systemName: "line.3.horizontal.decrease.circle")
+                            Image(systemName: selectedTypes.isEmpty
+                                  ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
                         }
                         Image(systemName: "chevron.down")
                             .font(.caption2)
                     }
                     .font(.subheadline)
                 }
+                // Stays open so several types can be ticked in one go.
+                .menuActionDismissBehavior(.disabled)
                 .accessibilityLabel(Text("common.filter.button", bundle: .module))
             }
         }

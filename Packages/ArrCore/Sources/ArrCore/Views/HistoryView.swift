@@ -11,7 +11,9 @@ struct HistoryView: View {
     let onClose: () -> Void
     /// The iOS History tab supplies its own nav bar and filter instead.
     var showHeader: Bool = true
-    var typeFilter: HistoryItem.EventType? = nil
+    /// Empty = every event. The iOS tab supplies it; the self-drawn header keeps its own.
+    var typeFilter: Set<HistoryItem.EventType> = []
+    @State private var headerTypeFilter: Set<HistoryItem.EventType> = []
     /// The host pushes onto its own stack so Back returns here; nil leaves rows inert.
     var onOpenDetail: ((QueueItem) -> Void)? = nil
 
@@ -33,8 +35,9 @@ struct HistoryView: View {
     }
 
     private func shownItems(_ feed: HistoryFeed) -> [HistoryItem] {
-        guard let typeFilter else { return feed.items }
-        return feed.items.filter { $0.eventType == typeFilter }
+        let types = showHeader ? headerTypeFilter : typeFilter
+        guard !types.isEmpty else { return feed.items }
+        return feed.items.filter { types.contains($0.eventType) }
     }
 
     private var header: some View {
@@ -46,6 +49,14 @@ struct HistoryView: View {
                 .foregroundStyle(.primary)
                 .lineLimit(1)
             Spacer(minLength: 0)
+            TrailingMenu {
+                HistoryTypeFilterItems(selection: $headerTypeFilter.animation(.easeInOut(duration: 0.15)))
+            } label: {
+                HeaderGlyph(systemName: headerTypeFilter.isEmpty
+                            ? "line.3.horizontal.decrease.circle" : "line.3.horizontal.decrease.circle.fill")
+            }
+            .help(Text("common.filter.button", bundle: .module))
+            .accessibilityLabel(Text("common.filter.button", bundle: .module))
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -144,7 +155,7 @@ struct HistoryView: View {
 
     init(source: QueueItem.Source?, scope: HistoryScope? = nil, title: String? = nil,
          viewModel: QueueViewModel, showHeader: Bool = true,
-         typeFilter: HistoryItem.EventType? = nil, onOpenDetail: ((QueueItem) -> Void)? = nil,
+         typeFilter: Set<HistoryItem.EventType> = [], onOpenDetail: ((QueueItem) -> Void)? = nil,
          onClose: @escaping () -> Void) {
         self.source = source
         self.scope = scope
@@ -373,6 +384,36 @@ private struct HistoryItemTooltip: View {
 
     private static func lastComponent(_ path: String) -> String {
         (path as NSString).lastPathComponent
+    }
+}
+
+/// Menu items for a multi-select event filter; an empty selection shows everything, `.other` included.
+struct HistoryTypeFilterItems: View {
+    @Binding var selection: Set<HistoryItem.EventType>
+    /// Handed over by `TrailingMenu`; a menu has no `ConfigStore` in its environment.
+    @Environment(\.locale) private var locale
+
+    /// `.other` is the catch-all, so it's not offered.
+    static let types: [HistoryItem.EventType] = [.grabbed, .imported, .failed, .deleted]
+
+    var body: some View {
+        Toggle(isOn: Binding(get: { selection.isEmpty }, set: { if $0 { selection = [] } })) {
+            Text("search.all.button", bundle: .module)
+        }
+        Section {
+            ForEach(Self.types, id: \.self) { type in
+                Toggle(isOn: Binding(
+                    get: { selection.contains(type) },
+                    set: { if $0 { selection.insert(type) } else { selection.remove(type) } }
+                )) {
+                    Label {
+                        Text(verbatim: AppLocalized.string(type.labelKey, locale: locale))
+                    } icon: {
+                        Image(systemName: type.symbol)
+                    }
+                }
+            }
+        }
     }
 }
 
