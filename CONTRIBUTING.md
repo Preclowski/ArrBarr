@@ -36,6 +36,8 @@ xcodebuild ... ARRBARR_DEVELOPMENT_TEAM=YOURTEAMID
 
 `CURRENT_PROJECT_VERSION` works the same way: it reads `ARRBARR_BUILD_NUMBER`,
 which defaults to `1` locally and to the CI run number in the release workflow.
+`ARRBARR_GIT_SHA` (empty by default) appends the short commit to the version
+shown in Settings, e.g. `v3.2.1-abc1234`.
 
 ### No real servers needed
 

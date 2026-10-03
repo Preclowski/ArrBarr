@@ -226,6 +226,7 @@ jobs:
             -derivedDataPath build \
             CODE_SIGN_IDENTITY="$SIGN_IDENTITY" \
             ARRBARR_BUILD_NUMBER="$ARRBARR_BUILD_NUMBER" \
+            ARRBARR_GIT_SHA="${GITHUB_SHA::7}" \
             ARRBARR_DEVELOPMENT_TEAM="$ARRBARR_DEVELOPMENT_TEAM" \
             build
 

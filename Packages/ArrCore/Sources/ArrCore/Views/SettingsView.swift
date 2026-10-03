@@ -107,7 +107,11 @@ public struct SettingsView: View {
         } label: { Text("settings.theme.button", bundle: .module) }
     }
 
+    /// `v3.2.1-abc1234`; the suffix is absent when the build wasn't given `ARRBARR_GIT_SHA`.
     static var versionString: String {
-        "v" + (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?")
+        let info = Bundle.main.infoDictionary
+        let version = "v" + (info?["CFBundleShortVersionString"] as? String ?? "?")
+        guard let sha = info?["ArrBarrGitCommit"] as? String, !sha.isEmpty else { return version }
+        return version + "-" + sha
     }
 }

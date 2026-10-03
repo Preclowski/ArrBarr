@@ -92,7 +92,7 @@ the demo library's titles and artwork from `demo_catalogue.json` over the placeh
 
 ```bash
 # Build (macOS, Debug → ./build)
-xcodebuild -project ArrBarr.xcodeproj -scheme ArrBarr -configuration Debug -derivedDataPath build build
+xcodebuild -project ArrBarr.xcodeproj -scheme ArrBarr -configuration Debug -derivedDataPath build ARRBARR_GIT_SHA=$(git rev-parse --short=7 HEAD) build
 
 # Kill + relaunch (ALWAYS do this after any code change — the user verifies visually)
 pkill -x ArrBarr 2>/dev/null; sleep 0.5 && open build/Build/Products/Debug/ArrBarr.app
