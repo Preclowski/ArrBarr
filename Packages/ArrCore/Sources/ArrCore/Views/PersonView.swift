@@ -145,6 +145,12 @@ struct PersonView: View {
         }
         .task(id: ref.tmdbId) { await loadInitial() }
         .task {
+            // The add panel pops back here on its own; stay on the filmography and mark the row owned.
+            searchVM.onAdded = { arrId in
+                guard let added = titleAdd, let arrId else { return }
+                if let i = movieRows.firstIndex(where: { $0.id == added.id }) { movieRows[i].inLibraryArrId = arrId }
+                if let i = seriesRows.firstIndex(where: { $0.id == added.id }) { seriesRows[i].inLibraryArrId = arrId }
+            }
             searchVM.setup(
                 radarrConfig: configStore.radarr, sonarrConfig: configStore.sonarr,
                 lidarrConfig: configStore.lidarr, whisparrConfig: configStore.whisparr,

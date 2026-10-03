@@ -454,8 +454,13 @@ final class SearchViewModel {
         }
     }
 
+    /// Replaces opening the added title through the root router, which tears down the stack of a
+    /// surface that pushed the add panel itself (the person page).
+    @ObservationIgnored var onAdded: ((_ arrId: Int?) -> Void)?
+
     /// No-op when the arr returned no id (demo mode, unparseable response); the add still succeeded.
     private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
+        if let onAdded { return onAdded(arrId) }
         guard let arrId else { return }
         DetailRequest.open(source: source, arrId: arrId, title: result.title,
                            posterURL: result.posterURL, posterRequiresAuth: false)
