@@ -46,7 +46,7 @@ enum TrailerProvider {
         if let tmdbId, tmdbId > 0 {
             clips = await fetch(configStore: configStore) { try await $0.movieVideos(movieId: tmdbId) }
         }
-        return TrailerReel(featuredKey: radarrTrailerId, clips: clips)
+        return await playable(TrailerReel(featuredKey: radarrTrailerId, clips: clips))
     }
 
     /// `tvdbId` resolves series Sonarr shipped without a `tmdbId`.
@@ -57,10 +57,29 @@ enum TrailerProvider {
             guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
             return try await client.tvVideos(tvId: id)
         }
-        return TrailerReel(featuredKey: nil, clips: clips)
+        return await playable(TrailerReel(featuredKey: nil, clips: clips))
     }
 
     // MARK: - Fetch
+
+    /// TMDB can't tell a private or deleted video from a live one, but YouTube 404s its still. The stills
+    /// land in `PosterStore`, so the row then paints from cache.
+    private static func playable(_ reel: TrailerReel?) async -> TrailerReel? {
+        guard let reel else { return nil }
+        let alive = await withTaskGroup(of: String?.self) { group in
+            for clip in reel.clips {
+                group.addTask {
+                    guard let url = clip.thumbnailURL,
+                          await PosterStore.shared.image(for: url, tier: .icon) != nil else { return nil }
+                    return clip.key
+                }
+            }
+            var keys: Set<String> = []
+            for await key in group { if let key { keys.insert(key) } }
+            return keys
+        }
+        return TrailerReel(featuredKey: nil, clips: reel.clips.filter { alive.contains($0.key) })
+    }
 
     private static func fetch(configStore: ConfigStore,
                               _ videos: @escaping (TMDBClient) async throws -> [TMDBVideo]) async -> [TrailerClip] {

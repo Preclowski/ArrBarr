@@ -194,7 +194,6 @@ struct SearchAddPanel: View {
         case .musicBrainz, .imdb:
             break
         }
-        await reel?.prefetchThumbnails()
         withAnimation(DetailView.landing) { trailer = reel }
     }
 
