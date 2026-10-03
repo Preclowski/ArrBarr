@@ -230,8 +230,9 @@ nonisolated public struct HistoryItem: Identifiable, Equatable, Sendable {
             switch raw?.lowercased() {
             case "grabbed": return .grabbed
             case "downloadfolderimported", "episodefileimported", "moviefileimported",
-                 "trackfileimported": return .imported
-            case "downloadfailed", "downloadignored": return .failed
+                 "trackfileimported", "seriesfolderimported", "moviefolderimported",
+                 "artistfolderimported": return .imported
+            case "downloadfailed", "downloadignored", "albumimportincomplete": return .failed
             case "moviefiledeleted", "episodefiledeleted", "trackfiledeleted": return .deleted
             default: return .other
             }

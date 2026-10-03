@@ -190,6 +190,9 @@ nonisolated enum ArrCompositions {
 
     static func history(_ r: ArrHistoryRecord, source: QueueItem.Source, baseURL: String) -> HistoryItem? {
         guard let dateStr = r.date, let date = parseArrDate(dateStr) else { return nil }
+        // Lidarr's per-album summary of the trackFileImported rows next to it; as a row it
+        // would duplicate the folded album import.
+        if source == .lidarr, r.eventType?.lowercased() == "downloadimported" { return nil }
         let eventType = HistoryItem.EventType.parse(r.eventType)
         let data = r.data
         var title = r.sourceTitle ?? unknownTitle
