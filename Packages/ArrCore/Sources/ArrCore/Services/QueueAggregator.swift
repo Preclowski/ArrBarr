@@ -41,11 +41,14 @@ protocol QueueDataProviding: Sendable {
     func fetchUpcoming() async -> (items: [UpcomingItem], failed: Set<QueueItem.Source>)
     func fetchHealth() async -> HealthResult
     func fetchHistory(for source: QueueItem.Source, page: Int, pageSize: Int, scope: HistoryScope?) async -> HistoryResult
+    /// Any window, past included; an arr that fails adds nothing.
+    func fetchCalendar(start: Date, end: Date) async -> [UpcomingItem]
     func perform(_ action: QueueAggregator.Action, on item: QueueItem) async throws
     func deleteAll(_ items: [QueueItem]) async throws
 }
 
 extension QueueDataProviding {
+    func fetchCalendar(start: Date, end: Date) async -> [UpcomingItem] { [] }
     func latest(source: QueueItem.Source) async -> SourceQueueResult { await fetch(source: source) }
     func latestRevision(source: QueueItem.Source) -> QueueRevision? { nil }
 }
@@ -246,6 +249,20 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             }
         }
         return (UpcomingService.curate(items), failed)
+    }
+
+    func fetchCalendar(start: Date, end: Date) async -> [UpcomingItem] {
+        await withTaskGroup(of: [UpcomingItem].self) { group in
+            for source in QueueItem.Source.allCases {
+                group.addTask {
+                    let baseURL = await self.configStore.config(for: source.serviceKind).baseURL
+                    return (try? await ArrQueueLoader.calendar(source: source, gateway: self.gateway, baseURL: baseURL, start: start, end: end)) ?? []
+                }
+            }
+            var items: [UpcomingItem] = []
+            for await rows in group { items += rows }
+            return items
+        }
     }
 
     // MARK: - Actions

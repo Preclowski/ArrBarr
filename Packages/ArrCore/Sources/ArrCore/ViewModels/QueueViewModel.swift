@@ -243,6 +243,11 @@ public final class QueueViewModel {
         return await aggregator.fetchHistory(for: source, page: page, pageSize: pageSize, scope: scope)
     }
 
+    /// Kept across opens, like the history feeds.
+    @ObservationIgnored private(set) lazy var pastCalendar = PastCalendarFeed { [weak self] start, end in
+        await self?.aggregator.fetchCalendar(start: start, end: end) ?? []
+    }
+
     /// Kept across opens: the popover rebuilds its History view every time.
     @ObservationIgnored private var historyFeeds: [HistoryFeedKey: HistoryFeed] = [:]
 

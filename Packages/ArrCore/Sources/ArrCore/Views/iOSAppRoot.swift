@@ -500,7 +500,7 @@ private struct UpcomingTab: View {
             emptyState
         } else {
             List {
-                ForEach(grouped, id: \.label) { group in
+                ForEach(UpcomingDayGroup.grouped(viewModel.upcoming, locale: configStore.currentLocale)) { group in
                     Section(group.label) {
                         ForEach(group.items) { item in
                             UpcomingRowView(item: item)
@@ -511,38 +511,6 @@ private struct UpcomingTab: View {
             }
             .listStyle(.insetGrouped)
         }
-    }
-
-    private struct UpcomingGroup {
-        let label: String
-        let items: [UpcomingItem]
-    }
-
-    private var grouped: [UpcomingGroup] {
-        let calendar = Calendar.current
-        var groups: [UpcomingGroup] = []
-        var current: (date: DateComponents, items: [UpcomingItem])?
-        for item in viewModel.upcoming {
-            let dc = calendar.dateComponents([.year, .month, .day], from: item.airDate)
-            if let c = current, c.date == dc {
-                current?.items.append(item)
-            } else {
-                if let c = current, let first = c.items.first {
-                    groups.append(UpcomingGroup(
-                        label: first.airDateFormatted(locale: configStore.currentLocale),
-                        items: c.items
-                    ))
-                }
-                current = (dc, [item])
-            }
-        }
-        if let c = current, let first = c.items.first {
-            groups.append(UpcomingGroup(
-                label: first.airDateFormatted(locale: configStore.currentLocale),
-                items: c.items
-            ))
-        }
-        return groups
     }
 
     private var emptyState: some View {
