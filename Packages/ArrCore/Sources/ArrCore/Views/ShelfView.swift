@@ -649,20 +649,25 @@ private struct ShelfInfo: View {
         }
     }
 
-    /// Unlinked, like the Library tooltip: the chips sit over the scroll surface.
+    /// Linked like the detail hero's. No ids beyond the arr's own, so IMDb, RT and Metacritic open a title search.
     private var chips: [RatingChip] {
+        let title = entry.title
         switch entry.source {
         case .radarr, .whisparr:
-            [
-                entry.ratingImdb.flatMap { RatingChip.imdb($0) },
-                entry.ratingTmdb.flatMap { RatingChip.tmdb($0) },
-                entry.ratingRt.flatMap { RatingChip.rottenTomatoes($0) },
-                entry.ratingMetacritic.flatMap { RatingChip.metacritic($0) },
+            return [
+                entry.ratingImdb.flatMap { RatingChip.imdb($0, linkTitle: title) },
+                entry.ratingTmdb.flatMap { RatingChip.tmdb($0, linkTitle: title, tmdbId: tmdbId ?? entry.externalId) },
+                entry.ratingRt.flatMap { RatingChip.rottenTomatoes($0, linkTitle: title) },
+                entry.ratingMetacritic.flatMap { RatingChip.metacritic($0, linkTitle: title) },
             ].compactMap { $0 }
         case .sonarr:
-            [entry.ratingArr.flatMap { RatingChip.tvdb($0) }, entry.ratingTmdb.flatMap { RatingChip.tmdb($0) }].compactMap { $0 }
+            // `RatingChip.tmdb` links a film page; a series' TMDB chip searches by title instead.
+            return [
+                entry.ratingArr.flatMap { RatingChip.tvdb($0, linkTitle: title, tvdbId: entry.externalId) },
+                entry.ratingTmdb.flatMap { RatingChip.tmdb($0, linkTitle: title) },
+            ].compactMap { $0 }
         case .lidarr:
-            []
+            return []
         }
     }
 }
