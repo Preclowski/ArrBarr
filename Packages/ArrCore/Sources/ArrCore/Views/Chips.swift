@@ -246,10 +246,11 @@ struct StateChip: View {
 
     var body: some View {
         // Filled, so a status reads apart from the outlined tags beside it. The fill grows by half the outlined
-        // chips' stroke to keep their size. Dark text: white on the bright system greens and oranges is ~2:1.
+        // chips' stroke to keep their size. Dark text, as a deep shade of the fill: white on the bright system
+        // greens and oranges is ~2:1, plain black shouts.
         Text(verbatim: text)
-            .scaledFont(size: 9, weight: .semibold)
-            .foregroundStyle(Color.black.opacity(0.85))
+            .scaledFont(size: 9, weight: .medium)
+            .foregroundStyle(Color.black.opacity(0.65))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(
