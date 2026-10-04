@@ -352,8 +352,8 @@ struct MediaHeaderCard: View {
 
 // MARK: - Poster lightbox
 
-/// The art fades in from many points at once and flows into place; the front refracts it like a glass ridge.
-private struct IgniteReveal: ViewModifier, Animatable {
+/// The art is put together from its three colour separations, which drift in and ease into register.
+private struct TritoneReveal: ViewModifier, Animatable {
     var progress: CGFloat
     let size: CGSize
     let seed: Float
@@ -367,8 +367,8 @@ private struct IgniteReveal: ViewModifier, Animatable {
     func body(content: Content) -> some View {
         // Off once done: a layer effect rasterises at 1×, which would blur the 5× zoom.
         content.layerEffect(
-            ShaderLibrary.bundle(.module).posterIgnite(.float2(size), .float(Float(progress)), .float(seed)),
-            maxSampleOffset: CGSize(width: 80, height: 80),
+            ShaderLibrary.bundle(.module).posterTritone(.float2(size), .float(Float(progress)), .float(seed)),
+            maxSampleOffset: .zero,
             isEnabled: enabled && progress < 1
         )
     }
@@ -397,8 +397,8 @@ struct PosterLightbox: View {
     /// hold the committed value so successive gestures compound.
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var sweep: CGFloat = 0
-    /// New ignition points on every open.
-    @State private var igniteSeed = Float.random(in: 0..<1)
+    /// Each separation's path and the order they land in.
+    @State private var revealSeed = Float.random(in: 0..<1)
     @State private var zoom: CGFloat = 1
     @State private var baseZoom: CGFloat = 1
     @State private var offset: CGSize = .zero
@@ -524,8 +524,8 @@ struct PosterLightbox: View {
                     cornerRadius: fullBleed ? 0 : Tokens.Radius.panel,
                     fallbackSymbol: "photo"
                 )
-                .modifier(IgniteReveal(progress: sweep, size: CGSize(width: posterW, height: posterH),
-                                       seed: igniteSeed, enabled: !reduceMotion))
+                .modifier(TritoneReveal(progress: sweep, size: CGSize(width: posterW, height: posterH),
+                                        seed: revealSeed, enabled: !reduceMotion))
                 .frame(width: posterW, height: posterH)
                 .scaleEffect(zoom)
                 .offset(offset)
@@ -596,7 +596,8 @@ struct PosterLightbox: View {
             #endif
         }
         .onAppear {
-            withAnimation(.easeOut(duration: 0.5)) { sweep = 1 }
+            // Linear: the shader eases each separation on its own.
+            withAnimation(.linear(duration: 0.7)) { sweep = 1 }
         }
         #if os(macOS)
         .onAppear { startScrollZoom() }

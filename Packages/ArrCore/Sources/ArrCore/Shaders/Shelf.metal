@@ -166,47 +166,37 @@ static float shelfFbm3(float3 p) {
     return half4(col, 1.0h) * color.a;
 }
 
-// MARK: - Lightbox ignition
+// MARK: - Lightbox tritone
 
-/// The poster fades in from many points at once and flows into place like the Roulette's morph; the front is a
-/// glass ridge that bends the art across itself, splits it into channels and throws diffraction fringes.
-[[stitchable]] half4 posterIgnite(float2 p, SwiftUI::Layer layer, float2 size, float progress, float seed) {
-    const float band = 0.22;
-    float scale = max(size.x, size.y);
-    float2 offset = float2(seed * 17.0, seed * 31.0);
+/// The poster is put together from its three colour separations, the tunnel's split pulled apart: each drifts in
+/// on its own random path, turn and scale, in a random order, and eases into register.
+[[stitchable]] half4 posterTritone(float2 p, SwiftUI::Layer layer, float2 size, float progress, float seed) {
+    const float lag = 0.1;
+    float2 c = size * 0.5;
+    float2 q = p - c;
+    float reach = length(c);
+    int order = int(seed * 6.0);                        // one of the six channel orders
 
-    // fBm sits mostly in 0.28…0.72, so it is stretched to the full range or the reveal would stall, then rush.
-    float2 uv = p / scale;
-    float raw = shelfFbm(uv * 4.0 + offset);
-    float n = clamp((raw - 0.28) / 0.44, 0.0, 1.0);
-
-    float front = mix(-band, 1.0 + band, progress);
-    float edge = clamp((front - n) / band, 0.0, 1.0);   // 0 hidden, 1 shown
-    if (edge >= 1.0) { return layer.sample(p); }
-
-    // Liquid pull as in `shelfMorph`, gone once the pixel is fully shown; then bend and split along the
-    // noise gradient across the front.
-    float2 flow = float2(shelfFbm(uv * 1.8 + 7.3 + offset + progress * 0.3),
-                         shelfFbm(uv * 1.8 + 1.7 - offset - progress * 0.3)) - 0.5;
-    float2 liquid = flow * (0.45 * scale) * (1.0 - smoothstep(0.0, 1.0, edge));
-    float glow = sin(edge * M_PI_F);                    // strongest mid-front, zero at both ends
-    float2 e = float2(2.0 / scale, 0.0);
-    float2 grad = float2(shelfFbm((uv + e.xy) * 4.0 + offset), shelfFbm((uv + e.yx) * 4.0 + offset)) - raw;
-    float2 dir = length(grad) > 1e-6 ? normalize(grad) : float2(0.0, 1.0);
-    float2 bent = p + liquid + dir * (10.0 * glow);
-    float2 split = dir * (8.0 * glow);
-    float2 lo = float2(0.5, 0.5);
-    float2 hi = size - 0.5;
-    half a = layer.sample(p).a;
-    half3 glass = half3(layer.sample(clamp(bent + split, lo, hi)).r,
-                        layer.sample(clamp(bent, lo, hi)).g,
-                        layer.sample(clamp(bent - split, lo, hi)).b);
-
-    // Rainbow bands across the front's width, like a grating. Mixed, not added: added colour clips to white
-    // on bright art.
-    half3 fringe = half3(0.5 + 0.5 * cos(6.28318 * (edge * 1.4 + n * 0.5 + float3(0.0, 0.33, 0.67))));
-    half3 rgb = mix(glass, a * (0.2h + 0.8h * fringe), half(0.55 * glow));
-    // Opaque by mid-front, so the fringe is seen; displaced samples can carry colour past a rounded corner.
-    half reveal = half(smoothstep(0.0, 0.6, edge));
-    return half4(min(rgb, half3(a)) * reveal, a * reveal);
+    half3 rgb = half3(0.0);
+    half alpha = 0.0h;
+    for (int k = 0; k < 3; k++) {
+        float4 h = float4(shelfHash(float2(seed * 91.7 + float(k) * 17.3, 1.3)),
+                          shelfHash(float2(seed * 53.1 + float(k) * 11.9, 4.7)),
+                          shelfHash(float2(seed * 37.9 + float(k) * 23.1, 8.2)),
+                          shelfHash(float2(seed * 71.3 + float(k) * 5.7, 2.9)));
+        int slot = order < 3 ? (k + order) % 3 : (2 - k + order) % 3;
+        float t = clamp((progress - float(slot) * lag) / (1.0 - 2.0 * lag), 0.0, 1.0);
+        float away = pow(1.0 - t, 3.0);
+        float dir = h.x * 2.0 * M_PI_F;
+        float2 r = q - float2(cos(dir), sin(dir)) * reach * (0.06 + 0.08 * h.y) * away;
+        float ang = (h.z - 0.5) * 0.3 * away;
+        float2 src = c + float2(r.x * cos(ang) - r.y * sin(ang), r.x * sin(ang) + r.y * cos(ang))
+                       * (1.0 + (h.w - 0.5) * 0.25 * away);
+        if (any(src < 0.0) || any(src > size)) { continue; }
+        half4 s = layer.sample(src);
+        half fade = half(smoothstep(0.0, 0.3, t));
+        rgb[k] = s[k] * fade;
+        alpha = max(alpha, s.a * fade);
+    }
+    return half4(rgb, alpha);
 }
