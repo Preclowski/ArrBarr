@@ -11,6 +11,7 @@ nonisolated extension SearchResult {
             metacritic: r.ratings?.metacritic?.value, overview: r.overview, runtime: r.runtime, genres: r.genres ?? [], network: r.studio,
             certification: r.certification, posterURL: (r.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.mediaServerKeys).0,
             source: .radarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, imdbId: r.imdbId, sourceRank: sourceRank)
+        releaseStatus = r.status
     }
 
     init?(sonarr r: ArrSeries, baseURL: String, sourceRank: Int = 0) {
@@ -23,6 +24,7 @@ nonisolated extension SearchResult {
             posterURL: (r.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.mediaServerKeys).0,
             source: .sonarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
             imdbId: r.imdbId, sourceRank: sourceRank, tmdbTVId: (r.tmdbId ?? 0) != 0 ? r.tmdbId : nil)
+        releaseStatus = r.status
     }
 
     init?(whisparr r: ArrMovie, baseURL: String, sourceRank: Int = 0) {
@@ -35,6 +37,7 @@ nonisolated extension SearchResult {
             votes: r.ratings?.tmdb?.votes ?? r.ratings?.imdb?.votes, imdb: nil, rottenTomatoes: nil, metacritic: nil, overview: r.overview,
             runtime: r.runtime, genres: r.genres ?? [], network: r.studio, certification: nil,
             posterURL: (r.images ?? []).posterURL(baseURL: baseURL).0, source: .whisparr, sourceRank: sourceRank)
+        releaseStatus = r.status
     }
 
     init?(album r: ArrAlbum, baseURL: String, sourceRank: Int = 0) {

@@ -101,7 +101,8 @@ struct SearchResultTooltip: View {
             posterURL: result.posterURL,
             posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: result.source),
             blurred: configStore.shouldBlurPoster(for: result.source),
-            fallbackSymbol: result.source.symbol
+            fallbackSymbol: result.source.symbol,
+            contextChip: ArrReleaseStatusLabel.text(result.releaseStatus, locale: locale).map { AnyView(StateChip(text: $0)) }
         ) {
             VStack(alignment: .leading, spacing: 6) {
                 if !result.genres.isEmpty {

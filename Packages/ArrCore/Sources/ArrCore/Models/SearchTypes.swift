@@ -35,6 +35,8 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
     /// The arr's record id when the result is already in the library, so a tap opens DetailView.
     var inLibraryArrId: Int?
     var libraryDownloaded: Bool = false
+    /// The arr's `status` (`announced`, `inCinemas`, `ended`…); nil on a lean TMDB row until it's enriched.
+    var releaseStatus: String?
     /// Lidarr only: album vs artist. Stamped at unify time because the two lookups return disjoint shapes.
     let isLidarrAlbum: Bool
     /// TMDB's series id, for `.sonarr` rows only. TMDB-sourced rows have no tvdbId, so this keeps the
@@ -217,5 +219,6 @@ nonisolated extension SearchResult {
         self = withLibraryOwnership(LibraryOwnership(arrId: e.arrId, isDownloaded: e.state == .complete))
         // The grid's covers are the arr's own `/MediaCover` files behind the API key.
         self.posterRequiresAuth = e.posterRequiresAuth
+        self.releaseStatus = e.releaseStatus
     }
 }

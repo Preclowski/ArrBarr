@@ -224,6 +224,8 @@ struct SearchAddPanel: View {
                 posterURL: result.posterURL,
                 fallbackSymbol: result.source == .sonarr ? "tv" : (result.source == .lidarr ? "music.note" : (result.source == .whisparr ? "flame" : "film")),
                 posterAspect: 2.0/3.0,
+                // Arrives with the arr's lookup: a lean TMDB row gets it once enriched.
+                titleBadge: AnyView(ReleaseStatusChip(status: result.releaseStatus, source: result.source)),
                 onPosterTap: { url in
                     withAnimation(.smooth(duration: 0.22)) {
                         enlargedPoster = url ?? result.posterURL

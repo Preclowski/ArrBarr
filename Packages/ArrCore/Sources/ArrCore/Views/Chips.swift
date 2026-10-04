@@ -260,6 +260,24 @@ struct StateChip: View {
     }
 }
 
+/// A title's release status. A series shows only "Ended": "continuing" says nothing on a show you'd add.
+struct ReleaseStatusChip: View {
+    let status: String?
+    let source: QueueItem.Source
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        if source == .sonarr {
+            if status?.lowercased() == "ended", let text = ArrReleaseStatusLabel.text("ended", locale: locale) {
+                // Brown: a fact, not a problem; green/orange/red/blue are file states, indigo is upgrade.
+                StateChip(text: text, color: .brown)
+            }
+        } else if let text = ArrReleaseStatusLabel.text(status, locale: locale) {
+            StateChip(text: text)
+        }
+    }
+}
+
 extension Color {
     /// Through the platform colour: the menu-bar panel washes SwiftUI's own colours out over light content.
     var panelSafe: Color {

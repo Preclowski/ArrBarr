@@ -131,13 +131,12 @@ extension DetailView {
 
     /// Release status is a fact of the title, so it sits here, not in the file banner.
     private var movieTitleBadge: AnyView? {
-        let release = ArrReleaseStatusLabel.text(radarrDetail?.status, locale: configStore.currentLocale)
         // Nothing until the detail lands — a bare "Missing" mid-fetch would be a claim we can't back.
         guard radarrDetail != nil || qualityProfileName != nil else { return nil }
         // Profile first, matching the series hero.
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
-            if let release { StateChip(text: release) }
+            ReleaseStatusChip(status: radarrDetail?.status, source: .radarr)
             // "Downloaded" is the poster's bottom strip.
             if radarrDetail != nil, movieFileState != .complete {
                 MediaStateChip(state: movieFileState, locale: configStore.currentLocale)
@@ -155,11 +154,7 @@ extension DetailView {
         guard sonarrDetail != nil || qualityProfileName != nil else { return nil }
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
-            if sonarrDetail?.status?.lowercased() == "ended",
-               let ended = ArrReleaseStatusLabel.text("ended", locale: configStore.currentLocale) {
-                // Brown: a fact, not a problem; green/orange/red/blue are file states, indigo is upgrade.
-                StateChip(text: ended, color: .brown)
-            }
+            ReleaseStatusChip(status: sonarrDetail?.status, source: .sonarr)
             // No have/total: the season rows carry the actionable count, and a partial series has
             // nothing to say in one word. "Downloaded" is the poster's bottom strip.
             if sonarrDetail != nil, seriesFileState != .partial, seriesFileState != .complete {
