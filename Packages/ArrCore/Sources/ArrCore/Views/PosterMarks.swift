@@ -137,15 +137,9 @@ enum LibraryMark {
         #endif
     }
 
-    /// Glass like the watched wedge: its rim parts the strip from light artwork, where a flat green or blue fades.
-    /// `flat` for the Roulette's hero strip, where glass over the stage read as a faint wash.
-    @ViewBuilder
-    func strip(in shape: some Shape, flat: Bool = false) -> some View {
-        if flat {
-            shape.fill(color)
-        } else {
-            Color.clear.glassEffect(.regular.tint(color.opacity(0.7)), in: shape)
-        }
+    /// Flat, not glass: a glass strip on every row quadrupled the Library's scroll hitches.
+    func strip(in shape: some Shape) -> some View {
+        shape.fill(color)
     }
 }
 

@@ -329,7 +329,7 @@ struct ShelfView: View {
     /// outside the scene's shaders; at rest every mode leaves that poster on this rect.
     private func heroStrip(_ mark: LibraryMark, size: CGSize) -> some View {
         let w = ShelfScene.heroWidth(for: size)
-        return mark.strip(in: PosterBottomEdge(thickness: min(3, w * 0.02), cornerRadius: w * 0.04), flat: true)
+        return mark.strip(in: PosterBottomEdge(thickness: min(3, w * 0.02), cornerRadius: w * 0.04))
             .frame(width: w, height: w * 1.5)
             .position(ShelfScene.heroCenter(in: size))
             .allowsHitTesting(false)
