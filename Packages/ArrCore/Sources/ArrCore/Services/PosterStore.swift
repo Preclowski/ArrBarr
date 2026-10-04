@@ -215,7 +215,8 @@ public actor PosterStore {
         }
         guard let fetched = await fetchStoring(url, tier: tier, apiKey: apiKey),
               let image = await Self.decode(fetched.data) else {
-            noteFailure(Self.memoryKey(url, tier))
+            // Only artwork the server says is gone sits out the cool-off; a dropped connection retries next time.
+            if Self.isFreshMiss(url, tier: tier) { noteFailure(Self.memoryKey(url, tier)) }
             return nil
         }
         store(image, key: Self.memoryKey(url, tier))
@@ -261,16 +262,28 @@ public actor PosterStore {
         }
         let artwork = await MediaServerIndex.shared.artwork(for: url)
         if let variant = Self.sourceURL(for: url, tier: tier, artwork: artwork),
-           let data = await download(variant, apiKey: apiKey, artwork: artwork),
+           case .data(let data) = await download(variant, apiKey: apiKey, artwork: artwork),
            let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) {
             return PosterFetch(data: persist(sized, url: url, tier: tier), downloadedBytes: data.count)
         }
-        guard let data = await download(url, apiKey: apiKey, artwork: artwork),
-              let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) else {
+        switch await download(url, apiKey: apiKey, artwork: artwork) {
+        case .data(let data):
+            guard let sized = Self.resized(data, maxPixelSize: tier.maxPixelSize) else {
+                markMiss(url, tier: tier)
+                return nil
+            }
+            return PosterFetch(data: persist(sized, url: url, tier: tier), downloadedBytes: data.count)
+        case .gone:
             markMiss(url, tier: tier)
             return nil
+        case .failed:
+            return nil
         }
-        return PosterFetch(data: persist(sized, url: url, tier: tier), downloadedBytes: data.count)
+    }
+
+    /// `gone` is the server's answer (404/410) and is remembered; `failed` (offline, timeout, 5xx) is not.
+    enum Download: Equatable {
+        case data(Data), gone, failed
     }
 
     /// TMDB and TheTVDB serve size variants by path (measured 13 kB `w185` vs 241 kB
@@ -315,7 +328,7 @@ public actor PosterStore {
         return base.path.isEmpty || base.path == "/" || url.path == base.path || url.path.hasPrefix(prefix)
     }
 
-    private func download(_ url: URL, apiKey: String?, artwork: ArtworkReference?) async -> Data? {
+    private func download(_ url: URL, apiKey: String?, artwork: ArtworkReference?) async -> Download {
         // Signposted so poster fetches can be told apart from queue side-loads sharing the per-host pool.
         let signpost = AppSignpost.posters
         let state = signpost.beginInterval("poster download")
@@ -340,12 +353,12 @@ public actor PosterStore {
                 Self.logger.debug(
                     "poster \(http.statusCode, privacy: .public) for \(url.loggableDescription, privacy: .private)"
                 )
-                return nil
+                return [404, 410].contains(http.statusCode) ? .gone : .failed
             }
-            return data
+            return .data(data)
         } catch {
             Self.logger.debug("poster fetch failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
-            return nil
+            return .failed
         }
     }
 
