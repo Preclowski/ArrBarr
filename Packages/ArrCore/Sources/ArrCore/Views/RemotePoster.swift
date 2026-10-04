@@ -64,7 +64,7 @@ struct DetailHeroPoster: View {
         artwork
             // `monitored: nil` — the ribbon here is the interactive toggle the
             // host hands down as `cornerAction`, not a drawn-on marker.
-            .posterMarks(watched: watched, library: libraryMark,
+            .posterMarks(watched: watched, glassWatched: true, library: libraryMark,
                          cornerRadius: Tokens.Radius.card, ribbonWidth: 12)
             .overlay(alignment: .topLeading) { cornerAction }
     }

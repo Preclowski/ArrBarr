@@ -82,7 +82,7 @@ struct DiscoverCardView: View {
                 .clipped()
                 // Watched wedge only: a deck card has no arr record, so no monitored flag.
                 .posterMarks(watched: MediaServerIndex.shared.isWatched(item.result.mediaServerKeys),
-                             monitored: nil, cornerRadius: 0, ribbonWidth: 12)
+                             glassWatched: true, monitored: nil, cornerRadius: 0, ribbonWidth: 12)
 
                 bottomGlassPanel(h: h * 0.55)
                     .frame(maxHeight: .infinity, alignment: .bottom)

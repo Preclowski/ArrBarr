@@ -6,8 +6,8 @@ import SwiftUI
 struct WatchedCornerBadge: View {
     /// Default suits the library grid's 104–160pt tiles.
     var side: CGFloat = 26
-    /// A solid tint instead of glass, for covers drawn inside the Roulette's shaders, where glass has no
-    /// backdrop to refract and would cost a pass per poster per frame.
+    /// A solid tint instead of glass, for lists and the Roulette: a glass pass per cover cost a scrolling
+    /// Library list about 5× its hitches, and the Roulette's shaders give glass no backdrop.
     var flat = false
 
     var body: some View {
@@ -22,10 +22,19 @@ struct WatchedCornerBadge: View {
     @ViewBuilder
     private var wedge: some View {
         if flat {
-            Triangle().fill(Color.accentColor.opacity(0.85))
+            Triangle().fill(Self.flatTint.opacity(0.85))
         } else {
             Color.clear.glassEffect(.regular.tint(Color.accentColor.opacity(0.7)), in: Triangle())
         }
+    }
+
+    /// The platform accent: the menu-bar panel washes SwiftUI's own colours out over light artwork.
+    private static var flatTint: Color {
+        #if os(macOS)
+        Color(nsColor: .controlAccentColor)
+        #else
+        Color.accentColor
+        #endif
     }
 
     nonisolated private struct Triangle: Shape {
@@ -81,15 +90,17 @@ struct MonitorRibbon: View {
 extension View {
     /// Watched wedge (clipped to `cornerRadius`), the monitored ribbon over it and the library strip along the
     /// bottom. `watched` honours the Settings toggle; a `nil` `monitored` or `library` draws nothing.
-    func posterMarks(watched: Bool = false, monitored: Bool? = nil, library: LibraryMark? = nil,
-                     cornerRadius: CGFloat, ribbonWidth: CGFloat = 10) -> some View {
-        modifier(PosterMarks(watched: watched, monitored: monitored, library: library,
+    /// `glassWatched` only for a lone poster (a detail hero): in a list every glass wedge costs frames.
+    func posterMarks(watched: Bool = false, glassWatched: Bool = false, monitored: Bool? = nil,
+                     library: LibraryMark? = nil, cornerRadius: CGFloat, ribbonWidth: CGFloat = 10) -> some View {
+        modifier(PosterMarks(watched: watched, glassWatched: glassWatched, monitored: monitored, library: library,
                              cornerRadius: cornerRadius, ribbonWidth: ribbonWidth))
     }
 }
 
 private struct PosterMarks: ViewModifier {
     let watched: Bool
+    let glassWatched: Bool
     let monitored: Bool?
     let library: LibraryMark?
     let cornerRadius: CGFloat
@@ -101,6 +112,7 @@ private struct PosterMarks: ViewModifier {
         content
             // Only on a watched cover: an unconditional `clipShape` adds a render pass to every poster in a grid.
             .modifier(WatchedCorner(watched: watched && configStore.showWatchedIndicator,
+                                    glass: glassWatched,
                                     side: ribbonWidth * 1.6,
                                     cornerRadius: cornerRadius))
             .overlay {
@@ -182,13 +194,14 @@ nonisolated struct PosterBottomEdge: Shape {
 /// Conditional so untouched covers keep their plain compositing.
 private struct WatchedCorner: ViewModifier {
     let watched: Bool
+    let glass: Bool
     let side: CGFloat
     let cornerRadius: CGFloat
 
     func body(content: Content) -> some View {
         if watched {
             content
-                .overlay(alignment: .topTrailing) { WatchedCornerBadge(side: side) }
+                .overlay(alignment: .topTrailing) { WatchedCornerBadge(side: side, flat: !glass) }
                 .clipShape(RoundedRectangle(cornerRadius: cornerRadius, style: .continuous))
         } else {
             content
