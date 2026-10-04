@@ -352,7 +352,7 @@ struct MediaHeaderCard: View {
 
 // MARK: - Poster lightbox
 
-/// The art catches alight at many points at once and burns in from each, with a diffraction fringe for flame.
+/// The art fades in from many points at once and flows into place; the front refracts it like a glass ridge.
 private struct IgniteReveal: ViewModifier, Animatable {
     var progress: CGFloat
     let size: CGSize
@@ -368,7 +368,7 @@ private struct IgniteReveal: ViewModifier, Animatable {
         // Off once done: a layer effect rasterises at 1×, which would blur the 5× zoom.
         content.layerEffect(
             ShaderLibrary.bundle(.module).posterIgnite(.float2(size), .float(Float(progress)), .float(seed)),
-            maxSampleOffset: CGSize(width: 16, height: 16),
+            maxSampleOffset: CGSize(width: 80, height: 80),
             isEnabled: enabled && progress < 1
         )
     }
@@ -596,7 +596,7 @@ struct PosterLightbox: View {
             #endif
         }
         .onAppear {
-            withAnimation(.easeInOut(duration: 1.1)) { sweep = 1 }
+            withAnimation(.easeOut(duration: 0.5)) { sweep = 1 }
         }
         #if os(macOS)
         .onAppear { startScrollZoom() }

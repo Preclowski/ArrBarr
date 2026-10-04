@@ -168,41 +168,45 @@ static float shelfFbm3(float3 p) {
 
 // MARK: - Lightbox ignition
 
-/// The art catches at many points at once and the reveal spreads from each, like paper alight across its
-/// whole surface; the burning edge is a diffraction fringe (split channels, a spectral sheen) instead of fire.
+/// The poster fades in from many points at once and flows into place like the Roulette's morph; the front is a
+/// glass ridge that bends the art across itself, splits it into channels and throws diffraction fringes.
 [[stitchable]] half4 posterIgnite(float2 p, SwiftUI::Layer layer, float2 size, float progress, float seed) {
-    const float band = 0.12;
+    const float band = 0.22;
     float scale = max(size.x, size.y);
     float2 offset = float2(seed * 17.0, seed * 31.0);
 
-    // Broad patches decide where it catches first; a fine grain frays the edge like burning paper. fBm sits
-    // mostly in 0.28…0.72, so it is stretched to the full range or the reveal would stall, then rush.
+    // fBm sits mostly in 0.28…0.72, so it is stretched to the full range or the reveal would stall, then rush.
     float2 uv = p / scale;
-    float coarse = clamp((shelfFbm(uv * 4.0 + offset) - 0.28) / 0.44, 0.0, 1.0);
-    float n = coarse + 0.08 * (shelfNoise(uv * 38.0 + offset) - 0.5);
+    float raw = shelfFbm(uv * 4.0 + offset);
+    float n = clamp((raw - 0.28) / 0.44, 0.0, 1.0);
 
     float front = mix(-band, 1.0 + band, progress);
-    float edge = (front - n) / band;               // < 0 not yet alight, 0…1 the fringe, > 1 revealed
-    if (edge <= 0.0) { return half4(0.0); }
+    float edge = clamp((front - n) / band, 0.0, 1.0);   // 0 hidden, 1 shown
     if (edge >= 1.0) { return layer.sample(p); }
 
-    float glow = sin(edge * M_PI_F);               // strongest mid-fringe, zero at both ends
+    // Liquid pull as in `shelfMorph`, gone once the pixel is fully shown; then bend and split along the
+    // noise gradient across the front.
+    float2 flow = float2(shelfFbm(uv * 1.8 + 7.3 + offset + progress * 0.3),
+                         shelfFbm(uv * 1.8 + 1.7 - offset - progress * 0.3)) - 0.5;
+    float2 liquid = flow * (0.45 * scale) * (1.0 - smoothstep(0.0, 1.0, edge));
+    float glow = sin(edge * M_PI_F);                    // strongest mid-front, zero at both ends
     float2 e = float2(2.0 / scale, 0.0);
-    float2 grad = float2(shelfFbm((uv + e.xy) * 4.0 + offset), shelfFbm((uv + e.yx) * 4.0 + offset))
-                - shelfFbm(uv * 4.0 + offset);
+    float2 grad = float2(shelfFbm((uv + e.xy) * 4.0 + offset), shelfFbm((uv + e.yx) * 4.0 + offset)) - raw;
     float2 dir = length(grad) > 1e-6 ? normalize(grad) : float2(0.0, 1.0);
-    float spread = 6.0 * glow;
-
+    float2 bent = p + liquid + dir * (10.0 * glow);
+    float2 split = dir * (8.0 * glow);
     float2 lo = float2(0.5, 0.5);
     float2 hi = size - 0.5;
-    half4 base = layer.sample(p);
-    half r = layer.sample(clamp(p + dir * spread, lo, hi)).r;
-    half b = layer.sample(clamp(p - dir * spread, lo, hi)).b;
+    half a = layer.sample(p).a;
+    half3 glass = half3(layer.sample(clamp(bent + split, lo, hi)).r,
+                        layer.sample(clamp(bent, lo, hi)).g,
+                        layer.sample(clamp(bent - split, lo, hi)).b);
 
-    // A thin spectrum that runs along the fringe as it advances.
-    float hue = fract(n * 2.0 + progress);
-    half3 spectrum = half3(0.5 + 0.5 * cos(6.28318 * (hue + float3(0.0, 0.33, 0.67))));
-    half3 rgb = half3(r, base.g, b) + spectrum * half(0.28 * glow);
-    half alpha = base.a * half(smoothstep(0.0, 0.5, edge));
-    return half4(rgb * alpha, alpha);
+    // Rainbow bands across the front's width, like a grating. Mixed, not added: added colour clips to white
+    // on bright art.
+    half3 fringe = half3(0.5 + 0.5 * cos(6.28318 * (edge * 1.4 + n * 0.5 + float3(0.0, 0.33, 0.67))));
+    half3 rgb = mix(glass, a * (0.2h + 0.8h * fringe), half(0.55 * glow));
+    // Opaque by mid-front, so the fringe is seen; displaced samples can carry colour past a rounded corner.
+    half reveal = half(smoothstep(0.0, 0.6, edge));
+    return half4(min(rgb, half3(a)) * reveal, a * reveal);
 }
