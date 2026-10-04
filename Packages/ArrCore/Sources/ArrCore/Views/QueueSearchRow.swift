@@ -19,6 +19,7 @@ struct QueueSearchRow: View {
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: item.source),
             posterFallbackSymbol: item.source.symbol,
+            posterLibraryMark: LibraryMark(downloaded: item.isUpgrade),
             title: item.title,
             metadataSegments: metadataSegments,
             // No section headers in this layout, so each row carries its own "In queue" badge.

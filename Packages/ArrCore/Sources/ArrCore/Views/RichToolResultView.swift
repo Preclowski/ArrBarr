@@ -111,7 +111,7 @@ struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.title,
                             year: rec.year,
-                            hasFile: rec.hasFile ?? false,
+                            libraryMark: LibraryMark(downloaded: rec.hasFile == true),
                             images: rec.images,
                             baseURL: radarr.baseURL,
                             apiKey: radarr.apiKey,
@@ -131,7 +131,7 @@ struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.title,
                             year: rec.year,
-                            hasFile: nil,
+                            libraryMark: LibraryMark(downloaded: rec.ownership?.isDownloaded == true),
                             images: rec.images,
                             baseURL: sonarr.baseURL,
                             apiKey: sonarr.apiKey,
@@ -151,7 +151,7 @@ struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.artistName ?? "(untitled)",
                             year: nil,
-                            hasFile: nil,
+                            libraryMark: LibraryMark(downloaded: rec.ownership?.isDownloaded == true),
                             images: rec.images,
                             baseURL: lidarr.baseURL,
                             apiKey: lidarr.apiKey,
@@ -165,7 +165,7 @@ struct RichToolResultView: View {
                         LibraryRecordCard(
                             title: rec.title,
                             year: rec.year,
-                            hasFile: rec.hasFile ?? false,
+                            libraryMark: LibraryMark(downloaded: rec.hasFile == true),
                             images: rec.images,
                             baseURL: whisparr.baseURL,
                             apiKey: whisparr.apiKey,
@@ -262,22 +262,16 @@ private struct SearchResultCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ZStack(alignment: .bottomTrailing) {
-                PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
-                    RemotePoster(
-                        url: result.posterURL,
-                        apiKey: apiKey,
-                        size: CGSize(width: 90, height: 135),
-                        cornerRadius: Tokens.Radius.card
-                    )
-                }
-                if isOwned {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                        .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
-                        .padding(6)
-                }
+            PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
+                RemotePoster(
+                    url: result.posterURL,
+                    apiKey: apiKey,
+                    size: CGSize(width: 90, height: 135),
+                    cornerRadius: Tokens.Radius.card
+                )
             }
+            .posterMarks(library: isOwned ? LibraryMark(downloaded: result.libraryDownloaded) : nil,
+                         cornerRadius: Tokens.Radius.card)
             Text(result.title)
                 .scaledFont(size: 12, weight: .semibold)
                 .lineLimit(2)
@@ -330,21 +324,14 @@ private struct AlbumCard: View {
             )
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                ZStack(alignment: .bottomTrailing) {
-                    RemotePoster(
-                        url: coverURL,
-                        apiKey: apiKey,
-                        size: CGSize(width: 90, height: 90),
-                        cornerRadius: Tokens.Radius.card,
-                        fallbackSymbol: "music.note"
-                    )
-                    if album.isComplete {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.green)
-                            .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
-                            .padding(6)
-                    }
-                }
+                RemotePoster(
+                    url: coverURL,
+                    apiKey: apiKey,
+                    size: CGSize(width: 90, height: 90),
+                    cornerRadius: Tokens.Radius.card,
+                    fallbackSymbol: "music.note"
+                )
+                .posterMarks(library: LibraryMark(downloaded: album.isComplete), cornerRadius: Tokens.Radius.card)
                 Text(album.title)
                     .scaledFont(size: 12, weight: .semibold)
                     .lineLimit(2)
@@ -379,8 +366,7 @@ private struct AlbumCard: View {
 private struct LibraryRecordCard: View {
     let title: String
     let year: Int?
-    /// nil for series; for movies, whether the file is on disk.
-    let hasFile: Bool?
+    let libraryMark: LibraryMark
     let images: [ArrImage]?
     let baseURL: String
     let apiKey: String
@@ -424,22 +410,15 @@ private struct LibraryRecordCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ZStack(alignment: .bottomTrailing) {
-                PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
-                    RemotePoster(
-                        url: posterURL,
-                        apiKey: poster.requiresAuth ? apiKey : nil,
-                        size: CGSize(width: 90, height: 135),
-                        cornerRadius: Tokens.Radius.card
-                    )
-                }
-                if let hasFile {
-                    Image(systemName: hasFile ? "checkmark.circle.fill" : "questionmark.circle")
-                        .foregroundStyle(hasFile ? .green : .orange)
-                        .background(Circle().fill(Color.black.opacity(0.5)).padding(-2))
-                        .padding(6)
-                }
+            PosterBlurContainer(blurred: blurred, cornerRadius: Tokens.Radius.card) {
+                RemotePoster(
+                    url: posterURL,
+                    apiKey: poster.requiresAuth ? apiKey : nil,
+                    size: CGSize(width: 90, height: 135),
+                    cornerRadius: Tokens.Radius.card
+                )
             }
+            .posterMarks(library: libraryMark, cornerRadius: Tokens.Radius.card)
             Text(title)
                 .scaledFont(size: 12, weight: .semibold)
                 .lineLimit(2)

@@ -14012,6 +14012,48 @@
         }
       }
     },
+    "library.mark.inLibrary": {
+      "comment": "Tooltip on the poster's bottom strip: the title is in the arr but not downloaded",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In library"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W bibliotece"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In der Bibliothek"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En la biblioteca"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la bibliothèque"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In bibliotheek"
+          }
+        }
+      }
+    },
     "library.release.announced": {
       "extractionState": "manual",
       "localizations": {

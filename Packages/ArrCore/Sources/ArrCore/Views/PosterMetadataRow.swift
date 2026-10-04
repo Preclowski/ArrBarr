@@ -13,6 +13,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
     /// `posterMonitored` is `nil` on rows that don't know the flag (a search hit, an upcoming episode).
     let posterWatched: Bool
     let posterMonitored: Bool?
+    let posterLibraryMark: LibraryMark?
     /// Callers compose `Title (Year)` themselves: episodes have no year suffix.
     let title: String
     let metadataSegments: [String]
@@ -35,6 +36,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
         posterFallbackSymbol: String = "",
         posterWatched: Bool = false,
         posterMonitored: Bool? = nil,
+        posterLibraryMark: LibraryMark? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -55,6 +57,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
         self.posterFallbackSymbol = posterFallbackSymbol
         self.posterWatched = posterWatched
         self.posterMonitored = posterMonitored
+        self.posterLibraryMark = posterLibraryMark
         self.title = title
         self.metadataSegments = metadataSegments
         self.metadataSegmentColors = metadataSegmentColors
@@ -91,7 +94,7 @@ struct PosterMetadataRow<TitleBadge: View, MetadataBadge: View, MetadataBadge2: 
                     fallbackSymbol: posterFallbackSymbol
                 )
             }
-            .posterMarks(watched: posterWatched, monitored: posterMonitored,
+            .posterMarks(watched: posterWatched, monitored: posterMonitored, library: posterLibraryMark,
                          cornerRadius: posterCornerRadius,
                          ribbonWidth: max(5, posterSize.width * 0.2))
 
@@ -167,6 +170,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == Empt
         posterFallbackSymbol: String = "",
         posterWatched: Bool = false,
         posterMonitored: Bool? = nil,
+        posterLibraryMark: LibraryMark? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -179,6 +183,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == Empt
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
                   posterWatched: posterWatched, posterMonitored: posterMonitored,
+                  posterLibraryMark: posterLibraryMark,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
@@ -198,6 +203,7 @@ extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBadge2 == 
         posterFallbackSymbol: String = "",
         posterWatched: Bool = false,
         posterMonitored: Bool? = nil,
+        posterLibraryMark: LibraryMark? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -211,6 +217,7 @@ extension PosterMetadataRow where MetadataBadge == EmptyView, MetadataBadge2 == 
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
                   posterWatched: posterWatched, posterMonitored: posterMonitored,
+                  posterLibraryMark: posterLibraryMark,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
@@ -230,6 +237,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == Emp
         posterFallbackSymbol: String = "",
         posterWatched: Bool = false,
         posterMonitored: Bool? = nil,
+        posterLibraryMark: LibraryMark? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -243,6 +251,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge2 == Emp
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
                   posterWatched: posterWatched, posterMonitored: posterMonitored,
+                  posterLibraryMark: posterLibraryMark,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,
@@ -263,6 +272,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == Empt
         posterFallbackSymbol: String = "",
         posterWatched: Bool = false,
         posterMonitored: Bool? = nil,
+        posterLibraryMark: LibraryMark? = nil,
         title: String,
         metadataSegments: [String],
         metadataSegmentColors: [Color?] = [],
@@ -276,6 +286,7 @@ extension PosterMetadataRow where TitleBadge == EmptyView, MetadataBadge == Empt
                   posterSize: posterSize, posterCornerRadius: posterCornerRadius,
                   posterBlurred: posterBlurred, posterFallbackSymbol: posterFallbackSymbol,
                   posterWatched: posterWatched, posterMonitored: posterMonitored,
+                  posterLibraryMark: posterLibraryMark,
                   title: title, metadataSegments: metadataSegments,
                   metadataSegmentColors: metadataSegmentColors,
                   metadataSegments2: metadataSegments2, disabled: disabled, onTap: onTap,

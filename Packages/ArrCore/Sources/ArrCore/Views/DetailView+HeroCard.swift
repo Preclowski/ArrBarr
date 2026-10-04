@@ -136,6 +136,7 @@ extension DetailView {
             },
             posterCornerAction: monitorPosterToggle,
             watched: isWatched,
+            libraryMark: heroLibraryMark,
             // Title + year live in the nav-bar title.
             showTitle: false,
             metadataLoading: metadataLoading,

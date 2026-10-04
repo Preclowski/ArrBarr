@@ -152,6 +152,7 @@ struct LidarrArtistView: View {
                 size: CGSize(width: 110, height: 110),
                 fallbackSymbol: "music.mic",
                 cornerAction: AnyView(monitorPosterToggle),
+                libraryMark: artist?.ownership.map { LibraryMark(downloaded: $0.isDownloaded) },
                 onTap: { url in
                     withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 }

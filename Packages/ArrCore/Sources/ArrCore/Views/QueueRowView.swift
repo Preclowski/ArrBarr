@@ -114,7 +114,8 @@ struct QueueRowView: View {
                 )
             }
             // Before the hover / selection overlays: the wedge is part of the artwork.
-            .posterMarks(watched: item.watched, monitored: nil,
+            // An upgrade already has a file.
+            .posterMarks(watched: item.watched, library: LibraryMark(downloaded: item.isUpgrade),
                          cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             .modifier(PosterLeavingMark())
             // macOS: pause/resume lives on the poster; cancelling a download is deliberately not in the row.

@@ -48,7 +48,7 @@ struct QueueGroupRowView: View {
                     fallbackSymbol: "tv"
                 )
             }
-            .posterMarks(watched: rep.watched, monitored: nil,
+            .posterMarks(watched: rep.watched, library: LibraryMark(downloaded: rep.isUpgrade),
                          cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
             .modifier(PosterLeavingMark())
             // Suppressed while selecting: the poster is the checkbox then.

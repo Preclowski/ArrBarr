@@ -136,6 +136,7 @@ struct MediaHeaderCard: View {
     /// Rendered above the title (the episode header's series/season links).
     var aboveTitle: AnyView?
     var watched: Bool = false
+    var libraryMark: LibraryMark?
     /// Off when the NavigationStack toolbar already shows `Title (Year)`.
     var showTitle: Bool = true
     /// Shows skeletons for the runtime row and overview while the detail fetch is in flight.
@@ -175,6 +176,7 @@ struct MediaHeaderCard: View {
         posterCornerAction: AnyView? = nil,
         aboveTitle: AnyView? = nil,
         watched: Bool = false,
+        libraryMark: LibraryMark? = nil,
         showTitle: Bool = true,
         metadataLoading: Bool = false,
         directedBy: [CastMember] = [],
@@ -205,6 +207,7 @@ struct MediaHeaderCard: View {
         self.posterCornerAction = posterCornerAction
         self.aboveTitle = aboveTitle
         self.watched = watched
+        self.libraryMark = libraryMark
         self.showTitle = showTitle
         self.metadataLoading = metadataLoading
         self.directedBy = directedBy
@@ -313,6 +316,7 @@ struct MediaHeaderCard: View {
             blurred: blurred,
             cornerAction: posterCornerAction,
             watched: watched,
+            libraryMark: libraryMark,
             onTap: onPosterTap
         )
     }

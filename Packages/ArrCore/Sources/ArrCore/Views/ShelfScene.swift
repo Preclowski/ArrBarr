@@ -18,9 +18,14 @@ struct ShelfScene: View {
         min(size.width * 0.66, size.height * 0.66 / 1.5)
     }
 
+    /// Where every mode leaves the selected poster at rest.
+    static func heroCenter(in size: CGSize) -> CGPoint {
+        CGPoint(x: size.width / 2, y: size.height * 0.39)
+    }
+
     private var width: CGFloat { Self.heroWidth(for: size) }
     private var height: CGFloat { width * 1.5 }
-    private var center: CGPoint { CGPoint(x: size.width / 2, y: size.height * 0.39) }
+    private var center: CGPoint { Self.heroCenter(in: size) }
 
     private func window(_ radius: Int) -> [Int] {
         guard !entries.isEmpty else { return [] }

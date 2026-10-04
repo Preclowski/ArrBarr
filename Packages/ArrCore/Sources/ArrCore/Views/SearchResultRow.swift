@@ -29,16 +29,12 @@ struct SearchResultRow: View {
             posterFallbackSymbol: result.source.symbol,
             // A lookup hit carries no arr record, so there is no monitored flag to draw.
             posterWatched: MediaServerIndex.shared.isWatched(result.mediaServerKeys),
+            posterLibraryMark: isInLibrary ? LibraryMark(downloaded: result.libraryDownloaded) : nil,
             title: titleWithYear,
             metadataSegments: metadataSegments,
             onTap: onTap,
             titleBadge: { SourceGlyphChip(source: result.source) }
-        ) {
-            // No second trailing chevron or `+`: the title chevron is the drill-in, like every other row surface.
-            if isInLibrary {
-                LibraryStateBadge(isDownloaded: result.libraryDownloaded)
-            }
-        }
+        ) { EmptyView() }
         #if os(macOS)
         // No extra request: uses what the lookup already sent.
         .hoverTooltip(enabled: hasTooltipContent) {

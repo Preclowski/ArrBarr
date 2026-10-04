@@ -76,11 +76,10 @@ struct TrackDetailOverlay: View {
             }
             .buttonStyle(.plain)
             .disabled(posterURL == nil)
+            .posterMarks(library: LibraryMark(downloaded: file != nil || track.hasFile == true),
+                         cornerRadius: Tokens.Radius.card)
 
             VStack(alignment: .leading, spacing: 4) {
-                if file != nil {
-                    LibraryStateBadge(isDownloaded: true)
-                }
                 if let artist, let artistName = artist.artistName {
                     if let onOpenArtist {
                         Button { onOpenArtist(artist) } label: {

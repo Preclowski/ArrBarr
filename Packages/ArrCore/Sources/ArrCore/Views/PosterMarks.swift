@@ -78,12 +78,12 @@ struct MonitorRibbon: View {
     }
 }
 
-public extension View {
-    /// Watched wedge (clipped to `cornerRadius`) with the monitored ribbon over it. `watched` honours the
-    /// Settings toggle; `monitored` is `nil` where the flag is unknown, drawing no ribbon.
-    func posterMarks(watched: Bool, monitored: Bool?, cornerRadius: CGFloat,
-                     ribbonWidth: CGFloat = 10) -> some View {
-        modifier(PosterMarks(watched: watched, monitored: monitored,
+extension View {
+    /// Watched wedge (clipped to `cornerRadius`), the monitored ribbon over it and the library strip along the
+    /// bottom. `watched` honours the Settings toggle; a `nil` `monitored` or `library` draws nothing.
+    func posterMarks(watched: Bool = false, monitored: Bool? = nil, library: LibraryMark? = nil,
+                     cornerRadius: CGFloat, ribbonWidth: CGFloat = 10) -> some View {
+        modifier(PosterMarks(watched: watched, monitored: monitored, library: library,
                              cornerRadius: cornerRadius, ribbonWidth: ribbonWidth))
     }
 }
@@ -91,6 +91,7 @@ public extension View {
 private struct PosterMarks: ViewModifier {
     let watched: Bool
     let monitored: Bool?
+    let library: LibraryMark?
     let cornerRadius: CGFloat
     let ribbonWidth: CGFloat
     /// Not the environment object: tooltips and popovers don't inherit it, and a missing one crashes.
@@ -102,12 +103,85 @@ private struct PosterMarks: ViewModifier {
             .modifier(WatchedCorner(watched: watched && configStore.showWatchedIndicator,
                                     side: ribbonWidth * 1.6,
                                     cornerRadius: cornerRadius))
+            .overlay {
+                if let library {
+                    LibraryMarkEdge(mark: library, thickness: ribbonWidth < 10 ? 1.5 : 3, cornerRadius: cornerRadius)
+                }
+            }
             .overlay(alignment: .topLeading) {
                 if monitored == true {
                     MonitorRibbon(width: ribbonWidth)
                         .padding(.leading, ribbonWidth * 0.4)
                 }
             }
+    }
+}
+
+// MARK: - Library mark
+
+/// Where a title stands in the arr: blue once added, green once on disk.
+enum LibraryMark {
+    case inLibrary, downloaded
+
+    init(downloaded: Bool) { self = downloaded ? .downloaded : .inLibrary }
+
+    fileprivate var label: LocalizedStringKey { self == .downloaded ? "Downloaded" : "library.mark.inLibrary" }
+
+    /// The platform colour, not SwiftUI's `.green`/`.blue`: the menu-bar panel blends those with what's under them,
+    /// washing the strip out on light artwork.
+    private var color: Color {
+        #if os(macOS)
+        Color(nsColor: self == .downloaded ? .systemGreen : .systemBlue)
+        #else
+        Color(uiColor: self == .downloaded ? .systemGreen : .systemBlue)
+        #endif
+    }
+
+    /// Glass like the watched wedge: its rim parts the strip from light artwork, where a flat green or blue fades.
+    /// `flat` for the Roulette's hero strip, where glass over the stage read as a faint wash.
+    @ViewBuilder
+    func strip(in shape: some Shape, flat: Bool = false) -> some View {
+        if flat {
+            shape.fill(color)
+        } else {
+            Color.clear.glassEffect(.regular.tint(color.opacity(0.7)), in: shape)
+        }
+    }
+}
+
+extension LibraryEntry {
+    /// A Roulette entry from TMDB carries `arrId` 0 when the arr doesn't have it.
+    var libraryMark: LibraryMark? { arrId == 0 ? nil : LibraryMark(downloaded: state == .complete) }
+}
+
+/// A strip along the poster's bottom edge.
+private struct LibraryMarkEdge: View {
+    let mark: LibraryMark
+    let thickness: CGFloat
+    let cornerRadius: CGFloat
+
+    var body: some View {
+        mark.strip(in: PosterBottomEdge(thickness: thickness, cornerRadius: cornerRadius))
+            .overlay(alignment: .bottom) {
+                // The edge itself is too thin to aim the tooltip at.
+                Color.clear
+                    .frame(height: thickness * 4)
+                    .contentShape(Rectangle())
+                    .help(Text(mark.label, bundle: .module))
+            }
+            .accessibilityElement()
+            .accessibilityLabel(Text(mark.label, bundle: .module))
+    }
+}
+
+/// Cut from the poster's own rounded rect, so the ends follow its corners without a clip pass.
+nonisolated struct PosterBottomEdge: Shape {
+    let thickness: CGFloat
+    let cornerRadius: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let strip = Path(CGRect(x: rect.minX, y: rect.maxY - thickness, width: rect.width, height: thickness))
+        return RoundedRectangle(cornerRadius: cornerRadius, style: .continuous).path(in: rect).intersection(strip)
     }
 }
 

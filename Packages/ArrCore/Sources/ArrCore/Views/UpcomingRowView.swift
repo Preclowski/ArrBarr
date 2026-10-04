@@ -63,6 +63,8 @@ struct UpcomingRowView: View {
             posterWatched: MediaServerIndex.shared.isWatched(item.mediaServerKeys,
                                                             season: item.seasonNumber,
                                                             episode: item.episodeNumber),
+            // A calendar entry is always in the library.
+            posterLibraryMark: LibraryMark(downloaded: item.hasFile),
             title: item.title,
             metadataSegments: episodeSegments,
             metadataSegments2: ratingSegments,
@@ -72,14 +74,8 @@ struct UpcomingRowView: View {
                 if let ratingChip { RatingPill(chip: ratingChip) }
             }
         ) {
-            HStack(spacing: 6) {
-                if item.hasFile {
-                    // A calendar entry is always in the library, so only "downloaded" is news.
-                    LibraryStateBadge(isDownloaded: true)
-                }
-                ServiceIcon(source: item.source, size: 13)
-                    .foregroundStyle(.tertiary)
-            }
+            ServiceIcon(source: item.source, size: 13)
+                .foregroundStyle(.tertiary)
         }
         .upcomingTooltip(item: item)
         .contextMenu {

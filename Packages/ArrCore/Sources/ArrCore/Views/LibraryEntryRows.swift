@@ -101,7 +101,7 @@ struct LibraryTile: View {
                             )
                         }
                 }
-                .posterMarks(watched: entry.watched, monitored: entry.isMonitored,
+                .posterMarks(watched: entry.watched, monitored: entry.isMonitored, library: entry.libraryMark,
                              cornerRadius: Tokens.Radius.card, ribbonWidth: 10)
                 Text(verbatim: entry.title)
                     .scaledFont(size: 11, weight: .semibold)
@@ -166,13 +166,14 @@ struct LibraryListRow: View {
             posterFallbackSymbol: entry.source.symbol,
             // Watched only: the row already dims unmonitored entries, and two marks crowd a 25pt thumbnail.
             posterWatched: entry.watched,
+            posterLibraryMark: entry.libraryMark,
             title: rowTitle,
             metadataSegments: metadataSegments,
             onTap: { entry.openDetail() },
             metadataBadge: { profileBadge }
         ) {
-            // Trailing, so the chips line up in a column down the list.
-            LibraryStatusChip(entry: entry)
+            // Trailing, so the chips line up in a column down the list; "downloaded" is the poster's bottom strip.
+            if entry.state != .complete { LibraryStatusChip(entry: entry) }
         }
         .opacity(entry.state == .unmonitored ? 0.55 : 1)
         .libraryEntryMenu(entry, configStore: configStore)

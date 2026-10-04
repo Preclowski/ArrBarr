@@ -122,13 +122,14 @@ struct LidarrDetailPanel: View {
                 size: CGSize(width: 110, height: 110),
                 fallbackSymbol: "music.note",
                 cornerAction: posterCornerAction,
+                libraryMark: album?.statistics.map { LibraryMark(downloaded: albumFileState($0) == .complete) },
                 onTap: { url in
                     withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 }
             )
             VStack(alignment: .leading, spacing: 4) {
                 // No album title: the surface's header already carries it (`DetailView.navTitleString`).
-                if let stats = album?.statistics {
+                if let stats = album?.statistics, albumFileState(stats) != .complete {
                     MediaStateChip(
                         state: albumFileState(stats),
                         have: stats.trackFileCount,

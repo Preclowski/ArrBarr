@@ -138,7 +138,8 @@ extension DetailView {
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
             if let release { TagChip(text: release) }
-            if radarrDetail != nil {
+            // "Downloaded" is the poster's bottom strip.
+            if radarrDetail != nil, movieFileState != .complete {
                 MediaStateChip(state: movieFileState, locale: configStore.currentLocale)
             }
         })
@@ -160,8 +161,8 @@ extension DetailView {
                 TagChip(text: ended, color: .brown)
             }
             // No have/total: the season rows carry the actionable count, and a partial series has
-            // nothing to say in one word.
-            if sonarrDetail != nil, seriesFileState != .partial {
+            // nothing to say in one word. "Downloaded" is the poster's bottom strip.
+            if sonarrDetail != nil, seriesFileState != .partial, seriesFileState != .complete {
                 MediaStateChip(state: seriesFileState, locale: configStore.currentLocale)
             }
         })
@@ -175,5 +176,12 @@ extension DetailView {
 
     private var seriesFileState: LibraryEntry.FileState {
         .series(monitored: sonarrDetail?.monitored, counts: seriesEpisodeCounts)
+    }
+
+    /// Nothing until the record lands, like the chips.
+    var heroLibraryMark: LibraryMark? {
+        if radarrDetail != nil { return LibraryMark(downloaded: movieFileState == .complete) }
+        if sonarrDetail != nil { return LibraryMark(downloaded: seriesFileState == .complete) }
+        return nil
     }
 }

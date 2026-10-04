@@ -55,7 +55,8 @@ final class ShelfMotion {
         if !active { active = true }
         settle?.cancel()
         settle = Task { [weak self] in
-            try? await Task.sleep(for: .milliseconds(450))
+            // Short: the library strips come back with the clean frame, and nobody waits long for them.
+            try? await Task.sleep(for: .milliseconds(120))
             guard !Task.isCancelled else { return }
             self?.active = false
         }
@@ -229,6 +230,15 @@ struct ShelfView: View {
                 }
                 scrollDriver(entries, size: geo.size)
                 chrome(entries)
+                ZStack {
+                    if entries.indices.contains(centerIndex), sceneReady(entries), !motion.active,
+                       let mark = entries[centerIndex].libraryMark {
+                        heroStrip(mark, size: geo.size)
+                            .transition(.opacity)
+                    }
+                }
+                // Gone at once when the Shelf moves, eased in once it settles.
+                .animation(motion.active ? nil : .easeOut(duration: 0.2), value: motion.active)
                 if entries.isEmpty && !warming {
                     emptyState
                 } else if !sceneReady(entries) {
@@ -314,6 +324,16 @@ struct ShelfView: View {
     }
 
     // MARK: - Layers
+
+    /// The selected poster's library strip, drawn over the chrome's shade (it would dim it with the cover) and
+    /// outside the scene's shaders; at rest every mode leaves that poster on this rect.
+    private func heroStrip(_ mark: LibraryMark, size: CGSize) -> some View {
+        let w = ShelfScene.heroWidth(for: size)
+        return mark.strip(in: PosterBottomEdge(thickness: min(3, w * 0.02), cornerRadius: w * 0.04), flat: true)
+            .frame(width: w, height: w * 1.5)
+            .position(ShelfScene.heroCenter(in: size))
+            .allowsHitTesting(false)
+    }
 
     @ViewBuilder
     private func backdrop(_ entries: [LibraryEntry]) -> some View {

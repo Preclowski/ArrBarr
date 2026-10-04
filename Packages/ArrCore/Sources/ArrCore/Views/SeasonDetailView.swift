@@ -76,6 +76,13 @@ struct SeasonDetailView: View {
         sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.monitored
     }
 
+    private var seasonLibraryMark: LibraryMark? {
+        guard let stats = sonarrDetail?.seasons?.first(where: { $0.seasonNumber == drill.seasonNumber })?.statistics
+        else { return nil }
+        return LibraryMark(downloaded: EpisodeFileCounts(have: stats.episodeFileCount ?? 0,
+                                                         total: stats.episodeCount ?? 0).isComplete)
+    }
+
     private var monitorPosterToggle: AnyView? {
         guard let seasonMonitored else { return nil }
         return AnyView(
@@ -311,6 +318,7 @@ struct SeasonDetailView: View {
                 withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url ?? posterURL }
             },
             posterCornerAction: monitorPosterToggle,
+            libraryMark: seasonLibraryMark,
             showTitle: false
         )
     }

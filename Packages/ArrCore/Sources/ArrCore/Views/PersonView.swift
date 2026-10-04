@@ -408,6 +408,7 @@ private struct PersonFilmographyRow: View {
             posterSize: CGSize(width: 26, height: 38),
             posterBlurred: configStore.shouldBlurPoster(for: result.source),
             posterFallbackSymbol: result.source.symbol,
+            posterLibraryMark: result.inLibraryArrId.map { _ in LibraryMark(downloaded: result.libraryDownloaded) },
             title: result.year.map { "\(result.title) (\($0))" } ?? result.title,
             metadataSegments: metadata,
             onTap: onTap,
@@ -415,11 +416,7 @@ private struct PersonFilmographyRow: View {
             metadataBadge: {
                 if let chip = result.rating.flatMap({ RatingChip.tmdb($0) }) { RatingPill(chip: chip) }
             }
-        ) {
-            if result.inLibraryArrId != nil {
-                LibraryStateBadge(isDownloaded: result.libraryDownloaded)
-            }
-        }
+        ) { EmptyView() }
         #if os(macOS)
         row
             .hoverTooltip(enabled: hasTooltip) {

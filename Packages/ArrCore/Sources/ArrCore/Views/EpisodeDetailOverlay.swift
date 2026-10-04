@@ -316,9 +316,6 @@ struct EpisodeDetailOverlay: View {
     private var heroBadges: some View {
         HStack(spacing: 4) {
             if let profileName { ProfileChip(name: profileName) }
-            if episode.hasFile == true {
-                LibraryStateBadge(isDownloaded: true)
-            }
             if !hasAired {
                 Text("detail.unaired.button", bundle: .module)
                     .scaledFont(size: 9, weight: .semibold)
@@ -405,6 +402,7 @@ struct EpisodeDetailOverlay: View {
                 posterCornerAction: AnyView(monitorPosterToggle),
                 aboveTitle: AnyView(seriesContextLinks),
                 watched: isWatched,
+                libraryMark: LibraryMark(downloaded: episode.hasFile == true),
                 metadataLoading: isLoadingDetails
             )
 

@@ -46,7 +46,7 @@ struct QueueTitleGroupRowView: View {
                     fallbackSymbol: rep.source.symbol
                 )
             }
-            .posterMarks(watched: rep.watched, monitored: nil,
+            .posterMarks(watched: rep.watched, library: LibraryMark(downloaded: group.allItems.allSatisfy(\.isUpgrade)),
                          cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
 
             VStack(alignment: .leading, spacing: 3) {
