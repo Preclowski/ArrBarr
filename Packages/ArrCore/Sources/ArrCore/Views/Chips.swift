@@ -245,16 +245,16 @@ struct StateChip: View {
     }
 
     var body: some View {
-        // Filled, so a status reads apart from the outlined tags beside it. The fill grows by half the outlined
-        // chips' stroke to keep their size. Softened white text over a fill that lets a little of the surface through.
+        // Tonal: a faint wash of the colour under text in the colour, so a status stands apart from the outlined
+        // tags without shouting. The fill grows by half the outlined chips' stroke to keep their size.
         Text(verbatim: text)
             .scaledFont(size: 9, weight: .medium)
-            .foregroundStyle(Color.white.opacity(0.85))
+            .foregroundStyle(color.tonalText)
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                    .fill(color.panelSafe.opacity(0.8))
+                    .fill(color.panelSafe.opacity(0.22))
                     .padding(-0.375)
             )
     }
@@ -285,6 +285,31 @@ extension Color {
         Color(nsColor: NSColor(self))
         #else
         self
+        #endif
+    }
+
+    /// Text over a wash of this colour: a touch lighter on dark surfaces, darker on light ones, where the bright
+    /// system greens and oranges would not read.
+    var tonalText: Color {
+        #if os(macOS)
+        nonisolated(unsafe) let base = NSColor(self)
+        return Color(nsColor: NSColor(name: nil) { appearance in
+            var shade = base
+            appearance.performAsCurrentDrawingAppearance {
+                let dark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+                shade = base.usingColorSpace(.sRGB)?.blended(withFraction: dark ? 0.1 : 0.35,
+                                                             of: dark ? .white : .black) ?? base
+            }
+            return shade
+        })
+        #else
+        nonisolated(unsafe) let base = UIColor(self)
+        return Color(uiColor: UIColor { traits in
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            base.resolvedColor(with: traits).getRed(&r, green: &g, blue: &b, alpha: &a)
+            let (target, f): (CGFloat, CGFloat) = traits.userInterfaceStyle == .dark ? (1, 0.1) : (0, 0.35)
+            return UIColor(red: r + (target - r) * f, green: g + (target - g) * f, blue: b + (target - b) * f, alpha: a)
+        })
         #endif
     }
 }
