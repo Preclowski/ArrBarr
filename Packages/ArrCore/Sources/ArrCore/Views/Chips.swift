@@ -250,7 +250,7 @@ struct StateChip: View {
         // greens and oranges is ~2:1, plain black shouts. The fill lets a little of the surface through to soften it.
         Text(verbatim: text)
             .scaledFont(size: 9, weight: .medium)
-            .foregroundStyle(Color.black.opacity(0.65))
+            .foregroundStyle(Color.black.opacity(0.5))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
             .background(
