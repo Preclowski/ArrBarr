@@ -102,7 +102,7 @@ struct MediaStateChip: View {
     var body: some View {
         StateChip(
             text: state.statusText(have: have, total: total, locale: locale),
-            color: state.chipColor ?? .secondary
+            color: state.chipColor ?? .gray
         )
     }
 }
@@ -237,23 +237,37 @@ private struct HoverChipOutline<S: InsettableShape>: ViewModifier {
 
 struct StateChip: View {
     let text: String
-    var color: Color = .secondary
+    var color: Color = .gray
 
-    init(text: String, color: Color = .secondary) {
+    init(text: String, color: Color = .gray) {
         self.text = text
         self.color = color
     }
 
     var body: some View {
+        // Filled, so a status reads apart from the outlined tags beside it. The fill grows by half the outlined
+        // chips' stroke to keep their size. Dark text: white on the bright system greens and oranges is ~2:1.
         Text(verbatim: text)
             .scaledFont(size: 9, weight: .semibold)
-            .foregroundStyle(color)
+            .foregroundStyle(Color.black.opacity(0.85))
             .padding(.horizontal, 5)
             .padding(.vertical, 1)
-            .overlay(
+            .background(
                 RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                    .stroke(color.opacity(0.55), lineWidth: 0.75)
+                    .fill(color.panelSafe)
+                    .padding(-0.375)
             )
+    }
+}
+
+extension Color {
+    /// Through the platform colour: the menu-bar panel washes SwiftUI's own colours out over light content.
+    var panelSafe: Color {
+        #if os(macOS)
+        Color(nsColor: NSColor(self))
+        #else
+        self
+        #endif
     }
 }
 

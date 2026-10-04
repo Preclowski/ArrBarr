@@ -32,7 +32,7 @@ private struct LibraryEntryTooltip: View {
             posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: entry.source),
             blurred: configStore.shouldBlurPoster(for: entry.source),
             fallbackSymbol: entry.source.symbol,
-            contextChip: entry.releaseStatusText(locale: configStore.currentLocale).map { AnyView(TagChip(text: $0)) },
+            contextChip: entry.releaseStatusText(locale: configStore.currentLocale).map { AnyView(StateChip(text: $0)) },
             statusChip: AnyView(LibraryStatusChip(entry: entry))
         ) {
             if !entry.genres.isEmpty {

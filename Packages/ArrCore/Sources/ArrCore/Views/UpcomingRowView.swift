@@ -201,7 +201,7 @@ struct UpcomingItemTooltip: View {
             blurred: configStore.shouldBlurPoster(for: item.source),
             fallbackSymbol: item.source.symbol,
             contextChip: ArrReleaseStatusLabel.text(item.releaseStatus, locale: configStore.currentLocale)
-                .map { AnyView(TagChip(text: $0)) },
+                .map { AnyView(StateChip(text: $0)) },
             statusChip: AnyView(StateChip(
                 text: AppLocalized.string(
                     item.hasFile ? "Downloaded"

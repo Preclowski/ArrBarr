@@ -317,12 +317,8 @@ struct EpisodeDetailOverlay: View {
         HStack(spacing: 4) {
             if let profileName { ProfileChip(name: profileName) }
             if !hasAired {
-                Text("detail.unaired.button", bundle: .module)
-                    .scaledFont(size: 9, weight: .semibold)
-                    .foregroundStyle(Color.orange)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 1)
-                    .chipOutline(.orange)
+                StateChip(text: AppLocalized.string("detail.unaired.button", locale: configStore.currentLocale),
+                          color: .orange)
             }
         }
     }

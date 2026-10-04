@@ -137,7 +137,7 @@ extension DetailView {
         // Profile first, matching the series hero.
         return AnyView(HStack(spacing: 4) {
             if let profile = qualityProfileName { ProfileChip(name: profile) }
-            if let release { TagChip(text: release) }
+            if let release { StateChip(text: release) }
             // "Downloaded" is the poster's bottom strip.
             if radarrDetail != nil, movieFileState != .complete {
                 MediaStateChip(state: movieFileState, locale: configStore.currentLocale)
@@ -158,7 +158,7 @@ extension DetailView {
             if sonarrDetail?.status?.lowercased() == "ended",
                let ended = ArrReleaseStatusLabel.text("ended", locale: configStore.currentLocale) {
                 // Brown: a fact, not a problem; green/orange/red/blue are file states, indigo is upgrade.
-                TagChip(text: ended, color: .brown)
+                StateChip(text: ended, color: .brown)
             }
             // No have/total: the season rows carry the actionable count, and a partial series has
             // nothing to say in one word. "Downloaded" is the poster's bottom strip.
