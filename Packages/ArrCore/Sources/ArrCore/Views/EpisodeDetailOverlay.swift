@@ -354,13 +354,15 @@ struct EpisodeDetailOverlay: View {
             if let onTapSeason {
                 Button(action: onTapSeason) {
                     HStack(spacing: 4) {
+                        // Primary like the series link above: a link, not a caption.
                         Text(verbatim: seasonLabel)
                             .scaledFont(size: 12, weight: .medium)
                             .lineLimit(1)
+                            .foregroundStyle(.primary)
                         LinkChevron(size: 9)
                             .accessibilityHidden(true)
+                            .foregroundStyle(.secondary)
                     }
-                    .foregroundStyle(.secondary)
                 }
                 .buttonStyle(.plain)
                 .linkRowHover()
