@@ -13,6 +13,8 @@ Releases before 0.10.0 are described on the
 
 ### Added
 
+- Short notes report how a search, grab, pause, resume or removal turned out, with retry on failures.
+- Roulette spins trending and top-rated titles, and keeps its place in each set.
 - Roulette buttons open into panels with every choice, including live previews of each spin style.
 - Library filters: status, sort, genres, decades and unwatched in one view; active filters show as tokens.
 - Pick several genres at once in the Library and the Roulette.
@@ -22,6 +24,7 @@ Releases before 0.10.0 are described on the
 - Upcoming scrolls back into past days.
 - History filters by several event types.
 - Settings shows the build's commit next to the version.
+- Episodes show their own status, with an "Unaired" chip.
 
 ### Changed
 
@@ -30,6 +33,7 @@ Releases before 0.10.0 are described on the
 - The poster lightbox opens with a glass and tritone reveal.
 - The Library source menu shows the arr icons.
 - Smoother scrolling in the Library.
+- Warp's edges keep waving while the Roulette rests.
 
 ### Fixed
 
