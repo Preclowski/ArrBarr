@@ -9,6 +9,37 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.3.0] — 2026-10-05
+
+### Added
+
+- Roulette buttons open into panels with every choice, including live previews of each spin style.
+- Library filters: status, sort, genres, decades and unwatched in one view; active filters show as tokens.
+- Pick several genres at once in the Library and the Roulette.
+- Roulette rating chips open the rating site.
+- Releases grabbed or failed before are marked.
+- Search shows release status for titles outside the library.
+- Upcoming scrolls back into past days.
+- History filters by several event types.
+- Settings shows the build's commit next to the version.
+
+### Changed
+
+- Status chips are filled and tonal.
+- Library state shows as a strip along the poster's bottom edge.
+- The poster lightbox opens with a glass and tritone reveal.
+- The Library source menu shows the arr icons.
+- Smoother scrolling in the Library.
+
+### Fixed
+
+- Posters retry after a dropped connection.
+- Adding from a filmography stays on the filmography.
+- The add panel's overview scrolls under its footer.
+- Trailers whose YouTube video is gone are dropped.
+- History classifies folder imports and Lidarr album events.
+- The quiz deck no longer misses its first messages.
+
 ## [3.2.1] — 2026-10-01
 
 ### Added
