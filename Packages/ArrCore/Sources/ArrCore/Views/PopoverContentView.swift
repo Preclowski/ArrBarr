@@ -262,8 +262,9 @@ public struct PopoverContentView: View {
     }
 
     @State var tabFrames: [Tab: CGRect] = [:]
+    /// Pointer x while the tab lens is pressed or dragged.
+    @State var lensDragX: CGFloat?
 
-    @Namespace var barGlass
     /// The detail's trailer tiles travel into the player's reel strip.
     @Namespace var trailerTiles
 

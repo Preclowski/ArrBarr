@@ -32,16 +32,11 @@ extension PopoverContentView {
     }
 
     var tabBar: some View {
-        // One container so the islands morph together. `spacing: 0` because the container fuses
-        // glass within its spacing — at 8 the two islands became one blob.
-        GlassEffectContainer(spacing: 0) {
-            HStack(spacing: 8) {
-                tabPills
-                    .frame(maxWidth: .infinity)
-                    .glassyFloatingBar()
-                    .glassEffectID("tabs", in: barGlass)
-                accessoryIsland
-            }
+        HStack(spacing: 8) {
+            tabPills
+                .frame(maxWidth: .infinity)
+                .flatTabTrack()
+            accessoryIsland
         }
         .padding(.horizontal, 12)
         .padding(.top, 10)
@@ -53,9 +48,7 @@ extension PopoverContentView {
         let side = barHeight
         return moreMenu
             .frame(width: side, height: side)
-            // Explicit circle: the glass pads its bounds and a capsule re-derives its radius from that.
-            .glassyFloatingBar(circular: true)
-            .glassEffectID("accessory", in: barGlass)
+            .flatTabTrack(circular: true)
     }
 
     private var barHeight: CGFloat {
@@ -80,24 +73,61 @@ extension PopoverContentView {
         #endif
     }
 
+    private var tabHorizontalPadding: CGFloat { commandHeld ? 6 : 18 }
+
+    @ViewBuilder
+    private func tabContent(_ tab: Tab, titled: Bool? = nil) -> some View {
+        HStack(spacing: 3) {
+            // Explicit `.transition(.opacity)`: otherwise the inserted Text slides in from the left
+            // inside the animated relayout instead of crossfading.
+            if titled ?? (selectedTab == tab) && !commandHeld {
+                // No `fixedSize`: an incompressible "Nadchodzące" pill pushed the detached bar past the
+                // 400 pt panel and the content bled past the window edges.
+                Text(LocalizedStringKey(tab.rawValue), bundle: .module)
+                    .scaledFont(size: 12, weight: .semibold)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    // 0.75: the squeeze needs ~20 pt back; a higher floor makes SwiftUI truncate instead of scale.
+                    .minimumScaleFactor(0.75)
+                    .transition(.opacity)
+            } else {
+                Image(systemName: tab.symbol)
+                    .scaledFont(size: 13, weight: .medium)
+                    .foregroundStyle(lensIntent == tab ? .primary : .secondary)
+                    .scaleEffect(lensIntent == tab ? 1.2 : 1)
+                    .animation(.spring(response: 0.25, dampingFraction: 0.7), value: lensIntent == tab)
+                    .accessibilityLabel(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
+                    .help(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
+                    .transition(.opacity)
+            }
+            if tab == .chat && !storeManager.isPro {
+                Image(systemName: "lock.fill")
+                    .scaledFont(size: 9, weight: .semibold)
+                    .foregroundStyle(.secondary)
+            }
+            // In the layout rather than an overlay: every pill reshapes while ⌘ is held anyway, and
+            // the animated `tabFrames` glide absorbs it.
+            if let hint = commandHint(for: tab) {
+                Text(hint)
+                    .scaledFont(size: 9, weight: .semibold)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .padding(.leading, 4)
+                    .transition(.opacity)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+
     private var tabPills: some View {
         HStack(spacing: 0) {
             // Edge spacers split the extra width into uniform gutters instead of clumping tabs left.
             Spacer(minLength: 0)
             ForEach(Array(visibleTabs.enumerated()), id: \.element) { _, tab in
-                Button {
-                    if tab == .chat && !storeManager.isPro {
-                        storeManager.gate(.chat)
-                        return
-                    }
-                    // Re-tapping the active tab clears the query. Not from Chat: it doesn't show the field.
-                    if tab == selectedTab, tab.hostsSearch, searchViewModel.isActive {
-                        withAnimation(.easeOut(duration: 0.18)) {
-                            searchViewModel.query = ""
-                        }
-                    }
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
-                } label: {
+                // Mouse goes through the lens drag below; the action serves keyboard and VoiceOver.
+                Button { tapTab(tab) } label: {
                     // Invisible semibold copy fixes the width, or the regular→semibold switch resizes the tab
                     // out of band from the selection spring and the indicator's width snaps.
                     ZStack {
@@ -110,52 +140,15 @@ extension PopoverContentView {
                     .fixedSize()
                     .hidden()
                     .frame(width: 0)
-                    HStack(spacing: 3) {
-                        // Explicit `.transition(.opacity)`: otherwise the inserted Text slides in from the left
-                        // inside the animated relayout instead of crossfading.
-                        if selectedTab == tab && !commandHeld {
-                            // No `fixedSize`: an incompressible "Nadchodzące" pill pushed the detached bar past the
-                            // 400 pt panel and the content bled past the window edges.
-                            Text(LocalizedStringKey(tab.rawValue), bundle: .module)
-                                .scaledFont(size: 12, weight: .semibold)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                                // 0.75: the squeeze needs ~20 pt back; a higher floor makes SwiftUI truncate instead of scale.
-                                .minimumScaleFactor(0.75)
-                                .transition(.opacity)
-                        } else {
-                            Image(systemName: tab.symbol)
-                                .scaledFont(size: 13, weight: .medium)
-                                .foregroundStyle(.secondary)
-                                .accessibilityLabel(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
-                                .help(Text(LocalizedStringKey(tab.rawValue), bundle: .module))
-                                .transition(.opacity)
-                        }
-                        if tab == .chat && !storeManager.isPro {
-                            Image(systemName: "lock.fill")
-                                .scaledFont(size: 9, weight: .semibold)
-                                .foregroundStyle(.secondary)
-                        }
-                        // In the layout rather than an overlay: every pill reshapes while ⌘ is held anyway, and
-                        // the animated `tabFrames` glide absorbs it.
-                        if let hint = commandHint(for: tab) {
-                            Text(hint)
-                                .scaledFont(size: 9, weight: .semibold)
-                                .lineLimit(1)
-                                .fixedSize()
-                                .monospacedDigit()
-                                .foregroundStyle(.secondary)
-                                .padding(.leading, 4)
-                                .transition(.opacity)
-                                .accessibilityHidden(true)
-                        }
-                    }
+                    tabContent(tab)
+                        // The selected label is redrawn above the lens, sharp.
+                        .opacity(tab == selectedTab || tab == lensIntent ? 0 : 1)
                     }
                     // No `fixedSize` either — same overflow as the label above. Narrower while ⌘ is held:
                     // five icon+hint pills don't fit at 18 and the hints wrapped, growing the bar.
-                    .padding(.horizontal, commandHeld ? 6 : 18)
+                    .padding(.horizontal, tabHorizontalPadding)
                     // Padding, not a fixed height, so the bar grows with the user's text size.
-                    .padding(.vertical, 9)
+                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                     .background(
                         GeometryReader { proxy in
@@ -186,40 +179,120 @@ extension PopoverContentView {
                 }
             }
         }
-        .background(
+        // Over the labels, so the lens refracts them.
+        .overlay(
             // `.position()` in an explicit GeometryReader: a `.background(ZStack).offset` mis-aligned by
             // one tab on macOS when the implicit ZStack's bounds didn't match the HStack's.
             GeometryReader { geo in
-                if let rect = selectionPillRect(in: geo.size) {
+                if let rect = lensRect(in: geo.size) {
                     TabPillBackground()
                         .frame(width: rect.width, height: rect.height)
+                        // Grows only while it travels: dragged, or gliding to a newly selected tab.
+                        .scaleEffect(lensDragX == nil ? 1 : Self.lensLift)
+                        .keyframeAnimator(initialValue: CGFloat(1), trigger: selectedTab) { lens, scale in
+                            lens.scaleEffect(scale)
+                        } keyframes: { _ in
+                            SpringKeyframe(Self.lensLift, duration: 0.14)
+                            SpringKeyframe(1, duration: 0.35, spring: .bouncy)
+                        }
                         .position(x: rect.midX, y: rect.midY)
                 }
+                // Glass blurs what it covers; the selected label sits on top instead.
+                if let frame = tabFrames[selectedTab] {
+                    // Hands the title to the drag's target; its slot keeps the title's width, so nothing reflows.
+                    tabContent(selectedTab, titled: lensIntent == nil || lensIntent == selectedTab)
+                        .frame(width: max(0, frame.width - tabHorizontalPadding * 2))
+                        .position(x: frame.midX, y: frame.midY)
+                        .accessibilityHidden(true)
+                }
+                // Same for the drag's target: under the glass its highlight is lost.
+                // Titled here only: in the layout the title would widen the tab and reflow the bar mid-drag.
+                if let intent = lensIntent, intent != selectedTab, let frame = tabFrames[intent],
+                   let slot = selectionPillRect(for: intent, in: geo.size) {
+                    tabContent(intent, titled: true)
+                        .frame(width: max(0, slot.width * Self.lensLift - 16))
+                        .position(x: frame.midX, y: frame.midY)
+                        .transition(.opacity)
+                        .accessibilityHidden(true)
+                }
             }
+            .allowsHitTesting(false)
         )
+        // High priority so it wins over the tab Buttons: press lifts the lens, drag carries it, release selects.
+        .highPriorityGesture(
+            DragGesture(minimumDistance: 0, coordinateSpace: .named("tabPills"))
+                .onChanged { value in
+                    // A click is not a drag: the lens stays put and glides on release.
+                    guard lensDragX != nil || abs(value.translation.width) > 3 else { return }
+                    withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.78)) {
+                        lensDragX = value.location.x
+                    }
+                }
+                .onEnded { value in
+                    let target = nearestTab(to: value.location.x)
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { lensDragX = nil }
+                    if let target { tapTab(target) }
+                }
+        )
+    }
+
+    private static let lensLift: CGFloat = 1.28
+
+    /// The tab the dragged lens would land on.
+    private var lensIntent: Tab? { lensDragX.flatMap(nearestTab(to:)) }
+
+    private func tapTab(_ tab: Tab) {
+        if tab == .chat && !storeManager.isPro {
+            storeManager.gate(.chat)
+            return
+        }
+        // Re-tapping the active tab clears the query. Not from Chat: it doesn't show the field.
+        if tab == selectedTab, tab.hostsSearch, searchViewModel.isActive {
+            withAnimation(.easeOut(duration: 0.18)) {
+                searchViewModel.query = ""
+            }
+        }
+        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
+    }
+
+    private func nearestTab(to x: CGFloat) -> Tab? {
+        visibleTabs
+            .compactMap { tab in tabFrames[tab].map { (tab, abs($0.midX - x)) } }
+            .min { $0.1 < $1.1 }?.0
+    }
+
+    /// The selected slot at rest; while dragging, the slot under the pointer, centred on it.
+    private func lensRect(in container: CGSize) -> CGRect? {
+        guard let dragX = lensDragX else { return selectionPillRect(for: selectedTab, in: container) }
+        guard let tab = nearestTab(to: dragX),
+              let slot = selectionPillRect(for: tab, in: container) else { return nil }
+        let x = min(max(dragX, slot.width / 2), container.width - slot.width / 2)
+        return CGRect(x: x - slot.width / 2, y: slot.minY, width: slot.width, height: slot.height)
     }
 
     /// Fills the tab's slot (label plus half of each gutter) measured from `tabFrames`, so it
     /// neither under-fills the popover nor spills when the detached × squeezes the tabs.
-    private func selectionPillRect(in container: CGSize) -> CGRect? {
-        guard let frame = tabFrames[selectedTab] else { return nil }
+    private func selectionPillRect(for tab: Tab, in container: CGSize) -> CGRect? {
+        guard let frame = tabFrames[tab] else { return nil }
         let ordered = visibleTabs
             .compactMap { tab in tabFrames[tab].map { (tab, $0) } }
             .sorted { $0.1.minX < $1.1.minX }
-        guard let idx = ordered.firstIndex(where: { $0.0 == selectedTab }) else { return nil }
+        guard let idx = ordered.firstIndex(where: { $0.0 == tab }) else { return nil }
 
-        let gap: CGFloat = 3
-        // Outer edges reach halfway to the bar's inner edge, so every pill is symmetric.
+        let gap: CGFloat = 1
+        // Outer edges reach the track's edge, so the end lenses overhang it evenly.
         let leftEdge = idx > 0
             ? (ordered[idx - 1].1.maxX + frame.minX) / 2 + gap
-            : frame.minX / 2
+            : 0
         let rightEdge = idx < ordered.count - 1
             ? (ordered[idx + 1].1.minX + frame.maxX) / 2 - gap
-            : (frame.maxX + container.width) / 2
+            : container.width
 
-        let height = max(0, frame.height - 6)
-        return CGRect(x: leftEdge, y: frame.midY - height / 2,
-                      width: max(0, rightEdge - leftEdge), height: height)
+        // At rest the lens barely clears the track; the drag lift is what makes it pop out.
+        let overhang: CGFloat = 1
+        let height = frame.height + overhang * 2
+        return CGRect(x: leftEdge - overhang, y: frame.midY - height / 2,
+                      width: max(0, rightEdge - leftEdge + overhang * 2), height: height)
     }
 
     /// Shorter than the tab labels, so a glyph can never stretch the bar.
