@@ -137,12 +137,8 @@ struct ShelfView: View {
     /// Debug harness only: parks the scroll here once the library lands.
     private let initialPosition: Double?
     @State private var start = CACurrentMediaTime()
-    @State private var hoveredMode: ShelfMode?
-    @State private var pickerExpanded = false
-    @State private var pickerOrder: [ShelfMode] = ShelfMode.allCases
-    /// The expand animation has finished; the name tooltip waits for it.
-    @State private var pickerSettled = false
-    @State private var pickerCollapse: Task<Void, Never>?
+    /// The bottom control grown into its panel, if any.
+    @State private var openControl: ShelfControlKind?
     @State private var filter = ShelfFilter(source: .radarr)
     @State private var collection: ShelfCollection = .library
     @State private var remote = ShelfRemoteLists()
@@ -232,7 +228,7 @@ struct ShelfView: View {
                 chrome(entries)
                 ZStack {
                     if entries.indices.contains(centerIndex), sceneReady(entries), !motion.active,
-                       let mark = entries[centerIndex].libraryMark {
+                       openControl == nil, let mark = entries[centerIndex].libraryMark {
                         heroStrip(mark, size: geo.size)
                             .transition(.opacity)
                     }
@@ -383,25 +379,13 @@ struct ShelfView: View {
             if entries.indices.contains(centerIndex), sceneReady(entries) {
                 ShelfInfo(entry: entries[centerIndex], tmdbId: remoteItem(entries[centerIndex])?.tmdbId)
                     .padding(.horizontal, 20)
+                    // An open panel stands where the info block is.
+                    .opacity(openControl == nil ? 1 : 0)
+                    .offset(y: openControl == nil ? 0 : 6)
                     .id(entries[centerIndex].id)
                     .transition(.opacity)
             }
-            modePicker
-                .frame(maxWidth: .infinity)
-                .overlay(alignment: .leading) {
-                    if availableCollections.count > 1 {
-                        ShelfCollectionMenu(collection: $collection, available: availableCollections)
-                            .padding(.leading, 12)
-                    }
-                }
-                .overlay(alignment: .trailing) {
-                    ShelfFilterMenu(filter: $filter, sources: sources,
-                                    library: remoteKey.map { (remote.items[$0] ?? []).map(\.entry) } ?? library.entries[source] ?? [],
-                                    sortModes: Self.sortModes(for: collection, source: source),
-                                    watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured,
-                                    showsLibraryToggle: collection.isRemote)
-                        .padding(.trailing, 12)
-                }
+            controls(entries)
                 .padding(.top, 12)
                 .padding(.bottom, 14)
         }
@@ -410,101 +394,55 @@ struct ShelfView: View {
                 .frame(height: 200)
                 .allowsHitTesting(false)
         }
+        .background {
+            // Deeper while a panel is open, so its glass reads over bright covers.
+            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: UnitPoint(x: 0.5, y: 0.3), endPoint: .bottom)
+                .opacity(openControl == nil ? 0 : 1)
+                .allowsHitTesting(false)
+        }
         .animation(.easeOut(duration: 0.15), value: centerIndex)
+        .animation(.easeOut(duration: 0.25), value: openControl)
     }
 
-    /// Collapsed to the current mode; hover (or a tap, where there is no pointer) fans the rest out upwards,
-    /// so no translation of the corner menus can crowd it. The column floats over the info block: the row's
-    /// height stays the collapsed button's.
-    private var modePicker: some View {
+    /// Collection, mode and filter, each a glass button that grows into its panel. The row keeps the buttons'
+    /// height; a panel floats up over the info block.
+    private func controls(_ entries: [LibraryEntry]) -> some View {
         Color.clear
-            .frame(width: 42, height: 36)
-            .overlay(alignment: .bottom) { modeColumn }
-    }
-
-    /// Top to bottom; the current mode sits at the bottom, where the collapsed button is.
-    private var pickerColumn: [ShelfMode] { pickerExpanded ? pickerOrder : [mode] }
-
-    private var modeColumn: some View {
-        VStack(spacing: 2) {
-            ForEach(pickerColumn) { m in
-                Button {
-                    if pickerExpanded {
-                        mode = m
-                        #if os(iOS)
-                        pickerExpanded = false
-                        #endif
-                    } else {
-                        expandPicker()
+            .frame(height: 36)
+            .frame(maxWidth: .infinity)
+            .overlay(alignment: .bottomLeading) {
+                if availableCollections.count > 1 {
+                    ShelfExpandingControl(kind: .collection, open: $openControl, alignment: .bottomLeading,
+                                          label: Text(collection.title, bundle: .module)) {
+                        Image(systemName: collection.symbol)
+                    } panel: {
+                        ShelfCollectionPanel(collection: $collection, available: availableCollections,
+                                             libraryCount: library.entries[source]?.count)
                     }
-                } label: {
-                    Image(systemName: m.symbol)
-                        .scaledFont(size: 13, weight: .semibold)
-                        .frame(width: 36, height: 30)
-                        .background(Capsule().fill(Color.white.opacity(mode == m && pickerExpanded ? 0.22 : 0)))
-                        .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text(m.title, bundle: .module))
-                .onHover { inside in
-                    if inside { hoveredMode = m } else if hoveredMode == m { hoveredMode = nil }
-                }
-                .transition(.opacity.combined(with: .scale(scale: 0.6, anchor: .bottom)))
-            }
-        }
-        .padding(3)
-        .glassEffect(.regular, in: .capsule)
-        // `.help` never shows in the menu-bar panel, so the name floats beside the hovered icon instead,
-        // on a twin of the column: outside the glass, which would clip it.
-        .overlay(alignment: .bottom) {
-            VStack(spacing: 2) {
-                ForEach(pickerColumn) { m in
-                    Color.clear
-                        .frame(width: 36, height: 30)
-                        .overlay(alignment: .leading) {
-                            if hoveredMode == m, pickerSettled {
-                                Text(m.title, bundle: .module)
-                                    .scaledFont(size: 11, weight: .semibold)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .glassEffect(.regular, in: .capsule)
-                                    .fixedSize()
-                                    .offset(x: 36 + 12)
-                                    .transition(.opacity)
-                            }
-                        }
+                    .padding(.leading, 12)
                 }
             }
-            .padding(3)
-            .allowsHitTesting(false)
-        }
-        .onHover { inside in
-            pickerCollapse?.cancel()
-            if inside {
-                if !pickerExpanded { expandPicker() }
-            } else {
-                // A pointer skimming the edge of the growing column must not make it flicker.
-                pickerCollapse = Task {
-                    try? await Task.sleep(for: .milliseconds(250))
-                    guard !Task.isCancelled else { return }
-                    pickerExpanded = false
+            .overlay(alignment: .bottom) {
+                ShelfExpandingControl(kind: .mode, open: $openControl, alignment: .bottom,
+                                      label: Text(mode.title, bundle: .module)) {
+                    Image(systemName: mode.symbol)
+                } panel: {
+                    ShelfModePanel(mode: $mode, entries: entries, posters: posters, center: motion.center)
                 }
             }
-        }
-        .animation(.smooth(duration: 0.28), value: pickerExpanded)
-        .task(id: pickerExpanded) {
-            guard pickerExpanded else { pickerSettled = false; return }
-            try? await Task.sleep(for: .milliseconds(280))
-            if !Task.isCancelled { pickerSettled = true }
-        }
-        .animation(.easeOut(duration: 0.12), value: hoveredMode)
-        .animation(.easeOut(duration: 0.12), value: pickerSettled)
-    }
-
-    /// The order is fixed for the whole expansion, so picking a mode doesn't reshuffle icons under the pointer.
-    private func expandPicker() {
-        pickerOrder = ShelfMode.allCases.filter { $0 != mode } + [mode]
-        pickerExpanded = true
+            .overlay(alignment: .bottomTrailing) {
+                ShelfExpandingControl(kind: .filter, open: $openControl, alignment: .bottomTrailing,
+                                      label: Text("common.filter.button", bundle: .module)) {
+                    Image(systemName: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
+                } panel: {
+                    ShelfFilterPanel(filter: $filter, sources: sources,
+                                     library: remoteKey.map { (remote.items[$0] ?? []).map(\.entry) } ?? library.entries[source] ?? [],
+                                     sortModes: Self.sortModes(for: collection, source: source),
+                                     watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured,
+                                     showsLibraryToggle: collection.isRemote)
+                }
+                .padding(.trailing, 12)
+            }
     }
 
     /// TMDB lists have no dates added, sizes or arr ratings.
@@ -562,6 +500,8 @@ struct ShelfView: View {
 
     /// The centre poster opens its detail; a tap either side steps toward it.
     private func tap(atContentX x: CGFloat, size: CGSize, entries: [LibraryEntry]) {
+        // A tap beside an open panel closes it (iOS has no pointer to leave it with).
+        if openControl != nil { openControl = nil; return }
         let screenX = x - CGFloat(motion.position) * Self.pitch
         let half = ShelfScene.heroWidth(for: size) / 2
         if screenX < size.width / 2 - half { step(-1, count: entries.count); return }

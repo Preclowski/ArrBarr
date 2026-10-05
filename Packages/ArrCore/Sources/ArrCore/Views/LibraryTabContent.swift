@@ -31,8 +31,37 @@ enum StatusFilter: CaseIterable {
         switch self {
         case .all: return "search.all.button"
         case .missing: return "search.missing.button"
-        case .unmonitored: return "Unmonitored"
+        case .unmonitored: return "common.notMonitored.label"
         }
+    }
+
+    func includes(_ entry: LibraryEntry) -> Bool {
+        switch self {
+        case .all: return true
+        // Includes not-yet-available titles; their tile explains why.
+        case .missing: return entry.state == .missing || entry.state == .partial || entry.state == .notAvailable
+        case .unmonitored: return entry.state == .unmonitored
+        }
+    }
+}
+
+/// The Library's narrowing beyond the status: genre, decade and watch state.
+struct LibraryNarrowing: Equatable {
+    var genre: String?
+    var decade: Int?
+    var unwatchedOnly = false
+
+    enum Facet { case genre, decade }
+
+    var isActive: Bool { genre != nil || decade != nil || unwatchedOnly }
+    var cacheKey: String { "\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)" }
+
+    /// Leaving one facet out gives that facet's own counts.
+    func matches(_ entry: LibraryEntry, ignoring facet: Facet? = nil) -> Bool {
+        if facet != .genre, let genre, !entry.genres.contains(genre) { return false }
+        if facet != .decade, let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
+        if unwatchedOnly, entry.watched { return false }
+        return true
     }
 }
 
@@ -110,6 +139,7 @@ struct LibraryTabContent: View {
     @State private var source: QueueItem.Source = .radarr
     @State private var sourceResolved = false
     @State private var statusFilter: StatusFilter = .all
+    @State private var narrowing = LibraryNarrowing()
     @State private var sort: SortMode = .title
     /// Not reset on axis change: only picking the selected axis again flips it.
     @State private var sortDescending = false
@@ -130,20 +160,13 @@ struct LibraryTabContent: View {
         viewModel.entries[source] ?? []
     }
 
-    private func matches(_ entry: LibraryEntry, filter: StatusFilter) -> Bool {
-        switch filter {
-        case .all: return true
-        // Includes not-yet-available titles; their chip explains why.
-        case .missing: return entry.state == .missing || entry.state == .partial || entry.state == .notAvailable
-        case .unmonitored: return entry.state == .unmonitored
-        }
-    }
-
+    /// Narrowed by genre, decade and watch state, so each status says what picking it would show.
     private var filterCounts: [StatusFilter: Int] {
         var out: [StatusFilter: Int] = [:]
+        let narrowing = narrowing
         for filter in StatusFilter.allCases {
-            out[filter] = viewModel.count(source, cacheKey: filter.cacheKey, over: allEntries) {
-                matches($0, filter: filter)
+            out[filter] = viewModel.count(source, cacheKey: "\(filter.cacheKey)|\(narrowing.cacheKey)", over: allEntries) {
+                filter.includes($0) && narrowing.matches($0)
             }
         }
         return out
@@ -159,8 +182,9 @@ struct LibraryTabContent: View {
             : ascending
         let sorted = viewModel.sorted(source, cacheKey: axisKey, using: comparator)
         // Memoized: re-filtering ~3k records copies the array on every `surface` pass.
-        return viewModel.visible(source, cacheKey: "\(axisKey)|\(statusFilter.cacheKey)",
-                                 from: sorted) { matches($0, filter: statusFilter) }
+        let status = statusFilter, narrowing = narrowing
+        return viewModel.visible(source, cacheKey: "\(axisKey)|\(status.cacheKey)|\(narrowing.cacheKey)",
+                                 from: sorted) { status.includes($0) && narrowing.matches($0) }
     }
 
     var body: some View {
@@ -181,6 +205,8 @@ struct LibraryTabContent: View {
             restoreGridPosition()
             // An axis the new arr doesn't offer (IMDb on Sonarr) resets rather than sorting on nils.
             if !SortMode.available(for: source).contains(sort) { sort = .title }
+            // A genre or decade from the other library would empty this one.
+            narrowing = LibraryNarrowing()
             Task { await load() }
         }
     }
@@ -314,8 +340,11 @@ struct LibraryTabContent: View {
                 LibraryFilterStrip {
                     LibraryFilterBar(sources: availableSources,
                                      counts: filterCounts,
+                                     entries: allEntries,
+                                     watchStateKnown: configStore.mediaServer.isConfigured,
                                      source: $source,
                                      statusFilter: $statusFilter,
+                                     narrowing: $narrowing,
                                      sort: $sort,
                                      sortDescending: $sortDescending,
                                      viewModeRaw: $viewModeRaw)

@@ -31,9 +31,14 @@ struct ShelfFilter: Equatable {
     }
     var key: String { "\(sortKey)|\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)|\(inLibraryOnly)" }
 
-    func matches(_ entry: LibraryEntry) -> Bool {
-        if let genre, !entry.genres.contains(genre) { return false }
-        if let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
+    enum Facet { case genre, decade }
+
+    func matches(_ entry: LibraryEntry) -> Bool { matches(entry, ignoring: nil) }
+
+    /// Leaving one facet out gives that facet's own counts: what picking another value of it would show.
+    func matches(_ entry: LibraryEntry, ignoring facet: Facet?) -> Bool {
+        if facet != .genre, let genre, !entry.genres.contains(genre) { return false }
+        if facet != .decade, let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
         if unwatchedOnly, entry.watched { return false }
         if inLibraryOnly, entry.arrId == 0 { return false }
         return true
@@ -47,123 +52,116 @@ struct ShelfFilter: Equatable {
     }
 }
 
-/// One glass button in the Shelf's corner; the menu holds every choice, and a short summary appears beside the
-/// glyph only while something is narrowed.
-struct ShelfFilterMenu: View {
+/// Every narrowing at once: source, order, genres and decades, the counts already narrowed by the rest.
+struct ShelfFilterPanel: View {
     @Binding var filter: ShelfFilter
     let sources: [QueueItem.Source]
-    /// The whole library of the current source, for the genre and decade lists.
+    /// The whole set of the current source, for the genre and decade lists.
     let library: [LibraryEntry]
     let sortModes: [SortMode]
     let watchStateKnown: Bool
     var showsLibraryToggle = false
-    @Environment(\.locale) private var locale
+    @State private var hoveredSort: SortChoice?
+    @State private var hoveredDecade: Int?
+
+    enum SortChoice: Hashable {
+        case random
+        case mode(SortMode)
+    }
 
     var body: some View {
-        ShelfCornerButton(
-            symbol: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease",
-            title: Text(verbatim: summary),
-            titleLeading: true
-        ) {
-            content
+        VStack(alignment: .leading, spacing: 12) {
+            if sources.count > 1 {
+                ShelfSegments(items: sources, selected: filter.source, height: 22, action: { source in
+                    // A genre from the other library would empty the new one.
+                    filter.source = source
+                    filter.clearNarrowing()
+                }) { source, _ in
+                    Text(verbatim: source.displayName).scaledFont(size: 11.5, weight: .semibold)
+                }
+                .frame(width: 140)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+            ShelfPanelSection(title: "shelf.filter.sort") { sortHint } content: {
+                ShelfSegments(items: [.random] + sortModes.map(SortChoice.mode), selected: selectedSort, height: 28,
+                              action: pick, onHover: { hoveredSort = $0 }) { choice, on in
+                    sortIcon(choice, on: on)
+                }
+            }
+            ShelfPanelSection(title: "shelf.filter.genre") {
+                GenreChipCloud(genre: $filter.genre, all: library) { filter.matches($0, ignoring: .genre) }
+            }
+            if !DecadeHistogram.decades(in: library).isEmpty {
+                ShelfPanelSection(title: "shelf.filter.years") {
+                    DecadeHint(decade: hoveredDecade ?? filter.decade)
+                } content: {
+                    DecadeHistogram(decade: $filter.decade, hovered: $hoveredDecade, all: library) {
+                        filter.matches($0, ignoring: .decade)
+                    }
+                }
+            }
+            HStack {
+                if watchStateKnown {
+                    Toggle(isOn: $filter.unwatchedOnly) { Text("shelf.filter.unwatched", bundle: .module) }
+                } else if showsLibraryToggle {
+                    Toggle(isOn: $filter.inLibraryOnly) { Text("shelf.filter.inLibrary", bundle: .module) }
+                }
+                Spacer(minLength: 8)
+                Button { filter.clearNarrowing() } label: {
+                    Label { Text("queue.clearFilter.button", bundle: .module) } icon: { Image(systemName: "xmark") }
+                        .labelStyle(.titleAndIcon)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .opacity(filter.isNarrowed ? 1 : 0)
+                .allowsHitTesting(filter.isNarrowed)
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .scaledFont(size: 12, weight: .medium)
+            .padding(.horizontal, 2)
+        }
+        .frame(width: 352)
+        .animation(.easeOut(duration: 0.15), value: filter)
+    }
+
+    // MARK: - Sort
+
+    private var selectedSort: SortChoice { filter.shuffleSeed == nil ? .mode(filter.sort) : .random }
+
+    private func pick(_ choice: SortChoice) {
+        switch choice {
+        case .random:
+            filter.shuffleSeed = Int.random(in: 1...Int(Int32.max))
+        case .mode(let mode):
+            if selectedSort == choice { filter.descending.toggle() } else { filter.sort = mode }
+            filter.shuffleSeed = nil
         }
     }
 
-    /// What's narrowed, or the menu's name when nothing is.
-    private var summary: String {
-        var parts: [String] = []
-        if sources.count > 1 { parts.append(filter.source.displayName) }
-        if let genre = filter.genre { parts.append(GenreName.localized(genre, locale: locale)) }
-        if let decade = filter.decade { parts.append("\(decade)–\(decade + 9)") }
-        if filter.unwatchedOnly { parts.append(AppLocalized.string("shelf.filter.unwatched", locale: locale)) }
-        if filter.inLibraryOnly { parts.append(AppLocalized.string("shelf.filter.inLibrary", locale: locale)) }
-        return parts.isEmpty ? AppLocalized.string("common.filter.button", locale: locale) : parts.joined(separator: " · ")
+    private func sortIcon(_ choice: SortChoice, on: Bool) -> some View {
+        HStack(spacing: 2) {
+            switch choice {
+            case .random:
+                Image(systemName: "shuffle")
+            case .mode(let mode):
+                Image(systemName: mode.symbolName)
+                if on { Image(systemName: filter.descending ? "arrow.down" : "arrow.up").scaledFont(size: 9, weight: .bold) }
+            }
+        }
+        .scaledFont(size: 12, weight: .semibold)
     }
 
     @ViewBuilder
-    private var content: some View {
-        if sources.count > 1 {
-            // A `Picker`, like the Library tab: AppKit owns the checkmark.
-            // Clears the narrowing in the same change: a genre from the other library would empty the new one.
-            Picker(selection: Binding(get: { filter.source }, set: { filter.source = $0; filter.clearNarrowing() })) {
-                ForEach(sources, id: \.self) { Text(verbatim: $0.displayName).tag($0) }
-            } label: {
-                EmptyView()
-            }
-            .pickerStyle(.inline)
-        }
-        Picker(selection: $filter.genre) {
-            Text("shelf.filter.anyGenre", bundle: .module).tag(String?.none)
-            ForEach(genres, id: \.self) { genre in
-                Text(verbatim: GenreName.localized(genre, locale: locale)).tag(String?.some(genre))
-            }
-        } label: {
-            Text("shelf.filter.genre", bundle: .module)
-        }
-        .pickerStyle(.menu)
-        Picker(selection: $filter.decade) {
-            Text("shelf.filter.anyYear", bundle: .module).tag(Int?.none)
-            ForEach(decades, id: \.self) { decade in
-                Text(verbatim: "\(decade)–\(decade + 9)").tag(Int?.some(decade))
-            }
-        } label: {
-            Text("shelf.filter.years", bundle: .module)
-        }
-        .pickerStyle(.menu)
-        Menu {
-            ForEach(sortModes, id: \.self) { mode in
-                let selected = filter.shuffleSeed == nil && filter.sort == mode
-                Button {
-                    if selected { filter.descending.toggle() } else { filter.sort = mode }
-                    filter.shuffleSeed = nil
-                } label: {
-                    Label {
-                        mode.label
-                    } icon: {
-                        Image(systemName: selected ? (filter.descending ? "arrow.down" : "arrow.up") : mode.symbolName)
-                    }
-                    .labelStyle(.titleAndIcon)
-                }
-            }
-            Button {
-                filter.shuffleSeed = Int.random(in: 1...Int(Int32.max))
-            } label: {
-                Label {
-                    Text("shelf.sort.random", bundle: .module)
-                } icon: {
-                    Image(systemName: filter.shuffleSeed == nil ? "shuffle" : "checkmark")
-                }
-                .labelStyle(.titleAndIcon)
-            }
-        } label: {
-            Text("shelf.filter.sort", bundle: .module)
-        }
-        if watchStateKnown {
-            Toggle(isOn: $filter.unwatchedOnly) {
-                Text("shelf.filter.unwatched", bundle: .module)
+    private var sortHint: some View {
+        switch hoveredSort ?? selectedSort {
+        case .random:
+            Text("shelf.sort.random", bundle: .module)
+        case .mode(let mode):
+            HStack(spacing: 3) {
+                mode.label
+                if hoveredSort == nil { Image(systemName: filter.descending ? "arrow.down" : "arrow.up").scaledFont(size: 9, weight: .bold) }
             }
         }
-        if showsLibraryToggle {
-            Toggle(isOn: $filter.inLibraryOnly) {
-                Text("shelf.filter.inLibrary", bundle: .module)
-            }
-        }
-        if filter.isNarrowed {
-            Divider()
-            Button { filter.clearNarrowing() } label: {
-                Text("queue.clearFilter.button", bundle: .module)
-            }
-        }
-    }
-
-    /// Most common first; a long tail of one-off genres would bury the useful ones.
-    private var genres: [String] {
-        var counts: [String: Int] = [:]
-        for entry in library { for genre in entry.genres { counts[genre, default: 0] += 1 } }
-        return counts.sorted { ($0.value, $1.key) > ($1.value, $0.key) }.prefix(20).map(\.key)
-    }
-
-    private var decades: [Int] {
-        Set(library.compactMap { $0.year.map { $0 / 10 * 10 } }).filter { $0 > 1800 }.sorted(by: >)
     }
 }

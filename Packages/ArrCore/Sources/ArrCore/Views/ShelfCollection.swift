@@ -105,71 +105,56 @@ final class ShelfRemoteLists {
     }
 }
 
-/// The Roulette's other corner menu: which collection spins.
-struct ShelfCollectionMenu: View {
+/// Every collection the Roulette can spin.
+struct ShelfCollectionPanel: View {
     @Binding var collection: ShelfCollection
     let available: [ShelfCollection]
+    /// Titles in the arr's library for the current source.
+    let libraryCount: Int?
+    @State private var hovered: ShelfCollection?
+    @Namespace private var selection
 
     var body: some View {
-        ShelfCornerButton(symbol: collection.symbol, title: Text(collection.title, bundle: .module), titleLeading: false) {
-            Picker(selection: $collection) {
-                ForEach(available) { c in
-                    Label { Text(c.title, bundle: .module) } icon: { Image(systemName: c.symbol) }
-                        .tag(c)
+        VStack(spacing: 2) {
+            ForEach(available) { c in
+                let on = c == collection
+                Button { collection = c } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: c.symbol)
+                            .scaledFont(size: 11.5)
+                            .foregroundStyle(on ? .primary : .secondary)
+                            .frame(width: 16)
+                        Text(c.title, bundle: .module)
+                            .scaledFont(size: 12, weight: on ? .medium : .regular)
+                            .lineLimit(1)
+                        Spacer(minLength: 12)
+                        Group {
+                            if c == .library, let libraryCount { Text(libraryCount, format: .number) } else if c.isRemote { Text(verbatim: "TMDB") }
+                        }
+                        .scaledFont(size: 10.5)
+                        .monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                    }
+                    .padding(.horizontal, 10)
+                    .frame(height: 34)
+                    .background {
+                        if on {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(.white.opacity(0.14))
+                                .matchedGeometryEffect(id: "selection", in: selection)
+                        } else if hovered == c {
+                            RoundedRectangle(cornerRadius: 12, style: .continuous).fill(.white.opacity(0.06))
+                        }
+                    }
+                    .contentShape(Rectangle())
                 }
-            } label: {
-                EmptyView()
+                .buttonStyle(.plain)
+                .onHover { inside in
+                    if inside { hovered = c } else if hovered == c { hovered = nil }
+                }
             }
-            .pickerStyle(.inline)
         }
-    }
-}
-
-/// A glass corner button of the Roulette. Its title opens on hover toward the middle; the icon never moves.
-struct ShelfCornerButton<Items: View>: View {
-    let symbol: String
-    let title: Text
-    /// Right corner: the title sits left of the icon.
-    let titleLeading: Bool
-    @ViewBuilder var items: () -> Items
-    @State private var hovering = false
-
-    var body: some View {
-        HStack(spacing: 0) {
-            if titleLeading { titleView }
-            Image(systemName: symbol)
-                .scaledFont(size: 13, weight: .semibold)
-                .frame(width: 32, height: 32)
-            if !titleLeading { titleView }
-        }
-        .foregroundStyle(.primary)
-        .clipShape(.capsule)
-        .glassEffect(.regular, in: .capsule)
-        .brightness(hovering ? 0.08 : 0)
-        // The menu only takes the click: an AppKit-backed Menu label resizes without animating.
-        .overlay {
-            Menu(content: items) {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .contentShape(Capsule())
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
-            .accessibilityLabel(title)
-        }
-        .fixedSize()
-        .onHover { over in withAnimation(.smooth(duration: 0.32)) { hovering = over } }
-    }
-
-    @ViewBuilder
-    private var titleView: some View {
-        if hovering {
-            title
-                .scaledFont(size: 11, weight: .medium)
-                .lineLimit(1)
-                .padding(titleLeading ? .leading : .trailing, 12)
-                .transition(.opacity.combined(with: .offset(x: titleLeading ? 10 : -10)))
-        }
+        .frame(minWidth: 190)
+        .animation(.spring(response: 0.38, dampingFraction: 0.75), value: collection)
     }
 }
