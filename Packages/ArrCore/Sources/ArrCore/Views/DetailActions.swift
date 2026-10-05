@@ -254,8 +254,11 @@ private struct DetailActionsHost: ViewModifier {
             }
     }
 
+    /// The detail usually closes with the record, so the toast is what confirms it.
     private func deleted(_ request: MediaDeleteRequest) {
         state.delete = nil
+        ToastCenter.shared.show(Toast(tone: .success, symbol: "checkmark.circle.fill",
+                                      title: "toast.removed.title", detail: request.title))
         onDeleted(request)
     }
 }

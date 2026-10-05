@@ -54,7 +54,6 @@ public final class QueueViewModel {
     public internal(set) var hasLoadedOnce = false {
         didSet { if hasLoadedOnce, !oldValue { Self.logFirstLoad() } }
     }
-    public internal(set) var lastError: String?
     /// Rows playing the delete animation: `leavingIDs` drives the tint, `slidingIDs` the slide. Two sets because
     /// each needs its own `withAnimation` curve. Kept until the server drops them, so a row never slides back.
     public internal(set) var leavingIDs: Set<QueueItem.ID> = []
@@ -65,6 +64,7 @@ public final class QueueViewModel {
     let aggregator: QueueDataProviding
     let configStore: ConfigStore
     let coalescer: NotificationCoalescer
+    let toasts: ToastCenter
     let connectionMonitor = ConnectionHealthMonitor()
     var queueUpdatesTask: Task<Void, Never>?
     var committedRevision: [QueueItem.Source: QueueRevision] = [:]
@@ -124,6 +124,8 @@ public final class QueueViewModel {
         coalescer.postTest()
     }
 
+    /// Automatic searches the user started, waiting for a grab or the end of the sweep.
+    @ObservationIgnored var searchWatches: [SearchWatch] = []
     @ObservationIgnored var realtimeTask: Task<Void, Never>?
     @ObservationIgnored var breakerTask: Task<Void, Never>?
     @ObservationIgnored var invalidationObserver: NotificationCenter.ObservationToken?
@@ -139,6 +141,7 @@ public final class QueueViewModel {
         self.notificationDefaults = notificationDefaults
         self.aggregator = QueueAggregator(configStore: configStore)
         self.coalescer = NotificationCoalescer(configStore: configStore)
+        self.toasts = .shared
         commonSetup(autostart: true)
     }
 
@@ -154,6 +157,7 @@ public final class QueueViewModel {
         self.notificationDefaults = notificationDefaults
         self.aggregator = aggregator
         self.coalescer = NotificationCoalescer(configStore: configStore)
+        self.toasts = ToastCenter()
         commonSetup(autostart: autostart)
     }
 

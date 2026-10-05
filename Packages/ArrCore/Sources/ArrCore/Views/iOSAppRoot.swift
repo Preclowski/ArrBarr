@@ -114,6 +114,7 @@ public struct iOSAppRoot: View {
         // add actions do nothing.
         .onRequest(from: Router.searchAdd) { route in quizAddResult = route.result; return true }
         // Queue deletes ask through `ConfirmCenter`; without a host the question never shows.
+        .toastHost()
         .confirmCenterHost()
         // Seeded by the `discover_in_quiz` tool or the chat resume card.
         .fullScreenCover(isPresented: $discoverViewModel.isPresented) {

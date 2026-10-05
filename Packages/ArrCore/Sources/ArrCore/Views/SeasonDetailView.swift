@@ -192,9 +192,7 @@ struct SeasonDetailView: View {
                 episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
                 queueItems: queueByEpisodeId[ep.id] ?? [],
                 onClose: { selectedEpisode = nil },
-                onSearch: { episodeId in
-                    try await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
-                },
+                onSearch: { _ in try await searchEpisode(ep) },
                 seriesWebURL: seriesWebURL,
                 onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
                 onResumeEpisode: { q in await viewModel.resume(q); await viewModel.refresh() },
@@ -278,12 +276,20 @@ struct SeasonDetailView: View {
     }
 
     private func searchEpisode(_ ep: ArrEpisode) async throws {
-        try await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
+        let commandId = try await configStore.sonarrClient.searchEpisodes(episodeIds: [ep.id])
+        viewModel.watchSearch(SearchSubject(source: .sonarr, entityId: drill.seriesId,
+                                            season: drill.seasonNumber, episode: ep.episodeNumber),
+                              title: episodeSearchTitle(ep), commandId: commandId)
     }
 
     private func startAutomaticSearch() {
         let (client, seriesId, season) = (configStore.sonarrClient, drill.seriesId, drill.seasonNumber)
-        SearchFeedback.run($searchFeedback) { try await client.searchSeason(seriesId: seriesId, seasonNumber: season) }
+        let title = "\(drill.seriesTitle) · \(navTitle)"
+        SearchFeedback.run($searchFeedback) {
+            let commandId = try await client.searchSeason(seriesId: seriesId, seasonNumber: season)
+            viewModel.watchSearch(SearchSubject(source: .sonarr, entityId: seriesId, season: season),
+                                  title: title, commandId: commandId)
+        }
     }
 
     /// Sonarr's series score is TVDB's.
@@ -314,6 +320,7 @@ struct SeasonDetailView: View {
             blurred: false,
             trailing: nil,
             titleBadge: nil,
+            profileName: profileName,
             onPosterTap: { url in
                 withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url ?? posterURL }
             },

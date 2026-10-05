@@ -10,7 +10,6 @@ struct RadarrDetailPanel<Header: View>: View {
     let radarrMovieFile: ArrFile?
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
-    let loadError: String?
     var isLoading: Bool = false
     let header: Header
     /// From Radarr `/credit`.
@@ -67,10 +66,6 @@ struct RadarrDetailPanel<Header: View>: View {
                         ExistingFileBanner(file: file)
                     }
                 }
-            }
-
-            if let err = loadError {
-                LoadErrorLine(message: err)
             }
         }
     }

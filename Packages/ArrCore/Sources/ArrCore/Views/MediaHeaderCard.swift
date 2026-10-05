@@ -130,6 +130,8 @@ struct MediaHeaderCard: View {
     var blurred: Bool
     var trailing: AnyView?
     var titleBadge: AnyView?
+    /// Quality profile, centred under the poster.
+    var profileName: String?
     var onPosterTap: ((URL?) -> Void)?
     /// Pinned to the poster's top corner (the monitored bookmark).
     var posterCornerAction: AnyView?
@@ -172,6 +174,7 @@ struct MediaHeaderCard: View {
         blurred: Bool = false,
         trailing: AnyView? = nil,
         titleBadge: AnyView? = nil,
+        profileName: String? = nil,
         onPosterTap: ((URL?) -> Void)? = nil,
         posterCornerAction: AnyView? = nil,
         aboveTitle: AnyView? = nil,
@@ -203,6 +206,7 @@ struct MediaHeaderCard: View {
         self.blurred = blurred
         self.trailing = trailing
         self.titleBadge = titleBadge
+        self.profileName = profileName
         self.onPosterTap = onPosterTap
         self.posterCornerAction = posterCornerAction
         self.aboveTitle = aboveTitle
@@ -220,7 +224,13 @@ struct MediaHeaderCard: View {
         let posterWidth: CGFloat = 110
         let posterHeight = posterWidth / posterAspect
         HStack(alignment: .top, spacing: 12) {
-            posterView(width: posterWidth, height: posterHeight)
+            VStack(spacing: 6) {
+                posterView(width: posterWidth, height: posterHeight)
+                if let profileName {
+                    ProfileChip(name: profileName)
+                        .frame(maxWidth: posterWidth)
+                }
+            }
             VStack(alignment: .leading, spacing: 4) {
                 if let aboveTitle {
                     aboveTitle

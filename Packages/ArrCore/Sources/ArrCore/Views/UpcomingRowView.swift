@@ -200,8 +200,7 @@ struct UpcomingItemTooltip: View {
             posterSize: MediaTooltipChrome<EmptyView>.posterSize(for: item.source),
             blurred: configStore.shouldBlurPoster(for: item.source),
             fallbackSymbol: item.source.symbol,
-            contextChip: ArrReleaseStatusLabel.text(item.releaseStatus, locale: configStore.currentLocale)
-                .map { AnyView(StateChip(text: $0)) },
+            contextChip: releaseChip,
             statusChip: AnyView(StateChip(
                 text: AppLocalized.string(
                     item.hasFile ? "Downloaded"
@@ -275,6 +274,15 @@ struct UpcomingItemTooltip: View {
                 break
             }
         }
+    }
+
+    /// An episode's own status, not its series' ("Continuing").
+    private var releaseChip: AnyView? {
+        if item.source == .sonarr {
+            return item.airDate > .now ? AnyView(UnairedChip()) : nil
+        }
+        return ArrReleaseStatusLabel.text(item.releaseStatus, locale: configStore.currentLocale)
+            .map { AnyView(StateChip(text: $0)) }
     }
 
     private var runtimeCertLine: String {

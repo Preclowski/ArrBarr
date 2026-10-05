@@ -26,7 +26,8 @@ extension QueueViewModel {
         persistHealthTracker()
     }
 
-    func notifyNewItems(source: QueueItem.Source, items: [QueueItem], errored: Bool) {
+    /// `toasted` grabs already reached the user as a toast in the open panel; a banner would repeat it.
+    func notifyNewItems(source: QueueItem.Source, items: [QueueItem], errored: Bool, toasted: Set<QueueItem.ID> = []) {
         guard !errored else { return }
         let newItems = notificationTracker.newItems(for: source, items: items)
         persistNotificationTracker()
@@ -37,7 +38,7 @@ extension QueueViewModel {
             case .lidarr: configStore.notifyLidarr
             case .whisparr: false  // no notify toggle for Whisparr
             }
-            if allowed { coalescer.enqueue(item) }
+            if allowed, !(isPanelVisible && toasted.contains(item.id)) { coalescer.enqueue(item) }
         }
     }
 }

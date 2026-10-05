@@ -170,7 +170,7 @@ nonisolated enum ArrCompositions {
                 id: "sonarr-cal-\(r.id)", source: .sonarr, title: r.series?.year.map { "\(base) (\($0))" } ?? base, subtitle: subtitle,
                 airDate: date, releaseType: "Airing", hasFile: r.hasFile ?? false, overview: r.overview,
                 posterURL: poster, posterRequiresAuth: auth, imdb: r.series?.ratings?.value, runtime: r.series?.runtime,
-                entityId: r.seriesId, episodeFileId: r.episodeFileId, genres: r.series?.genres ?? [], releaseStatus: r.series?.status,
+                entityId: r.seriesId, episodeFileId: r.episodeFileId, genres: r.series?.genres ?? [],
                 qualityProfileId: r.series?.qualityProfileId, seasonNumber: r.seasonNumber, episodeNumber: r.episodeNumber, tvdbId: r.series?.tvdbId,
                 slug: r.series?.titleSlug)
         case .lidarr:

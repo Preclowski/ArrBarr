@@ -2049,6 +2049,250 @@
   },
   "status": 200
  },
+ "trendingmovies": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-65-backdrop.jpg",
+     "genre_ids": [
+      878,
+      28,
+      12
+     ],
+     "id": 969681,
+     "original_language": "en",
+     "original_title": "Open Movie 65",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 766.2638,
+     "poster_path": "/open-movie-65-poster.jpg",
+     "release_date": "2026-07-29",
+     "softcore": false,
+     "title": "Open Movie 65",
+     "video": false,
+     "vote_average": 7.85,
+     "vote_count": 2675
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-66-backdrop.jpg",
+     "genre_ids": [
+      35,
+      12,
+      10751,
+      16
+     ],
+     "id": 1204680,
+     "original_language": "en",
+     "original_title": "Open Movie 66",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 593.0284,
+     "poster_path": "/open-movie-66-poster.jpg",
+     "release_date": "2026-08-20",
+     "softcore": false,
+     "title": "Open Movie 66",
+     "video": false,
+     "vote_average": 7.6,
+     "vote_count": 374
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-40-backdrop.jpg",
+     "genre_ids": [
+      28,
+      27,
+      878
+     ],
+     "id": 1375646,
+     "original_language": "ko",
+     "original_title": "Open Movie 40",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 454.2796,
+     "poster_path": "/open-movie-40-poster.jpg",
+     "release_date": "2026-05-21",
+     "softcore": false,
+     "title": "Open Movie 40",
+     "video": false,
+     "vote_average": 8.078,
+     "vote_count": 786
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-67-backdrop.jpg",
+     "genre_ids": [
+      12,
+      28,
+      14
+     ],
+     "id": 1368337,
+     "original_language": "en",
+     "original_title": "Open Movie 67",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 433.1516,
+     "poster_path": "/open-movie-67-poster.jpg",
+     "release_date": "2026-07-15",
+     "softcore": false,
+     "title": "Open Movie 67",
+     "video": false,
+     "vote_average": 8.007,
+     "vote_count": 3694
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-movie-68-backdrop.jpg",
+     "genre_ids": [
+      28,
+      53
+     ],
+     "id": 1288445,
+     "original_language": "en",
+     "original_title": "Open Movie 68",
+     "overview": "An open-licensed short film from the demo library.",
+     "popularity": 348.4092,
+     "poster_path": "/open-movie-68-poster.jpg",
+     "release_date": "2026-08-19",
+     "softcore": false,
+     "title": "Open Movie 68",
+     "video": false,
+     "vote_average": 6.441,
+     "vote_count": 395
+    }
+   ],
+   "total_pages": 1001,
+   "total_results": 20001
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200,
+  "synthetic": true
+ },
+ "trendingtv": {
+  "body": {
+   "page": 1,
+   "results": [
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-37-backdrop.jpg",
+     "first_air_date": "2017-02-20",
+     "genre_ids": [
+      10751,
+      35,
+      18
+     ],
+     "id": 91759,
+     "name": "Open Series 37",
+     "origin_country": [
+      "HK"
+     ],
+     "original_language": "cn",
+     "original_name": "Open Series 37",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 750.4806,
+     "poster_path": "/open-series-37-poster.jpg",
+     "softcore": false,
+     "vote_average": 5.4,
+     "vote_count": 46
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-38-backdrop.jpg",
+     "first_air_date": "2007-08-05",
+     "genre_ids": [
+      35,
+      10764
+     ],
+     "id": 30801,
+     "name": "Open Series 38",
+     "origin_country": [
+      "KR"
+     ],
+     "original_language": "ko",
+     "original_name": "Open Series 38",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 691.455,
+     "poster_path": "/open-series-38-poster.jpg",
+     "softcore": false,
+     "vote_average": 6.667,
+     "vote_count": 30
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-10-backdrop.jpg",
+     "first_air_date": "2022-02-03",
+     "genre_ids": [
+      10759,
+      80
+     ],
+     "id": 108978,
+     "name": "Open Series 10",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 10",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 650.433,
+     "poster_path": "/open-series-10-poster.jpg",
+     "softcore": false,
+     "vote_average": 8.113,
+     "vote_count": 3296
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-39-backdrop.jpg",
+     "first_air_date": "1969-11-10",
+     "genre_ids": [
+      10762,
+      35
+     ],
+     "id": 502,
+     "name": "Open Series 39",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 39",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 614.3406,
+     "poster_path": "/open-series-39-poster.jpg",
+     "softcore": false,
+     "vote_average": 7.135,
+     "vote_count": 293
+    },
+    {
+     "adult": false,
+     "backdrop_path": "/open-series-40-backdrop.jpg",
+     "first_air_date": "2009-07-16",
+     "genre_ids": [
+      10767,
+      35
+     ],
+     "id": 22980,
+     "name": "Open Series 40",
+     "origin_country": [
+      "US"
+     ],
+     "original_language": "en",
+     "original_name": "Open Series 40",
+     "overview": "An open-licensed series from the demo library.",
+     "popularity": 584.0501,
+     "poster_path": "/open-series-40-poster.jpg",
+     "softcore": false,
+     "vote_average": 4.916,
+     "vote_count": 95
+    }
+   ],
+   "total_pages": 630,
+   "total_results": 12587
+  },
+  "headers": {
+   "Content-Type": "application/json;charset=utf-8"
+  },
+  "status": 200,
+  "synthetic": true
+ },
  "tvcountries": {
   "body": {
    "adult": false,

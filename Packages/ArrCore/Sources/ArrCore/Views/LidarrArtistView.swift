@@ -14,7 +14,7 @@ struct LidarrArtistView: View {
     @State private var artist: ArrArtist?
     @State private var albums: [ArrAlbum] = []
     @State private var loading = true
-    @State private var loadError: String?
+    @State private var loadFailed = false
     @State private var enlargedPoster: URL?
     /// Owned locally so back from the album returns here, not to the queue.
     @State private var albumDetail: QueueItem?
@@ -63,6 +63,7 @@ struct LidarrArtistView: View {
             try await configStore.lidarrClient
                 .setArtistMonitored(artistId: artistId, monitored: monitored)
         } catch {
+            viewModel.reportFailure("toast.monitorFailed.title", error, source: .lidarr)
             await load()
         }
     }
@@ -104,10 +105,6 @@ struct LidarrArtistView: View {
                     }
                     .padding(.horizontal, 14)
                     albumSection
-                    if let err = loadError {
-                        LoadErrorLine(message: err)
-                            .padding(.horizontal, 14)
-                    }
                 }
                 .padding(.vertical, 12)
             }
@@ -216,7 +213,7 @@ struct LidarrArtistView: View {
                 SkeletonRows(count: 6)
                     .padding(.top, 6)
                     .padding(.horizontal, 14)
-            } else if loadError == nil {
+            } else if !loadFailed {
                 Text("person.noTitles.label", bundle: .module)
                     .scaledFont(size: 12)
                     .foregroundStyle(.secondary)
@@ -338,7 +335,7 @@ struct LidarrArtistView: View {
     private func load() async {
         guard let artistId = item.entityId else { return }
         loading = true
-        loadError = nil
+        loadFailed = false
         defer { loading = false }
         let client = configStore.lidarrClient
         async let a = client.fetchArtistDetails(id: artistId)
@@ -348,10 +345,8 @@ struct LidarrArtistView: View {
             // Newest first, like Lidarr's own artist page.
             albums = try await al.sorted { ($0.releaseDate ?? "") > ($1.releaseDate ?? "") }
         } catch {
-            loadError = String(
-                format: String(localized: "Couldn't load details: %@", bundle: .module),
-                error.localizedDescription
-            )
+            loadFailed = true
+            viewModel.reportFailure("toast.loadFailed.title", error, source: .lidarr) { Task { await load() } }
         }
     }
 }

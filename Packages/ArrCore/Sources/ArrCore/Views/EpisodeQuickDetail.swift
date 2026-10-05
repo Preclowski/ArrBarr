@@ -44,7 +44,7 @@ struct EpisodeQuickDetail: View {
     @State private var profileName: String?
     @State private var fullEpisode: ArrEpisode?
     @State private var episodeFileMap: [Int: ArrFile] = [:]
-    @State private var loadError: String?
+    @State private var loadFailed = false
     /// Owned here, not at the root stack: sibling root destinations don't nest,
     /// so back would skip the episode.
     @State private var seriesPush: SeriesPushRequest?
@@ -78,8 +78,13 @@ struct EpisodeQuickDetail: View {
             queueItems: liveQueueItems,
             onClose: onBack,
             onSearch: { episodeId in
-                let client = configStore.sonarrClient
-                try await client.searchEpisodes(episodeIds: [episodeId])
+                let commandId = try await configStore.sonarrClient.searchEpisodes(episodeIds: [episodeId])
+                guard let seriesId = item.entityId else { return }
+                let (season, episode) = (displayEpisode.seasonNumber, displayEpisode.episodeNumber)
+                let series = sonarrDetail?.title ?? splitTitleAndYear(item.title).title
+                viewModel.watchSearch(SearchSubject(source: .sonarr, entityId: seriesId, season: season, episode: episode),
+                                      title: "\(series) · \(EpisodeCode.string(season: season ?? 0, episode: episode))",
+                                      commandId: commandId)
             },
             seriesWebURL: arrWebURL(for: item, in: configStore),
             onPauseEpisode: { q in await viewModel.pause(q); await viewModel.refresh() },
@@ -103,7 +108,7 @@ struct EpisodeQuickDetail: View {
             profileName: profileName,
             mediaServerKeys: sonarrDetail?.mediaServerKeys ?? [],
             series: sonarrDetail,
-            isLoadingDetails: fullEpisode == nil && loadError == nil,
+            isLoadingDetails: fullEpisode == nil && !loadFailed,
             // The stub carries `monitored: nil`, so no bookmark until the real record lands.
             monitored: displayEpisode.monitored,
             onToggleMonitored: { monitored in
@@ -117,6 +122,7 @@ struct EpisodeQuickDetail: View {
                     try await configStore.sonarrClient
                         .setEpisodesMonitored(episodeIds: [epId], monitored: monitored)
                 } catch {
+                    viewModel.reportFailure("toast.monitorFailed.title", error, source: .sonarr)
                     await load()
                 }
             },
@@ -159,6 +165,7 @@ struct EpisodeQuickDetail: View {
                             seriesId: drill.seriesId, seasonNumber: drill.seasonNumber, monitored: monitored)
                     } catch {
                         Self.log.error("season monitor flip failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
+                        viewModel.reportFailure("toast.monitorFailed.title", error, source: .sonarr)
                     }
                     // Refetch: the flip cascades to every episode flag.
                     await load()
@@ -171,6 +178,7 @@ struct EpisodeQuickDetail: View {
                         try await configStore.sonarrClient
                             .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
                     } catch {
+                        viewModel.reportFailure("toast.monitorFailed.title", error, source: .sonarr)
                         await load()
                     }
                 },
@@ -244,6 +252,7 @@ struct EpisodeQuickDetail: View {
 
     private func load() async {
         guard let seriesId = item.entityId else { return }
+        loadFailed = false
         let client = configStore.sonarrClient
         do {
             async let detailReq = client.fetchSeriesDetails(id: seriesId)
@@ -272,7 +281,8 @@ struct EpisodeQuickDetail: View {
             }
             self.episodeFileMap = files
         } catch {
-            self.loadError = error.localizedDescription
+            loadFailed = true
+            viewModel.reportFailure("toast.loadFailed.title", error, source: .sonarr) { Task { await load() } }
         }
     }
 }

@@ -216,6 +216,7 @@ public struct PopoverContentView: View {
                 get: { trailerSession.key },
                 set: { if $0 == nil { trailerSession.dismiss() } }
             ), fillsWindow: trailerFillsWindow, allowsFullscreen: isDetachedWindow, tileNamespace: trailerTiles)
+            .toastHost()
             .confirmCenterHost()
             // No paywall here: the MenuBarExtra panel resigns key when StoreKit's UI appears and
             // would abort the purchase. AppDelegate hosts it in an NSWindow.

@@ -99,6 +99,13 @@ public struct TMDBService: Sendable {
         let query = [("include_adult", "false"), ("sort_by", sort), ("vote_count.gte", String(minVotes)), ("page", String(page))] + extra
         return json(plan("discoverTV", path: "/discover/tv", query: query), tags: [.collection(.lookup, instance)], freshness: .warm)
     }
+    /// This week's buzz; no discover filter reproduces it.
+    public func trendingMovies(page: Int = 1) -> Resource<TMDBPage<TMDBMovieSummary>> {
+        json(plan("trendingMovies", path: "/trending/movie/week", query: [("page", String(page))]), tags: [.collection(.lookup, instance)], freshness: .warm)
+    }
+    public func trendingTV(page: Int = 1) -> Resource<TMDBPage<TMDBTVSummary>> {
+        json(plan("trendingTV", path: "/trending/tv/week", query: [("page", String(page))]), tags: [.collection(.lookup, instance)], freshness: .warm)
+    }
 
     /// A CDN url at any size (`/t/p/<size>/<file>`, as the arrs hand them out), so it can be re-sized.
     public static func artwork(cdnURL url: URL, kind: ArtworkReference.Kind) -> ArtworkReference? {

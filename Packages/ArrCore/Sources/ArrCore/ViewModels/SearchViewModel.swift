@@ -364,6 +364,7 @@ final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
                                                   searchOnAdd: searchOnAdd)
             whisparrResults.removeAll { $0.id == result.id }
+            if searchOnAdd, let arrId { watchAddSearch(result, source: .whisparr, arrId: arrId) }
             navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -381,6 +382,7 @@ final class SearchViewModel {
                                                  rootFolderPath: rootFolderPath, monitor: monitor,
                                                  searchOnAdd: searchOnAdd)
             radarrResults.removeAll { $0.id == result.id }
+            if searchOnAdd, let arrId { watchAddSearch(result, source: .radarr, arrId: arrId) }
             navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -408,6 +410,7 @@ final class SearchViewModel {
                                                   seriesType: seriesType, seasonFolder: seasonFolder,
                                                   searchOnAdd: searchOnAdd)
             sonarrResults.removeAll { $0.id == result.id }
+            if searchOnAdd, let arrId { watchAddSearch(result, source: .sonarr, arrId: arrId) }
             navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -447,6 +450,7 @@ final class SearchViewModel {
                                                   searchOnAdd: searchOnAdd)
             lidarrResults.removeAll { $0.id == result.id }
             guard let arrId else { return }
+            if searchOnAdd { watchAddSearch(result, source: .lidarr, arrId: arrId, isLidarrAlbum: true) }
             DetailRequest.open(source: .lidarr, arrId: arrId, title: result.title,
                                posterURL: result.posterURL, isLidarrAlbum: true)
         } catch {
@@ -459,6 +463,14 @@ final class SearchViewModel {
     @ObservationIgnored var onAdded: ((_ arrId: Int?) -> Void)?
 
     /// No-op when the arr returned no id (demo mode, unparseable response); the add still succeeded.
+    /// The add's own search, followed like one started from a detail. Not an artist's: its grabs carry album ids.
+    private func watchAddSearch(_ result: SearchResult, source: QueueItem.Source, arrId: Int, isLidarrAlbum: Bool = false) {
+        let detail = DetailRequest.item(source: source, arrId: arrId, title: result.title,
+                                        posterURL: result.posterURL, isLidarrAlbum: isLidarrAlbum)
+        QueueViewModel.shared.watchSearch(SearchSubject(source: source, entityId: arrId), title: result.title,
+                                          commandId: nil, manualSearch: source == .sonarr ? nil : detail)
+    }
+
     private func navigateToAdded(_ result: SearchResult, source: QueueItem.Source, arrId: Int?) {
         if let onAdded { return onAdded(arrId) }
         guard let arrId else { return }

@@ -28,7 +28,8 @@ enum ShelfMode: String, CaseIterable, Identifiable {
 }
 
 /// Scroll state read by the scene on each display tick. Only `center` and `active` are observed, so a scroll
-/// event never re-evaluates the Shelf's body; the TimelineView alone redraws, and only while `active`.
+/// event never re-evaluates the Shelf's body; the TimelineView alone redraws, and only while `active` (or for
+/// Warp's idle wave).
 @Observable
 final class ShelfMotion {
     private(set) var center = 0
@@ -62,11 +63,25 @@ final class ShelfMotion {
         }
     }
 
+    /// A cover sits on the hero slot. A finger resting mid-scroll also stops the events, between two covers.
+    var isOnCover: Bool { abs(position - position.rounded()) < 0.02 }
+
     /// Posters per second.
     func velocity(at now: CFTimeInterval) -> Double {
         // The frame drawn as the tick pauses must be the clean one; speed effects would freeze mid-glitch.
         active ? velocity * exp(-(now - stamp) * 7) : 0
     }
+}
+
+/// The Roulette's place for the app's run. The panel rebuilds its content on every open and tab switch, which
+/// reshuffled the library and sent the Roulette back to its first title.
+final class ShelfSession {
+    static let shared = ShelfSession()
+
+    var filter: ShelfFilter?
+    var collection: ShelfCollection = .library
+    /// The title on the hero slot, per collection and source.
+    var centred: [String: String] = [:]
 }
 
 /// Card-tier posters near the centre (they fill most of the popover), icon tier for the rest of the window.
@@ -137,10 +152,13 @@ struct ShelfView: View {
     /// Debug harness only: parks the scroll here once the library lands.
     private let initialPosition: Double?
     @State private var start = CACurrentMediaTime()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The bottom control grown into its panel, if any.
     @State private var openControl: ShelfControlKind?
-    @State private var filter = ShelfFilter(source: .radarr)
-    @State private var collection: ShelfCollection = .library
+    @State private var filter: ShelfFilter
+    @State private var collection: ShelfCollection
+    /// The scroll has been put on this set's remembered title; until then the hero is not recorded.
+    @State private var placed = false
     @State private var remote = ShelfRemoteLists()
     /// A TMDB set is being fetched and its covers loaded; the stage stays on the spinner meanwhile.
     @State private var warming = false
@@ -158,7 +176,12 @@ struct ShelfView: View {
         self.onClose = onClose
         let saved = UserDefaults.standard.string(forKey: Self.modeKey).flatMap(ShelfMode.init(rawValue:))
         _mode = State(initialValue: initialMode ?? saved ?? .warp)
+        _filter = State(initialValue: ShelfSession.shared.filter ?? ShelfFilter(source: .radarr))
+        _collection = State(initialValue: ShelfSession.shared.collection)
     }
+
+    private var session: ShelfSession { .shared }
+    private var sessionKey: String { "\(collection.rawValue)|\(source.rawValue)" }
 
     /// Scroll points per poster. Smaller than the visual spacing so one flick crosses dozens of posters.
     static let pitch: CGFloat = 70
@@ -201,6 +224,11 @@ struct ShelfView: View {
 
     private var centerIndex: Int { motion.center.shelfWrapped(into: entries.count) }
 
+    /// Warp's edges wave at rest too; paused, any body pass (a hover) redrew the wave a jump further on.
+    private var ticking: Bool {
+        !isObscured && (motion.active || (mode == .warp && !reduceMotion))
+    }
+
     private func sceneReady(_ entries: [LibraryEntry]) -> Bool {
         !warming && (revealed || (!entries.isEmpty && posters.image(for: entries[centerIndex].id) != nil))
     }
@@ -210,7 +238,8 @@ struct ShelfView: View {
         GeometryReader { geo in
             ZStack {
                 if sceneReady(entries) {
-                TimelineView(.animation(paused: isObscured || !motion.active)) { timeline in
+                // The idle wave is slow: 15 fps carries it, and every frame also re-samples the glass over the stage.
+                TimelineView(.animation(minimumInterval: motion.active ? nil : 1.0 / 15, paused: !ticking)) { timeline in
                     ShelfScene(
                         mode: mode,
                         entries: entries,
@@ -227,7 +256,7 @@ struct ShelfView: View {
                 scrollDriver(entries, size: geo.size)
                 chrome(entries)
                 ZStack {
-                    if entries.indices.contains(centerIndex), sceneReady(entries), !motion.active,
+                    if entries.indices.contains(centerIndex), sceneReady(entries), !motion.active, motion.isOnCover,
                        openControl == nil, let mark = entries[centerIndex].libraryMark {
                         heroStrip(mark, size: geo.size)
                             .transition(.opacity)
@@ -277,11 +306,12 @@ struct ShelfView: View {
             warming = true
             await remote.load(remoteKey, configStore: configStore)
             guard !Task.isCancelled else { return }
-            let set = entries
-            // Warmed around the first title, which is where the recentre lands.
-            await posters.warm(set, around: 0, apiKey: apiKey)
+            // `self.`: the body's `entries` was taken before the list arrived.
+            let set = self.entries
+            // Warmed around the title the recentre lands on.
+            await posters.warm(set, around: remembered(in: set), apiKey: apiKey)
             guard !Task.isCancelled else { return }
-            recenter(set.count)
+            recenter(set, restoring: true)
             try? await Task.sleep(for: .milliseconds(80))
             guard !Task.isCancelled else { return }
             warming = false
@@ -293,24 +323,32 @@ struct ShelfView: View {
             if !available.contains(collection) { collection = available.contains(.popular) ? .popular : .library }
         }
         .onChange(of: collection) { _, new in
+            session.collection = new
+            placed = false
             // A genre or sort from the other set could empty or scramble this one.
             filter.clearNarrowing()
             if !ShelfView.sortModes(for: new, source: source).contains(filter.sort), filter.shuffleSeed == nil {
                 filter.shuffleSeed = Int.random(in: 1...Int(Int32.max))
             }
-            if !new.isRemote { recenter(entries.count) }
+            if !new.isRemote { recenter(entries, restoring: true) }
         }
-        .onChange(of: filter) { _, _ in
-            recenter(entries.count)
+        .onChange(of: filter) { old, new in
+            session.filter = new
+            placed = false
+            // Another source keeps its own place; a new sort or filter starts from the top.
+            var sameOrder = old
+            sameOrder.source = new.source
+            recenter(entries, restoring: sameOrder == new)
             posters.prefetch(entries, around: 0, apiKey: apiKey)
         }
         .onChange(of: centerIndex, initial: true) { _, center in
             posters.prefetch(entries, around: center, apiKey: apiKey)
+            if placed, entries.indices.contains(center) { session.centred[sessionKey] = entries[center].id }
         }
-        .onChange(of: entries.count) { old, new in
+        .onChange(of: entries.count) { old, _ in
             // Only the first load recentres; a background refresh that adds a title must not throw you back.
-            if old == 0 { recenter(new) }
-            posters.prefetch(entries, around: centerIndex, apiKey: apiKey)
+            if old == 0 { recenter(entries, restoring: true) }
+            posters.prefetch(entries, around: old == 0 ? remembered(in: entries) : centerIndex, apiKey: apiKey)
         }
         .task(id: entries.count) {
             guard let initialPosition, !entries.isEmpty else { return }
@@ -491,14 +529,23 @@ struct ShelfView: View {
         withAnimation(.smooth(duration: 0.4)) { scroll.scrollTo(x: CGFloat(target) * Self.pitch) }
     }
 
-    /// The content width changes in the same update, so the jump waits a beat for layout.
-    private func recenter(_ count: Int) {
-        guard count > 0 else { return }
-        let x = CGFloat(Self.home(count)) * Self.pitch
+    /// The content width changes in the same update, so the jump waits a beat for layout. `restoring` lands on
+    /// the title this collection last showed, when it is still in the set; otherwise on the first.
+    private func recenter(_ entries: [LibraryEntry], restoring: Bool) {
+        guard !entries.isEmpty else { return }
+        let index = restoring ? remembered(in: entries) : 0
+        let x = CGFloat(Self.home(entries.count) + index) * Self.pitch
+        let key = sessionKey
         Task {
             try? await Task.sleep(for: .milliseconds(30))
             scroll.scrollTo(x: x)
+            session.centred[key] = entries[index].id
+            placed = true
         }
+    }
+
+    private func remembered(in entries: [LibraryEntry]) -> Int {
+        session.centred[sessionKey].flatMap { id in entries.firstIndex { $0.id == id } } ?? 0
     }
 
     /// The centre poster opens its detail; a tap either side steps toward it.

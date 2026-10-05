@@ -10,7 +10,6 @@ struct LidarrDetailPanel: View {
     var lidarrTrackFiles: [ArrFile] = []
     let siblings: [QueueItem]
     let hasActiveDownloads: Bool
-    let loadError: String?
     var isLoading: Bool = false
     @Binding var enlargedPoster: URL?
     @Binding var selectedDiscNumber: Int?
@@ -96,9 +95,6 @@ struct LidarrDetailPanel: View {
                     DetailSectionHeader("detail.tracks.button")
                     SkeletonRows(count: 8)
                 }
-            }
-            if let err = loadError {
-                LoadErrorLine(message: err)
             }
         }
     }

@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 import SwiftUI
 import os
 
@@ -28,13 +29,14 @@ extension QueueViewModel {
         await beginLeaving(items)
         do {
             try await aggregator.deleteAll(items)
-            lastError = nil
             if let source = items.first?.source {
                 Task { await self.refreshQueue(source: source) }
             }
         } catch {
-            lastError = error.localizedDescription
             endLeaving(items)
+            if let source = items.first?.source {
+                reportFailure("toast.removeFailed.title", error, source: source) { Task { await self.deleteAll(items) } }
+            }
         }
     }
 
@@ -67,13 +69,12 @@ extension QueueViewModel {
         if action == .delete { await beginLeaving([item]) }
         do {
             try await aggregator.perform(action, on: item)
-            lastError = nil
             // The command's effect paints the change at once; this refresh replaces it with a fact.
             Task { await self.refreshQueue(source: item.source) }
         } catch {
             let message = error.localizedDescription
-            lastError = message
             if action == .delete { endLeaving([item]) }
+            reportFailure(action.failureTitle, error, source: item.source) { Task { await self.runAction(action, on: item) } }
             actionLog.error("\(String(describing: action), privacy: .public) queue \(item.arrQueueId, privacy: .public) failed: \(message, privacy: .private)")
             // Pin the client red only when the failure proves it down: `canControl` is client-wide, so a single
             // rejected request would strip pause/resume from every row.
@@ -82,6 +83,27 @@ extension QueueViewModel {
             if reachedClient, actionFailureProvesClientDown(error), let kind = configStore.downloadClient(for: item) {
                 ConnectionHealth.shared.forceDown(.arr(kind), message: message)
             }
+        }
+    }
+
+    /// Away from home is expected: a failure that only repeats what the offline chip already says stays quiet.
+    func reportFailure(_ title: LocalizedStringKey, _ error: Error, source: QueueItem.Source,
+                       retry: (@MainActor () -> Void)? = nil) {
+        let unreachable = switch error as? MediaKitError {
+        case .unreachable, .breakerOpen: true
+        default: false
+        }
+        if unreachable, isFullyOffline || lastUnreachable.contains(source) { return }
+        toasts.show(.failure(title, error: error, retry: retry))
+    }
+}
+
+private extension QueueAggregator.Action {
+    var failureTitle: LocalizedStringKey {
+        switch self {
+        case .pause: "toast.pauseFailed.title"
+        case .resume, .continueDownload: "toast.resumeFailed.title"
+        case .delete: "toast.removeFailed.title"
         }
     }
 }

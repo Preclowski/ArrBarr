@@ -129,6 +129,7 @@ extension DetailView {
             blurred: configStore.shouldBlurPoster(for: item.source),
             trailing: existingTrailer,
             titleBadge: titleBadge,
+            profileName: qualityProfileName,
             onPosterTap: { url in
                 withAnimation(.smooth(duration: 0.22)) {
                     enlargedPoster = url ?? item.posterURL

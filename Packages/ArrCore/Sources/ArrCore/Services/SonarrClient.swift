@@ -14,9 +14,15 @@ nonisolated public struct SonarrClient: ArrAPIClient {
 
     func fetchSeriesDetails(id: Int) async throws -> ArrSeries { try await read { $0.seriesDetails(id: id) } }
     func fetchEpisodes(seriesId: Int) async throws -> [ArrEpisode] { try await read { $0.episodes(seriesID: seriesId) } }
-    func searchEpisodes(episodeIds: [Int]) async throws { try await run { $0.search(.episodes(episodeIds)) } }
-    func searchSeason(seriesId: Int, seasonNumber: Int) async throws { try await run { $0.search(.season(seriesID: seriesId, season: seasonNumber)) } }
-    func searchSeries(seriesId: Int) async throws { try await run { $0.search(.series(seriesId)) } }
+    /// The search calls return the arr command id, for `QueueViewModel.watchSearch`.
+    @discardableResult
+    func searchEpisodes(episodeIds: [Int]) async throws -> Int? { try await run { $0.search(.episodes(episodeIds)) }.trackingID }
+    @discardableResult
+    func searchSeason(seriesId: Int, seasonNumber: Int) async throws -> Int? {
+        try await run { $0.search(.season(seriesID: seriesId, season: seasonNumber)) }.trackingID
+    }
+    @discardableResult
+    func searchSeries(seriesId: Int) async throws -> Int? { try await run { $0.search(.series(seriesId)) }.trackingID }
     func deleteEpisodeFile(id: Int, seriesId: Int) async throws { try await run { $0.deleteFile(id: id, parent: seriesId) } }
     func setSeriesMonitored(seriesId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: seriesId, monitored) } }
     func setEpisodesMonitored(episodeIds: [Int], monitored: Bool) async throws { try await run { $0.setEpisodesMonitored(ids: episodeIds, monitored) } }

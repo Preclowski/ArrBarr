@@ -114,7 +114,6 @@ struct DetailView: View {
     @State var countries: [String] = []
     @State var qualityProfileName: String?
     @State var loading = true
-    @State var loadError: String?
     /// Owned locally so back returns here.
     @State private var personRef: PersonRef?
     /// Owned locally (like `personRef`) so back returns to this album.
@@ -207,6 +206,7 @@ struct DetailView: View {
                     .setAlbumMonitored(albumId: entityId, monitored: monitored)
             }
         } catch {
+            viewModel.reportFailure("toast.monitorFailed.title", error, source: item.source)
             await load(showSpinner: false)
         }
     }
@@ -229,8 +229,9 @@ struct DetailView: View {
             try await configStore.sonarrClient.setSeasonMonitored(
                 seriesId: seriesId, seasonNumber: seasonNumber, monitored: monitored)
         } catch {
-            // The refetch below snaps the optimistic flip back; the reason only reaches the log.
+            // The refetch below snaps the optimistic flip back.
             Self.searchLog.error("season monitor flip failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
+            viewModel.reportFailure("toast.monitorFailed.title", error, source: .sonarr)
         }
         await load(showSpinner: false)
     }
@@ -346,6 +347,7 @@ struct DetailView: View {
                         try await configStore.sonarrClient
                             .setEpisodesMonitored(episodeIds: [episodeId], monitored: monitored)
                     } catch {
+                        viewModel.reportFailure("toast.monitorFailed.title", error, source: .sonarr)
                         await load(showSpinner: false)
                     }
                 },

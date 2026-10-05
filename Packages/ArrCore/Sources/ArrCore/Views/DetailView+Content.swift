@@ -31,7 +31,6 @@ extension DetailView {
                     radarrMovieFile: radarrMovieFile,
                     siblings: siblings,
                     hasActiveDownloads: hasActiveDownloads,
-                    loadError: loadError,
                     isLoading: loading,
                     header: movieHeader,
                     cast: cast,
@@ -65,7 +64,6 @@ extension DetailView {
                 )
                 SonarrDetailPanel(
                     siblings: siblings,
-                    loadError: loadError,
                     isLoading: loading,
                     header: seriesHeader,
                     cast: cast,
@@ -84,8 +82,11 @@ extension DetailView {
                         await setSeasonMonitored(seasonNumber: season.seasonNumber, monitored: monitored)
                     },
                     onAutomaticSeasonSearch: { season in
-                        try await configStore.sonarrClient.searchSeason(
-                            seriesId: item.entityId ?? 0, seasonNumber: season.seasonNumber)
+                        let seriesId = item.entityId ?? 0
+                        let commandId = try await configStore.sonarrClient.searchSeason(
+                            seriesId: seriesId, seasonNumber: season.seasonNumber)
+                        viewModel.watchSearch(SearchSubject(source: .sonarr, entityId: seriesId, season: season.seasonNumber),
+                                              title: seasonSearchTitle(season.seasonNumber), commandId: commandId)
                     },
                     onManualSeasonSearch: { season in
                         manualSearchTarget = .season(
@@ -107,7 +108,6 @@ extension DetailView {
                     lidarrTrackFiles: lidarrTrackFiles,
                     siblings: siblings,
                     hasActiveDownloads: hasActiveDownloads,
-                    loadError: loadError,
                     isLoading: loading,
                     enlargedPoster: $enlargedPoster,
                     selectedDiscNumber: $selectedDiscNumber,
@@ -132,10 +132,8 @@ extension DetailView {
     /// Release status is a fact of the title, so it sits here, not in the file banner.
     private var movieTitleBadge: AnyView? {
         // Nothing until the detail lands — a bare "Missing" mid-fetch would be a claim we can't back.
-        guard radarrDetail != nil || qualityProfileName != nil else { return nil }
-        // Profile first, matching the series hero.
+        guard radarrDetail != nil else { return nil }
         return AnyView(HStack(spacing: 4) {
-            if let profile = qualityProfileName { ProfileChip(name: profile) }
             ReleaseStatusChip(status: radarrDetail?.status, source: .radarr)
             // "Downloaded" is the poster's bottom strip.
             if radarrDetail != nil, movieFileState != .complete {
@@ -149,11 +147,10 @@ extension DetailView {
                hasFile: (radarrMovieFile ?? radarrDetail?.movieFile) != nil)
     }
 
-    /// Series hero's title badges — assigned profile + how much is on disk.
+    /// Series hero's title badges — release status + how much is on disk.
     private var seriesTitleBadge: AnyView? {
-        guard sonarrDetail != nil || qualityProfileName != nil else { return nil }
+        guard sonarrDetail != nil else { return nil }
         return AnyView(HStack(spacing: 4) {
-            if let profile = qualityProfileName { ProfileChip(name: profile) }
             ReleaseStatusChip(status: sonarrDetail?.status, source: .sonarr)
             // No have/total: the season rows carry the actionable count, and a partial series has
             // nothing to say in one word. "Downloaded" is the poster's bottom strip.

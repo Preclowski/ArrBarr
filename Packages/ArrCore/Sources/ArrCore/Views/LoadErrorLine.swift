@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// Tertiary "couldn't load details" line shown at the bottom of the
-/// Radarr / Sonarr / Lidarr detail panels. Each panel carried an identical
-/// copy; this is the single source.
+/// Tertiary "couldn't load" line inside the edit panel, which stays open over the failure.
 struct LoadErrorLine: View {
     let message: String
 

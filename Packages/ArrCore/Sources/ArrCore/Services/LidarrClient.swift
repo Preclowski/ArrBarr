@@ -22,7 +22,9 @@ nonisolated public struct LidarrClient: ArrAPIClient {
     func fetchArtistAlbums(artistId: Int) async throws -> [ArrAlbum] { try await read { $0.albums(artistID: artistId) } }
     func setAlbumMonitored(albumId: Int, monitored: Bool) async throws { try await run { $0.setAlbumMonitored(albumID: albumId, monitored) } }
     func setArtistMonitored(artistId: Int, monitored: Bool) async throws { try await run { $0.setMonitored(entityID: artistId, monitored) } }
-    func searchAlbum(albumId: Int) async throws { try await run { $0.search(.albums([albumId])) } }
+    /// Returns the arr command id, for `QueueViewModel.watchSearch`.
+    @discardableResult
+    func searchAlbum(albumId: Int) async throws -> Int? { try await run { $0.search(.albums([albumId])) }.trackingID }
     func searchArtist(artistId: Int) async throws { try await run { $0.search(.artist(artistId)) } }
     func deleteAlbum(albumId: Int, artistId: Int, deleteFiles: Bool, addImportListExclusion: Bool) async throws {
         try await run { $0.deleteAlbum(id: albumId, artistID: artistId, deleteFiles: deleteFiles, addImportListExclusion: addImportListExclusion) }

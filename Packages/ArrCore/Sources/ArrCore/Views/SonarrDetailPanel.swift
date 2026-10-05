@@ -6,7 +6,6 @@ import MediaKit
 struct SonarrDetailPanel<Header: View>: View {
     @Environment(ConfigStore.self) var configStore
     let siblings: [QueueItem]
-    let loadError: String?
     var isLoading: Bool = false
     let header: Header
     /// TMDB only: Sonarr has no cast endpoint.
@@ -95,10 +94,6 @@ struct SonarrDetailPanel<Header: View>: View {
                     DetailSectionHeader("detail.seasons.button")
                     SkeletonRows(count: 6)
                 }
-            }
-
-            if let err = loadError {
-                LoadErrorLine(message: err)
             }
         }
     }

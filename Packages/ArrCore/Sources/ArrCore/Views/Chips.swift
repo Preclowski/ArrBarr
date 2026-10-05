@@ -261,6 +261,15 @@ struct StateChip: View {
 }
 
 /// A title's release status. A series shows only "Ended": "continuing" says nothing on a show you'd add.
+/// An episode's release status: Sonarr has none per episode, only the air date.
+struct UnairedChip: View {
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        StateChip(text: AppLocalized.string("detail.unaired.button", locale: locale), color: .orange)
+    }
+}
+
 struct ReleaseStatusChip: View {
     let status: String?
     let source: QueueItem.Source

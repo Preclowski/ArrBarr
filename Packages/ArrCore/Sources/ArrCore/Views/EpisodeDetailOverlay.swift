@@ -312,17 +312,6 @@ struct EpisodeDetailOverlay: View {
         episode.airDateUtc.flatMap(parseArrDate).map { Self.airFormatter.string(from: $0) }
     }
 
-    @ViewBuilder
-    private var heroBadges: some View {
-        HStack(spacing: 4) {
-            if let profileName { ProfileChip(name: profileName) }
-            if !hasAired {
-                StateChip(text: AppLocalized.string("detail.unaired.button", locale: configStore.currentLocale),
-                          color: .orange)
-            }
-        }
-    }
-
     /// Series-level watch state says nothing about one episode.
     private var isWatched: Bool {
         MediaServerIndex.shared.isWatched(mediaServerKeys,
@@ -334,7 +323,7 @@ struct EpisodeDetailOverlay: View {
     @ViewBuilder
     private var seriesContextLinks: some View {
         VStack(alignment: .leading, spacing: 4) {
-            heroBadges
+            if !hasAired { UnairedChip() }
             if let onTapSeries {
                 Button(action: onTapSeries) {
                     HStack(spacing: 4) {
@@ -394,6 +383,7 @@ struct EpisodeDetailOverlay: View {
                 // Spelled out, not defaulted: the series, season and episode heroes must draw artwork identically.
                 posterAspect: 2.0 / 3.0,
                 blurred: false,
+                profileName: profileName,
                 onPosterTap: { url in
                     withAnimation(.smooth(duration: 0.22)) { enlargedPoster = url }
                 },

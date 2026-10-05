@@ -241,8 +241,7 @@ nonisolated public struct TMDBClient: Sendable {
     public func seriesOnAir(around date: Date = Date()) async throws -> [TMDBTVSummary] {
         let extra = [("air_date.gte", Self.day(date, offset: -14)),
                      ("air_date.lte", Self.day(date, offset: 7)),
-                     // Kids, news, reality, soap, talk.
-                     ("without_genres", "10762,10763,10764,10766,10767")]
+                     ("without_genres", Self.fillerTVGenres.map(String.init).joined(separator: ","))]
         let airing = try await twoPages { page in
             try await self.read { $0.discoverTV(minVotes: 10, page: page, extra: extra) }.results
         }
@@ -260,27 +259,58 @@ nonisolated public struct TMDBClient: Sendable {
         return airing.filter { fresh.contains($0.id) }
     }
 
-    /// Most popular first, `pages` deep; a title that moved between pages mid-fetch shows once.
-    public func popularMovies(pages: Int = 3) async throws -> [TMDBMovieSummary] {
-        let all = try await firstPages(pages) { page in
+    /// Kids, news, reality, soap and talk shows, which otherwise crowd every series list.
+    private static let fillerTVGenres = [10762, 10763, 10764, 10766, 10767]
+    private static var withoutFillerTV: [(String, String)] {
+        [("without_genres", fillerTVGenres.map(String.init).joined(separator: ","))]
+    }
+
+    /// Most popular first, `pages` deep.
+    public func popularMovies(pages: Int) async throws -> [TMDBMovieSummary] {
+        try await firstPages(pages, id: \.id) { page in
             try await self.read { $0.discoverMovies(page: page) }.results
         }
-        var seen = Set<Int>()
-        return all.filter { seen.insert($0.id).inserted }
     }
 
-    /// Without kids, news, reality, soap and talk shows, which otherwise crowd the top.
-    public func popularSeries(pages: Int = 3) async throws -> [TMDBTVSummary] {
-        let extra = [("without_genres", "10762,10763,10764,10766,10767")]
-        let all = try await firstPages(pages) { page in
-            try await self.read { $0.discoverTV(minVotes: 20, page: page, extra: extra) }.results
+    public func popularSeries(pages: Int) async throws -> [TMDBTVSummary] {
+        try await firstPages(pages, id: \.id) { page in
+            try await self.read { $0.discoverTV(minVotes: 20, page: page, extra: Self.withoutFillerTV) }.results
         }
-        var seen = Set<Int>()
-        return all.filter { seen.insert($0.id).inserted }
     }
 
-    /// Fetched together, returned in page order. Only the first page must answer.
-    private func firstPages<T>(_ count: Int, _ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
+    /// Best score first. The vote floor keeps out what a handful of fans rated perfect.
+    public func topRatedMovies(pages: Int) async throws -> [TMDBMovieSummary] {
+        try await firstPages(pages, id: \.id) { page in
+            try await self.read { $0.discoverMovies(sort: "vote_average.desc", minVotes: 1000, page: page) }.results
+        }
+    }
+
+    public func topRatedSeries(pages: Int) async throws -> [TMDBTVSummary] {
+        try await firstPages(pages, id: \.id) { page in
+            try await self.read {
+                $0.discoverTV(sort: "vote_average.desc", minVotes: 300, page: page, extra: Self.withoutFillerTV)
+            }.results
+        }
+    }
+
+    public func trendingMovies(pages: Int) async throws -> [TMDBMovieSummary] {
+        try await firstPages(pages, id: \.id) { page in
+            try await self.read { $0.trendingMovies(page: page) }.results
+        }
+    }
+
+    /// Trending takes no genre filter, so the filler goes here.
+    public func trendingSeries(pages: Int) async throws -> [TMDBTVSummary] {
+        try await firstPages(pages, id: \.id) { page in
+            try await self.read { $0.trendingTV(page: page) }.results
+        }
+        .filter { Set($0.genreIds ?? []).isDisjoint(with: Self.fillerTVGenres) }
+    }
+
+    /// Fetched together, returned in page order; a title that moved between pages mid-fetch shows once.
+    /// Only the first page must answer.
+    private func firstPages<T>(_ count: Int, id: KeyPath<T, Int>,
+                               _ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {
         async let first = fetch(1)
         let rest = await withTaskGroup(of: (Int, [T]).self) { group in
             for page in stride(from: 2, through: count, by: 1) {
@@ -290,7 +320,8 @@ nonisolated public struct TMDBClient: Sendable {
             for await (page, items) in group { pages[page] = items }
             return pages.keys.sorted().flatMap { pages[$0] ?? [] }
         }
-        return try await first + rest
+        var seen = Set<Int>()
+        return try await (first + rest).filter { seen.insert($0[keyPath: id]).inserted }
     }
 
     private func twoPages<T>(_ fetch: @escaping @Sendable (Int) async throws -> [T]) async throws -> [T] where T: Sendable {

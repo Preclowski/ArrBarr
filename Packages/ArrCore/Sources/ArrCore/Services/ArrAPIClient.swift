@@ -16,7 +16,9 @@ protocol MovieArrClient: ArrAPIClient {}
 extension MovieArrClient {
     func fetchMovieDetails(id: Int) async throws -> ArrMovie { try await read { $0.movie(id: id) } }
     func fetchMovieFile(movieId: Int) async throws -> ArrFile? { try await read { $0.movieFiles([movieId]) }.first }
-    func searchMovie(movieId: Int) async throws { try await run { $0.search(.movies([movieId])) } }
+    /// Returns the arr command id, for `QueueViewModel.watchSearch`.
+    @discardableResult
+    func searchMovie(movieId: Int) async throws -> Int? { try await run { $0.search(.movies([movieId])) }.trackingID }
     /// `revalidate: false` serves the stored rows, flags `isStale` and refreshes behind the caller.
     func fetchAllMovies(revalidate: Bool = true) async throws -> [ArrMovie] {
         try await fetchAllMoviesFetched(revalidate: revalidate).value
@@ -93,9 +95,13 @@ extension ArrAPIClient {
         return status.version.map { "\(serviceName) \($0)" } ?? String(localized: "common.ok.label", bundle: .module)
     }
 
+    /// nil when the poll failed, so a blip never reads as "the search finished".
+    func fetchCommands() async -> [ArrCommand]? {
+        await Logger.extras.attempt("command poll") { try await read(policy: .mustRevalidate) { $0.commands() } }
+    }
+
     func isSearchRunning(entityId: Int) async -> Bool {
-        let commands = (await Logger.extras.attempt("search-running poll") { try await read(policy: .mustRevalidate) { $0.commands() } }) ?? []
-        return commands.contains { $0.isSearch(for: entityId) }
+        (await fetchCommands() ?? []).contains { $0.isSearch(for: entityId) }
     }
 
     // MARK: - Shared writes

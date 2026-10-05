@@ -116,7 +116,8 @@ extension QueueViewModel {
             leavingIDs.subtract(gone)
             slidingIDs.subtract(gone)
         }
-        notifyNewItems(source: source, items: committed, errored: result.error != nil)
+        let toasted = result.error == nil ? resolveSearchWatches(source: source, items: committed) : []
+        notifyNewItems(source: source, items: committed, errored: result.error != nil, toasted: toasted)
         queues = newQueues
         errors = newErrors
 
@@ -145,7 +146,6 @@ extension QueueViewModel {
         )
         needs.append(contentsOf: serviceIssueRows())
         needsYou = needs
-        lastError = nil
     }
 
     /// `only` limits updates to the refreshed source; resetting the others would stop failures accumulating.

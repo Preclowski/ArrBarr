@@ -49,7 +49,11 @@ extension DetailView {
     func startAutomaticSearch() {
         guard !searchRunning else { return }
         SearchFeedback.run($searchFeedback) {
-            try await runAutomaticSearch()
+            let commandId = try await runAutomaticSearch()
+            if let entityId = item.entityId {
+                viewModel.watchSearch(SearchSubject(source: item.source, entityId: entityId), title: navTitleString,
+                                      commandId: commandId, manualSearch: manualTarget == nil ? nil : item)
+            }
             // Show it running now, or the CTA idles until the next poll and invites a second tap.
             searchRunning = true
             searchWatchToken += 1
@@ -79,13 +83,13 @@ extension DetailView {
     private static let searchWatchWindow: TimeInterval = 180
 
     /// A series searches every monitored episode; manual search stays per season.
-    private func runAutomaticSearch() async throws {
-        guard let entityId = item.entityId else { return }
+    private func runAutomaticSearch() async throws -> Int? {
+        guard let entityId = item.entityId else { return nil }
         switch item.source {
-        case .radarr: try await configStore.radarrClient.searchMovie(movieId: entityId)
-        case .whisparr: try await configStore.whisparrClient.searchMovie(movieId: entityId)
-        case .lidarr: try await configStore.lidarrClient.searchAlbum(albumId: entityId)
-        case .sonarr: try await configStore.sonarrClient.searchSeries(seriesId: entityId)
+        case .radarr: return try await configStore.radarrClient.searchMovie(movieId: entityId)
+        case .whisparr: return try await configStore.whisparrClient.searchMovie(movieId: entityId)
+        case .lidarr: return try await configStore.lidarrClient.searchAlbum(albumId: entityId)
+        case .sonarr: return try await configStore.sonarrClient.searchSeries(seriesId: entityId)
         }
     }
 }

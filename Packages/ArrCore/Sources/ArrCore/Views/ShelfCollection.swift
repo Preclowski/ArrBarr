@@ -3,7 +3,7 @@ import MediaKit
 
 /// What the Roulette spins: the arr's library, or a TMDB list.
 enum ShelfCollection: String, CaseIterable, Identifiable {
-    case library, popular, inCinemas
+    case library, popular, trending, topRated, inCinemas
 
     var id: Self { self }
 
@@ -11,6 +11,8 @@ enum ShelfCollection: String, CaseIterable, Identifiable {
         switch self {
         case .library: "shelf.collection.library"
         case .popular: "shelf.collection.popular"
+        case .trending: "shelf.collection.trending"
+        case .topRated: "shelf.collection.topRated"
         case .inCinemas: "shelf.collection.inCinemas"
         }
     }
@@ -19,6 +21,8 @@ enum ShelfCollection: String, CaseIterable, Identifiable {
         switch self {
         case .library: "books.vertical"
         case .popular: "flame"
+        case .trending: "chart.line.uptrend.xyaxis"
+        case .topRated: "trophy"
         case .inCinemas: "popcorn"
         }
     }
@@ -28,7 +32,8 @@ enum ShelfCollection: String, CaseIterable, Identifiable {
     /// Cinemas are movies only; TMDB lists need a TMDB key.
     static func available(for source: QueueItem.Source, tmdbConfigured: Bool) -> [ShelfCollection] {
         guard tmdbConfigured else { return [.library] }
-        return source == .sonarr ? [.library, .popular] : [.library, .popular, .inCinemas]
+        let lists: [ShelfCollection] = [.library, .popular, .trending, .topRated]
+        return source == .sonarr ? lists : lists + [.inCinemas]
     }
 }
 
@@ -73,6 +78,9 @@ final class ShelfRemoteLists {
     }
 
     private(set) var items: [Key: [ShelfRemoteItem]] = [:]
+    /// Trending past a hundred is noise; the ranked lists stay meaningful for longer.
+    private static let pages = 10
+    private static let trendingPages = 5
     private(set) var failed: Set<Key> = []
 
     func load(_ key: Key, configStore: ConfigStore) async {
@@ -81,23 +89,30 @@ final class ShelfRemoteLists {
         let client = configStore.tmdbClient
         do {
             switch (key.collection, key.source) {
-            case (.popular, .sonarr):
-                let shows = try await client.popularSeries()
+            case (.library, _):
+                return
+            case (_, .sonarr):
+                let shows = switch key.collection {
+                case .trending: try await client.trendingSeries(pages: Self.trendingPages)
+                case .topRated: try await client.topRatedSeries(pages: Self.pages)
+                default: try await client.popularSeries(pages: Self.pages)
+                }
                 let owned = await ArrLibraryMaps.sonarrByTMDBId(config: configStore.sonarr)
                 items[key] = zip(shows, TMDBSearchMapping.series(shows, libraryMap: owned)).map {
                     ShelfRemoteItem(result: $1, tmdbId: $0.id, releaseDate: $0.firstAirDate)
                 }
-            case (.popular, _), (.inCinemas, _):
+            default:
+                let movies = switch key.collection {
+                case .trending: try await client.trendingMovies(pages: Self.trendingPages)
+                case .topRated: try await client.topRatedMovies(pages: Self.pages)
                 // The user's country, not the app language: "in cinemas" is a place.
-                let movies = key.collection == .popular
-                    ? try await client.popularMovies()
-                    : try await client.moviesInCinemas(region: Locale.current.region?.identifier)
+                case .inCinemas: try await client.moviesInCinemas(region: Locale.current.region?.identifier)
+                default: try await client.popularMovies(pages: Self.pages)
+                }
                 let owned = await ArrLibraryMaps.radarrByTMDBId(config: configStore.radarr)
                 items[key] = zip(movies, TMDBSearchMapping.movies(movies, libraryMap: owned)).map {
                     ShelfRemoteItem(result: $1, tmdbId: $0.id, releaseDate: $0.releaseDate)
                 }
-            case (.library, _):
-                return
             }
         } catch {
             failed.insert(key)

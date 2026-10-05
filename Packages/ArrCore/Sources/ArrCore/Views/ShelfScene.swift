@@ -153,9 +153,12 @@ struct ShelfScene: View {
     private func tunnelPlacement(_ i: Int, ring: CGFloat) -> Placement? {
         let z = Double(i) - position
         guard z > -1.1 else { return nil }
-        let scale = z >= 0 ? 1 / (1 + z * 0.32) : 1 + (-z) * 2.4
+        // A passed poster eases off the slot. The scroll settles in half-point steps up to 100 ms apart, and a
+        // steep start turned each of them into a visible hop; past the first hundredths it clears the centre fast.
+        let gone = z < 0 ? Self.smoothstep(min(-z, 1) / 0.5) : 0
+        let scale = z >= 0 ? 1 / (1 + z * 0.32) : 1 + 2.4 * gone
         let theta = Double(i) * 2.39996
-        let spread = z >= 0 ? min(z, 1) : 1 + (-z) * 3
+        let spread = z >= 0 ? min(z, 1) : -z + 3 * gone
         var p = Placement()
         p.scale = CGFloat(scale)
         p.tilt = sin(theta) * 9 * min(abs(z), 1)
@@ -222,9 +225,15 @@ extension ShelfScene {
         let limb = Self.smoothstep((z2 + 0.15) / 0.55)
         let reach = Self.smoothstep((18 - abs(Double(i) - position)) / 6)
         p.opacity = limb * reach
+        guard p.opacity > 0.01 else { return nil }
         p.dim = (1 - max(z2, 0)) * 0.5 * (1 - lift)
         p.depth = z2 + lift * 2
         return p
+    }
+
+    private struct GlobeSlot: Identifiable {
+        let id: Int
+        let placement: Placement
     }
 
     private static func smoothstep(_ x: Double) -> Double {
@@ -246,17 +255,18 @@ extension ShelfScene {
                 .fill(.white)
                 .frame(width: r * 2.2, height: r * 2.2)
                 .colorEffect(Self.shaders.shelfEarth(.float(Float(r)), .float(Float(here.lon)), .float(Float(here.lat))))
-            ForEach(window(20), id: \.self) { i in
-                if let p = globePlacement(i, radius: r, poster: w) {
-                    poster(i, width: w)
-                        .overlay(Color.black.opacity(p.dim))
-                        .rotation3DEffect(.degrees(p.yaw), axis: (x: 0, y: 1, z: 0), perspective: 0.4)
-                        .rotation3DEffect(.degrees(p.pitch), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
-                        .scaleEffect(p.scale)
-                        .offset(x: p.x, y: p.y)
-                        .opacity(p.opacity)
-                        .zIndex(p.depth)
-                }
+            // Only the posters that show get a view: each hidden one still cost a SwiftUI subtree per frame.
+            let slots = window(18).compactMap { i in globePlacement(i, radius: r, poster: w).map { GlobeSlot(id: i, placement: $0) } }
+            ForEach(slots) { slot in
+                let p = slot.placement
+                poster(slot.id, width: w)
+                    .overlay(Color.black.opacity(p.dim))
+                    .rotation3DEffect(.degrees(p.yaw), axis: (x: 0, y: 1, z: 0), perspective: 0.4)
+                    .rotation3DEffect(.degrees(p.pitch), axis: (x: 1, y: 0, z: 0), perspective: 0.4)
+                    .scaleEffect(p.scale)
+                    .offset(x: p.x, y: p.y)
+                    .opacity(p.opacity)
+                    .zIndex(p.depth)
             }
         }
         .position(center)

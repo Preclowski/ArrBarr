@@ -19,7 +19,7 @@ private final class FakeAggregator: QueueDataProviding {
     var historyResult = HistoryResult(items: [], error: nil)
 
     /// When set, every `perform`/`deleteAll` throws this — used to assert the
-    /// view-model surfaces `lastError` and skips the optimistic mutation.
+    /// view-model toasts the failure and skips the optimistic mutation.
     var actionError: Error?
 
     private(set) var fetchCallCount = 0
@@ -322,7 +322,7 @@ struct QueueViewModelActionTests {
         #expect(fake.performedActions.map(\.0) == [.pause, .continueDownload, .delete])
     }
 
-    @Test("A failed action surfaces lastError and leaves the row untouched")
+    @Test("A failed action toasts its reason and leaves the row untouched")
     func failedActionSurfacesError() async {
         let (sut, fake, _) = makeSUT()
         let item = makeItem("a", source: .sonarr, status: .downloading)
@@ -331,8 +331,47 @@ struct QueueViewModelActionTests {
         fake.actionError = TestError()
 
         await sut.pause(item)
-        #expect(sut.lastError == "action failed")
+        #expect(sut.toasts.current?.detail == "action failed")
         #expect(sut.items(for: .sonarr).first?.status == .downloading)
+    }
+}
+
+// MARK: - Search outcome
+
+@Suite("QueueViewModel search watch")
+@MainActor
+struct QueueViewModelSearchWatchTests {
+    @Test("A watched search toasts the first new row for its title, not one already queued")
+    func newRowResolvesWatch() async {
+        let (sut, fake, _) = makeSUT()
+        let queued = releaseRow("radarr-1", downloadId: "a", status: .downloading)
+        fake.fetchResult = AggregateResult(radarr: [queued], sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+
+        sut.watchSearch(SearchSubject(source: .radarr, entityId: 7), title: "Sintel", commandId: 42)
+        await sut.refresh()
+        #expect(sut.toasts.current == nil)
+
+        fake.fetchResult = AggregateResult(
+            radarr: [queued, releaseRow("radarr-2", downloadId: "b", status: .queued)],
+            sonarr: [], lidarr: [], whisparr: [])
+        await sut.refresh()
+        #expect(sut.toasts.current?.detail == "Sintel")
+        #expect(sut.searchWatches.isEmpty)
+    }
+
+    @Test("A row for another season leaves a season watch waiting")
+    func otherSeasonDoesNotResolve() {
+        let subject = SearchSubject(source: .sonarr, entityId: 3, season: 2)
+        let row = QueueItem(
+            id: "sonarr-1", source: .sonarr, arrQueueId: 1,
+            downloadId: "x", downloadProtocol: .torrent, downloadClient: nil,
+            title: "Caminandes", subtitle: nil, seasonNumber: 1, episodeNumber: 1,
+            status: .queued, progress: 0, sizeTotal: 0, sizeLeft: 0, timeLeft: nil,
+            customFormats: [], customFormatScore: 0, quality: nil, isUpgrade: false,
+            contentSlug: nil, entityId: 3)
+        #expect(!subject.matches(row))
+        #expect(SearchSubject(source: .sonarr, entityId: 3).matches(row))
     }
 }
 
@@ -381,7 +420,7 @@ struct QueueViewModelActionHealthTests {
 
         await sut.resume(torrentItem("a"))
 
-        #expect(sut.lastError != nil)
+        #expect(sut.toasts.current != nil)
         #expect(!ConnectionHealth.shared.state(for: .arr(.qbittorrent)).isDown)
     }
 

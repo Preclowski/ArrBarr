@@ -314,7 +314,8 @@ struct ReleaseListView: View {
             } catch {
                 await MainActor.run {
                     grabbing.remove(release.guid)
-                    loadError = error.localizedDescription
+                    // A toast, not `loadError`: that swaps the whole list for the error.
+                    ToastCenter.shared.show(.failure("toast.grabFailed.title", error: error) { grab(release) })
                 }
             }
         }

@@ -28,6 +28,7 @@ nonisolated public struct UpcomingItem: Identifiable, Equatable, Sendable, Codab
     public var episodeFileId: Int? = nil
     public var genres: [String] = []
     public var certification: String? = nil
+    /// Movies only: a series' status ("Continuing") says nothing about the episode.
     public var releaseStatus: String? = nil
     public var ratingRt: Double? = nil
     public var ratingMetacritic: Double? = nil

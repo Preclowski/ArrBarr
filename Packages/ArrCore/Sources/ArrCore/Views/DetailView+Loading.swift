@@ -16,12 +16,8 @@ extension DetailView {
 
     func load(showSpinner: Bool = true) async {
         if showSpinner { loading = true }
-        loadError = nil
         defer { if showSpinner { withAnimation(Self.landing) { loading = false } } }
-        guard let entityId = item.entityId else {
-            loadError = "No entity id"
-            return
-        }
+        guard let entityId = item.entityId else { return }
         do {
             switch item.source {
             case .radarr:
@@ -99,7 +95,7 @@ extension DetailView {
                 qualityProfileName = await Self.profileName(
                     id: radarrDetail?.qualityProfileId, config: configStore.whisparr, source: .whisparr)            }
         } catch {
-            loadError = String(format: String(localized: "Couldn't load details: %@", bundle: .module), error.localizedDescription)
+            viewModel.reportFailure("toast.loadFailed.title", error, source: item.source) { Task { await load() } }
         }
     }
 }
