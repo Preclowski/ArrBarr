@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// The most common genres as chips, counted over the titles the other filters leave; a genre that would empty the
-/// set is greyed out. Shared by the Roulette's filter panel and the Library's filter popover.
+/// The most common genres as chips, any number picked (a title in any of them stays), counted over the titles the
+/// other filters leave; a genre that would add nothing is greyed out. Shared by the Roulette's filter panel and the Library's filter popover.
 struct GenreChipCloud: View {
-    @Binding var genre: String?
+    @Binding var genres: Set<String>
     /// The whole set: the chip order comes from it, so no chip moves while narrowing.
     let all: [LibraryEntry]
     /// Every filter but the genre.
@@ -13,12 +13,13 @@ struct GenreChipCloud: View {
 
     var body: some View {
         TooltipFlowLayout(spacing: compact ? 4 : 5) {
-            chip(Text("shelf.filter.anyGenre", bundle: .module), count: nil, on: genre == nil) { genre = nil }
-            ForEach(genres, id: \.name) { g in
-                chip(Text(verbatim: GenreName.localized(g.name, locale: locale)), count: g.count, on: genre == g.name) {
-                    genre = g.name
+            chip(Text("shelf.filter.anyGenre", bundle: .module), count: nil, on: genres.isEmpty) { genres = [] }
+            ForEach(ranked, id: \.name) { g in
+                let on = genres.contains(g.name)
+                chip(Text(verbatim: GenreName.localized(g.name, locale: locale)), count: g.count, on: on) {
+                    if on { genres.remove(g.name) } else { genres.insert(g.name) }
                 }
-                .disabled(g.count == 0 && genre != g.name)
+                .disabled(g.count == 0 && !on)
             }
         }
     }
@@ -42,7 +43,7 @@ struct GenreChipCloud: View {
     }
 
     /// Most common first; a long tail of one-off genres would bury the useful ones.
-    private var genres: [(name: String, count: Int)] {
+    private var ranked: [(name: String, count: Int)] {
         var order: [String: Int] = [:]
         var counts: [String: Int] = [:]
         for entry in all {

@@ -18,6 +18,8 @@ struct SearchHost<Content: View>: View {
 
     @Environment(ConfigStore.self) private var configStore
     @State private var personRef: PersonRef?
+    /// A tab's own full-popover surface (the Library's filters) has the field step aside.
+    @State private var searchHidden = false
     @FocusState private var fallbackFocus: Bool
 
     var body: some View {
@@ -38,7 +40,8 @@ struct SearchHost<Content: View>: View {
                 content()
             }
         }
-        .modifier(SearchField(searchVM: searchVM, enabled: enabled, isPresented: isPresented))
+        .modifier(SearchField(searchVM: searchVM, enabled: enabled && !searchHidden, isPresented: isPresented))
+        .onPreferenceChange(TabTakeoverKey.self) { searchHidden = $0 }
         .personDestination($personRef)
         #else
         // ZStack, not `safeAreaInset`: the inset re-mounts the TextField on every
@@ -51,10 +54,15 @@ struct SearchHost<Content: View>: View {
             } else {
                 content()
             }
-            SearchCapsule(searchVM: searchVM, focused: focused ?? $fallbackFocus)
-                .padding(.horizontal, 10)
-                .padding(.bottom, 10)
+            if !searchHidden {
+                SearchCapsule(searchVM: searchVM, focused: focused ?? $fallbackFocus)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 10)
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeOut(duration: 0.2), value: searchHidden)
+        .onPreferenceChange(TabTakeoverKey.self) { searchHidden = $0 }
         .personDestination($personRef)
         #endif
     }
@@ -68,4 +76,10 @@ struct SearchHost<Content: View>: View {
             onSelectPerson: { personRef = $0 }
         )
     }
+}
+
+/// Set by a tab whose current surface takes the whole popover: no tab bar, no search.
+struct TabTakeoverKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }

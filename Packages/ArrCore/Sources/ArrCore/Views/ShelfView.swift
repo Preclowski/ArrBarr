@@ -395,16 +395,19 @@ struct ShelfView: View {
                 .allowsHitTesting(false)
         }
         .background {
-            // Deeper while a panel is open, so its glass reads over bright covers.
-            LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: UnitPoint(x: 0.5, y: 0.3), endPoint: .bottom)
-                .opacity(openControl == nil ? 0 : 1)
-                .allowsHitTesting(false)
+            // Deeper while a panel is open, so its glass reads over bright covers. Absent otherwise: one more
+            // full-screen layer over the shader scene on every frame.
+            if openControl != nil {
+                LinearGradient(colors: [.clear, .black.opacity(0.6)], startPoint: UnitPoint(x: 0.5, y: 0.3), endPoint: .bottom)
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
         }
         .animation(.easeOut(duration: 0.15), value: centerIndex)
         .animation(.easeOut(duration: 0.25), value: openControl)
     }
 
-    /// Collection, mode and filter, each a glass button that grows into its panel. The row keeps the buttons'
+    /// Collection, filter and mode, each a glass button that grows into its panel. The row keeps the buttons'
     /// height; a panel floats up over the info block.
     private func controls(_ entries: [LibraryEntry]) -> some View {
         Color.clear
@@ -423,15 +426,7 @@ struct ShelfView: View {
                 }
             }
             .overlay(alignment: .bottom) {
-                ShelfExpandingControl(kind: .mode, open: $openControl, alignment: .bottom,
-                                      label: Text(mode.title, bundle: .module)) {
-                    Image(systemName: mode.symbol)
-                } panel: {
-                    ShelfModePanel(mode: $mode, entries: entries, posters: posters, center: motion.center)
-                }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                ShelfExpandingControl(kind: .filter, open: $openControl, alignment: .bottomTrailing,
+                ShelfExpandingControl(kind: .filter, open: $openControl, alignment: .bottom,
                                       label: Text("common.filter.button", bundle: .module)) {
                     Image(systemName: filter.isNarrowed ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease")
                 } panel: {
@@ -440,6 +435,14 @@ struct ShelfView: View {
                                      sortModes: Self.sortModes(for: collection, source: source),
                                      watchStateKnown: !collection.isRemote && configStore.mediaServer.isConfigured,
                                      showsLibraryToggle: collection.isRemote)
+                }
+            }
+            .overlay(alignment: .bottomTrailing) {
+                ShelfExpandingControl(kind: .mode, open: $openControl, alignment: .bottomTrailing,
+                                      label: Text(mode.title, bundle: .module)) {
+                    Image(systemName: mode.symbol)
+                } panel: {
+                    ShelfModePanel(mode: $mode, entries: entries, posters: posters, center: motion.center)
                 }
                 .padding(.trailing, 12)
             }

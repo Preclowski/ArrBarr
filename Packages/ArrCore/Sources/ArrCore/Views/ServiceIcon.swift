@@ -87,3 +87,19 @@ public struct ServiceIcon: View {
     }
 }
 
+
+nonisolated extension QueueItem.Source {
+    /// A menu row drops custom views and draws an asset at its own size, so the mark goes in as a sized template image.
+    var menuIcon: Image {
+        #if os(macOS)
+        guard let base = Bundle.module.image(forResource: brandIconName), let mark = base.copy() as? NSImage else {
+            return Image(systemName: symbol)
+        }
+        mark.size = NSSize(width: 14, height: 14)
+        mark.isTemplate = true
+        return Image(nsImage: mark)
+        #else
+        return Image(brandIconName, bundle: .module)
+        #endif
+    }
+}

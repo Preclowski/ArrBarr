@@ -7,13 +7,14 @@ struct ShelfFilter: Equatable {
     var descending = true
     /// Non-nil means shuffled; a new seed reshuffles.
     var shuffleSeed: Int? = .random(in: 1...Int(Int32.max))
-    var genre: String?
+    /// Any of these; empty is every genre.
+    var genres: Set<String> = []
     var decade: Int?
     var unwatchedOnly = false
     /// TMDB lists only: titles the arr already has.
     var inLibraryOnly = false
 
-    var isNarrowed: Bool { genre != nil || decade != nil || unwatchedOnly || inLibraryOnly }
+    var isNarrowed: Bool { !genres.isEmpty || decade != nil || unwatchedOnly || inLibraryOnly }
     var sortKey: String { shuffleSeed.map { "shelf|random|\($0)" } ?? "shelf|\(sort.cacheKey)|\(descending)" }
 
     func areInIncreasingOrder(_ a: LibraryEntry, _ b: LibraryEntry) -> Bool {
@@ -29,7 +30,7 @@ struct ShelfFilter: Equatable {
         for byte in id.utf8 { h = (h ^ UInt64(byte)) &* 1099511628211 }
         return h
     }
-    var key: String { "\(sortKey)|\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)|\(inLibraryOnly)" }
+    var key: String { "\(sortKey)|\(genres.sorted().joined(separator: ","))|\(decade.map(String.init) ?? "")|\(unwatchedOnly)|\(inLibraryOnly)" }
 
     enum Facet { case genre, decade }
 
@@ -37,7 +38,7 @@ struct ShelfFilter: Equatable {
 
     /// Leaving one facet out gives that facet's own counts: what picking another value of it would show.
     func matches(_ entry: LibraryEntry, ignoring facet: Facet?) -> Bool {
-        if facet != .genre, let genre, !entry.genres.contains(genre) { return false }
+        if facet != .genre, !genres.isEmpty, genres.isDisjoint(with: entry.genres) { return false }
         if facet != .decade, let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
         if unwatchedOnly, entry.watched { return false }
         if inLibraryOnly, entry.arrId == 0 { return false }
@@ -45,7 +46,7 @@ struct ShelfFilter: Equatable {
     }
 
     mutating func clearNarrowing() {
-        genre = nil
+        genres = []
         decade = nil
         unwatchedOnly = false
         inLibraryOnly = false
@@ -89,7 +90,7 @@ struct ShelfFilterPanel: View {
                 }
             }
             ShelfPanelSection(title: "shelf.filter.genre") {
-                GenreChipCloud(genre: $filter.genre, all: library) { filter.matches($0, ignoring: .genre) }
+                GenreChipCloud(genres: $filter.genres, all: library) { filter.matches($0, ignoring: .genre) }
             }
             if !DecadeHistogram.decades(in: library).isEmpty {
                 ShelfPanelSection(title: "shelf.filter.years") {

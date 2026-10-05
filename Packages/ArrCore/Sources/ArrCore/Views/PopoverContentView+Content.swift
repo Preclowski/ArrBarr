@@ -52,12 +52,13 @@ extension PopoverContentView {
                     // In the safe area, not a VStack row: the list scrolls under the glass and the system draws
                     // its soft scroll-edge blur (with `.scrollEdgeEffectStyle(.soft)` on each tab).
                     .safeAreaBar(edge: .top, spacing: 0) {
-                        if !(searchViewModel.isActive && selectedTab.hostsSearch) {
+                        if !(searchViewModel.isActive && selectedTab.hostsSearch), !tabTakeover {
                             // Shelf's stage runs under the bar and is always dark.
                             tabBar
                                 .environment(\.colorScheme, selectedTab == .shelf ? .dark : colorScheme)
                         }
                     }
+                    .onPreferenceChange(TabTakeoverKey.self) { tabTakeover = $0 }
                 } else {
                     PopoverEmptyState(onOpenSettings: onOpenSettings) { moreMenu }
                 }

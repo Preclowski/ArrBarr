@@ -47,18 +47,19 @@ enum StatusFilter: CaseIterable {
 
 /// The Library's narrowing beyond the status: genre, decade and watch state.
 struct LibraryNarrowing: Equatable {
-    var genre: String?
+    /// Any of these; empty is every genre.
+    var genres: Set<String> = []
     var decade: Int?
     var unwatchedOnly = false
 
     enum Facet { case genre, decade }
 
-    var isActive: Bool { genre != nil || decade != nil || unwatchedOnly }
-    var cacheKey: String { "\(genre ?? "")|\(decade.map(String.init) ?? "")|\(unwatchedOnly)" }
+    var isActive: Bool { !genres.isEmpty || decade != nil || unwatchedOnly }
+    var cacheKey: String { "\(genres.sorted().joined(separator: ","))|\(decade.map(String.init) ?? "")|\(unwatchedOnly)" }
 
     /// Leaving one facet out gives that facet's own counts.
     func matches(_ entry: LibraryEntry, ignoring facet: Facet? = nil) -> Bool {
-        if facet != .genre, let genre, !entry.genres.contains(genre) { return false }
+        if facet != .genre, !genres.isEmpty, genres.isDisjoint(with: entry.genres) { return false }
         if facet != .decade, let decade, (entry.year ?? 0) / 10 * 10 != decade { return false }
         if unwatchedOnly, entry.watched { return false }
         return true
@@ -140,6 +141,7 @@ struct LibraryTabContent: View {
     @State private var sourceResolved = false
     @State private var statusFilter: StatusFilter = .all
     @State private var narrowing = LibraryNarrowing()
+    @State private var showsFilters = false
     @State private var sort: SortMode = .title
     /// Not reset on axis change: only picking the selected axis again flips it.
     @State private var sortDescending = false
@@ -335,20 +337,84 @@ struct LibraryTabContent: View {
     private var surface: some View {
         let entries = visibleEntries
         let phase = phase(entries)
+        // The grid stays underneath the filters, so it keeps its scroll position.
         return gridOrState(entries, phase: phase)
+            .opacity(showsFilters ? 0 : 1)
+            .offset(y: showsFilters ? 10 : 0)
+            .allowsHitTesting(!showsFilters)
+            .overlay {
+                if showsFilters { filters(count: entries.count) }
+            }
             .safeAreaBar(edge: .top, spacing: 0) {
-                LibraryFilterStrip {
-                    LibraryFilterBar(sources: availableSources,
-                                     counts: filterCounts,
-                                     entries: allEntries,
-                                     watchStateKnown: configStore.mediaServer.isConfigured,
-                                     source: $source,
-                                     statusFilter: $statusFilter,
-                                     narrowing: $narrowing,
-                                     sort: $sort,
-                                     sortDescending: $sortDescending,
-                                     viewModeRaw: $viewModeRaw)
+                // The filters bring their own header.
+                if !showsFilters {
+                    LibraryFilterStrip {
+                        LibraryFilterBar(sources: availableSources,
+                                         counts: filterCounts,
+                                         source: $source,
+                                         statusFilter: $statusFilter,
+                                         narrowing: $narrowing,
+                                         sort: $sort,
+                                         sortDescending: $sortDescending,
+                                         viewModeRaw: $viewModeRaw,
+                                         showsFilters: $showsFilters)
+                    }
                 }
             }
+    }
+
+    /// Laid out like the detail view: a fixed header, only the filters scroll, the CTA pinned under them.
+    private func filters(count: Int) -> some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 6) {
+                FloatingBackButton { withAnimation(.smooth(duration: 0.3)) { showsFilters = false } }
+                    .keyboardShortcut(.cancelAction)
+                Text("common.filter.button", bundle: .module)
+                    .scaledFont(size: 15, weight: .semibold)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 10)
+            .padding(.bottom, 4)
+            ScrollView {
+                LibraryFilterPanel(source: source, counts: filterCounts, entries: allEntries,
+                                   watchStateKnown: configStore.mediaServer.isConfigured,
+                                   statusFilter: $statusFilter, narrowing: $narrowing,
+                                   sort: $sort, sortDescending: $sortDescending)
+                    .padding(.vertical, 12)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .frame(maxHeight: .infinity)
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                // The detail view's CTA: full width, glass, the status colour on the label.
+                Button {
+                    withAnimation(.smooth(duration: 0.3)) { showsFilters = false }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("toast.show.button", bundle: .module)
+                        Text(verbatim: "(\(count.formatted()))")
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                    }
+                    .scaledFont(size: 12, weight: .semibold)
+                    .foregroundStyle(.blue)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                }
+                .modifier(GlassButtonStyle())
+                .tint(.blue)
+                .disabled(count == 0)
+                .animation(.easeOut(duration: 0.2), value: count)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .preference(key: TabTakeoverKey.self, value: true)
+        #if os(iOS)
+        .toolbar(.hidden, for: .tabBar)
+        #endif
+        .transition(.opacity.combined(with: .offset(y: -8)))
     }
 }

@@ -29,16 +29,14 @@ private enum LibraryChrome {
 struct LibraryFilterBar: View {
     let sources: [QueueItem.Source]
     let counts: [StatusFilter: Int]
-    /// The whole library of the source, for the popover's genres and decades.
-    let entries: [LibraryEntry]
-    let watchStateKnown: Bool
     @Binding var source: QueueItem.Source
     @Binding var statusFilter: StatusFilter
     @Binding var narrowing: LibraryNarrowing
     @Binding var sort: SortMode
     @Binding var sortDescending: Bool
     @Binding var viewModeRaw: String
-    @State private var showsFilters = false
+    /// The filters stand in for the grid.
+    @Binding var showsFilters: Bool
     @Environment(\.locale) private var locale
 
     private var viewMode: ViewMode { ViewMode(rawValue: viewModeRaw) ?? .grid }
@@ -72,11 +70,13 @@ struct LibraryFilterBar: View {
 
     private var sourceMenu: some View {
         Menu {
-            // A `Picker`, not hand-built rows: brand marks don't draw inside menu rows,
-            // and AppKit then owns the selection checkmark.
+            // A `Picker`, not hand-built rows: AppKit owns the selection checkmark. Rows drop custom views,
+            // so the brand marks go in as plain images.
             Picker(selection: $source) {
                 ForEach(sources, id: \.self) { s in
-                    Text(verbatim: s.displayName).tag(s)
+                    Label { Text(verbatim: s.displayName) } icon: { s.menuIcon }
+                        .labelStyle(.titleAndIcon)
+                        .tag(s)
                 }
             } label: {
                 EmptyView()
@@ -127,13 +127,15 @@ struct LibraryFilterBar: View {
 
     // MARK: - Narrowing
 
-    private enum TokenKind: Hashable { case status, genre, decade, unwatched }
+    private enum TokenKind: Hashable { case status, genre(String), decade, unwatched }
     private struct Token { let kind: TokenKind; let label: Text }
 
     private var tokens: [Token] {
         var out: [Token] = []
         if statusFilter != .all { out.append(Token(kind: .status, label: Text(LocalizedStringKey(statusFilter.labelKey), bundle: .module))) }
-        if let genre = narrowing.genre { out.append(Token(kind: .genre, label: Text(verbatim: GenreName.localized(genre, locale: locale)))) }
+        for genre in narrowing.genres.sorted() {
+            out.append(Token(kind: .genre(genre), label: Text(verbatim: GenreName.localized(genre, locale: locale))))
+        }
         if let decade = narrowing.decade { out.append(Token(kind: .decade, label: Text(verbatim: "\(decade)–\(decade + 9)"))) }
         if narrowing.unwatchedOnly { out.append(Token(kind: .unwatched, label: Text("shelf.filter.unwatched", bundle: .module))) }
         return out
@@ -144,7 +146,7 @@ struct LibraryFilterBar: View {
             withAnimation(.easeOut(duration: 0.15)) {
                 switch token.kind {
                 case .status: statusFilter = .all
-                case .genre: narrowing.genre = nil
+                case .genre(let genre): narrowing.genres.remove(genre)
                 case .decade: narrowing.decade = nil
                 case .unwatched: narrowing.unwatchedOnly = false
                 }
@@ -171,7 +173,7 @@ struct LibraryFilterBar: View {
     }
 
     private var filterButton: some View {
-        Button { showsFilters.toggle() } label: {
+        Button { withAnimation(.smooth(duration: 0.3)) { showsFilters.toggle() } } label: {
             Image(systemName: "line.3.horizontal.decrease")
                 .scaledFont(size: LibraryChrome.glyph, weight: .medium)
                 .foregroundStyle(showsFilters || isNarrowed ? .primary : .secondary)
@@ -189,18 +191,11 @@ struct LibraryFilterBar: View {
         .buttonStyle(.plain)
         .help(Text("common.filter.button", bundle: .module))
         .accessibilityLabel(Text("common.filter.button", bundle: .module))
-        .popover(isPresented: $showsFilters, arrowEdge: .bottom) {
-            LibraryFilterPanel(source: source, counts: counts, entries: entries, watchStateKnown: watchStateKnown,
-                               statusFilter: $statusFilter, narrowing: $narrowing,
-                               sort: $sort, sortDescending: $sortDescending)
-                #if os(iOS)
-                .presentationDetents([.medium, .large])
-                #endif
-        }
     }
 }
 
-/// Status, order, genre, decade and watch state in one place, laid out like the Roulette's filter panel.
+/// Status, order, genre, decade and watch state in one place, laid out like the Roulette's filter panel; it takes the
+/// grid's place while open.
 struct LibraryFilterPanel: View {
     let source: QueueItem.Source
     let counts: [StatusFilter: Int]
@@ -216,9 +211,9 @@ struct LibraryFilterPanel: View {
     private var isNarrowed: Bool { statusFilter != .all || narrowing.isActive }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             ShelfPanelSection(title: "Status") {
-                ShelfSegments(items: StatusFilter.allCases, selected: statusFilter, height: 22,
+                ShelfSegments(items: StatusFilter.allCases, selected: statusFilter, height: 24,
                               action: { statusFilter = $0 }) { filter, on in
                     HStack(spacing: 4) {
                         Text(LocalizedStringKey(filter.labelKey), bundle: .module)
@@ -228,7 +223,7 @@ struct LibraryFilterPanel: View {
                             .monospacedDigit()
                             .foregroundStyle(.tertiary)
                     }
-                    .scaledFont(size: 11, weight: on ? .semibold : .medium)
+                    .scaledFont(size: 11.5, weight: on ? .semibold : .medium)
                     .padding(.horizontal, 4)
                 }
             }
@@ -238,7 +233,7 @@ struct LibraryFilterPanel: View {
                     if hoveredSort == nil { Image(systemName: sortDescending ? "arrow.down" : "arrow.up").scaledFont(size: 9, weight: .bold) }
                 }
             } content: {
-                ShelfSegments(items: SortMode.available(for: source), selected: sort, height: 24, action: { mode in
+                ShelfSegments(items: SortMode.available(for: source), selected: sort, height: 26, action: { mode in
                     if sort == mode { sortDescending.toggle() } else { sort = mode }
                 }, onHover: { hoveredSort = $0 }) { mode, on in
                     HStack(spacing: 2) {
@@ -249,20 +244,19 @@ struct LibraryFilterPanel: View {
                 }
             }
             ShelfPanelSection(title: "shelf.filter.genre") {
-                GenreChipCloud(genre: $narrowing.genre, all: entries, narrowed: {
+                GenreChipCloud(genres: $narrowing.genres, all: entries) {
                     statusFilter.includes($0) && narrowing.matches($0, ignoring: .genre)
-                }, compact: true)
+                }
             }
             if !DecadeHistogram.decades(in: entries).isEmpty {
                 ShelfPanelSection(title: "shelf.filter.years") {
                     DecadeHint(decade: hoveredDecade ?? narrowing.decade)
                 } content: {
-                    DecadeHistogram(decade: $narrowing.decade, hovered: $hoveredDecade, all: entries, narrowed: {
+                    DecadeHistogram(decade: $narrowing.decade, hovered: $hoveredDecade, all: entries) {
                         statusFilter.includes($0) && narrowing.matches($0, ignoring: .decade)
-                    }, compact: true)
+                    }
                 }
             }
-            Divider()
             HStack {
                 if watchStateKnown {
                     Toggle(isOn: $narrowing.unwatchedOnly) { Text("shelf.filter.unwatched", bundle: .module) }
@@ -284,9 +278,9 @@ struct LibraryFilterPanel: View {
             .scaledFont(size: 11.5, weight: .medium)
             .padding(.horizontal, 2)
         }
-        .padding(12)
-        .frame(width: 324)
+        .padding(.horizontal, 14)
         .animation(.easeOut(duration: 0.15), value: narrowing)
         .animation(.easeOut(duration: 0.15), value: statusFilter)
     }
 }
+

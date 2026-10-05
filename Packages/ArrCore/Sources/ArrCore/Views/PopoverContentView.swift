@@ -35,6 +35,8 @@ public struct PopoverContentView: View {
     @State var chatHolder = ChatViewModelHolder()
     @State var searchResult: SearchResult?
     @State var detailItem: QueueItem?
+    /// A tab's own full-popover surface (the Library's filters) is up: the tab bar steps aside.
+    @State var tabTakeover = false
     /// Detail surfaces own their person destination; chat has none, so the root hosts it.
     @State var personRef: PersonRef?
     /// Owned here because ⌘F and the Add/search intents aim at it from outside any tab.
