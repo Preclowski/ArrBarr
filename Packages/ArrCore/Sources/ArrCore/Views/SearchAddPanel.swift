@@ -518,38 +518,21 @@ struct SearchAddPanel: View {
                         }
                         if searchOnAdd {
                             Image(systemName: "magnifyingglass")
-                                .scaledFont(size: 11, weight: .semibold)
                             Text("search.addAndSearch.button", bundle: .module)
-                                .scaledFont(size: 12, weight: .semibold)
                         } else {
-                            ServiceIcon(source: result.source, size: 11)
+                            ServiceIcon(source: result.source, size: GlassCTAButtonStyle.labelSize - 1)
                             Text(addLabel, bundle: .module)
-                                .scaledFont(size: 12, weight: .semibold)
                         }
                     }
-                    .frame(maxWidth: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
         }
-        // Only one prominent button, so the user reaches for it instead of reading.
-        .modifier(AddCTAStyle(prominent: searchOnAdd))
+        // Only one stained button, so the user reaches for it instead of reading.
+        .buttonStyle(GlassCTAButtonStyle(tint: searchOnAdd ? .accentColor : nil))
         .disabled(viewModel.isAdding || viewModel.isLoadingOptions)
     }
 
     // MARK: - Helpers
-
-    private struct AddCTAStyle: ViewModifier {
-        let prominent: Bool
-        func body(content: Content) -> some View {
-            if prominent {
-                content.modifier(GlassProminentButtonStyle())
-            } else {
-                content.modifier(GlassButtonStyle())
-            }
-        }
-    }
 
     private func formPicker<T: Hashable>(_ label: LocalizedStringKey, selection: Binding<T>,
                                          options: [(T, String)]) -> some View {

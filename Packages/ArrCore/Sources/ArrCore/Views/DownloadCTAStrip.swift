@@ -3,47 +3,38 @@ import SwiftUI
 /// Pause/resume with a small cancel beside it, under a detail whose title has one live download.
 struct DownloadCTAStrip: View {
     let isPaused: Bool
-    let progress: Double
+    /// Nil when a percentage isn't meaningful; the pause button then stays clear.
+    let progress: Double?
     let onToggle: () async -> Void
     /// Nil hides the cancel button.
     let onCancel: (() -> Void)?
 
-    private enum Metrics {
-        #if os(iOS)
-        static let vPadding: CGFloat = 13
-        static let glyph: CGFloat = 14
-        #else
-        static let vPadding: CGFloat = 7
-        static let glyph: CGFloat = 13
-        #endif
-    }
-
     var body: some View {
         HStack(spacing: 8) {
-            // Tint by the action, not the status; red stays Cancel's.
-            PauseResumeButton(isPaused: isPaused, progress: progress, tint: isPaused ? .blue : .orange, action: onToggle)
-                // The ring is the only place this completion shows, so VoiceOver gets it as the value.
-                .accessibilityValue(Text(max(0.0, min(1.0, progress)), format: .percent.precision(.fractionLength(0))))
+            PauseResumeButton(isPaused: isPaused, progress: progress, action: onToggle)
+                // The fill is visual only, so VoiceOver gets the completion as the value.
+                .accessibilityValue(progress.map { Text(max(0.0, min(1.0, $0)), format: .percent.precision(.fractionLength(0))) } ?? Text(verbatim: ""))
             if let onCancel {
                 // Small and icon-only so it can't be mistaken for the primary verb.
                 Button {
                     PanelActivation.bringForward()
                     onCancel()
                 } label: {
+                    // Red on the glyph, not the glass: one coloured background per strip (HIG).
                     Image(systemName: "xmark")
-                        .scaledFont(size: Metrics.glyph, weight: .bold)
+                        .fontWeight(.bold)
                         .foregroundStyle(.red)
-                        .frame(width: 26)
-                        // Must match `PauseResumeButton`'s padding, or the two buttons differ in height.
-                        .padding(.vertical, Metrics.vPadding)
+                        .frame(width: 18)
+                        .frame(maxHeight: .infinity)
                 }
-                .modifier(GlassButtonStyle())
-                .tint(.red)
+                .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
                 .help(Text("queue.cancelDownload.button", bundle: .module))
                 .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
                 // "Cancel download" alone doesn't say the client loses the transfer.
                 .accessibilityHint(Text("This will remove the download from the client.", bundle: .module))
             }
         }
+        // A glyph is shorter than a text line; the cancel capsule takes the pause button's height.
+        .fixedSize(horizontal: false, vertical: true)
     }
 }

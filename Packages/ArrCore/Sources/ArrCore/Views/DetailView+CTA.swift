@@ -8,7 +8,7 @@ extension DetailView {
             let showsPlay = focused.showsPlay
             DownloadCTAStrip(
                 isPaused: showsPlay,
-                progress: f.source == .sonarr ? 1 : f.progress,
+                progress: f.source == .sonarr ? nil : f.progress,
                 onToggle: {
                     if showsPlay { await viewModel.resume(f) } else { await viewModel.pause(f) }
                     // Poll now so the status flip lands before the spinner releases, or the label reverts

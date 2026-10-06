@@ -305,17 +305,12 @@ struct MediaEditPanel: View {
                             Image(systemName: "lock.fill")
                         }
                         Image(systemName: "checkmark")
-                            .scaledFont(size: 11, weight: .semibold)
                         Text("edit.save.button", bundle: .module)
-                            .scaledFont(size: 12, weight: .semibold)
                     }
-                    .frame(maxWidth: .infinity)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 7)
         }
-        .modifier(GlassProminentButtonStyle())
+        .buttonStyle(GlassCTAButtonStyle(tint: .accentColor))
         .disabled(saving || loading)
         .padding(.horizontal, 14)
         .padding(.top, 4)

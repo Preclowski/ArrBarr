@@ -147,7 +147,7 @@ struct ServiceFields: View {
 
             // Opens the arr's iCal feed as `webcal://` → Apple Calendar's subscribe flow.
             if let calURL = CalendarFeed.subscriptionURL(kind: kind, config: config) {
-                // No GlassButtonStyle: that nested a pill inside the tappable row.
+                // No glass capsule style: that nested a pill inside the tappable row.
                 Button {
                     openURL(calURL)
                 } label: {

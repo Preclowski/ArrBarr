@@ -241,7 +241,7 @@ struct LibraryTabContent: View {
                 } label: {
                     Text("common.retry.button", bundle: .module)
                 }
-                .modifier(GlassButtonStyle())
+                .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
             }
         case .empty:
             emptyState(symbol: "books.vertical", textKey: "library.empty.title") { EmptyView() }
@@ -387,7 +387,7 @@ struct LibraryTabContent: View {
             .scrollIndicators(.hidden)
             .frame(maxHeight: .infinity)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                // The detail view's CTA: full width, glass, the status colour on the label.
+                // The detail view's CTA: full width, the accent staining the glass.
                 Button {
                     withAnimation(.smooth(duration: 0.3)) { showsFilters = false }
                 } label: {
@@ -397,13 +397,8 @@ struct LibraryTabContent: View {
                             .monospacedDigit()
                             .contentTransition(.numericText())
                     }
-                    .scaledFont(size: 12, weight: .semibold)
-                    .foregroundStyle(.blue)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 7)
                 }
-                .modifier(GlassButtonStyle())
-                .tint(.blue)
+                .buttonStyle(GlassCTAButtonStyle(tint: .accentColor))
                 .disabled(count == 0)
                 .animation(.easeOut(duration: 0.2), value: count)
                 .padding(.horizontal, 14)

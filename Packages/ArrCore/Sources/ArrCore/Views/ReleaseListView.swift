@@ -609,10 +609,8 @@ private struct ReleaseDetail: View {
                         } icon: {
                             Image(systemName: "arrow.up.right.square")
                         }
-                        .scaledFont(size: 11, weight: .medium)
                     }
-                    .modifier(GlassButtonStyle())
-                    .controlSize(.small)
+                    .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
             }
         }
     }
