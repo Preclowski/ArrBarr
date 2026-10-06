@@ -27,7 +27,7 @@ struct DownloadCTAStrip: View {
                         .frame(width: 18)
                         .frame(maxHeight: .infinity)
                 }
-                .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
+                .buttonStyle(CTAButtonStyle(fullWidth: false, glass: true))
                 .help(Text("queue.cancelDownload.button", bundle: .module))
                 .accessibilityLabel(Text("queue.cancelDownload.button", bundle: .module))
                 // "Cancel download" alone doesn't say the client loses the transfer.

@@ -1,14 +1,13 @@
 import SwiftUI
 
-// MARK: - Shared button style
-
-/// The app's capsule button: clear glass with a monochrome label. A primary action stains the glass with
-/// `tint` instead of colouring its text (HIG, Liquid Glass colour); `fill` is how much of it, from the
-/// leading edge, so a download's progress can fill the button.
-struct GlassCTAButtonStyle: ButtonStyle {
+/// The app's capsule button, with a monochrome label. A primary action colours the background with `tint`
+/// instead of its text (HIG, Liquid Glass colour); `fill` is how much of it, from the leading edge, so a
+/// download's progress can fill the button. Flat by default; `glass` only for bars floating over content.
+struct CTAButtonStyle: ButtonStyle {
     var tint: Color? = nil
     var fill: Double = 1
     var fullWidth: Bool = true
+    var glass: Bool = false
 
     #if os(iOS)
     static let labelSize: CGFloat = 16
@@ -24,23 +23,31 @@ struct GlassCTAButtonStyle: ButtonStyle {
 
     private struct StyledLabel: View {
         let configuration: Configuration
-        let style: GlassCTAButtonStyle
+        let style: CTAButtonStyle
         @Environment(\.isEnabled) private var isEnabled
 
         var body: some View {
+            if style.glass {
+                capsule.glassEffect(.clear.interactive(), in: .capsule)
+            } else {
+                capsule
+            }
+        }
+
+        private var capsule: some View {
             configuration.label
-                .scaledFont(size: GlassCTAButtonStyle.labelSize, weight: .semibold)
+                .scaledFont(size: CTAButtonStyle.labelSize, weight: .semibold)
                 .foregroundStyle(.primary)
                 .frame(maxWidth: style.fullWidth ? .infinity : nil)
-                .padding(.vertical, GlassCTAButtonStyle.vPadding)
+                .padding(.vertical, CTAButtonStyle.vPadding)
                 .padding(.horizontal, 14)
                 .background {
+                    if !style.glass { Capsule().fill(.quaternary) }
                     if let tint = style.tint { ProgressFill(progress: style.fill, tint: tint) }
                 }
                 .clipShape(.capsule)
                 .contentShape(.capsule)
                 .opacity(isEnabled ? (configuration.isPressed ? 0.75 : 1) : 0.45)
-                .glassEffect(.clear.interactive(), in: .capsule)
         }
     }
 }

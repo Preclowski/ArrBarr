@@ -27,10 +27,10 @@ struct PauseResumeButton: View {
                 if inFlight {
                     ProgressView()
                         .controlSize(.small)
-                        .frame(width: GlassCTAButtonStyle.labelSize, height: GlassCTAButtonStyle.labelSize)
+                        .frame(width: CTAButtonStyle.labelSize, height: CTAButtonStyle.labelSize)
                 } else {
                     Image(systemName: isPaused ? "play.fill" : "pause.fill")
-                        .frame(width: GlassCTAButtonStyle.labelSize)
+                        .frame(width: CTAButtonStyle.labelSize)
                 }
                 // Short verbs: the CTA strip fits three capsules.
                 Text(isPaused
@@ -38,7 +38,7 @@ struct PauseResumeButton: View {
                         : String(localized: "queue.pause.button", bundle: .module))
             }
         }
-        .buttonStyle(GlassCTAButtonStyle(tint: tint, fill: progress ?? 0))
+        .buttonStyle(CTAButtonStyle(tint: tint, fill: progress ?? 0, glass: true))
         .disabled(inFlight)
         .animation(.easeInOut(duration: 0.3), value: isPaused)
     }

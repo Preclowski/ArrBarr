@@ -610,7 +610,7 @@ private struct ReleaseDetail: View {
                             Image(systemName: "arrow.up.right.square")
                         }
                     }
-                    .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
+                    .buttonStyle(CTAButtonStyle(fullWidth: false))
             }
         }
     }

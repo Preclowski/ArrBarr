@@ -34,7 +34,7 @@ struct PopoverEmptyState<MoreMenu: View>: View {
                 .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 8))
 
                 Button { onOpenSettings() } label: { Text("common.openSettings.button", bundle: .module) }
-                    .buttonStyle(GlassCTAButtonStyle(tint: .accentColor, fullWidth: false))
+                    .buttonStyle(CTAButtonStyle(tint: .accentColor, fullWidth: false))
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 22)

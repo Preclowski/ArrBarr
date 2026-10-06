@@ -241,7 +241,7 @@ struct LibraryTabContent: View {
                 } label: {
                     Text("common.retry.button", bundle: .module)
                 }
-                .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
+                .buttonStyle(CTAButtonStyle(fullWidth: false))
             }
         case .empty:
             emptyState(symbol: "books.vertical", textKey: "library.empty.title") { EmptyView() }
@@ -398,7 +398,7 @@ struct LibraryTabContent: View {
                             .contentTransition(.numericText())
                     }
                 }
-                .buttonStyle(GlassCTAButtonStyle(tint: .accentColor))
+                .buttonStyle(CTAButtonStyle(tint: .accentColor, glass: true))
                 .disabled(count == 0)
                 .animation(.easeOut(duration: 0.2), value: count)
                 .padding(.horizontal, 14)

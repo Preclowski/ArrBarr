@@ -520,7 +520,7 @@ struct SearchAddPanel: View {
                             Image(systemName: "magnifyingglass")
                             Text("search.addAndSearch.button", bundle: .module)
                         } else {
-                            ServiceIcon(source: result.source, size: GlassCTAButtonStyle.labelSize - 1)
+                            ServiceIcon(source: result.source, size: CTAButtonStyle.labelSize - 1)
                             Text(addLabel, bundle: .module)
                         }
                     }
@@ -528,7 +528,7 @@ struct SearchAddPanel: View {
             }
         }
         // Only one stained button, so the user reaches for it instead of reading.
-        .buttonStyle(GlassCTAButtonStyle(tint: searchOnAdd ? .accentColor : nil))
+        .buttonStyle(CTAButtonStyle(tint: searchOnAdd ? .accentColor : nil))
         .disabled(viewModel.isAdding || viewModel.isLoadingOptions)
     }
 

@@ -103,7 +103,7 @@ struct PersonView: View {
                                 .foregroundStyle(.secondary)
                                 .multilineTextAlignment(.center)
                             Button { Task { await loadInitial() } } label: { Text("common.retry.button", bundle: .module) }
-                                .buttonStyle(GlassCTAButtonStyle(fullWidth: false))
+                                .buttonStyle(CTAButtonStyle(fullWidth: false))
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)

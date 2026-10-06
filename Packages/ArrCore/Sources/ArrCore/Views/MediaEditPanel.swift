@@ -310,7 +310,7 @@ struct MediaEditPanel: View {
                 }
             }
         }
-        .buttonStyle(GlassCTAButtonStyle(tint: .accentColor))
+        .buttonStyle(CTAButtonStyle(tint: .accentColor))
         .disabled(saving || loading)
         .padding(.horizontal, 14)
         .padding(.top, 4)
