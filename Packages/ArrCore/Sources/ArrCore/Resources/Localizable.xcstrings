@@ -26291,166 +26291,43 @@
       },
       "comment": "Button in settings"
     },
-    "settings.queueGrouping.collapsed.option": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Collapsed"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eingeklappt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contraído"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Replié"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ingeklapt"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Zwinięte"
-          }
-        }
-      }
-    },
-    "settings.queueGrouping.expanded.option": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expanded"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ausgeklappt"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Expandido"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Déplié"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uitgeklapt"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rozwinięte"
-          }
-        }
-      }
-    },
     "settings.queueGrouping.label": {
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Group queue by title"
+            "value": "Group queue items"
           }
         },
         "de": {
           "stringUnit": {
             "state": "translated",
-            "value": "Warteschlange nach Titel gruppieren"
+            "value": "Einträge in der Warteschlange gruppieren"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Agrupar la cola por título"
+            "value": "Agrupar elementos de la cola"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grouper la file par titre"
+            "value": "Grouper les éléments de la file"
           }
         },
         "nl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wachtrij groeperen op titel"
+            "value": "Items in de wachtrij groeperen"
           }
         },
         "pl": {
           "stringUnit": {
             "state": "translated",
-            "value": "Grupuj kolejkę według tytułu"
-          }
-        }
-      }
-    },
-    "settings.queueGrouping.off.option": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Off"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aus"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desactivado"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Désactivé"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Uit"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Wyłączone"
+            "value": "Grupuj elementy w kolejce"
           }
         }
       }
@@ -36165,6 +36042,88 @@
           "stringUnit": {
             "state": "translated",
             "value": "Best beoordeeld"
+          }
+        }
+      }
+    },
+    "queue.serverError.label": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server error"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serverfehler"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error del servidor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erreur du serveur"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serverfout"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Błąd serwera"
+          }
+        }
+      }
+    },
+    "Existing files": {
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Existing files"
+          }
+        },
+        "pl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Istniejące pliki"
+          }
+        },
+        "de": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vorhandene Dateien"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archivos existentes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers existants"
+          }
+        },
+        "nl": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bestaande bestanden"
           }
         }
       }

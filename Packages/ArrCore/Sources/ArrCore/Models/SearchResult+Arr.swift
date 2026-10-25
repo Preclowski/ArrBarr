@@ -25,6 +25,7 @@ nonisolated extension SearchResult {
             source: .sonarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil,
             imdbId: r.imdbId, sourceRank: sourceRank, tmdbTVId: (r.tmdbId ?? 0) != 0 ? r.tmdbId : nil)
         releaseStatus = r.status
+        seasonNumbers = (r.seasons ?? []).map(\.seasonNumber).filter { $0 > 0 }.sorted()
     }
 
     init?(whisparr r: ArrMovie, baseURL: String, sourceRank: Int = 0) {

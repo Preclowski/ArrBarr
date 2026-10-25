@@ -37,31 +37,29 @@ nonisolated public struct QueueGroup: Identifiable, Equatable {
     var memberCount: Int { items.count }
 }
 
-/// `off` renders the flat list; the other two differ only in default disclosure state.
-nonisolated public enum QueueTitleGroupingMode: String, CaseIterable, Sendable {
-    case off, collapsed, expanded
-}
-
 /// Never merges downloads: children are the real entries with their own controls;
 /// the container only adds a collapsible header.
-nonisolated struct QueueTitleGroup: Identifiable, Equatable {
+nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
     /// Survives members joining/leaving, so disclosure state can be keyed on it.
-    let id: String
+    public let id: String
     let entries: [QueueRowEntry]
 
     var representative: QueueItem { entries[0].representativeItem }
     /// A season pack counts as 1.
     var downloadCount: Int { entries.count }
     var allItems: [QueueItem] { entries.flatMap(\.allItems) }
+    /// One item per download: every member of a pack carries the whole pack's size.
+    var downloads: [QueueItem] { entries.map(\.representativeItem) }
+    var totalSize: Int64 { downloads.reduce(Int64(0)) { $0 + $1.sizeTotal } }
 
     /// Size-weighted; honest only because the header also shows the download count.
     var aggregateProgress: Double {
-        let total = allItems.reduce(Int64(0)) { $0 + $1.sizeTotal }
-        let left = allItems.reduce(Int64(0)) { $0 + $1.sizeLeft }
+        let items = downloads
+        let total = totalSize
+        let left = items.reduce(Int64(0)) { $0 + $1.sizeLeft }
         if total > 0 {
             return max(0, min(1, 1.0 - Double(left) / Double(total)))
         }
-        let items = allItems
         guard !items.isEmpty else { return 0 }
         return items.reduce(0.0) { $0 + $1.progress } / Double(items.count)
     }
@@ -69,8 +67,8 @@ nonisolated struct QueueTitleGroup: Identifiable, Equatable {
     /// Measured aggregate plus the interpolated delta: the measured figure comes from
     /// remaining bytes, more accurate than per-row percentages.
     func aggregateProgress(at date: Date, measuredAt: Date) -> Double {
-        let items = allItems
-        let total = items.reduce(Int64(0)) { $0 + $1.sizeTotal }
+        let items = downloads
+        let total = totalSize
         guard total > 0 else { return aggregateProgress }
         let gained = items.reduce(0.0) { sum, item in
             let delta = item.interpolatedProgress(at: date, measuredAt: measuredAt) - item.progress
@@ -90,6 +88,17 @@ nonisolated enum QueueDisplayRow: Identifiable {
         switch self {
         case .entry(let e): return e.id
         case .titleGroup(let g): return "title.\(g.id)"
+        }
+    }
+}
+
+nonisolated extension Sequence where Element == QueueItem {
+    /// One item per download id: a pack's episode rows each carry the whole pack's size.
+    var uniqueDownloads: [QueueItem] {
+        var seen = Set<String>()
+        return filter { item in
+            guard let key = item.downloadId?.lowercased(), !key.isEmpty else { return true }
+            return seen.insert("\(item.source.rawValue)|\(key)").inserted
         }
     }
 }
@@ -118,11 +127,28 @@ nonisolated enum QueueGrouping {
     }
 
     /// Arr entity id, else the normalized title; source-prefixed so ids never collide across arrs.
+    static func seriesKey(for item: QueueItem) -> String {
+        item.entityId.map { "\(item.source.rawValue).id.\($0)" }
+            ?? "\(item.source.rawValue).title.\(item.title.lowercased())"
+    }
+
+    /// Series split per season, so two seasons in flight are two groups.
     static func titleKey(for item: QueueItem) -> String {
-        if let entityId = item.entityId {
-            return "\(item.source.rawValue).id.\(entityId)"
+        let base = seriesKey(for: item)
+        guard item.source == .sonarr, let season = item.seasonNumber else { return base }
+        return "\(base).s\(season)"
+    }
+
+    /// Whole-series buckets in first-seen order, for search: one hit per show, not per episode.
+    static func groupBySeries(_ entries: [QueueRowEntry]) -> [[QueueRowEntry]] {
+        var order: [String] = []
+        var buckets: [String: [QueueRowEntry]] = [:]
+        for entry in entries {
+            let key = seriesKey(for: entry.representativeItem)
+            if buckets[key] == nil { order.append(key) }
+            buckets[key, default: []].append(entry)
         }
-        return "\(item.source.rawValue).title.\(item.title.lowercased())"
+        return order.compactMap { buckets[$0] }
     }
 
     /// Only buckets of ≥2 group; the group takes its first (best-ranked) member's position.

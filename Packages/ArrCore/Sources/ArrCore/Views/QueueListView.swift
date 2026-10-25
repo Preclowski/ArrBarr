@@ -161,15 +161,14 @@ struct QueueListView: View {
 
     func displayRows(for source: QueueItem.Source) -> [QueueDisplayRow] {
         let base = entries(for: source)
-        guard queueUI.queueTitleGrouping != .off else {
+        guard queueUI.groupsQueueItems else {
             return base.map { .entry($0) }
         }
         return QueueGrouping.groupByTitle(base)
     }
 
     func isGroupExpanded(_ group: QueueTitleGroup) -> Bool {
-        let defaultExpanded = queueUI.queueTitleGrouping == .expanded
-        return toggledTitleGroups.contains(group.id) ? !defaultExpanded : defaultExpanded
+        toggledTitleGroups.contains(group.id)
     }
 
     func toggleTitleGroup(_ group: QueueTitleGroup) {

@@ -76,6 +76,14 @@ struct QueueTitleGroupRowView: View {
                 }
 
                 HStack(spacing: 4) {
+                    if let seasonText {
+                        Text(seasonText)
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.secondary)
+                        Text(verbatim: "·")
+                            .scaledFont(size: 11)
+                            .foregroundStyle(.tertiary)
+                    }
                     LiveProgress(group: group) { progress in
                         Text(progress, format: .percent.precision(.fractionLength(0)))
                     }
@@ -156,7 +164,11 @@ struct QueueTitleGroupRowView: View {
         case .lidarr: return CGSize(width: 40, height: 40)
         }
     }
-    private var totalSize: Int64 {
-        group.allItems.reduce(Int64(0)) { $0 + $1.sizeTotal }
+    private var totalSize: Int64 { group.totalSize }
+
+    /// Series groups are keyed per season, so the representative's season is the group's.
+    private var seasonText: String? {
+        guard rep.source == .sonarr, let season = rep.seasonNumber else { return nil }
+        return String(format: String(localized: "queue.season02lld.button", bundle: .module), season)
     }
 }

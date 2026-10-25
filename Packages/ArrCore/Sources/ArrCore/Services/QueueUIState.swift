@@ -15,10 +15,11 @@ public final class QueueUIState {
     static let hiddenQueueItemsKey = "ArrBarr.hiddenQueueItems"
     static let hideHintSuppressedKey = "ArrBarr.queueHideHintSuppressed"
 
-    public var queueTitleGrouping: QueueTitleGroupingMode = .collapsed {
+    /// Off renders the flat list; on, groups start collapsed.
+    public var groupsQueueItems = true {
         didSet {
-            guard !isLoading, queueTitleGrouping != oldValue else { return }
-            defaults.set(queueTitleGrouping.rawValue, forKey: Self.queueTitleGroupingKey)
+            guard !isLoading, groupsQueueItems != oldValue else { return }
+            defaults.set(groupsQueueItems, forKey: Self.queueTitleGroupingKey)
         }
     }
 
@@ -75,9 +76,12 @@ public final class QueueUIState {
     private func load(from source: UserDefaults) {
         isLoading = true
         defer { isLoading = false }
-        queueTitleGrouping = QueueTitleGroupingMode(
-            rawValue: source.string(forKey: Self.queueTitleGroupingKey) ?? ""
-        ) ?? .collapsed
+        // Older builds stored "off" / "collapsed" / "expanded" under the same key.
+        switch source.object(forKey: Self.queueTitleGroupingKey) {
+        case let legacy as String: groupsQueueItems = legacy != "off"
+        case let enabled as Bool: groupsQueueItems = enabled
+        default: groupsQueueItems = true
+        }
         collapsedArrs = Set(source.stringArray(forKey: Self.collapsedArrsKey) ?? [])
         hiddenQueueItems = Set(source.stringArray(forKey: Self.hiddenQueueItemsKey) ?? [])
         hideHintSuppressed = source.bool(forKey: Self.hideHintSuppressedKey)

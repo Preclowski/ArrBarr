@@ -206,10 +206,10 @@ struct ServerStatusView: View {
                         .foregroundStyle(.blue)
                     Text(String(
                         format: String(localized: "status.activeDownloads.label", bundle: .module),
-                        active.count
+                        active.uniqueDownloads.count
                     ))
                     Spacer(minLength: 8)
-                    let remaining = active.reduce(Int64(0)) { $0 + max(0, $1.sizeLeft) }
+                    let remaining = active.uniqueDownloads.reduce(Int64(0)) { $0 + max(0, $1.sizeLeft) }
                     if remaining > 0 {
                         Text(String(
                             format: String(localized: "status.remaining.label", bundle: .module),

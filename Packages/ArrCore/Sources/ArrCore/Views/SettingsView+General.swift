@@ -151,17 +151,11 @@ extension SettingsView {
 
     // MARK: - Queue sections
 
-    /// One picker is both the on/off switch and the default disclosure state.
     var queueGroupingSection: some View {
         Section {
-            Picker(selection: $queueUI.queueTitleGrouping) {
-                Text("settings.queueGrouping.off.option", bundle: .module)
-                    .tag(QueueTitleGroupingMode.off)
-                Text("settings.queueGrouping.collapsed.option", bundle: .module)
-                    .tag(QueueTitleGroupingMode.collapsed)
-                Text("settings.queueGrouping.expanded.option", bundle: .module)
-                    .tag(QueueTitleGroupingMode.expanded)
-            } label: { Text("settings.queueGrouping.label", bundle: .module) }
+            Toggle(isOn: $queueUI.groupsQueueItems) {
+                Text("settings.queueGrouping.label", bundle: .module)
+            }
         } header: { Text("Queue", bundle: .module) }
     }
 

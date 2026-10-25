@@ -226,6 +226,18 @@ extension TestKit {
         #expect(kit.transport.operations.filter { $0 == "login" }.count == 1)
     }
 
+    @Test func sabnzbdOnlyFirstDownloadingSlotIsLive() throws {
+        let body = """
+        {"queue":{"paused":false,"kbpersec":"1024","slots":[
+        {"nzo_id":"a","filename":"A","status":"Downloading","mb":"100","mbleft":"50"},
+        {"nzo_id":"b","filename":"B","status":"Downloading","mb":"100","mbleft":"100"},
+        {"nzo_id":"c","filename":"C","status":"Paused","mb":"100","mbleft":"100"}]}}
+        """
+        let tasks = try SABnzbdService(instance: InstanceID(.sabnzbd)).decodeTasks(HTTPResponse(status: 200, body: Data(body.utf8)), ids: [])
+        #expect(tasks.map(\.state) == [.downloading, .queued, .paused])
+        #expect(tasks[0].downloadSpeed == 1024 * 1024 && tasks[1].downloadSpeed == nil)
+    }
+
     @Test func rtorrentMulticallRoundTrip() throws {
         let response = """
         <?xml version="1.0"?><methodResponse><params><param><value><array><data>

@@ -42,6 +42,8 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
     /// TMDB's series id, for `.sonarr` rows only. TMDB-sourced rows have no tvdbId, so this keeps the
     /// lookup exact; `SeriesIdentityResolver` uses it to verify a `tmdb:N` answer.
     let tmdbTVId: Int?
+    /// Sonarr only: the lookup's seasons, specials excluded, so an un-added series can list them.
+    var seasonNumbers: [Int] = []
 
     init(externalId: Int, foreignId: String, title: String, subtitle: String?,
          year: Int?, rating: Double?, votes: Int? = nil,

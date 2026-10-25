@@ -331,7 +331,8 @@ nonisolated enum MediaKitErrorPresenter {
         guard let mk = error as? MediaKitError else { return false }
         switch mk {
         case .unreachable, .breakerOpen: return true
-        case let .serverFault(_, status, _): return [502, 503, 504].contains(status)
+        // 521–524/530: a CDN or tunnel in front of a server that is down. 525/526 are TLS faults the user can fix.
+        case let .serverFault(_, status, _): return [502, 503, 504, 521, 522, 523, 524, 530].contains(status)
         case let .rejected(_, status, _): return [404, 408, 410].contains(status)
         default: return false
         }

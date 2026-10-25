@@ -4,11 +4,14 @@ import Foundation
 /// The same context on every tab.
 nonisolated public enum LocalHit: Identifiable {
     case queue(QueueRowEntry)
+    /// Several downloads of one series, shown as the series.
+    case queueSeries(QueueTitleGroup)
     case library(LibraryEntry)
 
     public var id: String {
         switch self {
         case .queue(let entry):   return "queue.\(entry.id)"
+        case .queueSeries(let g): return "queueSeries.\(g.id)"
         case .library(let entry): return "library.\(entry.id)"
         }
     }
@@ -18,6 +21,10 @@ nonisolated public enum LocalHit: Identifiable {
         switch self {
         case .queue(let entry):
             return entry.allItems.compactMap { item in
+                item.entityId.map { OwnershipKey(source: item.source, arrId: $0) }
+            }
+        case .queueSeries(let group):
+            return group.allItems.compactMap { item in
                 item.entityId.map { OwnershipKey(source: item.source, arrId: $0) }
             }
         case .library(let entry):
@@ -74,10 +81,17 @@ nonisolated public extension LocalHit {
                         .joined(separator: "\n")
                 }
             )
-            let rows: [QueueRowEntry] = source == .sonarr
-                ? QueueGrouping.group(matched)
-                : matched.map { .single($0) }
-            return rows.map(LocalHit.queue)
+            return queueRows(matched, source: source)
+        }
+    }
+
+    /// A series answers once, however many of its episodes matched.
+    static func queueRows(_ matched: [QueueItem], source: QueueItem.Source) -> [LocalHit] {
+        guard source == .sonarr else { return matched.map { .queue(.single($0)) } }
+        return QueueGrouping.groupBySeries(QueueGrouping.group(matched)).map { entries in
+            entries.count == 1
+                ? .queue(entries[0])
+                : .queueSeries(QueueTitleGroup(id: QueueGrouping.seriesKey(for: entries[0].representativeItem), entries: entries))
         }
     }
 }

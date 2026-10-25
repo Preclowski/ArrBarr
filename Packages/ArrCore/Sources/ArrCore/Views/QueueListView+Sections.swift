@@ -197,17 +197,19 @@ extension QueueListView {
                 withAnimation(.smooth(duration: 0.22)) { queueUI.toggleCollapsed(source) }
             }
         ) {
+            // The server's own reason can run to paragraphs; the header names the state, the tooltip keeps the detail.
             if isUnreachable {
                 Label { Text("offline.indicator.label", bundle: .module).textCase(.lowercase) } icon: { Image(systemName: "network.slash") }
                     .scaledFont(size: 11)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
+                    .help(Text(verbatim: error ?? ""))
             } else if let error {
-                Label(error, systemImage: "exclamationmark.triangle.fill")
+                Label { Text("queue.serverError.label", bundle: .module) } icon: { Image(systemName: "exclamationmark.triangle.fill") }
                     .scaledFont(size: 11)
                     .foregroundStyle(.orange)
                     .lineLimit(1)
-                    .truncationMode(.middle)
+                    .help(Text(verbatim: error))
             } else if let onShowHistory {
                 ShowHistoryLink { onShowHistory(source) }
             }

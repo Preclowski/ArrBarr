@@ -448,7 +448,7 @@ public final class NotificationCoalescer {
     }
 
     static func batchBodyText(_ items: [QueueItem]) -> String {
-        sizeText(items.reduce(Int64(0)) { $0 + $1.sizeTotal }) ?? ""
+        sizeText(items.uniqueDownloads.reduce(Int64(0)) { $0 + $1.sizeTotal }) ?? ""
     }
 
     static func countText(source: QueueItem.Source, count: Int) -> String {

@@ -166,13 +166,18 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     }
 
     /// Detail auto-drills to an episode only when `episodeNumber` is set; season packs open the SEASON.
-    public func seasonContext() -> QueueItem {
+    public func seasonContext() -> QueueItem { scoped(season: seasonNumber) }
+
+    /// A row standing for several seasons of one show opens the series itself.
+    func seriesContext() -> QueueItem { scoped(season: nil) }
+
+    private func scoped(season: Int?) -> QueueItem {
         QueueItem(
             id: id, source: source, arrQueueId: arrQueueId,
             downloadId: downloadId, downloadProtocol: downloadProtocol,
             downloadClient: downloadClient, indexer: indexer,
             title: title, subtitle: subtitle,
-            seasonNumber: seasonNumber, episodeNumber: nil, episodeTitle: episodeTitle,
+            seasonNumber: season, episodeNumber: nil, episodeTitle: episodeTitle,
             releaseName: releaseName,
             status: status, progress: progress, sizeTotal: sizeTotal,
             sizeLeft: sizeLeft, timeLeft: timeLeft,

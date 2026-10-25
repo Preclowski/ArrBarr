@@ -9,6 +9,7 @@ struct QueueTitleGroupingTests {
         title: String,
         source: QueueItem.Source = .sonarr,
         entityId: Int? = nil,
+        season: Int? = nil,
         downloadId: String? = nil,
         sizeTotal: Int64 = 0,
         sizeLeft: Int64 = 0,
@@ -23,6 +24,7 @@ struct QueueTitleGroupingTests {
             downloadClient: nil,
             title: title,
             subtitle: nil,
+            seasonNumber: season,
             status: .downloading,
             progress: progress,
             sizeTotal: sizeTotal,
@@ -117,6 +119,51 @@ struct QueueTitleGroupingTests {
         }
         #expect(group.downloadCount == 2)     // pack = 1, single = 1
         #expect(group.allItems.count == 3)    // but 3 underlying queue items
+    }
+
+    @Test("A series groups per season, not per show")
+    func seriesGroupsPerSeason() {
+        let rows = QueueGrouping.groupByTitle(entries([
+            item(id: "a", title: "Alpha", entityId: 1, season: 1),
+            item(id: "b", title: "Alpha", entityId: 1, season: 2),
+            item(id: "c", title: "Alpha", entityId: 1, season: 1),
+            item(id: "d", title: "Alpha", entityId: 1, season: 2),
+        ]))
+        #expect(rows.count == 2)
+        let groups = rows.compactMap { row -> QueueTitleGroup? in
+            if case .titleGroup(let g) = row { return g } else { return nil }
+        }
+        #expect(groups.map { $0.allItems.map(\.id) } == [["a", "c"], ["b", "d"]])
+    }
+
+    @Test("A pack's size counts once, not once per episode row")
+    func packSizeCountsOnce() {
+        let pack = QueueGroup(id: "pack", items: (1...3).map {
+            item(id: "p\($0)", title: "Alpha", entityId: 1, season: 1, downloadId: "pack", sizeTotal: 1000, sizeLeft: 500)
+        })
+        let group = QueueTitleGroup(id: "k", entries: [
+            .group(pack),
+            .single(item(id: "s", title: "Alpha", entityId: 1, season: 1, sizeTotal: 1000, sizeLeft: 0)),
+        ])
+        #expect(group.totalSize == 2000)
+        #expect(abs(group.aggregateProgress - 0.75) < 0.0001)
+    }
+
+    @Test("Queue search answers once per series, keeping every ownership key")
+    func searchCollapsesSeries() {
+        let hits = LocalHit.queueRows([
+            item(id: "a", title: "Alpha", entityId: 1, season: 1),
+            item(id: "b", title: "Beta", entityId: 2, season: 1),
+            item(id: "c", title: "Alpha", entityId: 1, season: 2),
+        ], source: .sonarr)
+        #expect(hits.count == 2)
+        guard case .queueSeries(let alpha) = hits[0], case .queue(.single(let beta)) = hits[1] else {
+            Issue.record("expected Alpha as one series hit and Beta as a plain row, got \(hits)")
+            return
+        }
+        #expect(alpha.downloadCount == 2)
+        #expect(beta.id == "b")
+        #expect(hits[0].ownershipKeys.allSatisfy { $0 == OwnershipKey(source: .sonarr, arrId: 1) })
     }
 
     @Test("Aggregate progress is size-weighted")

@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import ArrCore
 
-/// `collapsedArrs` and `queueTitleGrouping` moved off `ConfigStore` so that
+/// `collapsedArrs` and `groupsQueueItems` moved off `ConfigStore` so that
 /// collapsing a queue section stops invalidating every view observing the
 /// store. What must NOT change with them: the keys, the suite they are
 /// written to, and the fact that a reload doesn't write anything back — all
@@ -26,10 +26,10 @@ struct QueueUIStateTests {
         let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
-        state.queueTitleGrouping = .expanded
+        state.groupsQueueItems = false
         state.toggleCollapsed("radarr")
 
-        #expect(defaults.string(forKey: "ArrBarr.queueTitleGrouping") == "expanded")
+        #expect(defaults.object(forKey: "ArrBarr.queueTitleGrouping") as? Bool == false)
         #expect(defaults.stringArray(forKey: "ArrBarr.collapsedArrs") == ["radarr"])
     }
 
@@ -38,11 +38,11 @@ struct QueueUIStateTests {
         let defaults = makeDefaults()
 
         let first = QueueUIState(defaults: defaults)
-        first.queueTitleGrouping = .off
+        first.groupsQueueItems = false
         first.toggleCollapsed("sonarr")
 
         let second = QueueUIState(defaults: defaults)
-        #expect(second.queueTitleGrouping == .off)
+        #expect(second.groupsQueueItems == false)
         #expect(second.isCollapsed("sonarr"))
     }
 
@@ -51,14 +51,14 @@ struct QueueUIStateTests {
         let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
-        #expect(state.queueTitleGrouping == .collapsed)
+        #expect(state.groupsQueueItems)
 
         // What KVSyncCoordinator does: write into the suite, then ask for a reload.
-        defaults.set("expanded", forKey: "ArrBarr.queueTitleGrouping")
+        defaults.set(false, forKey: "ArrBarr.queueTitleGrouping")
         defaults.set(["lidarr"], forKey: "ArrBarr.collapsedArrs")
         state.reloadFromDefaults()
 
-        #expect(state.queueTitleGrouping == .expanded)
+        #expect(state.groupsQueueItems == false)
         #expect(state.isCollapsed("lidarr"))
     }
 
@@ -67,7 +67,7 @@ struct QueueUIStateTests {
         let defaults = makeDefaults()
 
         let state = QueueUIState(defaults: defaults)
-        state.queueTitleGrouping = .expanded
+        state.groupsQueueItems = false
         // Clear the keys behind its back, then reload: the values reset to
         // their defaults, and a setter that persisted during a load would put
         // them straight back — which through UserDefaults.didChangeNotification
@@ -76,9 +76,18 @@ struct QueueUIStateTests {
         defaults.removeObject(forKey: "ArrBarr.collapsedArrs")
         state.reloadFromDefaults()
 
-        #expect(state.queueTitleGrouping == .collapsed)
+        #expect(state.groupsQueueItems)
         #expect(defaults.object(forKey: "ArrBarr.queueTitleGrouping") == nil)
         #expect(defaults.object(forKey: "ArrBarr.collapsedArrs") == nil)
+    }
+
+    @Test("The old three-way setting reads as on unless it was off")
+    func legacyModeMigrates() {
+        let defaults = makeDefaults()
+        defaults.set("off", forKey: "ArrBarr.queueTitleGrouping")
+        #expect(QueueUIState(defaults: defaults).groupsQueueItems == false)
+        defaults.set("expanded", forKey: "ArrBarr.queueTitleGrouping")
+        #expect(QueueUIState(defaults: defaults).groupsQueueItems)
     }
 
     @Test("Both keys are still on the iCloud allow-list")

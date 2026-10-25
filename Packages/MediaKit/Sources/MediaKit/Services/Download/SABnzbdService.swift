@@ -26,12 +26,18 @@ struct SABnzbdService: DownloadService {
     func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let queue = try Self.decodeJSON(QueueResponse.self, response, operation: OperationID(instance.kind, "fetchProgress")).queue
         let speed = queue.kbpersec.flatMap(Double.init).map { Int64($0 * 1024) }
+        // SABnzbd labels every unpaused slot "Downloading" but fetches them one at a time in queue order,
+        // so only the first is live; the queue-wide speed belongs to it alone.
+        var claimedLive = false
         return queue.slots.map { s in
-            let state: DownloadTask.State = switch s.status.lowercased() {
+            var state: DownloadTask.State = switch s.status.lowercased() {
             case "downloading": .downloading
             case "paused": .paused
             case "checking", "verifying", "repairing", "extracting", "moving": .checking
             default: .queued
+            }
+            if state == .downloading {
+                if claimedLive { state = .queued } else { claimedLive = true }
             }
             let mb = Double(s.mb ?? "") ?? 0, left = Double(s.mbleft ?? "") ?? 0
             return DownloadTask(id: s.nzo_id, name: s.filename, state: state, progress: mb > 0 ? max(0, (mb - left) / mb) : 0,

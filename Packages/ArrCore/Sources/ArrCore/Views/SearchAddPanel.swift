@@ -1,4 +1,6 @@
 import SwiftUI
+import MediaKit
+import os
 
 struct SearchAddPanel: View {
     /// Mutable so a chat result built from a TMDB summary (no IMDb / RT / runtime) can be
@@ -53,6 +55,8 @@ struct SearchAddPanel: View {
     @State private var castLoading = false
     /// Pushed locally so back returns here.
     @State private var personRef: PersonRef?
+    /// TMDB's seasons add episode counts and years to the lookup's bare season numbers.
+    @State private var tmdbSeasons: [TMDBDetails.Airing] = []
 
     var body: some View {
         ZStack {
@@ -145,6 +149,7 @@ struct SearchAddPanel: View {
             await loadCast()
         }
         .task(id: identityKey) { await resolveTrailer() }
+        .task(id: identityKey) { await loadTMDBSeasons() }
     }
 
     /// Chat results from TMDB lack IMDb / RT / Metacritic / runtime; that absence marks them.
@@ -249,7 +254,34 @@ struct SearchAddPanel: View {
             if let trailer {
                 TrailerRow(reel: trailer)
             }
+            let seasons = result.source == .sonarr ? seasonEntries : []
+            if !seasons.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("detail.seasons.button", count: seasons.count)
+                    VStack(spacing: 3) {
+                        ForEach(seasons, id: \.number) { season in
+                            AddPanelSeasonRow(number: season.number, episodeCount: season.episodeCount, year: season.year)
+                        }
+                    }
+                }
+            }
         }
+    }
+
+    /// Sonarr's (TVDB) numbering decides the list, since that is what gets added; TMDB numbers
+    /// seasons differently for some shows, so it only fills in seasons whose number matches.
+    private var seasonEntries: [(number: Int, episodeCount: Int?, year: String?)] {
+        let tmdb = Dictionary(tmdbSeasons.compactMap { s in s.seasonNumber.map { ($0, s) } }, uniquingKeysWith: { a, _ in a })
+        let numbers = result.seasonNumbers.isEmpty ? tmdb.keys.filter { $0 > 0 }.sorted() : result.seasonNumbers
+        return numbers.map { n in (n, tmdb[n]?.episodeCount, tmdb[n]?.airDate.map { String($0.prefix(4)) }) }
+    }
+
+    private func loadTMDBSeasons() async {
+        guard result.source == .sonarr, !configStore.tmdbApiKey.isEmpty else { return }
+        let client = configStore.tmdbClient
+        guard let id = await client.seriesId(tmdbId: result.tmdbTVId, tvdbId: result.externalId),
+              let details = await Logger.extras.attempt("seasons", { try await client.tvDetails(tvId: id) }) else { return }
+        tmdbSeasons = details.seasons ?? []
     }
 
     /// Silent on failure / no key. Passing `tmdbTVId` for series skips the `/find` hop and is
@@ -561,5 +593,35 @@ struct SearchAddPanel: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
+    }
+}
+
+/// Read-only: an un-added series has nothing on disk or in the queue to show.
+private struct AddPanelSeasonRow: View {
+    let number: Int
+    let episodeCount: Int?
+    let year: String?
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Text(String(format: String(localized: "queue.season02lld.button", bundle: .module), number))
+                .scaledFont(size: 12, weight: .medium)
+            Spacer(minLength: 8)
+            if !detail.isEmpty {
+                Text(verbatim: detail)
+                    .scaledFont(size: 10, monospacedDigit: true)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
+    }
+
+    private var detail: String {
+        let episodes = episodeCount.map {
+            String.localizedStringWithFormat(NSLocalizedString("unit.episodes", bundle: .module, comment: ""), $0)
+        }
+        return [episodes, year].compactMap { $0 }.joined(separator: " · ")
     }
 }

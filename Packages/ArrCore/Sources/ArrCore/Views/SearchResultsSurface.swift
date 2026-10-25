@@ -78,6 +78,10 @@ struct SearchResultsSurface: View {
         case .queue(let entry):
             let item = entry.representativeItem
             QueueSearchRow(item: item) { onSelectQueueItem(item) }
+        case .queueSeries(let group):
+            let seasons = Set(group.allItems.map(\.seasonNumber))
+            let item = seasons.count == 1 ? group.representative.seasonContext() : group.representative.seriesContext()
+            QueueSearchRow(item: item, series: group) { onSelectQueueItem(item) }
         case .library(let entry):
             let result = SearchResult(libraryEntry: entry)
             SearchResultRow(result: result) { DetailRequest.tap(result) }

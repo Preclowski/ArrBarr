@@ -95,6 +95,14 @@ struct SonarrDetailPanel<Header: View>: View {
                     SkeletonRows(count: 6)
                 }
             }
+
+            // The series counterpart of a movie's existing-file section: many files, so their total.
+            if let stats = sonarrDetail?.statistics, let size = stats.sizeOnDisk, size > 0 {
+                VStack(alignment: .leading, spacing: 6) {
+                    DetailSectionHeader("Existing files", count: stats.episodeFileCount)
+                    ExistingFileBanner(quality: nil, size: size, customFormatScore: nil, customFormats: [], fileName: nil)
+                }
+            }
         }
     }
 
