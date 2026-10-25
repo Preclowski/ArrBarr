@@ -192,7 +192,20 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
             var copy = item
             copy.progress = task.progress
             if let speed = task.downloadSpeed { copy.downloadSpeed = speed }
+            // The client knows a pause or resume at once; the arr reads it on its own poll, up to a minute later.
+            if let status = clientStatus(task.state, over: item.status) { copy.status = status }
             return copy
+        }
+    }
+
+    /// Only the states the client owns; importing, warnings and failures stay the arr's call.
+    nonisolated static func clientStatus(_ state: DownloadTask.State, over arr: QueueItem.Status) -> QueueItem.Status? {
+        guard arr == .downloading || arr == .paused || arr == .queued else { return nil }
+        switch state {
+        case .downloading: return .downloading
+        case .paused: return .paused
+        case .queued: return .queued
+        default: return nil
         }
     }
 
@@ -296,14 +309,25 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         try await gateway.run(service.deleteQueueItem(id: item.arrQueueId, removeFromClient: removeFromClient, blocklist: false))
     }
 
+    /// Each download is removed from the client once, by its first member; the rest only leave the queue.
+    /// Every item is attempted: one failed call must not strand the rest, so the first error is rethrown after the loop.
     func deleteAll(_ items: [QueueItem]) async throws {
-        let downloadIds = Set(items.compactMap { $0.downloadId?.isEmpty == false ? $0.downloadId : nil })
-        let sharedDownload = downloadIds.count <= 1
-        var first = true
+        var removedDownloads = Set<String>()
+        var firstError: Error?
         for item in items {
-            try await deleteViaArr(item, removeFromClient: sharedDownload ? first : true)
-            first = false
+            let removeFromClient: Bool
+            if let id = item.downloadId?.lowercased(), !id.isEmpty {
+                removeFromClient = removedDownloads.insert(id).inserted
+            } else {
+                removeFromClient = true
+            }
+            do {
+                try await deleteViaArr(item, removeFromClient: removeFromClient)
+            } catch {
+                firstError = firstError ?? error
+            }
         }
+        if let firstError { throw firstError }
     }
 
     nonisolated static func candidateKinds(for proto: QueueItem.DownloadProtocol) -> [ServiceKind] {

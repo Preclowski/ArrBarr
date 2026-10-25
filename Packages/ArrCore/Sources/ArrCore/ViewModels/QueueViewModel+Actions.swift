@@ -33,8 +33,10 @@ extension QueueViewModel {
                 Task { await self.refreshQueue(source: source) }
             }
         } catch {
+            // Some items may have gone through before the failure: refresh so they don't reappear from the snapshot.
             endLeaving(items)
             if let source = items.first?.source {
+                Task { await self.refreshQueue(source: source) }
                 reportFailure("toast.removeFailed.title", error, source: source) { Task { await self.deleteAll(items) } }
             }
         }

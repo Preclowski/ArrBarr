@@ -46,7 +46,21 @@ struct DownloadProgressOverlayTests {
         #expect(out[0].progress == 0.44)
     }
 
-    private func task(_ id: String, progress: Double) -> DownloadTask {
-        DownloadTask(id: id, name: id, state: .downloading, progress: progress, instance: InstanceID(.qbittorrent))
+    @Test("The client's pause/resume beats the arr's lagging status; arr-side states stay")
+    func clientStatus() {
+        var paused = item("a", downloadId: "x", progress: 0.4)
+        paused.status = .paused
+        var importing = item("b", downloadId: "y", progress: 1)
+        importing.status = .importing
+        let out = QueueAggregator.overlay([paused, importing], with: [
+            "x": task("x", progress: 0.4),
+            "y": task("y", progress: 1, state: .paused),
+        ])
+        #expect(out[0].status == .downloading)
+        #expect(out[1].status == .importing)
+    }
+
+    private func task(_ id: String, progress: Double, state: DownloadTask.State = .downloading) -> DownloadTask {
+        DownloadTask(id: id, name: id, state: state, progress: progress, instance: InstanceID(.qbittorrent))
     }
 }
