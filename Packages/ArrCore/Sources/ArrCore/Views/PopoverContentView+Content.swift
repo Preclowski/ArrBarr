@@ -53,12 +53,13 @@ extension PopoverContentView {
                     // its soft scroll-edge blur (with `.scrollEdgeEffectStyle(.soft)` on each tab).
                     .safeAreaBar(edge: .top, spacing: 0) {
                         if !(searchViewModel.isActive && selectedTab.hostsSearch), !tabTakeover {
-                            // Shelf's stage runs under the bar and is always dark.
+                            // Shelf's stage runs under the bar and is dark once it shows.
                             tabBar
-                                .environment(\.colorScheme, selectedTab == .shelf ? .dark : colorScheme)
+                                .environment(\.colorScheme, selectedTab == .shelf && shelfStageShown ? .dark : colorScheme)
                         }
                     }
                     .onPreferenceChange(TabTakeoverKey.self) { tabTakeover = $0 }
+                    .onPreferenceChange(ShelfStageKey.self) { shelfStageShown = $0 }
                 } else {
                     PopoverEmptyState(onOpenSettings: onOpenSettings) { moreMenu }
                 }

@@ -166,9 +166,10 @@ fastest via SwiftPM:
 - **Realtime**: MediaKit's `SignalRSource` + `EventHub` per arr; `QueueViewModel`
   subscribes to `gateway.events.events()`. Servarr nests `action` inside
   `arguments[0].body`; system wake forces a reconnect (`queueVM.systemDidWake()`).
-- **In-app messages**: surfaces talk to their hosts through typed
-  `AppMessages.*` (`NotificationCenter.AsyncMessage`), observed with
-  `.onMessage(_:perform:)` — no `Notification.Name` posts.
+- **In-app messages**: models and the AppDelegate observe typed
+  `AppMessages.*` (`NotificationCenter.AsyncMessage`) — no `Notification.Name`
+  posts. A view host that pushes a surface (detail, person, search-add) takes a
+  `Router.*` request with `.onRequest(from:)` instead.
 - **Media server**: ONE of Plex / Jellyfin / Emby (`MediaServerConfig`, not a
   `ServiceKind`). `MediaServerIndex` is a lock-guarded snapshot — not an actor —
   so poster resolution stays synchronous; it supplies artwork overrides, the

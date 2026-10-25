@@ -30,6 +30,8 @@ public enum Router {
     /// The search-to-add intent or a chat link that resolved to nothing: run this query on the search surface.
     /// Never stale: the menu-bar panel can't be opened programmatically, so the query waits for its next open.
     public static let searchQuery = RequestRouter<String>(lifetime: .infinity)
+    /// A person card in chat, a chat link, a tool result or the Roulette's credit: push `PersonView`.
+    public static let person = RequestRouter<PersonRef>()
 }
 
 public struct SearchAddRoute: Sendable {

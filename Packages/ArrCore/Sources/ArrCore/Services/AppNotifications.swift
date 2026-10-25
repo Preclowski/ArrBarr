@@ -4,8 +4,8 @@ import os
 /// The subject every in-app message is posted for; there is one bus, so observers watch the type.
 public final class AppMessageBus: Sendable { private init() {} }
 
-/// Typed messages between surfaces (a chat card, an intent, a deep-tree row) and the hosts that react to them:
-/// the popover on macOS, the tab roots on iOS. Delivered asynchronously, observed with `onMessage`.
+/// Typed messages between surfaces and the models or app delegate that react to them, observed with
+/// `NotificationCenter.messages(of:for:)`. A view host that must push something takes a `Router` request instead.
 nonisolated public enum AppMessages {
     /// A successful "Test Connection": the queue refreshes so a just-saved key clears its banner.
     public struct ConfigValidated: NotificationCenter.AsyncMessage {
@@ -29,12 +29,6 @@ nonisolated public enum AppMessages {
         public let items: [DiscoverItem]
         public let append: Bool
         public init(items: [DiscoverItem], append: Bool) { self.items = items; self.append = append }
-    }
-    /// A person card in chat or an `arrbarr://person/…` link: push `PersonView`.
-    public struct OpenPerson: NotificationCenter.AsyncMessage {
-        public typealias Subject = AppMessageBus
-        public let ref: PersonRef
-        public init(ref: PersonRef) { self.ref = ref }
     }
     /// A title was added to an arr; the quiz drops a card it was still offering.
     public struct DidAddToLibrary: NotificationCenter.AsyncMessage {
@@ -180,7 +174,12 @@ enum LibraryAddCompletion {
 }
 
 enum PersonRequest {
-    static func post(_ ref: PersonRef) { AppMessages.post(AppMessages.OpenPerson(ref: ref)) }
+    private static let log = Logger(category: "Detail")
+
+    static func post(_ ref: PersonRef) {
+        log.notice("open person: \(ref.tmdbId, privacy: .public)")
+        Router.person.send(ref)
+    }
 }
 
 enum SearchAddRequest {

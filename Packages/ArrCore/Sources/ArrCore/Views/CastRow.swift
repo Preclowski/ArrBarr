@@ -80,6 +80,7 @@ struct DirectedByLine: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .linkRowHover()
             #if os(macOS)
             .pointerStyle(.link)
             #endif

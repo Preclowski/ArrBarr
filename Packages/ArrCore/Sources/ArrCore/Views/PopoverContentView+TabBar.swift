@@ -76,11 +76,12 @@ extension PopoverContentView {
     private var tabHorizontalPadding: CGFloat { commandHeld ? 6 : 18 }
 
     @ViewBuilder
-    private func tabContent(_ tab: Tab, titled: Bool? = nil) -> some View {
+    private func tabContent(_ tab: Tab) -> some View {
         HStack(spacing: 3) {
             // Explicit `.transition(.opacity)`: otherwise the inserted Text slides in from the left
             // inside the animated relayout instead of crossfading.
-            if titled ?? (selectedTab == tab) && !commandHeld {
+            // The drag's target takes the title live, so the bar reflows under the lens as it would on release.
+            if (lensIntent ?? selectedTab) == tab && !commandHeld {
                 // No `fixedSize`: an incompressible "Nadchodzące" pill pushed the detached bar past the
                 // 400 pt panel and the content bled past the window edges.
                 Text(LocalizedStringKey(tab.rawValue), bundle: .module)
@@ -185,35 +186,23 @@ extension PopoverContentView {
             // one tab on macOS when the implicit ZStack's bounds didn't match the HStack's.
             GeometryReader { geo in
                 if let rect = lensRect(in: geo.size) {
-                    TabPillBackground()
+                    // `lensTravel` 0 = resting pill, 1 = lifted rounded rect.
+                    TabPillBackground(cornerRadius: rect.height / 2 + (Self.lensTravelRadius - rect.height / 2) * lensTravel)
                         .frame(width: rect.width, height: rect.height)
-                        // Grows only while it travels: dragged, or gliding to a newly selected tab.
-                        .scaleEffect(lensDragX == nil ? 1 : Self.lensLift)
-                        .keyframeAnimator(initialValue: CGFloat(1), trigger: selectedTab) { lens, scale in
-                            lens.scaleEffect(scale)
-                        } keyframes: { _ in
-                            SpringKeyframe(Self.lensLift, duration: 0.14)
-                            SpringKeyframe(1, duration: 0.35, spring: .bouncy)
-                        }
+                        .scaleEffect(1 + (Self.lensLift - 1) * lensTravel)
                         .position(x: rect.midX, y: rect.midY)
                 }
-                // Glass blurs what it covers; the selected label sits on top instead.
-                if let frame = tabFrames[selectedTab] {
-                    // Hands the title to the drag's target; its slot keeps the title's width, so nothing reflows.
-                    tabContent(selectedTab, titled: lensIntent == nil || lensIntent == selectedTab)
-                        .frame(width: max(0, frame.width - tabHorizontalPadding * 2))
-                        .position(x: frame.midX, y: frame.midY)
-                        .accessibilityHidden(true)
-                }
-                // Same for the drag's target: under the glass its highlight is lost.
-                // Titled here only: in the layout the title would widen the tab and reflow the bar mid-drag.
-                if let intent = lensIntent, intent != selectedTab, let frame = tabFrames[intent],
-                   let slot = selectionPillRect(for: intent, in: geo.size) {
-                    tabContent(intent, titled: true)
-                        .frame(width: max(0, slot.width * Self.lensLift - 16))
-                        .position(x: frame.midX, y: frame.midY)
-                        .transition(.opacity)
-                        .accessibilityHidden(true)
+                // Glass blurs what it covers; the selected tab and the drag's target sit on top instead.
+                ForEach(raisedTabs, id: \.self) { tab in
+                    if let frame = tabFrames[tab] {
+                        // Natural width, not the animated slot's: squeezed by the growing slot, the title
+                        // revealed itself left to right instead of fading in place.
+                        tabContent(tab)
+                            .fixedSize()
+                            .position(x: frame.midX, y: frame.midY)
+                            .transition(.opacity)
+                            .accessibilityHidden(true)
+                    }
                 }
             }
             .allowsHitTesting(false)
@@ -224,47 +213,88 @@ extension PopoverContentView {
                 .onChanged { value in
                     // A click is not a drag: the lens stays put and glides on release.
                     guard lensDragX != nil || abs(value.translation.width) > 3 else { return }
+                    let x = value.location.x
                     withAnimation(.interactiveSpring(response: 0.22, dampingFraction: 0.78)) {
-                        lensDragX = value.location.x
+                        lensDragX = x
+                        lensIntent = tabUnder(x, current: lensIntent)
+                        lensTravel = 1
                     }
                 }
                 .onEnded { value in
-                    let target = nearestTab(to: value.location.x)
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { lensDragX = nil }
-                    if let target { tapTab(target) }
+                    let dragged = lensDragX != nil
+                    let target = lensIntent ?? tabUnder(value.location.x, current: nil)
+                    guard dragged else {
+                        if let target { tapTab(target) }
+                        return
+                    }
+                    // One spring for glide, shrink and reshape, so the lens settles into the tab as one motion.
+                    withAnimation(Self.lensSettle) {
+                        lensDragX = nil
+                        lensIntent = nil
+                        lensTravel = 0
+                        if let target { selectTabFromLens(target) }
+                    }
                 }
         )
     }
 
     private static let lensLift: CGFloat = 1.28
+    private static let lensTravelRadius: CGFloat = 8
 
-    /// The tab the dragged lens would land on.
-    private var lensIntent: Tab? { lensDragX.flatMap(nearestTab(to:)) }
+    private var raisedTabs: [Tab] {
+        guard let lensIntent, lensIntent != selectedTab else { return [selectedTab] }
+        return [selectedTab, lensIntent]
+    }
 
+    private static let lensSettle = Animation.spring(response: 0.42, dampingFraction: 0.86)
+
+    /// Click or keyboard: the lens lifts as it leaves, then settles while it glides in.
     private func tapTab(_ tab: Tab) {
+        let moves = tab != selectedTab
+        withAnimation(Self.lensSettle) { selectTabFromLens(tab) }
+        guard moves, selectedTab == tab else { return }
+        withAnimation(.easeOut(duration: 0.12)) {
+            lensTravel = 1
+        } completion: {
+            withAnimation(Self.lensSettle) { lensTravel = 0 }
+        }
+    }
+
+    /// Animation comes from the caller, so a drag release moves everything on one spring.
+    private func selectTabFromLens(_ tab: Tab) {
         if tab == .chat && !storeManager.isPro {
             storeManager.gate(.chat)
             return
         }
         // Re-tapping the active tab clears the query. Not from Chat: it doesn't show the field.
         if tab == selectedTab, tab.hostsSearch, searchViewModel.isActive {
-            withAnimation(.easeOut(duration: 0.18)) {
-                searchViewModel.query = ""
-            }
+            searchViewModel.query = ""
         }
-        withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) { selectedTab = tab }
+        selectedTab = tab
     }
 
-    private func nearestTab(to x: CGFloat) -> Tab? {
-        visibleTabs
-            .compactMap { tab in tabFrames[tab].map { (tab, abs($0.midX - x)) } }
-            .min { $0.1 < $1.1 }?.0
+    /// The tab whose half-gutter-to-half-gutter region holds `x`. `current` keeps its claim a few points
+    /// past its edge, or the reflow it triggers moves the boundary back under the pointer and the target flickers.
+    private func tabUnder(_ x: CGFloat, current: Tab?) -> Tab? {
+        let ordered = visibleTabs
+            .compactMap { tab in tabFrames[tab].map { (tab, $0) } }
+            .sorted { $0.1.minX < $1.1.minX }
+        func region(_ i: Int) -> ClosedRange<CGFloat> {
+            let lo = i > 0 ? (ordered[i - 1].1.maxX + ordered[i].1.minX) / 2 : -.infinity
+            let hi = i < ordered.count - 1 ? (ordered[i].1.maxX + ordered[i + 1].1.minX) / 2 : .infinity
+            return lo...hi
+        }
+        if let current, let i = ordered.firstIndex(where: { $0.0 == current }) {
+            let r = region(i)
+            if (r.lowerBound - 8)...(r.upperBound + 8) ~= x { return current }
+        }
+        return ordered.indices.first { region($0) ~= x }.map { ordered[$0].0 }
     }
 
     /// The selected slot at rest; while dragging, the slot under the pointer, centred on it.
     private func lensRect(in container: CGSize) -> CGRect? {
         guard let dragX = lensDragX else { return selectionPillRect(for: selectedTab, in: container) }
-        guard let tab = nearestTab(to: dragX),
+        guard let tab = lensIntent ?? tabUnder(dragX, current: nil),
               let slot = selectionPillRect(for: tab, in: container) else { return nil }
         let x = min(max(dragX, slot.width / 2), container.width - slot.width / 2)
         return CGRect(x: x - slot.width / 2, y: slot.minY, width: slot.width, height: slot.height)

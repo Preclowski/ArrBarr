@@ -545,7 +545,7 @@ private struct ChatTab: View {
             }
         }
         .personDestination($personRef)
-        .onMessage(AppMessages.OpenPerson.self) { personRef = $0.ref }
+        .onRequest(from: Router.person) { personRef = $0; return true }
         .navigationBarTitleDisplayMode(.inline)
     }
 }

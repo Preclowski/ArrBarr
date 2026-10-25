@@ -29,6 +29,9 @@ enum ShelfCollection: String, CaseIterable, Identifiable {
 
     var isRemote: Bool { self != .library }
 
+    /// Charts whose order is the point, so each cover shows its place. Cinemas is a listing, not a ranking.
+    var isRanked: Bool { self == .topRated || self == .trending || self == .popular }
+
     /// Cinemas are movies only; TMDB lists need a TMDB key.
     static func available(for source: QueueItem.Source, tmdbConfigured: Bool) -> [ShelfCollection] {
         guard tmdbConfigured else { return [.library] }
@@ -43,10 +46,12 @@ struct ShelfRemoteItem {
     /// Opens the add panel, or the detail when the title is already in the library.
     let result: SearchResult
     let tmdbId: Int
+    private let releaseDate: String?
 
     init(result: SearchResult, tmdbId: Int, releaseDate: String?) {
         self.result = result
         self.tmdbId = tmdbId
+        self.releaseDate = releaseDate
         let owned = result.inLibraryArrId
         var entry = LibraryEntry(
             id: "tmdb-\(result.source.rawValue)-\(tmdbId)", source: result.source, arrId: owned ?? 0,
@@ -64,6 +69,10 @@ struct ShelfRemoteItem {
         self.entry = entry
     }
 
+    func withOwnership(_ ownership: LibraryOwnership?) -> ShelfRemoteItem {
+        ShelfRemoteItem(result: result.withLibraryOwnership(ownership), tmdbId: tmdbId, releaseDate: releaseDate)
+    }
+
     private static func day(_ s: String) -> Date? {
         try? Date(s, strategy: Date.ISO8601FormatStyle().year().month().day())
     }
@@ -77,11 +86,53 @@ final class ShelfRemoteLists {
         let source: QueueItem.Source
     }
 
-    private(set) var items: [Key: [ShelfRemoteItem]] = [:]
+    private(set) var items: [Key: [ShelfRemoteItem]] = [:] {
+        didSet { entryCache = [:] }
+    }
+    /// One sorted, filtered pass per list and filter: the Shelf reads its entries a dozen times per body.
+    @ObservationIgnored private var entryCache: [Key: (filterKey: String, entries: [LibraryEntry])] = [:]
     /// Trending past a hundred is noise; the ranked lists stay meaningful for longer.
     private static let pages = 10
     private static let trendingPages = 5
     private(set) var failed: Set<Key> = []
+    @ObservationIgnored private var addObserver: NotificationCenter.ObservationToken?
+
+    init() {
+        // In the model, not the view: the Shelf is parked under the add panel when "added" arrives.
+        addObserver = NotificationCenter.default.addObserver(of: nil as AppMessageBus?, for: AppMessages.DidAddToLibrary.self) { [weak self] _ in
+            await self?.refreshOwnership(configStore: .shared)
+        }
+    }
+
+    isolated deinit {
+        if let addObserver { NotificationCenter.default.removeObserver(addObserver) }
+    }
+
+    /// Re-tags the loaded lists against the arr libraries, so a title just added gets its library strip
+    /// and opens its detail instead of the add panel.
+    private func refreshOwnership(configStore: ConfigStore) async {
+        let sources = Set(items.keys.map(\.source))
+        for source in sources {
+            let owned = source == .sonarr
+                ? await ArrLibraryMaps.sonarrByTMDBId(config: configStore.sonarr)
+                : await ArrLibraryMaps.radarrByTMDBId(config: configStore.radarr)
+            // An unreadable library comes back empty; that must not strip every title's library strip.
+            guard !owned.isEmpty else { continue }
+            for key in items.keys where key.source == source {
+                items[key] = items[key]?.map { $0.withOwnership(owned[$0.tmdbId]) }
+            }
+        }
+    }
+
+    func entries(_ key: Key, filter: ShelfFilter) -> [LibraryEntry] {
+        // Read before the cache, so the caller still observes the list on a hit.
+        let list = items[key] ?? []
+        if let hit = entryCache[key], hit.filterKey == filter.key { return hit.entries }
+        let all = list.map(\.entry).sorted(by: filter.areInIncreasingOrder)
+        let out = filter.isNarrowed ? all.filter(filter.matches) : all
+        entryCache[key] = (filter.key, out)
+        return out
+    }
 
     func load(_ key: Key, configStore: ConfigStore) async {
         guard items[key] == nil else { return }

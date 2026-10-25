@@ -37,6 +37,8 @@ public struct PopoverContentView: View {
     @State var detailItem: QueueItem?
     /// A tab's own full-popover surface (the Library's filters) is up: the tab bar steps aside.
     @State var tabTakeover = false
+    /// The Shelf's dark stage is up (see-through while it loads).
+    @State var shelfStageShown = false
     /// Detail surfaces own their person destination; chat has none, so the root hosts it.
     @State var personRef: PersonRef?
     /// Owned here because ⌘F and the Add/search intents aim at it from outside any tab.
@@ -181,11 +183,12 @@ public struct PopoverContentView: View {
                 }
                 return true
             }
-            .onMessage(AppMessages.OpenPerson.self) { message in
+            .onRequest(from: Router.person) { ref in
                 searchResult = nil
                 historySource = nil
                 detailItem = nil
-                personRef = message.ref
+                personRef = ref
+                return true
             }
             .onRequest(from: Router.searchAdd) { route in
                 // Back returns to chat only for the chat origin; a quiz card returns to the parked deck.
@@ -264,6 +267,10 @@ public struct PopoverContentView: View {
     @State var tabFrames: [Tab: CGRect] = [:]
     /// Pointer x while the tab lens is pressed or dragged.
     @State var lensDragX: CGFloat?
+    /// The tab a dragged lens would land on; titled live so the bar reflows mid-drag.
+    @State var lensIntent: PopoverContentView.Tab?
+    /// 0 = resting pill, 1 = lifted rounded rect (dragged, or leaving for a clicked tab).
+    @State var lensTravel: CGFloat = 0
 
     /// The detail's trailer tiles travel into the player's reel strip.
     @Namespace var trailerTiles

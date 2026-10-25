@@ -151,6 +151,8 @@ struct ShelfView: View {
     @State private var mode: ShelfMode
     /// Debug harness only: parks the scroll here once the library lands.
     private let initialPosition: Double?
+    /// Debug harness only: scrolls steadily once parked, for hitch measurements.
+    private let autoScroll: Bool
     @State private var start = CACurrentMediaTime()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The bottom control grown into its panel, if any.
@@ -170,9 +172,11 @@ struct ShelfView: View {
     private static let modeKey = "shelfMode"
 
     /// `initialMode` is the debug harness's; otherwise the last mode picked.
-    init(isObscured: Bool, initialMode: ShelfMode? = nil, initialPosition: Double? = nil, onClose: (() -> Void)? = nil) {
+    init(isObscured: Bool, initialMode: ShelfMode? = nil, initialPosition: Double? = nil,
+         autoScroll: Bool = false, onClose: (() -> Void)? = nil) {
         self.isObscured = isObscured
         self.initialPosition = initialPosition
+        self.autoScroll = autoScroll
         self.onClose = onClose
         let saved = UserDefaults.standard.string(forKey: Self.modeKey).flatMap(ShelfMode.init(rawValue:))
         _mode = State(initialValue: initialMode ?? saved ?? .warp)
@@ -212,11 +216,7 @@ struct ShelfView: View {
 
     private var entries: [LibraryEntry] {
         let f = filter
-        if let remoteKey {
-            // A few dozen titles: sorted per pass, no cache needed.
-            let all = (remote.items[remoteKey] ?? []).map(\.entry).sorted(by: f.areInIncreasingOrder)
-            return f.isNarrowed ? all.filter(f.matches) : all
-        }
+        if let remoteKey { return remote.entries(remoteKey, filter: f) }
         let sorted = library.sorted(f.source, cacheKey: f.sortKey, using: f.areInIncreasingOrder)
         guard f.isNarrowed else { return sorted }
         return library.visible(f.source, cacheKey: f.key, from: sorted, where: f.matches)
@@ -229,12 +229,19 @@ struct ShelfView: View {
         !isObscured && (motion.active || (mode == .warp && !reduceMotion))
     }
 
+    /// A scene or a real empty message; never a spinner. Until then the stage is see-through, on entry and on
+    /// every set switch, so loading never sits on black.
+    private func stageShown(_ entries: [LibraryEntry]) -> Bool {
+        sceneReady(entries) || (entries.isEmpty && !warming && !emptyIsLoading)
+    }
+
     private func sceneReady(_ entries: [LibraryEntry]) -> Bool {
         !warming && (revealed || (!entries.isEmpty && posters.image(for: entries[centerIndex].id) != nil))
     }
 
     var body: some View {
         let entries = entries
+        let stageShown = stageShown(entries)
         GeometryReader { geo in
             ZStack {
                 if sceneReady(entries) {
@@ -281,10 +288,13 @@ struct ShelfView: View {
                         .frame(width: geo.size.width, height: geo.size.height)
                         .clipped()
                 }
+                .opacity(stageShown ? 1 : 0)
             }
             .ignoresSafeArea()
         }
         .animation(.easeOut(duration: 0.3), value: revealed)
+        .animation(.easeOut(duration: 0.3), value: stageShown)
+        .preference(key: ShelfStageKey.self, value: stageShown)
         .onChange(of: sceneReady(entries)) { _, ready in
             if ready { revealed = true }
         }
@@ -353,7 +363,16 @@ struct ShelfView: View {
         .task(id: entries.count) {
             guard let initialPosition, !entries.isEmpty else { return }
             try? await Task.sleep(for: .milliseconds(400))
-            scroll.scrollTo(x: CGFloat(Double(Self.home(entries.count)) + initialPosition) * Self.pitch)
+            var x = CGFloat(Double(Self.home(entries.count)) + initialPosition) * Self.pitch
+            scroll.scrollTo(x: x)
+            guard autoScroll else { return }
+            try? await Task.sleep(for: .seconds(1))
+            // Four posters a second, one step per display frame.
+            while !Task.isCancelled {
+                x += Self.pitch * 4 / 120
+                scroll.scrollTo(x: x)
+                try? await Task.sleep(for: .milliseconds(8))
+            }
         }
     }
 
@@ -415,7 +434,8 @@ struct ShelfView: View {
             }
             Spacer()
             if entries.indices.contains(centerIndex), sceneReady(entries) {
-                ShelfInfo(entry: entries[centerIndex], tmdbId: remoteItem(entries[centerIndex])?.tmdbId)
+                ShelfInfo(entry: entries[centerIndex], tmdbId: remoteItem(entries[centerIndex])?.tmdbId,
+                          rank: listRank(entries[centerIndex]))
                     .padding(.horizontal, 20)
                     // An open panel stands where the info block is.
                     .opacity(openControl == nil ? 1 : 0)
@@ -430,6 +450,7 @@ struct ShelfView: View {
         .background(alignment: .bottom) {
             LinearGradient(colors: [.clear, .black.opacity(0.75)], startPoint: .top, endPoint: .bottom)
                 .frame(height: 200)
+                .opacity(stageShown(entries) ? 1 : 0)
                 .allowsHitTesting(false)
         }
         .background {
@@ -491,8 +512,22 @@ struct ShelfView: View {
         collection.isRemote ? [.title, .releaseDate, .tmdb] : SortMode.available(for: source)
     }
 
+    /// Place in the chart as TMDB ranked it, so a sort or a genre filter doesn't renumber it.
+    private func listRank(_ entry: LibraryEntry) -> Int? {
+        guard let remoteKey, collection.isRanked,
+              let index = remote.items[remoteKey]?.firstIndex(where: { $0.entry.id == entry.id }) else { return nil }
+        return index + 1
+    }
+
     private func remoteItem(_ entry: LibraryEntry) -> ShelfRemoteItem? {
         remoteKey.flatMap { remote.items[$0]?.first { $0.entry.id == entry.id } }
+    }
+
+    /// The empty stage is a spinner, not a message: the set or the library is still on its way.
+    private var emptyIsLoading: Bool {
+        if let remoteKey { return !remote.failed.contains(remoteKey) && remote.items[remoteKey] == nil }
+        let pending = !settled.contains(source) || library.loading.contains(source) || library.entries[source] == nil
+        return pending && !(library.loadFailed.contains(source) && settled.contains(source))
     }
 
     private var emptyState: some View {
@@ -573,15 +608,22 @@ struct ShelfView: View {
 public struct ShelfDebugView: View {
     private let mode: ShelfMode
     private let position: Double
+    private let autoScroll: Bool
 
+    /// `mode:position[:collection][:sonarr][:auto]`, e.g. `warp:1:topRated:sonarr:auto`.
     public init(spec: String) {
-        let parts = spec.split(separator: ":")
-        mode = ShelfMode(rawValue: String(parts.first ?? "")) ?? .coverFlow
+        let parts = spec.split(separator: ":").map(String.init)
+        mode = ShelfMode(rawValue: parts.first ?? "") ?? .coverFlow
         position = parts.count > 1 ? Double(parts[1]) ?? 3.5 : 3.5
+        if parts.count > 2, let collection = ShelfCollection(rawValue: parts[2]) {
+            ShelfSession.shared.collection = collection
+        }
+        if parts.contains("sonarr") { ShelfSession.shared.filter = ShelfFilter(source: .sonarr) }
+        autoScroll = parts.contains("auto")
     }
 
     public var body: some View {
-        ShelfView(isObscured: false, initialMode: mode, initialPosition: position, onClose: {})
+        ShelfView(isObscured: false, initialMode: mode, initialPosition: position, autoScroll: autoScroll, onClose: nil)
             .frame(width: 400, height: 600)
     }
 }
@@ -593,6 +635,8 @@ private struct ShelfInfo: View {
     let entry: LibraryEntry
     /// Set for TMDB lists: their series carry no tvdbId, and their films may not be in Radarr.
     var tmdbId: Int? = nil
+    /// Place in a ranked TMDB list.
+    var rank: Int? = nil
     @State private var directors: [CastMember] = []
     @State private var creditsLoading = true
 
@@ -609,6 +653,11 @@ private struct ShelfInfo: View {
             ZStack {
                 if let sizer = RatingChip.plain(1) { RatingPill(chip: sizer).hidden() }
                 HStack(spacing: 5) {
+                    if let rank {
+                        // The list is TMDB's chart, so the place wears TMDB's mark and colour.
+                        RatingPill(chip: RatingChip(label: "TMDB", value: "#\(rank)", color: .teal,
+                                                    iconName: "rating-tmdb", siteName: "TMDB"))
+                    }
                     ForEach(chips, id: \.label) { RatingPill(chip: $0) }
                 }
             }
@@ -619,7 +668,10 @@ private struct ShelfInfo: View {
                     SkeletonBar(width: 150, height: 11)
                 } else {
                     DirectedByLine(people: directors,
-                                   labelKey: entry.source == .sonarr ? "detail.createdBy.label" : "detail.directedBy.label")
+                                   labelKey: entry.source == .sonarr ? "detail.createdBy.label" : "detail.directedBy.label",
+                                   onTapPerson: { member in
+                                       if let ref = PersonRef(castMember: member) { PersonRequest.post(ref) }
+                                   })
                         .fixedSize()
                 }
             }
@@ -675,4 +727,10 @@ nonisolated private struct ShelfSnap: ScrollTargetBehavior {
     func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
         target.rect.origin.x = (target.rect.origin.x / pitch).rounded() * pitch
     }
+}
+
+/// The Shelf's dark stage is up, so the tab bar over it should be dark too.
+struct ShelfStageKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
 }
