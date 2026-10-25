@@ -373,21 +373,33 @@ struct ThinProgressBar: View {
     /// Status tint: colour is what makes a paused row stand out from a downloading one.
     var tint: Color = .primary
     var height: CGFloat = 3
+    /// A spark runs to the fill's front: bytes are moving.
+    var flowing: Bool = false
 
-    init(progress: Double, tint: Color = .primary, height: CGFloat = 3) {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    init(progress: Double, tint: Color = .primary, height: CGFloat = 3, flowing: Bool = false) {
         self.progress = progress
         self.tint = tint
         self.height = height
+        self.flowing = flowing
     }
 
     var body: some View {
         GeometryReader { geo in
+            let fillWidth = geo.size.width * max(0, min(1, progress))
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: height / 2)
                     .fill(Color.primary.opacity(0.12))
                 RoundedRectangle(cornerRadius: height / 2)
                     .fill(tint)
-                    .frame(width: geo.size.width * max(0, min(1, progress)))
+                    .frame(width: fillWidth)
+            }
+            // Unclipped, so the glow spills past the thin bar.
+            .overlay(alignment: .leading) {
+                if flowing && !reduceMotion && fillWidth > 16 {
+                    Spark(fillWidth: fillWidth, tint: tint).transition(.opacity)
+                }
             }
         }
         .frame(height: height)
@@ -397,3 +409,47 @@ struct ThinProgressBar: View {
     }
 }
 
+/// A spark running from the middle of the fill to its front, brightening as it goes, then dying at the tip.
+private struct Spark: View {
+    let fillWidth: CGFloat
+    let tint: Color
+
+    private static let run: Double = 2.4
+    private static let fade: Double = 0.5
+    private static let cycle: Double = 3.4
+    private static let size: CGFloat = 20
+
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 60)) { context in
+            let t = context.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: Self.cycle)
+            let p = min(1, t / Self.run)
+            // Quick off the mark, slow through the middle, quick onto the tip: a cubic around the midpoint
+            // blended with linear, so it slows without stopping.
+            let eased = 0.4 * p + 0.6 * (0.5 + pow(2 * p - 1, 3) / 2)
+            let brightness = t < Self.run ? pow(eased, 1.5) : max(0, 1 - (t - Self.run) / Self.fade)
+            glow
+                .opacity(brightness)
+                .offset(x: fillWidth * (0.5 + 0.5 * eased) - Self.size / 2)
+        }
+        .allowsHitTesting(false)
+    }
+
+    private var glow: some View {
+        ZStack {
+            // The trail, so it reads as moving light rather than a blinking dot.
+            Capsule().fill(.white.opacity(0.5))
+                .frame(width: 18, height: 2)
+                .blur(radius: 1)
+                .offset(x: -9)
+            Circle().fill(tint.opacity(0.7))
+                .frame(width: 16, height: 16)
+                .blur(radius: 4)
+            Circle().fill(.white.opacity(0.7))
+                .frame(width: 8, height: 8)
+                .blur(radius: 2)
+            Circle().fill(.white)
+                .frame(width: 3.5, height: 3.5)
+        }
+        .frame(width: Self.size, height: Self.size)
+    }
+}

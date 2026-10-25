@@ -38,7 +38,7 @@ struct PauseResumeButton: View {
                         : String(localized: "queue.pause.button", bundle: .module))
             }
         }
-        .buttonStyle(CTAButtonStyle(tint: tint, fill: progress ?? 0, glass: true))
+        .buttonStyle(CTAButtonStyle(tint: tint, fill: progress ?? 0, flowing: !isPaused && progress != nil, glass: true))
         .disabled(inFlight)
         .animation(.easeInOut(duration: 0.3), value: isPaused)
     }

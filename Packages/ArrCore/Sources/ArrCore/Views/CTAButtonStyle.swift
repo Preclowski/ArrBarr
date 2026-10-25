@@ -6,6 +6,8 @@ import SwiftUI
 struct CTAButtonStyle: ButtonStyle {
     var tint: Color? = nil
     var fill: Double = 1
+    /// Waves run through the fill: the download behind it is live.
+    var flowing: Bool = false
     var fullWidth: Bool = true
     var glass: Bool = false
 
@@ -43,7 +45,7 @@ struct CTAButtonStyle: ButtonStyle {
                 .padding(.horizontal, 14)
                 .background {
                     if !style.glass { Capsule().fill(.quaternary) }
-                    if let tint = style.tint { ProgressFill(progress: style.fill, tint: tint) }
+                    if let tint = style.tint { ProgressFill(progress: style.fill, tint: tint, flowing: style.flowing) }
                 }
                 .clipShape(.capsule)
                 .contentShape(.capsule)
@@ -56,22 +58,57 @@ struct CTAButtonStyle: ButtonStyle {
 private struct ProgressFill: View {
     let progress: Double
     let tint: Color
+    let flowing: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let edge: CGFloat = 28
 
     var body: some View {
         GeometryReader { geo in
             let span = geo.size.width + Self.edge
             // One fixed-width layer that slides: an offset animates smoothly where a resized gradient would jump.
-            HStack(spacing: 0) {
-                tint.opacity(0.35)
-                LinearGradient(colors: [tint.opacity(0.35), tint.opacity(0)], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: Self.edge)
-            }
-            .frame(width: span)
-            .offset(x: (max(0, min(1, progress)) - 1) * span)
+            tint.opacity(0.35)
+                .overlay {
+                    if flowing && !reduceMotion {
+                        FlowWaves().transition(.opacity)
+                    }
+                }
+                .frame(width: span)
+                .mask {
+                    HStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                            .frame(width: Self.edge)
+                    }
+                }
+                .offset(x: (max(0, min(1, progress)) - 1) * span)
         }
         .animation(.smooth(duration: 0.6), value: progress)
         .allowsHitTesting(false)
+    }
+}
+
+/// Lighter bands drifting left to right, so a slow download still reads as moving.
+private struct FlowWaves: View {
+    private static let wavelength: CGFloat = 90
+    private static let speed: Double = 50
+
+    var body: some View {
+        GeometryReader { geo in
+            let count = Int(geo.size.width / Self.wavelength) + 2
+            TimelineView(.animation) { context in
+                let shift = (context.date.timeIntervalSinceReferenceDate * Self.speed)
+                    .truncatingRemainder(dividingBy: Double(Self.wavelength))
+                HStack(spacing: 0) {
+                    ForEach(0..<count, id: \.self) { _ in
+                        LinearGradient(colors: [.white.opacity(0), .white.opacity(0.22), .white.opacity(0)],
+                                       startPoint: .leading, endPoint: .trailing)
+                            .frame(width: Self.wavelength)
+                    }
+                }
+                .offset(x: CGFloat(shift) - Self.wavelength)
+            }
+        }
+        .clipped()
     }
 }

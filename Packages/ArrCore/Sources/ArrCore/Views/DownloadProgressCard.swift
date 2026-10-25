@@ -144,7 +144,8 @@ struct DownloadProgressCard: View {
         // Detail surfaces drop the bar; progress shows in their Resume/Pause CTA.
         if compactSpec {
             LiveProgress(item: item) { live in
-                ThinProgressBar(progress: progressOverride ?? live, tint: tint, height: 6)
+                ThinProgressBar(progress: progressOverride ?? live, tint: tint, height: 6,
+                                flowing: item.status == .downloading)
             }
         }
     }

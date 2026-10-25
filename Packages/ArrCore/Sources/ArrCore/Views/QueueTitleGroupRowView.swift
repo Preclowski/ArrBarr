@@ -100,7 +100,8 @@ struct QueueTitleGroupRowView: View {
                 }
 
                 LiveProgress(group: group) { progress in
-                    ThinProgressBar(progress: progress, tint: aggregateTint, height: 6)
+                    ThinProgressBar(progress: progress, tint: aggregateTint, height: 6,
+                                    flowing: group.allItems.contains { $0.status == .downloading })
                 }
             }
 
