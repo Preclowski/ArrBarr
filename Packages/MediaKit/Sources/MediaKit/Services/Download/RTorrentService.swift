@@ -43,8 +43,8 @@ struct RTorrentService: DownloadService {
     }
 
     func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
-        guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
-        let method = switch action { case .pause: "d.stop"; case .resume: "d.start"; default: "d.erase" }
+        // rTorrent has no queue to jump: starting is all a force start can mean.
+        let method = switch action { case .pause: "d.stop"; case .resume, .forceStart: "d.start"; case .delete: "d.erase" }
         let service = self
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
             for id in ids { _ = try await ctx.send(service.call(action.rawValue, method: method, params: [.string(id.uppercased())])) }

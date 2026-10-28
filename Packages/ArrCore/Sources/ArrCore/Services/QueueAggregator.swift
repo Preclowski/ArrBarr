@@ -205,6 +205,8 @@ final class QueueAggregator: QueueDataProviding, @unchecked Sendable {
         case .downloading: return .downloading
         case .paused: return .paused
         case .queued: return .queued
+        // Running without moving: the arr's word, unless that word is a pause the client has already lifted.
+        case .stalled, .checking: return arr == .paused ? .downloading : nil
         default: return nil
         }
     }

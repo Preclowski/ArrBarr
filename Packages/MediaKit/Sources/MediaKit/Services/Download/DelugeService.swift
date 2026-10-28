@@ -47,14 +47,15 @@ struct DelugeService: DownloadService {
     }
 
     func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
-        guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
         let service = self
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in
             for id in ids {
                 let p = switch action {
                 case .pause: service.rpc("pause", method: "core.pause_torrent", params: [.array([.string(id)])])
                 case .resume: service.rpc("resume", method: "core.resume_torrent", params: [.array([.string(id)])])
-                default: service.rpc("delete", method: "core.remove_torrent", params: [.string(id), .bool(deleteFiles)])
+                // No force start in Deluge: the top of its queue is what gets the next active slot.
+                case .forceStart: service.rpc("forceStart", method: "core.queue_top", params: [.array([.string(id)])])
+                case .delete: service.rpc("delete", method: "core.remove_torrent", params: [.string(id), .bool(deleteFiles)])
                 }
                 _ = try Self.rpcResult(try await ctx.send(p), instance: service.instance, operation: p.operation)
             }

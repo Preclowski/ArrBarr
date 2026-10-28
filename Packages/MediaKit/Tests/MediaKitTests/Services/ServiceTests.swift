@@ -226,7 +226,7 @@ extension TestKit {
         #expect(kit.transport.operations.filter { $0 == "login" }.count == 1)
     }
 
-    @Test func sabnzbdOnlyFirstDownloadingSlotIsLive() throws {
+    @Test func sabnzbdKeepsItsStatesAndOnlyTheFirstDownloadingSlotMoves() throws {
         let body = """
         {"queue":{"paused":false,"kbpersec":"1024","slots":[
         {"nzo_id":"a","filename":"A","status":"Downloading","mb":"100","mbleft":"50"},
@@ -234,8 +234,17 @@ extension TestKit {
         {"nzo_id":"c","filename":"C","status":"Paused","mb":"100","mbleft":"100"}]}}
         """
         let tasks = try SABnzbdService(instance: InstanceID(.sabnzbd)).decodeTasks(HTTPResponse(status: 200, body: Data(body.utf8)), ids: [])
-        #expect(tasks.map(\.state) == [.downloading, .queued, .paused])
-        #expect(tasks[0].downloadSpeed == 1024 * 1024 && tasks[1].downloadSpeed == nil)
+        #expect(tasks.map(\.state) == [.downloading, .downloading, .paused])
+        #expect(tasks.map(\.downloadSpeed) == [1024 * 1024, 0, nil])
+    }
+
+    @Test func aResumeIsConfirmedByAnyRunningStateButAForceStartOnlyByDownloading() {
+        let task = { (state: DownloadTask.State) in DownloadTask(id: "a", name: "A", state: state, progress: 0, instance: InstanceID(.sabnzbd)) }
+        #expect(task(.paused).applying(.resumed)?.state == .downloading)
+        for running in [DownloadTask.State.queued, .stalled, .checking, .downloading] {
+            #expect(task(running).applying(.resumed) == task(running))
+        }
+        #expect(task(.queued).applying(.status("downloading"))?.state == .downloading)
     }
 
     @Test func rtorrentMulticallRoundTrip() throws {
@@ -355,6 +364,34 @@ enum ProducedOperations {
         let text = body(kit.transport.requests[0])
         #expect(text.contains(#""method":"append""#) && text.contains(Data("nzb".utf8).base64EncodedString()) && text.contains(#""tv""#) && text.contains("true"))
         #expect(kit.transport.requests[0].headers["Authorization"]?.hasPrefix("Basic ") == true)
+    }
+
+    @Test func everyClientForceStartsWithItsOwnVerb() async throws {
+        let (sab, sabID) = try await kit(.sabnzbd)
+        sab.transport.answer("forceStart", json: #"{"position":0}"#)
+        _ = try await sab.store.run(SABnzbdService(instance: sabID).action(.forceStart, ids: ["SABnzbd_nzo_a"], deleteFiles: false))
+        let query = sab.transport.requests[0].url.query ?? ""
+        #expect(query.contains("name=priority") && query.contains("value=SABnzbd_nzo_a") && query.contains("value2=2"))
+
+        let (nzb, nzbID) = try await kit(.nzbget)
+        nzb.transport.answer("forceStart", json: #"{"result":true}"#)
+        _ = try await nzb.store.run(NZBGetService(instance: nzbID).action(.forceStart, ids: ["7"], deleteFiles: false))
+        #expect(body(nzb.transport.requests[0]).contains(#""GroupSetPriority","900",[7]"#))
+
+        let (tr, trID) = try await kit(.transmission)
+        tr.transport.answer("forceStart", json: #"{"result":"success","arguments":{}}"#)
+        _ = try await tr.store.run(TransmissionService(instance: trID).action(.forceStart, ids: ["abc"], deleteFiles: false))
+        #expect(tr.transport.requests.last?.rpcMethod == "torrent-start-now")
+
+        let (de, deID) = try await kit(.deluge)
+        de.transport.answer("forceStart", json: #"{"result":null,"error":null,"id":1}"#)
+        _ = try await de.store.run(DelugeService(instance: deID).action(.forceStart, ids: ["abc"], deleteFiles: false))
+        #expect(de.transport.requests.last?.rpcMethod == "core.queue_top")
+
+        let (rt, rtID) = try await kit(.rtorrent)
+        rt.transport.answer("forceStart", json: "<methodResponse><params><param><value><i4>0</i4></value></param></params></methodResponse>")
+        _ = try await rt.store.run(RTorrentService(instance: rtID).action(.forceStart, ids: ["abc"], deleteFiles: false))
+        #expect(rt.transport.requests.last?.rpcMethod == "d.start")
     }
 
     @Test func rtorrentLoadPicksTheNonStartingMethodWhenPaused() async throws {

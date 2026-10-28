@@ -19,7 +19,16 @@ public struct DownloadTask: Sendable, Hashable, Codable, LivePatchable {
     }
 
     public func applying(_ change: PendingEffect.Change) -> DownloadTask? {
-        guard case let .status(raw) = change, let state = State(rawValue: raw) else { return nil }
+        let state: State
+        switch change {
+        case let .status(raw):
+            guard let parsed = State(rawValue: raw) else { return nil }
+            state = parsed
+        case .resumed:
+            guard self.state == .paused else { return self }
+            state = .downloading
+        default: return nil
+        }
         var copy = self
         copy.state = state
         return copy
@@ -45,10 +54,6 @@ public protocol DownloadService: Sendable {
     func add(_ payload: DownloadPayload, category: String?, paused: Bool) -> Command
 }
 
-extension Capability {
-    public static let downloadForceStart = Capability(rawValue: "downloadForceStart")
-}
-
 extension DownloadService {
     var downloadsTag: InvalidationTag { .collection(.downloads, instance) }
 
@@ -60,7 +65,8 @@ extension DownloadService {
     func effects(_ action: DownloadAction, ids: [String]) -> [PendingEffect] {
         let change: PendingEffect.Change = switch action {
         case .pause: .status(DownloadTask.State.paused.rawValue)
-        case .resume, .forceStart: .status(DownloadTask.State.downloading.rawValue)
+        case .resume: .resumed
+        case .forceStart: .status(DownloadTask.State.downloading.rawValue)
         case .delete: .removed
         }
         return ids.map { PendingEffect(elementID: $0.lowercased(), change: change) }
@@ -68,12 +74,6 @@ extension DownloadService {
 
     public func fetchTasks(ids: Set<String>, pipeline: RequestPipeline) async throws -> [DownloadTask] {
         try decodeTasks(try await pipeline.send(tasks(ids: ids)), ids: ids)
-    }
-
-    static func unsupportedForceStart(_ instance: InstanceID) -> Command {
-        Command(name: OperationID(instance.kind, "forceStart"), instance: instance, invalidates: []) { _ in
-            throw MediaKitError.unsupported(instance, .downloadForceStart)
-        }
     }
 
     static func decodeJSON<T: Decodable>(_ type: T.Type, _ response: HTTPResponse, operation: OperationID, decoder: JSONDecoder = WireCodec.decoder) throws -> T {

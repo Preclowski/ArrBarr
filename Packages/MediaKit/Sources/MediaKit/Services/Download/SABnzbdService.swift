@@ -26,22 +26,25 @@ struct SABnzbdService: DownloadService {
     func decodeTasks(_ response: HTTPResponse, ids: Set<String>) throws -> [DownloadTask] {
         let queue = try Self.decodeJSON(QueueResponse.self, response, operation: OperationID(instance.kind, "fetchProgress")).queue
         let speed = queue.kbpersec.flatMap(Double.init).map { Int64($0 * 1024) }
-        // SABnzbd labels every unpaused slot "Downloading" but fetches them one at a time in queue order,
-        // so only the first is live; the queue-wide speed belongs to it alone.
+        // SABnzbd labels every unpaused slot "Downloading" but fetches them one at a time in queue order.
+        // The state stays SABnzbd's (and the arr's); only the first slot is moving, so it alone gets the
+        // queue-wide speed and the rest a measured zero.
         var claimedLive = false
         return queue.slots.map { s in
-            var state: DownloadTask.State = switch s.status.lowercased() {
+            let state: DownloadTask.State = switch s.status.lowercased() {
             case "downloading": .downloading
             case "paused": .paused
             case "checking", "verifying", "repairing", "extracting", "moving": .checking
             default: .queued
             }
+            var slotSpeed: Int64?
             if state == .downloading {
-                if claimedLive { state = .queued } else { claimedLive = true }
+                slotSpeed = claimedLive ? 0 : speed
+                claimedLive = true
             }
             let mb = Double(s.mb ?? "") ?? 0, left = Double(s.mbleft ?? "") ?? 0
             return DownloadTask(id: s.nzo_id, name: s.filename, state: state, progress: mb > 0 ? max(0, (mb - left) / mb) : 0,
-                                downloadSpeed: state == .downloading ? speed : nil, sizeBytes: Int64(mb * 1_048_576),
+                                downloadSpeed: slotSpeed, sizeBytes: Int64(mb * 1_048_576),
                                 etaSeconds: Self.seconds(s.timeleft), category: s.cat, instance: instance)
         }
     }
@@ -51,10 +54,11 @@ struct SABnzbdService: DownloadService {
     }
 
     func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
-        guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
-        let name = switch action { case .pause: "pause"; case .resume: "resume"; default: "delete" }
+        let name = switch action { case .pause: "pause"; case .resume: "resume"; case .forceStart: "priority"; case .delete: "delete" }
         var query = [("mode", "queue"), ("name", name), ("value", ids.joined(separator: ","))]
         if action == .delete { query.append(("del_files", deleteFiles ? "1" : "0")) }
+        // "Force" priority: first in line, downloaded even while the queue is paused.
+        if action == .forceStart { query.append(("value2", "2")) }
         let p = api(action.rawValue, query: query, write: true)
         return command(action.rawValue, effects: effects(action, ids: ids)) { ctx in _ = try await ctx.send(p); return CommandReceipt(acceptedAt: ctx.clock.now) }
     }

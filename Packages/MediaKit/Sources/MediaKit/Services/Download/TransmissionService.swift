@@ -52,8 +52,7 @@ struct TransmissionService: DownloadService {
     }
 
     func action(_ action: DownloadAction, ids: [String], deleteFiles: Bool) -> Command {
-        guard action != .forceStart else { return Self.unsupportedForceStart(instance) }
-        let method = switch action { case .pause: "torrent-stop"; case .resume: "torrent-start"; default: "torrent-remove" }
+        let method = switch action { case .pause: "torrent-stop"; case .resume: "torrent-start"; case .forceStart: "torrent-start-now"; case .delete: "torrent-remove" }
         var arguments: [String: JSONValue] = ["ids": .array(ids.map { .string($0) })]
         if action == .delete { arguments["delete-local-data"] = .bool(deleteFiles) }
         let p = rpc(action.rawValue, method: method, arguments: arguments)

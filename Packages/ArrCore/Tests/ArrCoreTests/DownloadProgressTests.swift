@@ -60,6 +60,21 @@ struct DownloadProgressOverlayTests {
         #expect(out[1].status == .importing)
     }
 
+    @Test("A stalled or checking task lifts the arr's stale pause, and otherwise defers to the arr",
+          arguments: [DownloadTask.State.stalled, .checking])
+    func runningWithoutMoving(_ state: DownloadTask.State) {
+        var paused = item("a", downloadId: "x", progress: 0.4)
+        paused.status = .paused
+        var queued = item("b", downloadId: "y", progress: 0.4)
+        queued.status = .queued
+        let out = QueueAggregator.overlay([paused, queued], with: [
+            "x": task("x", progress: 0.4, state: state),
+            "y": task("y", progress: 0.4, state: state),
+        ])
+        #expect(out[0].status == .downloading)
+        #expect(out[1].status == .queued)
+    }
+
     private func task(_ id: String, progress: Double, state: DownloadTask.State = .downloading) -> DownloadTask {
         DownloadTask(id: id, name: id, state: state, progress: progress, instance: InstanceID(.qbittorrent))
     }

@@ -75,7 +75,8 @@ public struct CommandContext: Sendable {
 }
 
 public struct PendingEffect: Sendable, Equatable, Codable {
-    public enum Change: Sendable, Equatable, Codable { case status(String), removed, keepAlive }
+    /// `resumed` promises only "no longer paused": a row that came back waiting its turn, stalled or checking has agreed.
+    public enum Change: Sendable, Equatable, Codable { case status(String), resumed, removed, keepAlive }
     public let elementID: String
     /// The instance whose row this is; nil matches the id in every instance.
     public let instance: InstanceID?

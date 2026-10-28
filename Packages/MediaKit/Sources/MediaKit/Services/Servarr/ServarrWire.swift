@@ -292,9 +292,14 @@ public struct ArrQueueRecord: Codable, Equatable, Sendable, Hashable, LivePatcha
     public let album: ArrAlbum?
 
     public func applying(_ change: PendingEffect.Change) -> ArrQueueRecord? {
-        guard case let .status(value) = change else { return nil }
         var copy = self
-        copy.status = value
+        switch change {
+        case let .status(value): copy.status = value
+        case .resumed:
+            guard status?.lowercased() == "paused" else { return self }
+            copy.status = "downloading"
+        default: return nil
+        }
         return copy
     }
 

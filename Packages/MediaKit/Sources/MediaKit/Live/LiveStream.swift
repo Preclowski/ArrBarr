@@ -352,13 +352,13 @@ public actor LiveStream<Element: Codable & Sendable & Equatable & LivePatchable>
                 guard var rows = overlaid[instance] else { continue }
                 let index = rows.firstIndex { matches($0, effect.elementID) }
                 switch effect.change {
-                case let .status(status):
+                case .status, .resumed:
                     if let index {
-                        // Dropped once the source reports the same status.
-                        guard let patched = rows[index].applying(.status(status)), patched != rows[index] else { continue }
+                        // Dropped once the source agrees.
+                        guard let patched = rows[index].applying(effect.change), patched != rows[index] else { continue }
                         rows[index] = patched
                     } else {
-                        guard let seen = lastSeenRow(instance, effect.elementID), let ghost = seen.element.applying(.status(status)) else { continue }
+                        guard let seen = lastSeenRow(instance, effect.elementID), let ghost = seen.element.applying(effect.change) else { continue }
                         let before = presentAtApply[Self.effectKey(effect)] ?? []
                         if rows.contains(where: { $0.succeeds(seen.element) && !before.contains(elementID($0)) }) { continue }
                         rows.insert(ghost, at: min(seen.position, rows.count))

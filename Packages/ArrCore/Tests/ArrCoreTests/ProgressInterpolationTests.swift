@@ -38,14 +38,19 @@ struct ProgressInterpolationTests {
 
     @Test("Without a client speed the arr's ETA is enough")
     func rateFromTimeLeft() {
-        // SABnzbd reports no per-slot speed, so this is the path that actually
-        // runs on a usenet stack.
+        // NZBGet reports no speed, so this is the path that runs there.
         let row = item(progress: 0.5, timeLeft: "00:01:40")   // 100 s for the last half
         let rate = try! #require(row.progressRatePerSecond)
         #expect(abs(rate - 0.005) < 0.0001)
 
         let start = Date()
         #expect(abs(row.interpolatedProgress(at: start.addingTimeInterval(50), measuredAt: start) - 0.75) < 0.0001)
+    }
+
+    @Test("A client-reported zero speed holds the bar, ETA or not")
+    func zeroSpeedHolds() {
+        let row = item(progress: 0.5, timeLeft: "00:01:40", speed: 0)
+        #expect(row.progressRatePerSecond == nil)
     }
 
     @Test("Only a downloading row moves", arguments: [

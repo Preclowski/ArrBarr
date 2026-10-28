@@ -5,11 +5,13 @@ import Foundation
 nonisolated public extension QueueItem {
 
     /// Falls back to the arr's ETA so the bar still moves for clients that
-    /// report no per-item speed (SABnzbd).
+    /// report no per-item speed (NZBGet). A reported zero (stalled, or a SABnzbd slot
+    /// waiting its turn) holds the bar still.
     var progressRatePerSecond: Double? {
         guard status == .downloading, progress < 1 else { return nil }
-        if let speed = downloadSpeed, speed > 0, sizeTotal > 0 {
-            return Double(speed) / Double(sizeTotal)
+        if let speed = downloadSpeed {
+            guard speed > 0 else { return nil }
+            if sizeTotal > 0 { return Double(speed) / Double(sizeTotal) }
         }
         if let seconds = Self.seconds(fromTimeLeft: timeLeft), seconds > 0 {
             return (1 - progress) / seconds
