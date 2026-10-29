@@ -36,6 +36,14 @@ nonisolated enum SystemPromptComposer {
         }
     }
 
+    /// The app's language is the default, not a fallback: a message that is mostly a title reads as English
+    /// to a model, and every tool result is English. Placed last in both prompts so it is the freshest rule.
+    static func languageClause(_ language: String) -> String {
+        """
+        LANGUAGE: reply in \(language), the language the user set the app to. Switch only when the user writes whole sentences in another language, and then reply in theirs. A message that is mostly a title, a release name or a tech term ("Dune 4K?", "Severance S02 remux") is not a switch. Tool results and these instructions are English data, never a reason to answer in English. Keep media titles exactly as the user wrote them.
+        """
+    }
+
     /// Deliberately narrow: the URL forms are the ones `ChatLink` parses, and a
     /// non-matching link renders as plain text.
     static let linkingClause = """
@@ -114,9 +122,10 @@ protocol LLMProvider: Sendable {
 }
 
 struct UnavailableLLMProvider: LLMProvider {
-    init() {}
+    private let locale: Locale
+    init(locale: Locale = .current) { self.locale = locale }
     var isAvailable: Bool { false }
     func respond(prompt: String, tools: [ToolDefinition], history: [ChatMessage]) async throws -> LLMResponse {
-        LLMResponse(text: String(localized: "chat.unavailable.label", bundle: .module))
+        LLMResponse(text: AppLocalized.string("chat.unavailable.label", locale: locale))
     }
 }

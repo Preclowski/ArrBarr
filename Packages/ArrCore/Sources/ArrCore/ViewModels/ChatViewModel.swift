@@ -20,15 +20,23 @@ final class ChatViewModel {
     private let onTurnEnded: (@Sendable () -> Void)?
     private let onClear: (@Sendable () -> Void)?
     private var turnTask: Task<Void, Never>?
+    /// Replaced by `clear()`; a turn still running for the old conversation must not write into the new one.
+    private var conversationID = UUID()
+    /// The in-app language: `String(localized:)` follows the process language, stale after a live switch.
+    private let locale: Locale
 
     /// Never logs prompts, replies or tool arguments — they are the user's words. Records turn, provider and outcome.
     private static let log = Logger(category: "Chat")
 
     var providerIsAvailable: Bool { provider.isAvailable }
 
+    /// False while a turn runs or a confirm card waits; `send` would drop the text.
+    var canSend: Bool { pendingConfirm == nil && turnTask == nil }
+
     init(provider: LLMProvider,
                 tools: [ToolDefinition],
                 invokeTool: @escaping @Sendable (_ name: String, _ args: JSONValue) async throws -> ToolCallOutput,
+                locale: Locale = .current,
                 onToolCallStream: (@Sendable (_ name: String, _ arguments: String) -> Void)? = nil,
                 onTurnEnded: (@Sendable () -> Void)? = nil,
                 onClear: (@Sendable () -> Void)? = nil) {
@@ -38,6 +46,7 @@ final class ChatViewModel {
         self.provider = provider
         self.tools = tools
         self.invokeTool = invokeTool
+        self.locale = locale
     }
 
     func send(_ text: String) async {
@@ -63,6 +72,7 @@ final class ChatViewModel {
     func clear() {
         guard pendingResume == nil else { return }
         turnTask?.cancel()
+        conversationID = UUID()
         messages = []
         lastError = nil
         onClear?()
@@ -108,10 +118,15 @@ final class ChatViewModel {
         )
         // Bound once: reading the stored property inside the round's closure is a main-actor access.
         let observer = onToolCallStream
+        let conversation = conversationID
+        func post(_ message: ChatMessage) {
+            guard conversationID == conversation else { return }
+            messages.append(message)
+        }
         do {
             var nextPrompt: String? = prompt
             var roundsLeft = 6
-            while let p = nextPrompt, roundsLeft > 0 {
+            while let p = nextPrompt, roundsLeft > 0, conversationID == conversation {
                 roundsLeft -= 1
                 Self.log.debug("round \(6 - roundsLeft, privacy: .public)/6")
                 // The first round's prompt is the user message `send` just appended; history must not repeat it.
@@ -127,9 +142,9 @@ final class ChatViewModel {
                 if let toolResults = response.toolResults {
                     let toolCall = response.toolCalls.first
                     let assistantMsg = ChatMessage(role: .assistant, content: response.text, toolCall: toolCall)
-                    messages.append(assistantMsg)
+                    post(assistantMsg)
                     for (call, output) in zip(response.toolCalls, toolResults) {
-                        messages.append(ChatMessage(
+                        post(ChatMessage(
                             role: .tool,
                             content: call.name,
                             toolCall: call,
@@ -142,7 +157,7 @@ final class ChatViewModel {
 
                 let toolCalls = response.toolCalls
                 guard !toolCalls.isEmpty else {
-                    messages.append(ChatMessage(role: .assistant, content: response.text))
+                    post(ChatMessage(role: .assistant, content: response.text))
                     return
                 }
 
@@ -150,7 +165,8 @@ final class ChatViewModel {
                 // assistant carrier so the OpenAI history pairs them.
                 var ranAnyTool = false
                 for (index, call) in toolCalls.enumerated() {
-                    messages.append(ChatMessage(
+                    guard conversationID == conversation else { return }
+                    post(ChatMessage(
                         role: .assistant,
                         content: index == 0 ? response.text : "",
                         toolCall: call
@@ -161,7 +177,7 @@ final class ChatViewModel {
                     let preApproved: JSONValue?
                     if MCPToolWhitelist.isDestructive(call.name) {
                         guard let args = await awaitConfirm(call) else {
-                            messages.append(ChatMessage(
+                            post(ChatMessage(
                                 role: .tool,
                                 content: call.name,
                                 toolCall: call,
@@ -190,7 +206,7 @@ final class ChatViewModel {
                             try await invokeTool(call.name, confirmedArgs)
                         }
                     } catch LocalToolError.confirmationDeclined(_) {
-                        messages.append(ChatMessage(
+                        post(ChatMessage(
                             role: .tool,
                             content: call.name,
                             toolCall: call,
@@ -202,7 +218,7 @@ final class ChatViewModel {
                         output = ToolCallOutput(text: "(tool error: \(error.localizedDescription))")
                     }
                     let confirmedCall = ToolCall(id: call.id, name: call.name, arguments: confirmedArgs)
-                    messages.append(ChatMessage(
+                    post(ChatMessage(
                         role: .tool,
                         content: call.name,
                         toolCall: confirmedCall,
@@ -215,10 +231,10 @@ final class ChatViewModel {
                 // the model answer the tool output instead of the question.
                 nextPrompt = ranAnyTool ? "" : nil
             }
-            if roundsLeft == 0 {
+            if roundsLeft == 0, conversationID == conversation {
                 Self.log.notice("turn hit the 6-round tool-call cap and stopped")
-                lastError = String(localized: "chat.error.roundCap", bundle: .module)
-                messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.stuckInLoop", bundle: .module)))
+                lastError = AppLocalized.string("chat.error.roundCap", locale: locale)
+                post(ChatMessage(role: .assistant, content: AppLocalized.string("chat.error.stuckInLoop", locale: locale)))
             }
         } catch where Task.isCancelled {
             Self.log.notice("turn cancelled by the user")
@@ -227,8 +243,10 @@ final class ChatViewModel {
             Self.log.error(
                 "turn failed: \(error.logKind, privacy: .public) | \(String(reflecting: error), privacy: .private)"
             )
+            guard conversationID == conversation else { return }
             lastError = error.localizedDescription
-            messages.append(ChatMessage(role: .assistant, content: String(localized: "chat.error.failed \(error.localizedDescription)", bundle: .module)))
+            let format = AppLocalized.string("chat.error.failed %@", locale: locale)
+            post(ChatMessage(role: .assistant, content: String(format: format, locale: locale, error.localizedDescription)))
         }
     }
 }

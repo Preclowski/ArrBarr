@@ -1,4 +1,5 @@
 import Foundation
+import os
 import MediaKit
 
 // MARK: - get_title_details
@@ -21,6 +22,8 @@ extension LocalToolBackend {
             guard sonarr.isConfigured else { return ToolCallOutput(text: "Sonarr is not configured.") }
             let d = try await sonarrClient.fetchSeriesDetails(id: id)
             var text = Self.formatSeriesDetails(d)
+            text += await librarySection(profileId: d.qualityProfileId, client: sonarrClient,
+                                         files: await seriesFilesLine(seriesId: id))
             guard includeCast else { return ToolCallOutput(text: text) }
             let cast = await seriesCast(tmdbId: d.tmdbId)
             text += cast.text
@@ -29,6 +32,8 @@ extension LocalToolBackend {
             guard radarr.isConfigured else { return ToolCallOutput(text: "Radarr is not configured.") }
             let d = try await radarrClient.fetchMovieDetails(id: id)
             var text = Self.formatMovieDetails(d)
+            text += await librarySection(profileId: d.qualityProfileId, client: radarrClient,
+                                         files: await movieFileLine(d, movieId: id))
             guard includeCast else { return ToolCallOutput(text: text) }
             let cast = await movieCast(movieId: id)
             text += cast.text
@@ -36,6 +41,64 @@ extension LocalToolBackend {
         default:
             return ToolCallOutput(text: "Specify service: 'sonarr' or 'radarr'.")
         }
+    }
+
+    // MARK: - Profile and files
+
+    /// The profile decides the next grab; the file is what an upgrade would replace.
+    private func librarySection(profileId: Int?, client: some ArrAPIClient, files: String) async -> String {
+        var out = "\n\n"
+        if let profileId {
+            let profiles = (await Logger.extras.attempt("title quality profiles") { try await client.fetchQualityProfiles() }) ?? []
+            out += "Quality profile: \(profiles.first { $0.id == profileId }?.name ?? "id \(profileId)")\n"
+        }
+        return out + files
+    }
+
+    private func movieFileLine(_ movie: ArrMovie, movieId: Int) async -> String {
+        var file = movie.movieFile
+        if file == nil, movie.hasFile == true {
+            file = await Logger.extras.attempt("title movie file") { try await radarrClient.fetchMovieFile(movieId: movieId) } ?? nil
+        }
+        guard let file else { return "File: none on disk" }
+        return "File: " + Self.fileLine(file)
+    }
+
+    private func seriesFilesLine(seriesId: Int) async -> String {
+        guard let files = await Logger.extras.attempt("title episode files", {
+            Array(try await sonarrClient.fetchEpisodeFileMap(seriesId: seriesId).values)
+        }) else { return "Episode files: couldn't load" }
+        guard !files.isEmpty else { return "Episode files: none on disk" }
+        let size = files.reduce(Int64(0)) { $0 + ($1.size ?? 0) }
+        let counts = Dictionary(grouping: files) { file in
+            Self.qualityLabel(file.quality?.name, revision: revisionLabel(file.quality?.revision)) ?? "unknown"
+        }
+        .map { (quality: $0.key, count: $0.value.count) }
+        .sorted { $0.count != $1.count ? $0.count > $1.count : $0.quality < $1.quality }
+        let mix = counts.prefix(4).map { "\($0.quality) ×\($0.count)" }.joined(separator: ", ")
+        return "Episode files: \(files.count) on disk · "
+            + ByteCountFormatter.string(fromByteCount: size, countStyle: .file) + " — " + mix
+    }
+
+    /// `Bluray-2160p Proper · CF score 120 · CFs: DV, HDR10 · 24.3 GB · HEVC 2160p · TrueHD Atmos 7.1 · group FGT`
+    nonisolated static func fileLine(_ file: ArrFile) -> String {
+        var parts = [qualityLabel(file.quality?.name, revision: revisionLabel(file.quality?.revision)) ?? "quality unknown"]
+        if let score = file.customFormatScore { parts.append("CF score \(score)") }
+        if let formats = file.customFormats {
+            parts.append(formats.isEmpty ? "CFs: none" : "CFs: " + formats.map(\.name).joined(separator: ", "))
+        }
+        if let size = file.size, size > 0 {
+            parts.append(ByteCountFormatter.string(fromByteCount: size, countStyle: .file))
+        }
+        if let info = file.mediaInfo {
+            let video = [info.videoCodec, info.resolution].compactMap { $0?.isEmpty == false ? $0 : nil }
+            if !video.isEmpty { parts.append(video.joined(separator: " ")) }
+            var audio = [info.audioCodec].compactMap { $0?.isEmpty == false ? $0 : nil }
+            if let channels = info.audioChannels, channels > 0 { audio.append(String(format: "%.1f", channels)) }
+            if !audio.isEmpty { parts.append(audio.joined(separator: " ")) }
+        }
+        if let group = file.releaseGroup, !group.isEmpty { parts.append("group \(group)") }
+        return parts.joined(separator: " · ")
     }
 
     /// One list in both shapes, so what the user sees and the assistant says can't drift.

@@ -158,9 +158,10 @@ public final class ConfigStore {
         ("pl", "Polski"),
     ]
 
-    public var currentLocale: Locale {
-        if appLanguage == "system" { return .autoupdatingCurrent }
-        return Locale(identifier: appLanguage)
+    public var currentLocale: Locale { Self.locale(appLanguage: appLanguage) }
+
+    nonisolated static func locale(appLanguage: String) -> Locale {
+        appLanguage == "system" ? .autoupdatingCurrent : Locale(identifier: appLanguage)
     }
 
     /// Apply the in-app language to the process so model-layer `String(localized:)`

@@ -34,8 +34,10 @@ struct ChatViewModelTests {
     @MainActor final class FakeMCP {
         var callCount = 0
         var responses: [String: String] = [:]
+        var onCall: (() -> Void)?
         func call(name: String, arguments: JSONValue) async throws -> ToolCallOutput {
             callCount += 1
+            onCall?()
             return ToolCallOutput(text: responses[name] ?? "(no response)")
         }
     }
@@ -44,8 +46,42 @@ struct ChatViewModelTests {
         ChatViewModel(
             provider: provider,
             tools: [ToolDefinition(name: "sonarr_search", description: "", inputSchema: .object([:]))],
-            invokeTool: { name, args in try await mcp.call(name: name, arguments: args) }
+            invokeTool: { name, args in try await mcp.call(name: name, arguments: args) },
+            locale: Locale(identifier: "en")
         )
+    }
+
+    @Test("The VM's own bubbles follow the in-app language, not the process one")
+    func bubblesFollowAppLanguage() async throws {
+        let p = FakeProvider()
+        for _ in 0..<7 {
+            p.scripted.append(LLMResponse(text: "", toolCalls: [ToolCall(name: "sonarr_search", arguments: .object([:]))]))
+        }
+        let mcp = FakeMCP()
+        mcp.responses["sonarr_search"] = "result"
+        let vm = ChatViewModel(
+            provider: p,
+            tools: [ToolDefinition(name: "sonarr_search", description: "", inputSchema: .object([:]))],
+            invokeTool: { name, args in try await mcp.call(name: name, arguments: args) },
+            locale: Locale(identifier: "pl")
+        )
+        await vm.send("pętla")
+        #expect(vm.messages.last?.content == "Przepraszam — utknąłem w pętli i przerwałem.")
+    }
+
+    @Test("Clearing mid-turn keeps the old turn's results out of the new chat")
+    func clearMidTurnDropsLateResults() async throws {
+        let p = FakeProvider()
+        p.scripted = [
+            LLMResponse(text: "", toolCalls: [ToolCall(name: "sonarr_search", arguments: .object([:]))]),
+            LLMResponse(text: "done"),
+        ]
+        let mcp = FakeMCP()
+        mcp.responses["sonarr_search"] = "result"
+        let vm = makeVM(provider: p, mcp: mcp)
+        mcp.onCall = { vm.clear() }
+        await vm.send("q")
+        #expect(vm.messages.isEmpty)
     }
 
     @Test("plain text response — no tool calls")

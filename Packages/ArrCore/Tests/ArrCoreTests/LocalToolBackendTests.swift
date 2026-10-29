@@ -625,6 +625,30 @@ struct LocalToolBackendTests {
         #expect(!output.text.contains("Any: 0"))
     }
 
+    @Test("custom_formats describes several names in one call and reports the misses")
+    func describeSeveralFormats() async throws {
+        localStub.activate()
+        defer { localStub.reset() }
+        localStub.handlers["/api/v3/customformat"] = (200, Data("""
+        [{"id":7,"name":"x265 (HD)","specifications":[]},{"id":8,"name":"DV","specifications":[]}]
+        """.utf8))
+        localStub.handlers["/api/v3/qualityprofile"] = (200, Data("""
+        [{"id":1,"name":"UHD","formatItems":[{"format":8,"name":"DV","score":1500},{"format":7,"name":"x265 (HD)","score":-10000}]}]
+        """.utf8))
+
+        let output = try await backend().callTool(
+            name: "custom_formats",
+            arguments: .object([
+                "service": .string("radarr"),
+                "names": .array([.string("DV"), .string("x265"), .string("Bluray Tier 99")]),
+            ])
+        )
+        #expect(output.text.contains("custom format: DV (id 8)"))
+        #expect(output.text.contains("custom format: x265 (HD) (id 7)"))
+        #expect(output.text.contains("UHD: +1500"))
+        #expect(output.text.contains("No custom format named 'Bluray Tier 99'"))
+    }
+
     @Test("describe_format reports a helpful miss when the name isn't found")
     func describeFormatNotFound() async throws {
         localStub.activate()
@@ -736,7 +760,77 @@ struct LocalToolBackendTests {
     func queuePlainNoDiff() {
         let text = LocalToolBackend.formatQueueCondensed([plainItem()])
         #expect(text.contains("Dune"))
-        #expect(!text.contains("UPGRADE:"))
+        #expect(!text.contains("UPGRADE"))
+    }
+
+    @Test("Every queue row carries its release's quality, formats, score and profile")
+    func queueRowCarriesRelease() {
+        let item = QueueItem(
+            id: "radarr-9", source: .radarr, arrQueueId: 9,
+            downloadId: "abc", downloadProtocol: .torrent, downloadClient: "qbit",
+            title: "Dune (2021)", subtitle: nil, releaseName: "Dune.2021.2160p.UHD.BluRay.REMUX-FGT",
+            status: .downloading, progress: 0.4, sizeTotal: 60_000_000_000, sizeLeft: 36_000_000_000, timeLeft: nil,
+            customFormats: ["DV", "TrueHD Atmos"], customFormatScore: 1240,
+            quality: "Remux-2160p", qualityRevision: "Proper", isUpgrade: false,
+            qualityProfileId: 4, contentSlug: nil
+        )
+        let text = LocalToolBackend.formatQueueCondensed([item], profiles: [LocalToolBackend.profileKey(.radarr, 4): "UHD Remux"])
+        #expect(text.contains("Remux-2160p Proper"))
+        #expect(text.contains("CF score 1240"))
+        #expect(text.contains("CFs: DV, TrueHD Atmos"))
+        #expect(text.contains("release: Dune.2021.2160p.UHD.BluRay.REMUX-FGT"))
+        #expect(text.contains("profile: UHD Remux"))
+    }
+
+    @Test("An upgrade the arr reported no old file for says so instead of diffing against nothing")
+    func queueUpgradeWithoutExistingMetadata() {
+        let item = QueueItem(
+            id: "radarr-3", source: .radarr, arrQueueId: 3,
+            downloadId: nil, downloadProtocol: .torrent, downloadClient: "qbit",
+            title: "Léon", subtitle: nil, status: .downloading,
+            progress: 0.2, sizeTotal: 10, sizeLeft: 8, timeLeft: nil,
+            customFormats: ["x265"], customFormatScore: 30, quality: "Bluray-1080p", isUpgrade: true,
+            contentSlug: nil
+        )
+        let text = LocalToolBackend.formatQueueCondensed([item])
+        #expect(text.contains("UPGRADE of a file already in the library"))
+        #expect(!text.contains("? →"))
+        #expect(!text.contains("+x265"))
+    }
+
+    @Test("A repack of the same quality and score still explains itself")
+    func queueRepackUpgrade() {
+        let item = QueueItem(
+            id: "sonarr-4", source: .sonarr, arrQueueId: 4,
+            downloadId: nil, downloadProtocol: .usenet, downloadClient: "SAB",
+            title: "Severance (2022)", subtitle: "S02E03", status: .downloading,
+            progress: 0.5, sizeTotal: 2_000_000_000, sizeLeft: 1_000_000_000, timeLeft: nil,
+            customFormats: ["AMZN"], customFormatScore: 50, quality: "WEBDL-1080p", qualityRevision: "Repack", isUpgrade: true,
+            existingCustomFormats: ["AMZN"], existingCustomFormatScore: 50, existingQuality: "WEBDL-1080p",
+            existingSize: 2_000_000_000, contentSlug: nil
+        )
+        let diff = LocalToolBackend.upgradeDiffFragment(item) ?? ""
+        #expect(diff.contains("WEBDL-1080p → WEBDL-1080p Repack"))
+        #expect(diff.contains("same score (50)"))
+        #expect(diff.contains("same custom formats"))
+    }
+
+    @Test("A season pack is one queue row, not one per episode")
+    func queueSeasonPackIsOneRow() {
+        func episode(_ n: Int) -> QueueItem {
+            QueueItem(
+                id: "sonarr-\(n)", source: .sonarr, arrQueueId: n,
+                downloadId: "PACK", downloadProtocol: .torrent, downloadClient: "qbit",
+                title: "The Wire (2002)", subtitle: "S01E0\(n)", seasonNumber: 1, episodeNumber: n,
+                releaseName: "The.Wire.S01.1080p.BluRay-GRP",
+                status: .downloading, progress: 0.3, sizeTotal: 40_000_000_000, sizeLeft: 28_000_000_000, timeLeft: nil,
+                customFormats: [], customFormatScore: 0, quality: "Bluray-1080p", isUpgrade: false, contentSlug: nil
+            )
+        }
+        let text = LocalToolBackend.formatQueueCondensed((1...3).map(episode))
+        #expect(text.contains("Download queue — 1 download:"))
+        #expect(text.contains("season 1 pack, 3 episodes"))
+        #expect(text.components(separatedBy: "The.Wire.S01.1080p.BluRay-GRP").count == 2)
     }
 
     @Test("formatQueueCondensed reports empty queue")

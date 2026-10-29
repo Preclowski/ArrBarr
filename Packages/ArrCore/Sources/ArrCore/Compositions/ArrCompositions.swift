@@ -11,6 +11,7 @@ nonisolated enum ArrCompositions {
         var poster: URL?
         var posterRequiresAuth = false
         var mediaServerKeys: [MediaServerExternalKey] = []
+        var qualityProfileId: Int?
     }
 
     // MARK: - Queue
@@ -101,6 +102,7 @@ nonisolated enum ArrCompositions {
             customFormats: (r.customFormats ?? []).map(\.name),
             customFormatScore: r.customFormatScore ?? 0,
             quality: r.quality?.name,
+            qualityRevision: revisionLabel(r.quality?.revision),
             releaseGroup: source == .sonarr ? parseReleaseGroup(from: r.title) : nil,
             isUpgrade: isUpgrade,
             existingCustomFormats: (representative?.customFormats ?? []).map(\.name),
@@ -108,6 +110,8 @@ nonisolated enum ArrCompositions {
             existingQuality: representative?.quality?.name,
             existingSize: existingSize,
             existingFileName: source == .lidarr ? nil : representative?.relativePath.map { URL(fileURLWithPath: $0).lastPathComponent },
+            existingQualityRevision: revisionLabel(representative?.quality?.revision),
+            qualityProfileId: cached?.qualityProfileId ?? r.movie?.qualityProfileId ?? r.series?.qualityProfileId ?? r.artist?.qualityProfileId,
             contentSlug: slug,
             entityId: entityID,
             posterURL: poster,

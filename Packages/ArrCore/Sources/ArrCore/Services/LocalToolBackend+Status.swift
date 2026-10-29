@@ -155,7 +155,10 @@ extension LocalToolBackend {
 
     nonisolated static func formatCalendarCondensed(_ items: [UpcomingItem]) -> String {
         guard !items.isEmpty else { return "Nothing upcoming." }
+        // Fixed for the model, not the user's calendar: a Buddhist-calendar Mac would print 2569.
         let fmt = DateFormatter()
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.calendar = Calendar(identifier: .gregorian)
         fmt.dateFormat = "yyyy-MM-dd"
         let top = items.prefix(15)
         let lines = top.map { it -> String in
@@ -212,40 +215,55 @@ extension LocalToolBackend {
 
         let filter = Self.stringArg(args, key: "query").lowercased()
         if !filter.isEmpty {
-            items = items.filter { $0.title.lowercased().contains(filter) }
+            items = items.filter { item in
+                [item.title, item.subtitle, item.releaseName].contains { $0?.lowercased().contains(filter) == true }
+            }
         }
         items.sort { lhs, rhs in
             if lhs.isUpgrade != rhs.isUpgrade { return lhs.isUpgrade }
             return lhs.title.localizedCaseInsensitiveCompare(rhs.title) == .orderedAscending
         }
 
-        let text = Self.formatQueueCondensed(items, failures: failures)
+        let profiles = await qualityProfileNames(Set(items.map(\.source)), configured: configured)
+        let text = Self.formatQueueCondensed(items, failures: failures, profiles: profiles)
         return ToolCallOutput(text: text, rich: .downloadQueue(items))
     }
 
-    nonisolated static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = []) -> String {
-        var sections: [String] = []
+    /// Keyed by `profileKey`; a source whose profiles can't be read just goes without names.
+    private func qualityProfileNames(_ sources: Set<QueueItem.Source>,
+                                     configured: [(QueueItem.Source, ServiceConfig)]) async -> [String: String] {
+        await withTaskGroup(of: [String: String].self) { group in
+            for (source, cfg) in configured where sources.contains(source) {
+                group.addTask { [cfg] in
+                    let profiles = (await Logger.extras.attempt("queue quality profiles") {
+                        try await ServiceHandles.arr(source, config: cfg).fetchQualityProfiles()
+                    }) ?? []
+                    return Dictionary(profiles.map { (Self.profileKey(source, $0.id), $0.name) }) { first, _ in first }
+                }
+            }
+            return await group.reduce(into: [:]) { $0.merge($1) { first, _ in first } }
+        }
+    }
 
-        if items.isEmpty {
+    nonisolated static func profileKey(_ source: QueueItem.Source, _ id: Int) -> String { "\(source.rawValue)-\(id)" }
+
+    /// A season pack is one download whose episode rows share the release, so it is described once.
+    nonisolated static func formatQueueCondensed(_ items: [QueueItem], failures: [String] = [],
+                                                 profiles: [String: String] = [:]) -> String {
+        var sections: [String] = []
+        let entries = QueueGrouping.group(items)
+
+        if entries.isEmpty {
             sections.append(failures.isEmpty
                 ? "Nothing is downloading right now."
                 : "Nothing is downloading right now (some services were unreachable).")
         } else {
-            let top = items.prefix(25)
-            var lines: [String] = []
-            for item in top {
-                let pct = Int((item.progress * 100).rounded())
-                let tag = "[\(item.source.displayName)]"
-                var line = "• \(tag) \(item.title) — \(item.status.displayName) \(pct)%"
-                if item.isUpgrade, let diff = upgradeDiffFragment(item) {
-                    line += "\n    \(diff)"
-                }
-                lines.append(line)
-            }
-            var out = "Download queue — \(items.count) item\(items.count == 1 ? "" : "s"):"
+            let top = entries.prefix(25)
+            let lines = top.map { entryLines($0, profiles: profiles) }
+            var out = "Download queue — \(entries.count) download\(entries.count == 1 ? "" : "s"):"
             out += "\n" + lines.joined(separator: "\n")
-            if items.count > top.count {
-                out += "\n(\(items.count - top.count) more not shown)"
+            if entries.count > top.count {
+                out += "\n(\(entries.count - top.count) more not shown — pass `query` to narrow)"
             }
             sections.append(out)
         }
@@ -256,37 +274,86 @@ extension LocalToolBackend {
         return sections.joined(separator: "\n\n")
     }
 
-    /// `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`; nil when nothing differs.
+    nonisolated private static func entryLines(_ entry: QueueRowEntry, profiles: [String: String]) -> String {
+        let item = entry.representativeItem
+        let pct = Int((item.progress * 100).rounded())
+        var heading = "[\(item.source.displayName)] \(item.title)"
+        switch entry {
+        case .single:
+            if let subtitle = item.subtitle, !subtitle.isEmpty { heading += " · \(subtitle)" }
+        case .group(let group):
+            let season = item.seasonNumber.map { "season \($0) pack" } ?? "pack"
+            heading += " · \(season), \(group.memberCount) episodes"
+        }
+        var line = "• \(heading) — \(item.status.displayName) \(pct)%"
+        line += "\n    " + releaseFragment(item, profiles: profiles)
+        if let diff = upgradeDiffFragment(item) {
+            line += "\n    \(diff)"
+        }
+        for message in item.statusMessages.prefix(2) {
+            line += "\n    ! \(message)"
+        }
+        return line
+    }
+
+    /// `release: Dune.2021.2160p… · Bluray-2160p · CF score 1240 · CFs: DV, TrueHD Atmos · 24.3 GB · profile: UHD`
+    nonisolated static func releaseFragment(_ item: QueueItem, profiles: [String: String]) -> String {
+        var parts: [String] = []
+        if let release = item.releaseName, !release.isEmpty, release != item.title {
+            parts.append("release: \(release)")
+        }
+        parts.append(qualityLabel(item.quality, revision: item.qualityRevision) ?? "quality unknown")
+        parts.append("CF score \(item.customFormatScore)")
+        parts.append(item.customFormats.isEmpty ? "CFs: none" : "CFs: \(item.customFormats.joined(separator: ", "))")
+        if item.sizeTotal > 0 {
+            parts.append(ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file))
+        }
+        if let id = item.qualityProfileId, let name = profiles[profileKey(item.source, id)] {
+            parts.append("profile: \(name)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    nonisolated static func qualityLabel(_ quality: String?, revision: String?) -> String? {
+        guard let quality, !quality.isEmpty else { return nil }
+        return revision.map { "\(quality) \($0)" } ?? quality
+    }
+
+    /// `UPGRADE: 1080p → 2160p · score 50→120 · +DV -X · 8.1GB→24.3GB`; nil for a row that replaces nothing.
     nonisolated static func upgradeDiffFragment(_ item: QueueItem) -> String? {
+        guard item.isUpgrade else { return nil }
+        // Same gate as the detail panel: a "?" side would read as a file with no formats at all.
+        guard item.hasExistingFileMetadata else {
+            return "UPGRADE of a file already in the library (the arr didn't report that file's quality or formats)"
+        }
         var parts: [String] = []
 
-        let oldQ = item.existingQuality ?? "?"
-        let newQ = item.quality ?? "?"
-        if oldQ != newQ {
-            parts.append("\(oldQ) → \(newQ)")
-        }
+        let oldQ = qualityLabel(item.existingQuality, revision: item.existingQualityRevision) ?? "?"
+        let newQ = qualityLabel(item.quality, revision: item.qualityRevision) ?? "?"
+        parts.append(oldQ == newQ ? "same quality (\(newQ))" : "\(oldQ) → \(newQ)")
 
-        if let oldScore = item.existingCustomFormatScore, oldScore != item.customFormatScore {
-            parts.append("score \(oldScore)→\(item.customFormatScore)")
+        if let oldScore = item.existingCustomFormatScore {
+            parts.append(oldScore == item.customFormatScore
+                ? "same score (\(oldScore))"
+                : "score \(oldScore)→\(item.customFormatScore)")
         }
 
         let oldFormats = Set(item.existingCustomFormats)
         let newFormats = Set(item.customFormats)
-        let gained = newFormats.subtracting(oldFormats).sorted()
-        let lost = oldFormats.subtracting(newFormats).sorted()
-        var formatBits = gained.map { "+\($0)" }
-        formatBits += lost.map { "-\($0)" }
+        var formatBits = newFormats.subtracting(oldFormats).sorted().map { "+\($0)" }
+        formatBits += oldFormats.subtracting(newFormats).sorted().map { "-\($0)" }
         if !formatBits.isEmpty {
             parts.append(formatBits.joined(separator: " "))
+        } else if !oldFormats.isEmpty {
+            parts.append("same custom formats")
         }
 
-        if let oldSize = item.existingSize, oldSize > 0 {
+        if let oldSize = item.existingSize, oldSize > 0, item.sizeTotal > 0 {
             let oldStr = ByteCountFormatter.string(fromByteCount: oldSize, countStyle: .file)
             let newStr = ByteCountFormatter.string(fromByteCount: item.sizeTotal, countStyle: .file)
             parts.append("\(oldStr)→\(newStr)")
         }
 
-        guard !parts.isEmpty else { return nil }
         return "UPGRADE: " + parts.joined(separator: " · ")
     }
 

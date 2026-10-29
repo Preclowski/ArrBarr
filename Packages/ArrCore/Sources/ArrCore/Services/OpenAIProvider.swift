@@ -108,7 +108,7 @@ nonisolated struct OpenAIProvider: LLMProvider {
                 if stream.text.isEmpty && stream.toolCalls.isEmpty { throw OpenAIError.truncated }
             }
             return LLMResponse(text: stream.text, toolCalls: stream.toolCalls.map {
-                ToolCall(id: $0.id, name: $0.name, arguments: .toolArguments($0.arguments))
+                ToolCall(id: $0.id ?? Self.syntheticCallID(), name: $0.name, arguments: .toolArguments($0.arguments))
             }, toolResults: nil)
         }
         let decoded: ChatCompletionsResponse
@@ -119,24 +119,29 @@ nonisolated struct OpenAIProvider: LLMProvider {
         }
         guard let choice = decoded.choices.first else { throw OpenAIError.empty }
         let toolCalls = (choice.message.tool_calls ?? []).map { call in
-            ToolCall(id: call.id, name: call.function.name, arguments: .toolArguments(call.function.arguments))
+            ToolCall(id: call.id ?? Self.syntheticCallID(), name: call.function.name, arguments: .toolArguments(call.function.arguments))
         }
         return LLMResponse(text: choice.message.content ?? "", toolCalls: toolCalls, toolResults: nil)
     }
 
+    /// Some hosts stream tool calls without an id; the result's `tool_call_id` must still match its call.
+    /// Nine alphanumerics: the strictest host (Mistral) accepts nothing else.
+    static func syntheticCallID() -> String {
+        String(UUID().uuidString.replacingOccurrences(of: "-", with: "").prefix(9))
+    }
+
     // MARK: - History window
 
-    /// Not `suffix(n)`: tool rounds would evict the user's question and the model keeps digging. The
-    /// current turn is kept whole (over budget, its middle is dropped); earlier context fills the rest.
-    static func window(_ history: [ChatMessage], budget: Int = 16) -> [ChatMessage] {
-        guard history.count > budget else { return history }
+    /// Not `suffix(n)`: tool rounds would evict the user's question and the model keeps digging. The current
+    /// turn is kept whole up to `turnBudget` (the round cap bounds it; dropping its first round lost the very
+    /// result the follow-up calls were about), its middle going only past that; earlier context fills `budget`.
+    static func window(_ history: [ChatMessage], budget: Int = 16, turnBudget: Int = 48) -> [ChatMessage] {
         let turnStart = history.lastIndex { $0.role == .user } ?? history.startIndex
         let turn = Array(history[turnStart...])
-
-        guard turn.count <= budget else {
-            return [turn[0]] + turn.suffix(budget - 1)
+        guard turn.count <= turnBudget else {
+            return [turn[0]] + turn.suffix(turnBudget - 1)
         }
-        let earlier = history[..<turnStart].suffix(budget - turn.count)
+        let earlier = history[..<turnStart].suffix(max(0, budget - turn.count))
         return Array(earlier) + turn
     }
 
@@ -151,7 +156,6 @@ nonisolated struct OpenAIProvider: LLMProvider {
             content: """
             You are ArrBarr's in-app assistant for \(arrs) — and a film, TV and music obsessive at heart.
             \(SystemPromptComposer.persona)
-            Always reply in the same language as the user's latest message — this takes priority. Only when their language is genuinely unclear, default to \(replyLanguage). Keep media titles exactly as the user wrote them.
             Call a tool when the request needs server data or an action. Otherwise just answer.
             Only use tools from the provided list.
             Division of labour: the taste is yours, the facts are the tools'. You decide WHAT to recommend; only the tools know what the user already owns (the arrs) and what they have already watched (the media server). So whenever you have named titles and the answer depends on their shelf — "something I don't have yet", "have I seen these", "what should I watch tonight" — call check_titles ONCE with the whole candidate list before you recommend, rather than guessing or firing a tool per title. A large library already owns the obvious classics: reach past the canon.
@@ -162,6 +166,8 @@ nonisolated struct OpenAIProvider: LLMProvider {
             \(SystemPromptComposer.linkingClause)
 
             \(SystemPromptComposer.triviaClause)
+
+            \(SystemPromptComposer.languageClause(replyLanguage))
             """,
             tool_calls: nil,
             tool_call_id: nil
@@ -177,11 +183,17 @@ nonisolated struct OpenAIProvider: LLMProvider {
                 msgs.append(.init(role: "user", content: msg.content, tool_calls: nil, tool_call_id: nil))
             case .assistant:
                 if let call = msg.toolCall {
+                    // Without an id the result can't be paired, and an unanswered `tool_calls` is a 400.
+                    guard let tcID = call.id else {
+                        if !msg.content.isEmpty {
+                            msgs.append(.init(role: "assistant", content: msg.content, tool_calls: nil, tool_call_id: nil))
+                        }
+                        continue
+                    }
                     let argsString = (try? String(
                         data: JSONEncoder().encode(call.arguments),
                         encoding: .utf8
                     )) ?? "{}"
-                    let tcID = call.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
                     emittedToolCallIDs.insert(tcID)
                     msgs.append(.init(
                         role: "assistant",
@@ -197,8 +209,7 @@ nonisolated struct OpenAIProvider: LLMProvider {
                     msgs.append(.init(role: "assistant", content: msg.content, tool_calls: nil, tool_call_id: nil))
                 }
             case .tool:
-                let tcID = msg.toolCall?.id ?? "call_\(abs(msg.id.uuidString.hashValue))"
-                guard emittedToolCallIDs.contains(tcID) else { continue }
+                guard let tcID = msg.toolCall?.id, emittedToolCallIDs.contains(tcID) else { continue }
                 msgs.append(.init(
                     role: "tool",
                     content: msg.toolResult ?? "",
@@ -237,17 +248,17 @@ enum OpenAIError: Error, Equatable, Sendable, LocalizedError {
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let err = obj["error"] as? [String: Any],
                let msg = err["message"] as? String, !msg.isEmpty {
-                return "HTTP \(status): \(msg)"
+                return String(localized: "chat.error.http \(status) \(msg)", bundle: .module)
             }
-            return "HTTP \(status) from AI provider."
+            return String(localized: "chat.error.httpStatus \(status)", bundle: .module)
         case .decoding(let msg):
-            return "Couldn't decode AI response: \(msg)"
+            return String(localized: "chat.error.decoding \(msg)", bundle: .module)
         case .provider(let msg):
-            return "AI provider error: \(msg)"
+            return String(localized: "chat.error.provider \(msg)", bundle: .module)
         case .truncated:
-            return "AI provider stopped at its token limit before answering."
+            return String(localized: "chat.error.truncated", bundle: .module)
         case .empty:
-            return "AI provider returned an empty response."
+            return String(localized: "chat.error.empty", bundle: .module)
         }
     }
 }
@@ -304,9 +315,10 @@ nonisolated struct ChatCompletionsResponse: Decodable, Sendable {
         let content: String?
         let tool_calls: [ToolCallWire]?
     }
+    /// `id` / `type` optional: some OpenAI-compatible hosts omit them, which must not fail the whole reply.
     struct ToolCallWire: Decodable, Sendable {
-        let id: String
-        let type: String
+        let id: String?
+        let type: String?
         let function: Function
         struct Function: Decodable, Sendable {
             let name: String

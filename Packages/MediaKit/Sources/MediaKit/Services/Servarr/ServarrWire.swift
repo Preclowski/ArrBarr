@@ -16,7 +16,10 @@ public struct ArrCustomFormat: Codable, Equatable, Sendable, Hashable {
 
 public struct ArrQuality: Codable, Equatable, Sendable, Hashable {
     public struct Name: Codable, Equatable, Sendable, Hashable { public let name: String?; public let resolution: Int? }
+    /// `version` > 1 is a proper/repack, `real` > 0 a REAL: what an arr upgrades on when quality and score tie.
+    public struct Revision: Codable, Equatable, Sendable, Hashable { public let version: Int?; public let real: Int?; public let isRepack: Bool? }
     public let quality: Name?
+    public let revision: Revision?
     public var name: String? { quality?.name }
 }
 

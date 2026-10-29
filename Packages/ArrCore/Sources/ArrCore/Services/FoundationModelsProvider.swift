@@ -24,13 +24,17 @@ struct FoundationModelsProvider: LLMProvider {
     private let invokeTool: @Sendable (String, JSONValue) async throws -> ToolCallOutput
     /// Uses the same ConfirmActionCard as the OpenAI path; returns args to proceed, or nil to cancel.
     private let confirmDestructive: @Sendable (ToolCall) async -> JSONValue?
+    /// English name ("Polish"): the on-device model follows its instructions' language unless told otherwise.
+    private let replyLanguage: String
 
     init(
         invokeTool: @escaping @Sendable (String, JSONValue) async throws -> ToolCallOutput,
-        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?
+        confirmDestructive: @escaping @Sendable (ToolCall) async -> JSONValue?,
+        replyLanguage: String
     ) {
         self.invokeTool = invokeTool
         self.confirmDestructive = confirmDestructive
+        self.replyLanguage = replyLanguage
     }
 
     var isAvailable: Bool { FoundationModelsAvailability.isSupported }
@@ -44,7 +48,8 @@ struct FoundationModelsProvider: LLMProvider {
     ) async throws -> LLMResponse {
         let toolImpls = tools.map { DynamicMCPTool(spec: $0, invokeTool: invokeTool, confirmDestructive: confirmDestructive) }
         func session(_ history: [ChatMessage]) -> LanguageModelSession {
-            LanguageModelSession(tools: toolImpls, transcript: Self.transcript(tools: tools, toolImpls: toolImpls, history: history))
+            LanguageModelSession(tools: toolImpls, transcript: Self.transcript(
+                tools: tools, toolImpls: toolImpls, history: history, replyLanguage: replyLanguage))
         }
         // A cancelled turn leaves its tool calls behind; they'd render as stale cards on this one.
         _ = await DynamicMCPToolBox.shared.drainResults()
@@ -70,29 +75,32 @@ struct FoundationModelsProvider: LLMProvider {
 
     /// Earlier turns enter as transcript entries: replaying them through `respond(to:)` regenerated every
     /// turn and re-ran its tools.
-    nonisolated static func transcript(tools: [ToolDefinition], toolImpls: [DynamicMCPTool], history: [ChatMessage]) -> Transcript {
+    /// Tool rows are skipped before the window is cut, or a tool-heavy turn would push every prompt out. An answer
+    /// that used tools rides on a message carrying `toolCall`, so assistant text is kept regardless.
+    nonisolated static func transcript(tools: [ToolDefinition], toolImpls: [DynamicMCPTool], history: [ChatMessage],
+                                       replyLanguage: String) -> Transcript {
         func text(_ content: String) -> [Transcript.Segment] { [.text(.init(content: content))] }
         var entries: [Transcript.Entry] = [.instructions(.init(
-            segments: text(instructions(tools: tools)),
+            segments: text(instructions(tools: tools, replyLanguage: replyLanguage)),
             toolDefinitions: toolImpls.map { Transcript.ToolDefinition(tool: $0) }
         ))]
-        for msg in history.suffix(6) where !msg.content.isEmpty {
+        let turns = history.filter { $0.role != .tool && !$0.content.isEmpty }
+        for msg in turns.suffix(6) {
             switch msg.role {
             case .user: entries.append(.prompt(.init(segments: text(msg.content))))
-            case .assistant where msg.toolCall == nil: entries.append(.response(.init(assetIDs: [], segments: text(msg.content))))
-            default: break
+            case .assistant: entries.append(.response(.init(assetIDs: [], segments: text(msg.content))))
+            case .tool: break
             }
         }
         return Transcript(entries: entries)
     }
 
-    nonisolated private static func instructions(tools: [ToolDefinition]) -> String {
+    nonisolated private static func instructions(tools: [ToolDefinition], replyLanguage: String) -> String {
         return """
             You are ArrBarr's in-app assistant for \(SystemPromptComposer.arrsClause(tools: tools)) — and a film, TV and music obsessive at heart.
             \(tools.isEmpty ? "" : (LibraryStats.shared.promptBlock() ?? ""))
             \(tools.isEmpty ? "" : (TasteProfileStore.shared.promptBlock() ?? ""))
             \(SystemPromptComposer.persona)
-            Match the user's language. (This on-device model's output language is bounded by the system Apple Intelligence setting, so there's no point forcing a specific one here.) Keep media titles exactly as the user wrote them.
 
             How to call a tool:
             - Build a JSON object per the schema in the tool's description,
@@ -119,6 +127,8 @@ struct FoundationModelsProvider: LLMProvider {
             \(SystemPromptComposer.linkingClause)
 
             \(SystemPromptComposer.triviaClause)
+
+            \(SystemPromptComposer.languageClause(replyLanguage))
             """
     }
 }

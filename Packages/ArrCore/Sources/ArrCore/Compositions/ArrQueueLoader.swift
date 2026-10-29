@@ -89,16 +89,19 @@ enum ArrQueueLoader {
                         guard let m = await log.attempt("queue movie metadata", { try await store.read(service.movie(id: id), priority: .background).value }) else { return (id, nil) }
                         let keys = source == .radarr ? m.mediaServerKeys : []
                         let (poster, auth) = (m.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
-                        return (id, .init(title: m.title, year: m.year, slug: m.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
+                        return (id, .init(title: m.title, year: m.year, slug: m.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys,
+                                           qualityProfileId: m.qualityProfileId))
                     case .sonarr:
                         guard let s = await log.attempt("queue series metadata", { try await store.read(service.seriesDetails(id: id), priority: .background).value }) else { return (id, nil) }
                         let keys = s.mediaServerKeys
                         let (poster, auth) = (s.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: keys)
-                        return (id, .init(title: s.title, year: s.year, slug: s.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys))
+                        return (id, .init(title: s.title, year: s.year, slug: s.titleSlug, poster: poster, posterRequiresAuth: auth, mediaServerKeys: keys,
+                                           qualityProfileId: s.qualityProfileId))
                     case .lidarr:
                         guard let a = await log.attempt("queue album metadata", { try await store.read(service.album(id: id), priority: .background).value }) else { return (id, nil) }
                         let (poster, auth) = a.coverURL(baseURL: baseURL)
-                        return (id, .init(title: a.title, secondary: a.artist?.artistName, slug: a.foreignAlbumId, poster: poster, posterRequiresAuth: auth))
+                        return (id, .init(title: a.title, secondary: a.artist?.artistName, slug: a.foreignAlbumId, poster: poster, posterRequiresAuth: auth,
+                                           qualityProfileId: a.artist?.qualityProfileId))
                     }
                 }
             }

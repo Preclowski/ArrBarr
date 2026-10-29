@@ -67,6 +67,8 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     public let customFormats: [String]
     public let customFormatScore: Int
     public let quality: String?
+    /// "Proper" / "Repack" / "REAL"; nil for a first release.
+    public let qualityRevision: String?
     public let releaseGroup: String?
     public let isUpgrade: Bool
     public let existingCustomFormats: [String]
@@ -74,6 +76,8 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
     public let existingQuality: String?
     public let existingSize: Int64?
     public let existingFileName: String?
+    public let existingQualityRevision: String?
+    public let qualityProfileId: Int?
     public let contentSlug: String?
     public let entityId: Int?
 
@@ -96,9 +100,10 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         sizeLeft: Int64, timeLeft: String?,
         downloadSpeed: Int64? = nil,
         customFormats: [String], customFormatScore: Int,
-        quality: String?, releaseGroup: String? = nil, isUpgrade: Bool,
+        quality: String?, qualityRevision: String? = nil, releaseGroup: String? = nil, isUpgrade: Bool,
         existingCustomFormats: [String] = [], existingCustomFormatScore: Int? = nil, existingQuality: String? = nil,
-        existingSize: Int64? = nil, existingFileName: String? = nil,
+        existingSize: Int64? = nil, existingFileName: String? = nil, existingQualityRevision: String? = nil,
+        qualityProfileId: Int? = nil,
         contentSlug: String?,
         entityId: Int? = nil,
         posterURL: URL? = nil, posterRequiresAuth: Bool = false,
@@ -114,13 +119,15 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
         self.sizeLeft = sizeLeft; self.timeLeft = timeLeft
         self.downloadSpeed = downloadSpeed
         self.customFormats = customFormats; self.customFormatScore = customFormatScore
-        self.quality = quality; self.releaseGroup = releaseGroup
+        self.quality = quality; self.qualityRevision = qualityRevision; self.releaseGroup = releaseGroup
         self.isUpgrade = isUpgrade; self.contentSlug = contentSlug; self.entityId = entityId
         self.existingCustomFormats = existingCustomFormats
         self.existingCustomFormatScore = existingCustomFormatScore
         self.existingQuality = existingQuality
         self.existingSize = existingSize
         self.existingFileName = existingFileName
+        self.existingQualityRevision = existingQualityRevision
+        self.qualityProfileId = qualityProfileId
         self.posterURL = posterURL; self.posterRequiresAuth = posterRequiresAuth
         self.watched = watched
         self.statusMessages = statusMessages
@@ -182,11 +189,12 @@ nonisolated public struct QueueItem: Identifiable, Equatable, Hashable, Sendable
             status: status, progress: progress, sizeTotal: sizeTotal,
             sizeLeft: sizeLeft, timeLeft: timeLeft,
             customFormats: customFormats, customFormatScore: customFormatScore,
-            quality: quality, releaseGroup: releaseGroup, isUpgrade: isUpgrade,
+            quality: quality, qualityRevision: qualityRevision, releaseGroup: releaseGroup, isUpgrade: isUpgrade,
             existingCustomFormats: existingCustomFormats,
             existingCustomFormatScore: existingCustomFormatScore,
             existingQuality: existingQuality, existingSize: existingSize,
-            existingFileName: existingFileName,
+            existingFileName: existingFileName, existingQualityRevision: existingQualityRevision,
+            qualityProfileId: qualityProfileId,
             contentSlug: contentSlug, entityId: entityId,
             posterURL: posterURL, posterRequiresAuth: posterRequiresAuth,
             watched: watched,

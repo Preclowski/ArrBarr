@@ -97,6 +97,53 @@ struct OpenAIProviderTests {
         }
     }
 
+    @Test("a tool call without an id still gets one, so its result can be paired")
+    func toolCallWithoutID() async throws {
+        StubProtocol.reset()
+        StubProtocol.nextResponseBody = Data("""
+        data: {"choices":[{"delta":{"tool_calls":[{"index":0,"function":{"name":"list_download_queue","arguments":"{}"}}]}}]}
+
+        """.utf8)
+        let resp = try await provider().respond(prompt: "x", tools: [], history: [])
+        #expect(resp.toolCalls.count == 1)
+        #expect(resp.toolCalls[0].id?.isEmpty == false)
+
+        StubProtocol.reset()
+        StubProtocol.nextResponseBody = Data("""
+        {"choices":[{"message":{"role":"assistant","content":null,"tool_calls":[
+            {"function":{"name":"list_download_queue","arguments":"{}"}}
+        ]}}]}
+        """.utf8)
+        let plain = try await provider().respond(prompt: "x", tools: [], history: [])
+        #expect(plain.toolCalls.first?.id?.isEmpty == false)
+    }
+
+    @Test("A call and its result pair by the call's id")
+    func toolResultPairsByID() {
+        let call = ToolCall(id: "abc123def", name: "list_download_queue", arguments: .object([:]))
+        let history = [
+            ChatMessage(role: .user, content: "q"),
+            ChatMessage(role: .assistant, content: "", toolCall: call),
+            ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: "Download queue — 1 download"),
+        ]
+        let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "", tools: [], history: history)
+        #expect(body.messages.first { $0.role == "assistant" }?.tool_calls?.first?.id == "abc123def")
+        #expect(body.messages.first { $0.role == "tool" }?.tool_call_id == "abc123def")
+        #expect(body.messages.first { $0.role == "tool" }?.content == "Download queue — 1 download")
+    }
+
+    @Test("A call with no id sends neither half: an unanswered tool_calls is a 400")
+    func unpairableCallIsDropped() {
+        let call = ToolCall(id: nil, name: "health", arguments: .object([:]))
+        let history = [
+            ChatMessage(role: .user, content: "q"),
+            ChatMessage(role: .assistant, content: "", toolCall: call),
+            ChatMessage(role: .tool, content: call.name, toolCall: call, toolResult: "ok"),
+        ]
+        let body = OpenAIProvider.buildRequestBody(model: "m", prompt: "", tools: [], history: history)
+        #expect(body.messages.allSatisfy { $0.tool_calls == nil && $0.role != "tool" })
+    }
+
     @Test("non-2xx throws OpenAIError.http with body")
     func httpError() async throws {
         StubProtocol.reset()
@@ -176,9 +223,9 @@ struct OpenAIProviderTests {
         let system = body.messages.first { $0.role == "system" }?.content ?? ""
         #expect(system.contains("Radarr (movies) and Lidarr (music)"))
         #expect(!system.contains("Sonarr"))
-        // The user's language wins; the app language is only the fallback.
-        #expect(system.contains("same language as the user"))
-        #expect(system.contains("default to Polish"))
+        // The app's language is the default; English tool output is no reason to switch.
+        #expect(system.contains("reply in Polish"))
+        #expect(system.hasSuffix(SystemPromptComposer.languageClause("Polish")))
     }
 
     @Test("SystemPromptComposer.arrsClause joins present arrs, falls back when none")
@@ -223,14 +270,31 @@ struct OpenAIProviderTests {
     @Test("The window keeps the user's question no matter how many tool rounds ran")
     func windowPinsTheQuestion() {
         var history = [msg(.user, "daj listę albumów Daft Punk")]
-        // 12 tool rounds' worth of carrier+result — far past any fixed suffix.
-        for i in 0..<24 { history.append(msg(i.isMultiple(of: 2) ? .assistant : .tool, "noise \(i)")) }
+        // Far past the turn budget.
+        for i in 0..<80 { history.append(msg(i.isMultiple(of: 2) ? .assistant : .tool, "noise \(i)")) }
 
         let windowed = OpenAIProvider.window(history)
-        #expect(windowed.count <= 16)
+        #expect(windowed.count <= 48)
         #expect(windowed.first?.content == "daj listę albumów Daft Punk")
         // …and the freshest results survive too.
-        #expect(windowed.last?.content == "noise 23")
+        #expect(windowed.last?.content == "noise 79")
+    }
+
+    @Test("A turn past the context budget keeps its first tool round")
+    func windowKeepsTheWholeTurn() {
+        var history = [msg(.user, "old question"), msg(.assistant, "old answer"), msg(.user, "dlaczego upgrade?")]
+        // The queue result, then seven custom_formats follow-ups: 17 messages in the turn.
+        history.append(msg(.assistant, "queue call"))
+        history.append(msg(.tool, "queue result"))
+        for i in 0..<7 {
+            history.append(msg(.assistant, "cf call \(i)"))
+            history.append(msg(.tool, "cf result \(i)"))
+        }
+
+        let windowed = OpenAIProvider.window(history).map(\.content)
+        #expect(windowed.first == "dlaczego upgrade?")
+        #expect(windowed.contains("queue result"))
+        #expect(!windowed.contains("old answer"))
     }
 
     @Test("Short histories pass through untouched")

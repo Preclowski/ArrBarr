@@ -24,6 +24,7 @@ enum ChatViewModelFactory {
         appLanguage: String = "system"
     ) -> ChatViewModel {
         let replyLanguage = replyLanguageName(appLanguage: appLanguage)
+        let locale = ConfigStore.locale(appLanguage: appLanguage)
         let backend = LocalToolBackend(
             sonarr: sonarr, radarr: radarr, lidarr: lidarr,
             whisparr: whisparr, aiKnowsAboutWhisparr: aiKnowsAboutWhisparr,
@@ -65,16 +66,16 @@ enum ChatViewModelFactory {
         // Demo short-circuits both real backends: OpenAI needs a key and the on-device model can't see the canned arrs.
         if DemoMode.isActive {
             provider = DemoChatProvider()
-            return ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke)
+            return ChatViewModel(provider: provider, tools: llmTools, invokeTool: invoke, locale: locale)
         }
         switch chatProvider {
         case .foundationModels:
-            provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm)
+            provider = FoundationModelsProvider(invokeTool: invoke, confirmDestructive: confirm, replyLanguage: replyLanguage)
         case .openai:
             if openai.isConfigured {
                 provider = OpenAIProvider(config: openai, replyLanguage: replyLanguage)
             } else {
-                provider = UnavailableLLMProvider()
+                provider = UnavailableLLMProvider(locale: locale)
             }
         }
 
@@ -82,6 +83,7 @@ enum ChatViewModelFactory {
             provider: provider,
             tools: llmTools,
             invokeTool: invoke,
+            locale: locale,
             onToolCallStream: { name, arguments in
                 guard name == "discover_in_quiz" else { return }
                 Task { await backend.quizArgumentsStreamed(arguments) }

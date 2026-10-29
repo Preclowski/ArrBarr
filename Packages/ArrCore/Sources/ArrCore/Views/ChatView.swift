@@ -199,7 +199,7 @@ struct ChatView: View {
                     .frame(height: 17)
             }
             .buttonStyle(.plain)
-            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || viewModel.isThinking)
+            .disabled(draft.trimmingCharacters(in: .whitespaces).isEmpty || !viewModel.canSend)
             .accessibilityLabel(Text("chat.send.button", bundle: .module))
         }
         .padding(.horizontal, 14)
@@ -215,7 +215,8 @@ struct ChatView: View {
     private func send() {
         // `.onSubmit` bypasses the Send button's `.disabled`.
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, !viewModel.isThinking else { return }
+        // Not `isThinking`: that is false while a confirm card waits, and `send` would drop the text.
+        guard !text.isEmpty, viewModel.canSend else { return }
         draft = ""
         Task { await viewModel.send(text) }
     }

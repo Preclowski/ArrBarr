@@ -9,7 +9,7 @@ nonisolated public enum ChatProvider: String, Codable, CaseIterable, Sendable, I
     public var displayName: String {
         switch self {
         case .foundationModels: return "Apple Intelligence"
-        case .openai: return "OpenAI-compatible API"
+        case .openai: return String(localized: "chat.provider.openai.label", bundle: .module)
         }
     }
 }

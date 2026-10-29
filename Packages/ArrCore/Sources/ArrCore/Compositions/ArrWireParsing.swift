@@ -1,4 +1,5 @@
 import Foundation
+import MediaKit
 
 /// Servarr field parsing shared by every arr's row mappers.
 nonisolated func parseArrDate(_ string: String) -> Date? {
@@ -48,6 +49,18 @@ nonisolated func clampedBytes(_ value: Double?) -> Int64 {
     guard let value, value > 0 else { return 0 }
     guard value < Double(Int64.max) else { return Int64.max }
     return Int64(value)
+}
+
+/// "Proper", "Repack", "Proper v3", "REAL"; nil for a first release.
+nonisolated func revisionLabel(_ revision: MediaKit.ArrQuality.Revision?) -> String? {
+    guard let revision else { return nil }
+    var parts: [String] = []
+    if let version = revision.version, version > 1 {
+        parts.append(revision.isRepack == true ? "Repack" : "Proper")
+        if version > 2 { parts.append("v\(version)") }
+    }
+    if let real = revision.real, real > 0 { parts.append("REAL") }
+    return parts.isEmpty ? nil : parts.joined(separator: " ")
 }
 
 nonisolated func parseProtocol(_ raw: String?) -> QueueItem.DownloadProtocol {

@@ -20,14 +20,26 @@ extension LocalToolBackend {
         ServiceHandles.arr(source, config: config)
     }
 
-    /// No `name`/`id` → list everything; either present → describe that one.
+    /// No `name`/`names`/`id` → list everything; otherwise describe the named ones.
     func customFormats(_ args: JSONValue) async throws -> ToolCallOutput {
-        let name = Self.stringArg(args, key: "name").trimmingCharacters(in: .whitespaces)
+        let names = Self.formatNameQueries(args)
         let id = Self.optionalIntArg(args, key: "id")
-        if name.isEmpty && id == nil {
+        if names.isEmpty && id == nil {
             return try await listCustomFormats(args)
         }
-        return try await describeFormat(args)
+        return try await describeFormats(args, names: names, id: id)
+    }
+
+    /// `name` and `names` merged: models send either, sometimes both.
+    nonisolated private static func formatNameQueries(_ args: JSONValue) -> [String] {
+        var queries = [stringArg(args, key: "name")]
+        if case .object(let dict) = args, case .array(let entries) = dict["names"] {
+            queries += entries.compactMap { if case .string(let s) = $0 { s } else { nil } }
+        }
+        var seen = Set<String>()
+        return queries
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
     }
 
     func listCustomFormats(_ args: JSONValue) async throws -> ToolCallOutput {
@@ -50,41 +62,53 @@ extension LocalToolBackend {
             }
         let text = "\(source.displayName) custom formats (\(formats.count)):\n"
             + lines.joined(separator: "\n")
-            + "\n\nCall custom_formats again with a `name` or `id` to see what one matches and how it scores."
+            + "\n\nCall custom_formats again with `names` (or an `id`) to see what they match and how they score."
         return ToolCallOutput(text: text)
     }
 
-    func describeFormat(_ args: JSONValue) async throws -> ToolCallOutput {
+    /// Formats and profiles are read once for the whole batch.
+    func describeFormats(_ args: JSONValue, names: [String], id: Int?) async throws -> ToolCallOutput {
         guard let (config, source) = customFormatTarget(args) else {
             return ToolCallOutput(text: "Specify which service to query: 'sonarr' or 'radarr'.")
         }
         guard config.isConfigured else {
             return ToolCallOutput(text: "\(source.displayName) is not configured.")
         }
-        let nameQuery = Self.stringArg(args, key: "name").trimmingCharacters(in: .whitespaces)
-        let idQuery = Self.optionalIntArg(args, key: "id")
-        guard !nameQuery.isEmpty || idQuery != nil else {
-            return ToolCallOutput(text: "Provide the custom format 'name' or 'id' to describe.")
-        }
 
         let client = arrAPIClient(for: source, config: config)
         let formats = try await client.fetchCustomFormats()
 
         // Match by id first (exact), else exact name, else first substring hit.
-        let lowerName = nameQuery.lowercased()
-        let match: ArrCustomFormatDetail? = {
-            if let idQuery { return formats.first { $0.id == idQuery } }
-            return formats.first { $0.name.lowercased() == lowerName }
-                ?? formats.first { $0.name.lowercased().contains(lowerName) }
-        }()
-
-        guard let cf = match else {
-            let target = idQuery.map { "id \($0)" } ?? "named '\(nameQuery)'"
-            let available = formats.prefix(40).map(\.name).joined(separator: ", ")
-            return ToolCallOutput(text: "No custom format \(target) in \(source.displayName). "
-                + "Available: \(available.isEmpty ? "(none)" : available)")
+        var matched: [ArrCustomFormatDetail] = []
+        var misses: [String] = []
+        if let id {
+            if let cf = formats.first(where: { $0.id == id }) { matched.append(cf) } else { misses.append("id \(id)") }
+        }
+        for query in names {
+            let lower = query.lowercased()
+            if let cf = formats.first(where: { $0.name.lowercased() == lower })
+                ?? formats.first(where: { $0.name.lowercased().contains(lower) }) {
+                if !matched.contains(where: { $0.id == cf.id }) { matched.append(cf) }
+            } else {
+                misses.append("named '\(query)'")
+            }
         }
 
+        var sections: [String] = []
+        if !matched.isEmpty {
+            let profiles = (await Logger.extras.attempt("custom format profiles") { try await client.fetchQualityProfiles() }) ?? []
+            sections += matched.map { Self.describe($0, source: source, profiles: profiles) }
+        }
+        if !misses.isEmpty {
+            let available = formats.prefix(40).map(\.name).joined(separator: ", ")
+            sections.append("No custom format \(misses.joined(separator: ", ")) in \(source.displayName). "
+                + "Available: \(available.isEmpty ? "(none)" : available)")
+        }
+        return ToolCallOutput(text: sections.joined(separator: "\n\n"))
+    }
+
+    nonisolated private static func describe(_ cf: ArrCustomFormatDetail, source: QueueItem.Source,
+                                             profiles: [ArrQualityProfile]) -> String {
         var out = "\(source.displayName) custom format: \(cf.name) (id \(cf.id))\n"
 
         let specs = cf.specifications ?? []
@@ -93,11 +117,10 @@ extension LocalToolBackend {
         } else {
             out += "\nConditions:"
             for spec in specs {
-                out += "\n" + Self.describeSpecification(spec)
+                out += "\n" + describeSpecification(spec)
             }
         }
 
-        let profiles = (await Logger.extras.attempt("custom format profiles") { try await client.fetchQualityProfiles() }) ?? []
         let scored: [(String, Int)] = profiles.compactMap { profile in
             guard let item = profile.formatItems?.first(where: { $0.format == cf.id }),
                   item.score != 0 else { return nil }
@@ -117,7 +140,7 @@ extension LocalToolBackend {
                 out += "\n• (\(zeroCount) other profile\(zeroCount == 1 ? "" : "s"): 0)"
             }
         }
-        return ToolCallOutput(text: out)
+        return out
     }
 
     nonisolated private static func describeSpecification(_ spec: ArrCustomFormatDetail.Specification) -> String {
