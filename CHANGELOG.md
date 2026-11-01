@@ -9,6 +9,51 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.4.0] — 2026-11-01
+
+### Added
+
+- Arr rejections and queue status messages appear in the app's language.
+- Trailers for series outside the library, and per season in a season's detail.
+- The queue tooltip shows the arr's reason for a failed download.
+- The download confirmation shows why the arr rejected a release.
+- Season rows show the poster, premiere date, rating and watched state.
+- The add panel lists a new series' seasons.
+- Series detail shows the size of the existing files.
+- Force start works on every download client.
+- Roulette's ranked sets show each title's place, and created-by names open the person.
+- Skeletons while trailers and seasons load.
+
+### Changed
+
+- A title outside the library opens without the add form; "Add to library" brings it up.
+- Seasons use one list inside and outside the library.
+- Round download button in search results; its ring shows the download's progress and status.
+- Queue groups show fanned posters with the count on the poster.
+- Series groups split per season and start collapsed.
+- The selected tab is a glass lens.
+- Capsule buttons share one style, and pause/resume fills with the download's progress.
+- Live downloads animate their bars.
+- Monitoring, pause/resume, search results and copy animate on click.
+- Hover on the monitoring mark is smaller and no longer previews the result; on a poster it dims the art.
+- The episode's monitoring mark moved to the left.
+- The panel blurs its background slightly more.
+- Chat replies in the app's language.
+- The chat's queue tool reports release, quality, formats, score, size and profile.
+
+### Fixed
+
+- A refused grab shows the arr's full reason under the release.
+- A reason Lidarr repeats per track shows once.
+- Resume all resumes every row.
+- Pause and resume in the download client show at once.
+- Remove all continues past a failed item.
+- Group size and progress count a season pack once.
+- Queue search shows one row per series.
+- Section errors say "Server error" or "offline", with the reason in the tooltip.
+- The trailer skeleton no longer covers the cast.
+- The play icon on trailer tiles looks centred.
+
 ## [3.3.0] — 2026-10-05
 
 ### Added
