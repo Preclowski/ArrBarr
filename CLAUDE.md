@@ -44,7 +44,8 @@ Packages/ArrCore/           # the real codebase (Swift 6 tools, lang mode v5)
     Views/         # all SwiftUI (PopoverContentView, SettingsView, ChatView,
                    #   DiscoverTabView, SearchView, DetailView, iOSAppRoot, …)
     AppIntents/    # ArrBarrIntents — Siri/Shortcuts/Spotlight
-    Resources/Localizable.xcstrings   # single string catalog, Bundle.module
+    Resources/Localizable.xcstrings   # the app's string catalog, Bundle.module
+    Resources/ArrMessages.xcstrings   # generated: the arrs' English messages, translated
   Tests/ArrCoreTests/        # Swift Testing (import Testing, @Test/#expect); defaults suites via TestDefaults
 
 Packages/MediaKit/          # zero-dependency communication layer (Swift 6, strict):
@@ -130,7 +131,10 @@ fastest via SwiftPM:
 - **Localization**: catalog is `ArrCore/Resources/Localizable.xcstrings`
   (en/de/es/fr/nl/pl). In views use `Text("Key", bundle: .module)`; in
   models/services use `String(localized: "Key", bundle: .module)`. Never inline
-  user-facing literals. (The old `loc("…")` helper is gone.)
+  user-facing literals. (The old `loc("…")` helper is gone.) The arrs send
+  rejections and queue status messages in English only: `ArrMessageTranslator`
+  translates them at display, from `ArrMessages.xcstrings`. Edit `Tools/loc/arr_messages.json`
+  and regenerate with `Tools/loc/arr_messages.py`, never the catalog; the chat and MCP tools keep the English.
 - **Shared singletons** cross target boundaries: `ConfigStore.shared`,
   `QueueViewModel.shared`, `StoreManager.shared`, `PosterStore.shared`. The
   AppDelegate and the SwiftUI scenes observe the *same* instances.

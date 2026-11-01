@@ -1,5 +1,6 @@
 import SwiftUI
 import MediaKit
+import os
 
 /// Manual search results for a library item that isn't downloading; a row expands
 /// into the detail that decides the grab.
@@ -25,6 +26,9 @@ struct ReleaseListView: View {
     @State private var loadTask: Task<Void, Never>?
     @State private var grabbing: Set<String> = []
     @State private var grabbed: Set<String> = []
+    /// The arr's reason per guid, kept under the row: a one-line toast cuts it off and is gone in seconds.
+    @State private var grabErrors: [String: String] = [:]
+    private static let log = Logger(category: "ReleaseGrab")
     @State private var pendingGrab: ArrRelease?
     @State private var showGrabConfirm = false
     /// One at a time: two open rows in a 380pt popover is a scroll, not a comparison.
@@ -104,12 +108,20 @@ struct ReleaseListView: View {
         .inlineConfirm(
             isPresented: $showGrabConfirm,
             title: "Download this release?",
-            message: pendingGrab?.isRejected == true
-                ? "Your *arr rejected it — downloading anyway overrides that."
-                : "It will be sent to your download client.",
+            message: grabConfirmMessage,
             confirmLabel: "Download",
             onConfirm: { grab(pendingGrab) }
         )
+    }
+
+    private var grabConfirmMessage: Text {
+        if let pendingGrab, pendingGrab.isRejected {
+            Text(verbatim: (pendingGrab.rejections ?? [])
+                .map { ArrMessageTranslator.translate($0, locale: configStore.currentLocale) }
+                .joined(separator: "\n\n"))
+        } else {
+            Text("It will be sent to your download client.", bundle: .module)
+        }
     }
 
     @ViewBuilder
@@ -125,6 +137,7 @@ struct ReleaseListView: View {
         } else {
             // Filtered and sorted once per render: the check and the list both need it.
             let visible = visible
+            let queued = queuedByRelease
             if visible.isEmpty {
                 // Said outright: an empty list would read as "the search found nothing".
                 statusState(symbol: "line.3.horizontal.decrease.circle",
@@ -133,7 +146,7 @@ struct ReleaseListView: View {
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(visible) { release in
-                            row(release)
+                            row(release, queued: queued[release.title])
                         }
                     }
                     .padding(.vertical, 4)
@@ -143,8 +156,16 @@ struct ReleaseListView: View {
         }
     }
 
+    /// A grab returns no download id, so the title is the link: a client that renames the download breaks it.
+    private var queuedByRelease: [String: QueueItem] {
+        let rows = QueueViewModel.shared.items(for: target.source).compactMap { item in
+            item.releaseName.map { ($0, item) }
+        }
+        return Dictionary(rows, uniquingKeysWith: { first, _ in first })
+    }
+
     @ViewBuilder
-    private func row(_ release: ArrRelease) -> some View {
+    private func row(_ release: ArrRelease, queued: QueueItem?) -> some View {
         let isExpanded = expanded == release.guid
         VStack(spacing: 0) {
             ReleaseRow(
@@ -155,6 +176,7 @@ struct ReleaseListView: View {
                 isExpanded: isExpanded,
                 isGrabbing: grabbing.contains(release.guid),
                 isGrabbed: grabbed.contains(release.guid),
+                queued: queued,
                 historyMark: historyMarks[release.guid],
                 onTap: {
                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -166,6 +188,11 @@ struct ReleaseListView: View {
                     showGrabConfirm = true
                 }
             )
+            if let message = grabErrors[release.guid] {
+                QueueStatusMessagesBanner(messages: [message], tint: .red)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 8)
+            }
             #if os(iOS)
             if isExpanded {
                 ReleaseDetail(release: release, existing: baseline(for: release),
@@ -177,6 +204,10 @@ struct ReleaseListView: View {
             #endif
         }
         .background(isExpanded ? drawerFill : Color.clear)
+        // Imported or removed: it can be grabbed again.
+        .onChange(of: queued == nil) { _, left in
+            if left { grabbed.remove(release.guid) }
+        }
         Divider().opacity(0.35)
     }
 
@@ -278,6 +309,7 @@ struct ReleaseListView: View {
     private func load() async {
         loading = true
         loadError = nil
+        grabErrors = [:]
         defer { loading = false }
         guard let client = makeClient() else {
             loadError = String(localized: "Service not configured", bundle: .module)
@@ -303,6 +335,7 @@ struct ReleaseListView: View {
     private func grab(_ release: ArrRelease?) {
         guard let release, let indexerId = release.indexerId, let client = makeClient() else { return }
         grabbing.insert(release.guid)
+        withAnimation(.easeInOut(duration: 0.15)) { grabErrors[release.guid] = nil }
         Task {
             do {
                 try await client.grabRelease(guid: release.guid, indexerId: indexerId)
@@ -312,10 +345,12 @@ struct ReleaseListView: View {
                     withAnimation(.easeInOut(duration: 0.15)) { expanded = nil }
                 }
             } catch {
+                let arrAnswered = (error as? MediaKitError)?.serverMessage != nil
+                Self.log.error("grab failed: \(error.logKind, privacy: .public), arr gave a reason: \(arrAnswered, privacy: .public), \(error.localizedDescription, privacy: .private)")
                 await MainActor.run {
                     grabbing.remove(release.guid)
-                    // A toast, not `loadError`: that swaps the whole list for the error.
-                    ToastCenter.shared.show(.failure("toast.grabFailed.title", error: error) { grab(release) })
+                    // Not `loadError`: that swaps the whole list for the error.
+                    withAnimation(.easeInOut(duration: 0.15)) { grabErrors[release.guid] = error.localizedDescription }
                 }
             }
         }
@@ -347,10 +382,12 @@ private struct ReleaseRow: View {
     let isExpanded: Bool
     let isGrabbing: Bool
     let isGrabbed: Bool
+    let queued: QueueItem?
     let historyMark: ReleaseHistoryMark?
     let onTap: () -> Void
     let onGrab: () -> Void
     @Environment(\.locale) private var locale
+    private let controlDiameter: CGFloat = 24
 
     var body: some View {
         HStack(spacing: 0) {
@@ -492,24 +529,43 @@ private struct ReleaseRow: View {
     private var grabControl: some View {
         if isGrabbing {
             ProgressView().controlSize(.small)
-                .frame(width: 22)
+                .frame(width: controlDiameter)
                 .accessibilityLabel(Text("Sending to download client", bundle: .module))
+        } else if let queued {
+            LiveProgress(item: queued) { progress in
+                statusRing(progress: progress, tint: queued.status.tint)
+            }
+            .help(Text(verbatim: queued.status.displayName))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text(verbatim: queued.status.displayName))
+            .accessibilityValue(Text(queued.progress, format: .percent.precision(.fractionLength(0))))
         } else if isGrabbed {
-            Label { Text("queue.downloading.button", bundle: .module) } icon: { Image(systemName: "arrow.down.circle.fill") }
-                .scaledFont(size: 11)
-                .foregroundStyle(QueueItem.Status.downloading.tint)
+            // Sent, and not in the queue yet.
+            statusRing(progress: 0, tint: QueueItem.Status.downloading.tint)
+                .help(Text("queue.downloading.button", bundle: .module))
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(Text("queue.downloading.button", bundle: .module))
         } else {
             Button(action: onGrab) {
-                Image(systemName: "arrow.down.circle")
-                    .scaledFont(size: 17)
-                    .foregroundStyle(Color.accentColor)
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
+                // The ring's own glyph size, so nothing moves when the grab lands.
+                Image(systemName: "arrow.down")
+                    .font(.system(size: controlDiameter * 0.5, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: controlDiameter, height: controlDiameter)
+                    .background(controlFill, in: Circle())
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
             .help(Text("Download", bundle: .module))
             .accessibilityLabel(Text("Download", bundle: .module))
         }
+    }
+
+    private var controlFill: Color { Color.primary.opacity(0.1) }
+
+    private func statusRing(progress: Double, tint: Color) -> some View {
+        DownloadProgressRing(systemName: "arrow.down", progress: progress, diameter: controlDiameter, lineWidth: 2, tint: tint)
+            .background(controlFill, in: Circle())
     }
 
     @ViewBuilder
@@ -592,7 +648,7 @@ private struct ReleaseDetail: View {
             }
 
             if release.isRejected, let rejections = release.rejections, !rejections.isEmpty {
-                QueueStatusMessagesBanner(messages: rejections, tint: .orange)
+                QueueStatusMessagesBanner(messages: rejections, tint: .orange, inTooltip: !showsLink)
             }
 
             ReleaseNameBlock(release: release.title, existing: existing?.filename)

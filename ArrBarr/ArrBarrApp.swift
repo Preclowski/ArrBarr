@@ -37,6 +37,9 @@ struct ArrBarrApp: App {
                 onQuit: { NSApp.terminate(nil) }
             )
             .environment(configStore)
+            #if !APPSTORE
+            .background(PanelBlurBackground().ignoresSafeArea())
+            #endif
         } label: {
             // A custom (non-symbol) image inside a `Label` suppresses the title in the status item.
             let active = queueVM.activeCount
@@ -68,3 +71,52 @@ struct ArrBarrApp: App {
             }
     }
 }
+
+#if !APPSTORE
+/// A touch more blur behind the panel, whose glass has no setting for it. A stock effect view blurs far too much
+/// (radius 30, nothing behind stays readable), so this lowers its private backdrop filter. App Store builds keep the glass.
+private struct PanelBlurBackground: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSVisualEffectView {
+        let view = EffectView()
+        view.material = .popover
+        view.blendingMode = .behindWindow
+        view.state = .active
+        return view
+    }
+
+    func updateNSView(_ nsView: NSVisualEffectView, context: Context) {}
+
+    private final class EffectView: NSVisualEffectView {
+        private static let blurRadius = 6.0
+
+        override func layout() {
+            super.layout()
+            setBlurRadius()
+        }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            setBlurRadius()
+        }
+
+        override func viewDidChangeEffectiveAppearance() {
+            super.viewDidChangeEffectiveAppearance()
+            setBlurRadius()
+        }
+
+        /// Next tick: the view builds its layers after these callbacks.
+        private func setBlurRadius() {
+            DispatchQueue.main.async { [weak self] in
+                if let layer = self?.layer { Self.setBlurRadius(on: layer) }
+            }
+        }
+
+        private static func setBlurRadius(on layer: CALayer) {
+            if (layer.filters ?? []).contains(where: { String(describing: $0).contains("gaussianBlur") }) {
+                layer.setValue(blurRadius, forKeyPath: "filters.gaussianBlur.inputRadius")
+            }
+            layer.sublayers?.forEach(setBlurRadius)
+        }
+    }
+}
+#endif

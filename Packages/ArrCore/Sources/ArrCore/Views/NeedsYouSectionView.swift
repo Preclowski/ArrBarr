@@ -56,7 +56,7 @@ struct NeedsYouRow: View {
                     .lineLimit(1)
             }
             ForEach(Array(needs.detailLines.prefix(2).enumerated()), id: \.offset) { _, line in
-                Text(line)
+                Text(ArrMessageTranslator.translate(line, locale: ConfigStore.shared.currentLocale))
                     .scaledFont(size: 10)
                     .foregroundStyle(.tertiary)
                     .lineLimit(2)

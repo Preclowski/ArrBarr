@@ -61,6 +61,10 @@ public struct TMDBService: Sendable {
     public func tvVideos(id: Int) -> Resource<TMDBVideos> {
         json(plan("tvVideos", path: "/tv/{id}/videos", values: ["id": String(id)]), tags: [tvTag(id)], freshness: .archival)
     }
+    public func tvSeasonVideos(id: Int, season: Int) -> Resource<TMDBVideos> {
+        json(plan("tvSeasonVideos", path: "/tv/{id}/season/{season}/videos", values: ["id": String(id), "season": String(season)]),
+             tags: [tvTag(id)], freshness: .archival)
+    }
     public func tvRecommendations(id: Int, page: Int = 1) -> Resource<TMDBPage<TMDBTVSummary>> {
         json(plan("recommendedTV", path: "/tv/{id}/recommendations", values: ["id": String(id)], query: [("page", String(page))]), tags: [tvTag(id)], freshness: .warm)
     }

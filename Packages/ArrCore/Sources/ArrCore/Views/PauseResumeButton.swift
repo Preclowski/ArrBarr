@@ -9,6 +9,10 @@ struct PauseResumeButton: View {
     let action: () async -> Void
 
     @State private var inFlight = false
+    /// The write is optimistic, so the state flips under the spinner: the old glyph waits there and morphs as it leaves.
+    @State private var pausedBeforeAction = false
+
+    private var showsPlay: Bool { inFlight ? pausedBeforeAction : isPaused }
 
     // The fill is the download, so it takes the status colour, like the progress card above it.
     private var tint: Color { (isPaused ? QueueItem.Status.paused : .downloading).tint }
@@ -16,6 +20,7 @@ struct PauseResumeButton: View {
     var body: some View {
         Button {
             guard !inFlight else { return }
+            pausedBeforeAction = isPaused
             Task {
                 inFlight = true
                 await action()
@@ -24,13 +29,16 @@ struct PauseResumeButton: View {
         } label: {
             HStack(spacing: 7) {
                 // Only the glyph swaps for the spinner, so the button keeps its size.
-                if inFlight {
-                    ProgressView()
-                        .controlSize(.small)
-                        .frame(width: CTAButtonStyle.labelSize, height: CTAButtonStyle.labelSize)
-                } else {
-                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                ZStack {
+                    Image(systemName: showsPlay ? "play.fill" : "pause.fill")
+                        .symbolSwap()
                         .frame(width: CTAButtonStyle.labelSize)
+                        .opacity(inFlight ? 0 : 1)
+                    if inFlight {
+                        ProgressView()
+                            .controlSize(.small)
+                            .frame(width: CTAButtonStyle.labelSize, height: CTAButtonStyle.labelSize)
+                    }
                 }
                 // Short verbs: the CTA strip fits three capsules.
                 Text(isPaused
@@ -41,5 +49,6 @@ struct PauseResumeButton: View {
         .buttonStyle(CTAButtonStyle(tint: tint, fill: progress ?? 0, flowing: !isPaused && progress != nil, glass: true))
         .disabled(inFlight)
         .animation(.easeInOut(duration: 0.3), value: isPaused)
+        .animation(.easeInOut(duration: 0.3), value: showsPlay)
     }
 }

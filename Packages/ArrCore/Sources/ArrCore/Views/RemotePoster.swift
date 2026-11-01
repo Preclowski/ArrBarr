@@ -22,6 +22,12 @@ struct PosterBlurContainer<Content: View>: View {
     }
 }
 
+/// A corner action under the pointer dims the poster, so its motion reads on any artwork.
+struct PosterCornerHoverKey: PreferenceKey {
+    static let defaultValue = false
+    static func reduce(value: inout Bool, nextValue: () -> Bool) { value = value || nextValue() }
+}
+
 /// The hero artwork every detail surface draws, with the corner slots that live on the poster.
 struct DetailHeroPoster: View {
     let url: URL?
@@ -37,6 +43,7 @@ struct DetailHeroPoster: View {
     var onTap: ((URL?) -> Void)?
 
     @State private var hovering = false
+    @State private var cornerHovering = false
 
     init(
         url: URL?,
@@ -67,6 +74,7 @@ struct DetailHeroPoster: View {
             .posterMarks(watched: watched, glassWatched: true, library: libraryMark,
                          cornerRadius: Tokens.Radius.card, ribbonWidth: 12)
             .overlay(alignment: .topLeading) { cornerAction }
+            .onPreferenceChange(PosterCornerHoverKey.self) { cornerHovering = $0 }
     }
 
     @ViewBuilder
@@ -81,6 +89,7 @@ struct DetailHeroPoster: View {
                 fitsContent: true
             )
         }
+        .overlay { hoverDim }
         if let onTap {
             Button { onTap(url) } label: {
                 poster.overlay { enlargeHint }
@@ -94,27 +103,33 @@ struct DetailHeroPoster: View {
                 #if os(macOS)
                 .onHover { hovering = $0 }
                 .animation(.easeOut(duration: 0.12), value: hovering)
+                .animation(.easeOut(duration: 0.12), value: cornerHovering)
                 #endif
         } else {
             poster
         }
     }
 
+    /// One layer for the poster and its corner action, so moving between them keeps the level.
+    private var hoverDim: some View {
+        let dimmed = (hovering && url != nil) || cornerHovering
+        return RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
+            .fill(Color.black.opacity(dimmed ? 0.28 : 0))
+            .allowsHitTesting(false)
+            .animation(.easeOut(duration: 0.12), value: dimmed)
+    }
+
     /// Hover-only enlarge hint; hidden from VoiceOver (the button has a label) and absent on touch.
     @ViewBuilder
     private var enlargeHint: some View {
-        if hovering, url != nil {
-            ZStack {
-                RoundedRectangle(cornerRadius: Tokens.Radius.card, style: .continuous)
-                    .fill(Color.black.opacity(0.28))
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: min(size.width, size.height) * 0.22, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
-            }
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-            .transition(.opacity)
+        if hovering, !cornerHovering, url != nil {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: min(size.width, size.height) * 0.22, weight: .semibold))
+                .foregroundStyle(.white)
+                .shadow(color: .black.opacity(0.5), radius: 4, y: 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+                .transition(.opacity)
         }
     }
 }

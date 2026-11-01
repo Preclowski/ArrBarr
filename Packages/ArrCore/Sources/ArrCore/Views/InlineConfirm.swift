@@ -6,7 +6,7 @@ public extension View {
     func inlineConfirm(
         isPresented: Binding<Bool>,
         title: LocalizedStringKey,
-        message: LocalizedStringKey,
+        message: Text,
         confirmLabel: LocalizedStringKey,
         cancelLabel: LocalizedStringKey = "Cancel",
         isDestructive: Bool = false,
@@ -28,7 +28,7 @@ public extension View {
                 Text(cancelLabel, bundle: .module)
             }
         } message: {
-            Text(message, bundle: .module)
+            message
         }
         #else
         return overlay {

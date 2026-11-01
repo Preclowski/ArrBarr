@@ -18,7 +18,7 @@ struct TrailerRow: View {
                 // Lazy: a blockbuster lists a hundred clips, and each tile fetches its still.
                 LazyHStack(alignment: .top, spacing: 10) {
                     ForEach(reel.clips) { clip in
-                        let tile = TrailerTile(clip: clip, isPlaying: false) {
+                        let tile = TrailerTile(clip: clip) {
                             withAnimation(.smooth(duration: 0.4)) { session.present(reel, startingAt: clip) }
                         }
                         // While the player has them, the tiles live in its reel strip; the row keeps their room.
@@ -48,7 +48,6 @@ struct TrailerRow: View {
 
 private struct TrailerTile: View {
     let clip: TrailerClip
-    let isPlaying: Bool
     let action: () -> Void
     @State private var hovering = false
 
@@ -61,15 +60,13 @@ private struct TrailerTile: View {
                              size: Self.thumbnail, cornerRadius: Tokens.Radius.chip,
                              fallbackSymbol: "play.rectangle")
                     .overlay {
-                        Image(systemName: isPlaying ? "speaker.wave.2.fill" : "play.fill")
+                        Image(systemName: "play.fill")
                             .scaledFont(size: 13, weight: .semibold)
                             .foregroundStyle(.white)
+                            // A triangle's mass sits at its base: centred by its box, it reads left.
+                            .offset(x: 1)
                             .frame(width: 30, height: 30)
                             .background(.black.opacity(hovering ? 0.65 : 0.45), in: Circle())
-                    }
-                    .overlay {
-                        RoundedRectangle(cornerRadius: Tokens.Radius.chip)
-                            .strokeBorder(Color.accentColor, lineWidth: isPlaying ? 2 : 0)
                     }
                 Group {
                     if let name = clip.name, !name.isEmpty {
@@ -89,7 +86,6 @@ private struct TrailerTile: View {
         .buttonStyle(.plain)
         .accessibilityLabel(clip.name.map { Text(verbatim: $0) } ?? Text("detail.trailer.button", bundle: .module))
         .onHover { over in withAnimation(.smooth(duration: 0.15)) { hovering = over } }
-        .accessibilityAddTraits(isPlaying ? .isSelected : [])
         #if os(macOS)
         .pointerStyle(.link)
         #endif

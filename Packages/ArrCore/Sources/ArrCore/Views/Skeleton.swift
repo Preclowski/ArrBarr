@@ -63,16 +63,75 @@ struct SkeletonCastRow: View {
     }
 }
 
+/// `TrailerRow`'s room: its header, the tiles and the two caption lines they always reserve.
+struct SkeletonTrailerRow: View {
+    private static let thumbnail = TrailerClip.thumbnailSize
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                .fill(.quaternary).frame(width: 60, height: 12)
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(0..<3, id: \.self) { _ in
+                    VStack(alignment: .leading, spacing: 5) {
+                        RoundedRectangle(cornerRadius: Tokens.Radius.chip, style: .continuous)
+                            .fill(.quaternary).frame(width: Self.thumbnail.width, height: Self.thumbnail.height)
+                        RoundedRectangle(cornerRadius: 3, style: .continuous)
+                            .fill(.quaternary).frame(width: Self.thumbnail.width - 24, height: 9)
+                            .frame(height: 28, alignment: .top)
+                    }
+                }
+            }
+            .padding(.vertical, 2)
+            // The third tile runs off the margin, like the real row's.
+            .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+            .clipped()
+        }
+        .skeletonPulse()
+    }
+}
+
+/// `SeasonSection`'s shape, under its real header: a series always has seasons.
+struct SkeletonSeasonSection: View {
+    var rows: Int = 3
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            DetailSectionHeader("detail.seasons.button")
+            VStack(spacing: 2) {
+                ForEach(0..<max(1, rows), id: \.self) { _ in
+                    HStack(alignment: .top, spacing: 10) {
+                        RoundedRectangle(cornerRadius: Tokens.Radius.chip, style: .continuous)
+                            .fill(.quaternary).frame(width: 40, height: 60)
+                        VStack(alignment: .leading, spacing: 7) {
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(.quaternary).frame(width: 70, height: 11)
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(.quaternary).frame(width: 130, height: 9)
+                        }
+                        .padding(.top, 2)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 5)
+                }
+            }
+            .skeletonPulse()
+        }
+    }
+}
+
 private struct SkeletonPulse: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var dim = false
     func body(content: Content) -> some View {
         content
-            .opacity(dim ? 0.5 : 1)
-            .animation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true), value: dim)
+            // Scoped to the opacity: `.animation(_:value:)` also caught layout landing in the same tick,
+            // and the skeleton then bounced between its old and new position forever.
             // Reduce Motion: a steady dimmed placeholder instead of an endless pulse.
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
+                $0.opacity(dim ? 0.5 : 1)
+            }
             .onAppear { dim = true }
-            .transaction { if reduceMotion { $0.animation = nil } }
     }
 }
 

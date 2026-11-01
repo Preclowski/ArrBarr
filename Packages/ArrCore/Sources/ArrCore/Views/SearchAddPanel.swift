@@ -1,6 +1,5 @@
 import SwiftUI
 import MediaKit
-import os
 
 struct SearchAddPanel: View {
     /// Mutable so a chat result built from a TMDB summary (no IMDb / RT / runtime) can be
@@ -25,7 +24,14 @@ struct SearchAddPanel: View {
 
     /// Nil = no clip (or no TMDB key for the series route), so no poster badge.
     @State private var trailer: TrailerReel?
+    @State private var trailerLoading = true
     private var trailerSession: TrailerSession { .shared }
+    /// The title is browsed first; the add options open on request.
+    @State private var addFormOpen = false
+    #if os(iOS)
+    /// Sizes the sheet to the form.
+    @State private var addFormHeight: CGFloat = 320
+    #endif
 
     // Radarr state
     @State private var selectedProfileId: Int?
@@ -55,13 +61,25 @@ struct SearchAddPanel: View {
     @State private var castLoading = false
     /// Pushed locally so back returns here.
     @State private var personRef: PersonRef?
-    /// TMDB's seasons add episode counts and years to the lookup's bare season numbers.
-    @State private var tmdbSeasons: [TMDBDetails.Airing] = []
+    /// TMDB's seasons add artwork, episode counts and dates to the lookup's bare season numbers.
+    @State private var tmdbSeasons: [Int: TMDBDetails.Airing] = [:]
+    @State private var seasonsLoading = true
 
     var body: some View {
         ZStack {
             mainContent
                 .parked(enlargedPoster != nil)
+                // Without these, rows under the scrim still took clicks and opened their tooltips.
+                .parked(addFormOpen, opacity: 1)
+                .environment(\.suppressRowTooltip, addFormOpen)
+
+            #if os(macOS)
+            if addFormOpen {
+                addFormOverlay
+                    .transition(.opacity)
+                    .zIndex(5)
+            }
+            #endif
 
             if let url = enlargedPoster {
                 PosterLightbox(
@@ -79,13 +97,94 @@ struct SearchAddPanel: View {
         // No `.navigationTitle`: this overlay draws its own header, and a title would propagate up
         // and stack a second header above it.
         .personDestination($personRef)
+        #if os(iOS)
+        .sheet(isPresented: $addFormOpen, onDismiss: { viewModel.addError = nil }) {
+            addForm
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { addFormHeight = $0 }
+                .presentationDetents([.height(addFormHeight)])
+                .presentationDragIndicator(.visible)
+        }
+        #endif
+    }
+
+    #if os(macOS)
+    /// `.sheet` doesn't render inside a `MenuBarExtra` popover, hence an overlay.
+    private var addFormOverlay: some View {
+        ZStack(alignment: .bottom) {
+            // A Button, so Esc closes the form and VoiceOver gets a way out.
+            Button(action: closeAddForm) {
+                Rectangle()
+                    .fill(.black.opacity(0.32))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.cancelAction)
+            .focusEffectDisabled()
+            .accessibilityLabel(Text("common.cancel.button", bundle: .module))
+            .ignoresSafeArea()
+
+            addForm
+                .floatingPanelCard()
+        }
+    }
+
+    private func closeAddForm() {
+        viewModel.addError = nil
+        withAnimation(Self.addFormMotion) { addFormOpen = false }
+    }
+    #endif
+
+    private static let addFormMotion: Animation = .smooth(duration: 0.18)
+
+    private var addForm: some View {
+        VStack(spacing: 6) {
+            if viewModel.isLoadingOptions {
+                // The form's own rows, so the card doesn't grow when the options land.
+                SkeletonRows(count: formRowCount, rowHeight: 26, spacing: 4)
+                    .padding(.horizontal, 14)
+                    .padding(.bottom, 4)
+            } else {
+                if result.source == .radarr {
+                    radarrForm
+                } else if result.source == .sonarr {
+                    sonarrForm
+                } else if result.source == .whisparr {
+                    whisparrForm
+                } else {
+                    lidarrForm
+                }
+            }
+            if let err = viewModel.addError {
+                Text(err)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .padding(.horizontal, 14)
+            }
+            addButtons
+                .padding(.bottom, 10)
+        }
+        .padding(.top, 8)
+    }
+
+    private var openAddFormButton: some View {
+        Button {
+            withAnimation(Self.addFormMotion) { addFormOpen = true }
+        } label: {
+            HStack(spacing: 7) {
+                Image(systemName: storeManager.isPro ? "plus" : "lock.fill")
+                    .frame(width: CTAButtonStyle.labelSize)
+                Text("discover.addToLibrary.button", bundle: .module)
+            }
+        }
+        // The detail view's CTA, as `PauseResumeButton`: the accent staining the glass.
+        .buttonStyle(CTAButtonStyle(tint: .accentColor, glass: true))
     }
 
     private var mainContent: some View {
         VStack(spacing: 0) {
             header
 
-            // The form + CTA sit in a sticky footer so a tall overview never hides the action;
+            // The CTA sits in a sticky footer so a tall overview never hides the action;
             // a safe-area inset lets the overview scroll under the card instead of clipping above it.
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
@@ -98,34 +197,10 @@ struct SearchAddPanel: View {
             .scrollBounceBehavior(.basedOnSize)
             .frame(maxHeight: .infinity)
             .safeAreaInset(edge: .bottom, spacing: 0) {
-                VStack(spacing: 6) {
-                    if viewModel.isLoadingOptions {
-                        // The form's own rows, so the card doesn't grow when the options land.
-                        SkeletonRows(count: formRowCount, rowHeight: 26, spacing: 4)
-                            .padding(.horizontal, 14)
-                            .padding(.bottom, 4)
-                    } else {
-                        if result.source == .radarr {
-                            radarrForm
-                        } else if result.source == .sonarr {
-                            sonarrForm
-                        } else if result.source == .whisparr {
-                            whisparrForm
-                        } else {
-                            lidarrForm
-                        }
-                    }
-                    if let err = viewModel.addError {
-                        Text(err)
-                            .font(.caption)
-                            .foregroundStyle(.red)
-                            .padding(.horizontal, 14)
-                    }
-                    addButtons
-                        .padding(.bottom, 10)
-                }
-                .padding(.top, 8)
-                .floatingPanelCard()
+                openAddFormButton
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .frame(maxWidth: .infinity)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -164,7 +239,8 @@ struct SearchAddPanel: View {
         // An overlay, not a push, so there's no system chevron — draw our own back button.
         HStack(spacing: 6) {
             FloatingBackButton(action: onBack)
-                .keyboardShortcut(.cancelAction)
+                // The open form's scrim takes Esc.
+                .keyboardShortcut(addFormOpen ? nil : KeyboardShortcut.cancelAction)
             Text(verbatim: navTitleString)
                 .scaledFont(size: 15, weight: .semibold)
                 .foregroundStyle(.primary)
@@ -182,6 +258,7 @@ struct SearchAddPanel: View {
         // Dismiss only OUR previous clip — a fresh mount must not kill a session restored across a reopen.
         if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         trailer = nil
+        trailerLoading = true
         var reel: TrailerReel?
         switch result.mediaRef {
         case .tmdb(let id):
@@ -201,7 +278,11 @@ struct SearchAddPanel: View {
         case .musicBrainz, .imdb:
             break
         }
-        withAnimation(DetailView.landing) { trailer = reel }
+        guard !Task.isCancelled else { return }
+        withAnimation(DetailView.landing) {
+            trailer = reel
+            trailerLoading = false
+        }
     }
 
     private var navTitleString: String {
@@ -253,35 +334,46 @@ struct SearchAddPanel: View {
             }
             if let trailer {
                 TrailerRow(reel: trailer)
+            } else if trailerLoading, result.source != .lidarr, !configStore.tmdbApiKey.isEmpty {
+                SkeletonTrailerRow()
             }
-            let seasons = result.source == .sonarr ? seasonEntries : []
-            if !seasons.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    DetailSectionHeader("detail.seasons.button", count: seasons.count)
-                    VStack(spacing: 3) {
-                        ForEach(seasons, id: \.number) { season in
-                            AddPanelSeasonRow(number: season.number, episodeCount: season.episodeCount, year: season.year)
-                        }
-                    }
-                }
+            if result.source == .sonarr {
+                seasonList
             }
         }
     }
 
     /// Sonarr's (TVDB) numbering decides the list, since that is what gets added; TMDB numbers
     /// seasons differently for some shows, so it only fills in seasons whose number matches.
-    private var seasonEntries: [(number: Int, episodeCount: Int?, year: String?)] {
-        let tmdb = Dictionary(tmdbSeasons.compactMap { s in s.seasonNumber.map { ($0, s) } }, uniquingKeysWith: { a, _ in a })
-        let numbers = result.seasonNumbers.isEmpty ? tmdb.keys.filter { $0 > 0 }.sorted() : result.seasonNumbers
-        return numbers.map { n in (n, tmdb[n]?.episodeCount, tmdb[n]?.airDate.map { String($0.prefix(4)) }) }
+    private var seasonNumbers: [Int] {
+        result.seasonNumbers.isEmpty ? tmdbSeasons.keys.filter { $0 > 0 }.sorted() : result.seasonNumbers
+    }
+
+    /// Waits for TMDB even when the lookup knows the numbers: without it a row is a bare name.
+    @ViewBuilder
+    private var seasonList: some View {
+        if seasonsLoading, !configStore.tmdbApiKey.isEmpty {
+            SkeletonSeasonSection(rows: result.seasonNumbers.isEmpty ? 3 : result.seasonNumbers.count)
+        } else if !seasonNumbers.isEmpty {
+            SeasonSection(count: seasonNumbers.count) {
+                ForEach(seasonNumbers, id: \.self) { number in
+                    SeasonRow(number: number, tmdb: tmdbSeasons[number],
+                              posterURL: TMDBClient.imageURL(path: tmdbSeasons[number]?.posterPath) ?? result.posterURL)
+                }
+            }
+        }
     }
 
     private func loadTMDBSeasons() async {
-        guard result.source == .sonarr, !configStore.tmdbApiKey.isEmpty else { return }
-        let client = configStore.tmdbClient
-        guard let id = await client.seriesId(tmdbId: result.tmdbTVId, tvdbId: result.externalId),
-              let details = await Logger.extras.attempt("seasons", { try await client.tvDetails(tvId: id) }) else { return }
-        tmdbSeasons = details.seasons ?? []
+        guard result.source == .sonarr else { return }
+        seasonsLoading = true
+        let seasons = await DetailView.tmdbSeasons(tmdbId: result.tmdbTVId, tvdbId: result.externalId,
+                                                   configStore: configStore)
+        guard !Task.isCancelled else { return }
+        withAnimation(DetailView.landing) {
+            tmdbSeasons = seasons
+            seasonsLoading = false
+        }
     }
 
     /// Silent on failure / no key. Passing `tmdbTVId` for series skips the `/find` hop and is
@@ -593,35 +685,5 @@ struct SearchAddPanel: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.card))
-    }
-}
-
-/// Read-only: an un-added series has nothing on disk or in the queue to show.
-private struct AddPanelSeasonRow: View {
-    let number: Int
-    let episodeCount: Int?
-    let year: String?
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Text(String(format: String(localized: "queue.season02lld.button", bundle: .module), number))
-                .scaledFont(size: 12, weight: .medium)
-            Spacer(minLength: 8)
-            if !detail.isEmpty {
-                Text(verbatim: detail)
-                    .scaledFont(size: 10, monospacedDigit: true)
-                    .foregroundStyle(.secondary)
-            }
-        }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: Tokens.Radius.chip))
-    }
-
-    private var detail: String {
-        let episodes = episodeCount.map {
-            String.localizedStringWithFormat(NSLocalizedString("unit.episodes", bundle: .module, comment: ""), $0)
-        }
-        return [episodes, year].compactMap { $0 }.joined(separator: " · ")
     }
 }

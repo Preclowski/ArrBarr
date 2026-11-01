@@ -36,18 +36,24 @@ struct QueueTitleGroupRowView: View {
         // Poster at the same x as every queue row (alignment across row kinds is a hard rule); one disclosure
         // affordance, a trailing chevron.
         HStack(alignment: .center, spacing: 10) {
-            PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
-                RemotePoster(
-                    url: rep.posterURL,
-                    apiKey: rep.posterRequiresAuth ? configStore.config(for: rep.source).apiKey : nil,
-                    tier: .icon,
-                    size: posterSize,
-                    cornerRadius: Tokens.Radius.chip,
-                    fallbackSymbol: rep.source.symbol
-                )
+            ZStack {
+                // Rotation doesn't move the layout, so the front card keeps the shared poster x. Fanned to the
+                // right only: the left edge is the one every row shares, and 8° stops short of the title.
+                ForEach(Array(stride(from: stackDepth, to: 0, by: -1)), id: \.self) { layer in
+                    poster
+                        .brightness(-0.12 * Double(layer))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                                .strokeBorder(.black.opacity(0.3), lineWidth: 0.5)
+                        }
+                        .rotationEffect(.degrees(4 * Double(layer)), anchor: .bottom)
+                        .accessibilityHidden(true)
+                }
+                poster
+                    .posterMarks(watched: rep.watched, library: LibraryMark(downloaded: group.allItems.allSatisfy(\.isUpgrade)),
+                                 cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
+                    .overlay(alignment: .bottomTrailing) { countBadge }
             }
-            .posterMarks(watched: rep.watched, library: LibraryMark(downloaded: group.allItems.allSatisfy(\.isUpgrade)),
-                         cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 4) {
@@ -69,8 +75,6 @@ struct QueueTitleGroupRowView: View {
                         withAnimation(.easeInOut(duration: 0.15)) { titleHovering = hovering }
                     }
                     #endif
-
-                    TagChip(text: downloadCountText)
 
                     Spacer(minLength: 4)
                 }
@@ -147,7 +151,8 @@ struct QueueTitleGroupRowView: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityValue(Text(group.aggregateProgress, format: .percent.precision(.fractionLength(0))))
+        // The badge is a bare number, so VoiceOver gets the whole phrase here.
+        .accessibilityValue(Text(verbatim: "\(downloadCountText), \(group.aggregateProgress.formatted(.percent.precision(.fractionLength(0))))"))
         .accessibilityAddTraits(.isButton)
         .accessibilityHint(Text(isExpanded ? "Collapse section" : "Expand section", bundle: .module))
     }
@@ -157,6 +162,40 @@ struct QueueTitleGroupRowView: View {
         if items.contains(where: { $0.status == .downloading }) { return QueueItem.Status.downloading.tint }
         if items.allSatisfy({ $0.status == .paused }) { return QueueItem.Status.paused.tint }
         return rep.status.tint
+    }
+
+    private var poster: some View {
+        PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
+            RemotePoster(
+                url: rep.posterURL,
+                apiKey: rep.posterRequiresAuth ? configStore.config(for: rep.source).apiKey : nil,
+                tier: .icon,
+                size: posterSize,
+                cornerRadius: Tokens.Radius.chip,
+                fallbackSymbol: rep.source.symbol
+            )
+        }
+    }
+
+    /// Cards peeking out behind the poster: a hint of the stack, not a count.
+    private var stackDepth: Int { min(group.downloadCount - 1, 2) }
+
+    private var countBadge: some View {
+        HStack(spacing: 2) {
+            Image(systemName: "rectangle.portrait.on.rectangle.portrait.fill")
+                .scaledFont(size: 7, weight: .semibold)
+            Text(verbatim: "\(group.downloadCount)")
+                .scaledFont(size: 9, weight: .semibold, monospacedDigit: true)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 4)
+        .padding(.vertical, 1)
+        // A literal, not `Color.black`: the menu-bar panel blends SwiftUI's named colours with light art.
+        .background(Color(.sRGB, white: 0, opacity: 0.72), in: Capsule())
+        .fixedSize()
+        .padding(2.5)
+        .help(Text(verbatim: downloadCountText))
+        .accessibilityHidden(true)
     }
 
     private var posterSize: CGSize {

@@ -78,6 +78,15 @@ nonisolated public final class MediaServerIndex: @unchecked Sendable {
         return state.watchedEpisodesBySeries[itemId]?.contains(SeasonEpisode(season: season, episode: episode)) ?? false
     }
 
+    /// The whole series played, or every aired episode of the season among the recent plays.
+    public func isSeasonWatched(_ keys: [MediaServerExternalKey], season: Int, airedEpisodes: Int) -> Bool {
+        let state = state
+        guard let entry = Self.entry(for: keys, in: state) else { return false }
+        if entry.watched { return true }
+        guard airedEpisodes > 0, let plays = state.watchedEpisodesBySeries[entry.itemId] else { return false }
+        return plays.count { $0.season == season } >= airedEpisodes
+    }
+
     /// Unknown titles report not watched: the Quiz must not hide something because the index hasn't loaded.
     public func isWatched(_ keys: [MediaServerExternalKey]) -> Bool {
         entry(for: keys)?.watched ?? false

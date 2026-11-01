@@ -1,0 +1,2751 @@
+{
+ "%@ does not match existing release group %@": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "%@ passt nicht zur vorhandenen Release-Gruppe %@",
+  "es": "%@ no coincide con el grupo de lanzamiento existente %@",
+  "fr": "%@ ne correspond pas au groupe de release existant %@",
+  "nl": "%@ komt niet overeen met de bestaande releasegroep %@",
+  "pl": "%@ nie pasuje do istniejącej grupy wydania %@"
+ },
+ "%@ has ambiguous numbering": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "%@ hat eine mehrdeutige Nummerierung",
+  "es": "%@ tiene una numeración ambigua",
+  "fr": "%@ a une numérotation ambiguë",
+  "nl": "%@ heeft een dubbelzinnige nummering",
+  "pl": "%@ ma niejednoznaczną numerację"
+ },
+ "%@ is larger than maximum allowed %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "%@ ist größer als das erlaubte Maximum von %@",
+  "es": "%@ supera el máximo permitido de %@",
+  "fr": "%@ dépasse le maximum autorisé de %@",
+  "nl": "%@ is groter dan het toegestane maximum van %@",
+  "pl": "%@ to więcej niż dozwolone maksimum %@"
+ },
+ "%@ is larger than maximum allowed %@ (for %@)": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "%@ ist größer als das erlaubte Maximum von %@ (für %@)",
+  "es": "%@ supera el máximo permitido de %@ (para %@)",
+  "fr": "%@ dépasse le maximum autorisé de %@ (pour %@)",
+  "nl": "%@ is groter dan het toegestane maximum van %@ (voor %@)",
+  "pl": "%@ to więcej niż dozwolone maksimum %@ (dla %@)"
+ },
+ "%@ is not enabled for this artist": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "%@ ist für diesen Künstler nicht aktiviert",
+  "es": "%@ no está activado para este artista",
+  "fr": "%@ n'est pas activé pour cet artiste",
+  "nl": "%@ is niet ingeschakeld voor deze artiest",
+  "pl": "%@ nie jest włączony dla tego wykonawcy"
+ },
+ "%@ is not wanted in profile": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "%@ ist im Profil nicht gewünscht",
+  "es": "%@ no es deseado en el perfil",
+  "fr": "%@ n'est pas souhaité dans le profil",
+  "nl": "%@ is niet gewenst in het profiel",
+  "pl": "Profil nie dopuszcza %@"
+ },
+ "%@ is smaller than minimum allowed %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "%@ ist kleiner als das erlaubte Minimum von %@",
+  "es": "%@ no llega al mínimo permitido de %@",
+  "fr": "%@ est inférieur au minimum autorisé de %@",
+  "nl": "%@ is kleiner dan het toegestane minimum van %@",
+  "pl": "%@ to mniej niż dozwolone minimum %@"
+ },
+ "%@ is smaller than minimum allowed %@ (for %@)": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "%@ ist kleiner als das erlaubte Minimum von %@ (für %@)",
+  "es": "%@ no llega al mínimo permitido de %@ (para %@)",
+  "fr": "%@ est inférieur au minimum autorisé de %@ (pour %@)",
+  "nl": "%@ is kleiner dan het toegestane minimum van %@ (voor %@)",
+  "pl": "%@ to mniej niż dozwolone minimum %@ (dla %@)"
+ },
+ "%@ is wanted, but found %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "%@ ist gewünscht, gefunden wurde aber %@",
+  "es": "Se busca %@, pero se encontró %@",
+  "fr": "%@ est souhaité, mais %@ a été trouvé",
+  "nl": "%@ is gewenst, maar %@ gevonden",
+  "pl": "Oczekiwano %@, a znaleziono %@"
+ },
+ "Album already imported at %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album wurde bereits am %@ importiert",
+  "es": "Álbum ya importado el %@",
+  "fr": "Album déjà importé le %@",
+  "nl": "Album is al geïmporteerd op %@",
+  "pl": "Album zaimportowano już %@"
+ },
+ "Album duration is 0, unable to validate size until it is available": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Albumdauer ist 0, die Größe kann erst geprüft werden, wenn sie verfügbar ist",
+  "es": "La duración del álbum es 0; no se puede validar el tamaño hasta que esté disponible",
+  "fr": "La durée de l'album est de 0, impossible de valider la taille tant qu'elle n'est pas disponible",
+  "nl": "Albumduur is 0, de grootte kan pas worden gecontroleerd als die beschikbaar is",
+  "pl": "Długość albumu wynosi 0, rozmiaru nie da się sprawdzić, dopóki nie będzie znana"
+ },
+ "Album is not monitored": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album wird nicht überwacht",
+  "es": "El álbum no está monitorizado",
+  "fr": "L'album n'est pas surveillé",
+  "nl": "Album wordt niet gemonitord",
+  "pl": "Album nie jest monitorowany"
+ },
+ "Album match is not close enough: %@ vs %@ %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album stimmt nicht genau genug überein: %@ gegenüber %@ %@",
+  "es": "La coincidencia del álbum no es suficiente: %@ frente a %@ %@",
+  "fr": "La correspondance de l'album est insuffisante : %@ contre %@ %@",
+  "nl": "Albumovereenkomst is niet groot genoeg: %@ tegenover %@ %@",
+  "pl": "Album nie pasuje wystarczająco: %@ przy wymaganych %@ %@"
+ },
+ "Album release not requested": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album-Release wurde nicht angefordert",
+  "es": "No se solicitó esta versión del álbum",
+  "fr": "Cette version de l'album n'a pas été demandée",
+  "nl": "Albumrelease is niet aangevraagd",
+  "pl": "Nie żądano tego wydania albumu"
+ },
+ "Album wasn't requested": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album wurde nicht angefordert",
+  "es": "El álbum no se solicitó",
+  "fr": "L'album n'a pas été demandé",
+  "nl": "Album is niet aangevraagd",
+  "pl": "Nie żądano tego albumu"
+ },
+ "Ambiguous numbering": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Mehrdeutige Nummerierung",
+  "es": "Numeración ambigua",
+  "fr": "Numérotation ambiguë",
+  "nl": "Dubbelzinnige nummering",
+  "pl": "Niejednoznaczna numeracja"
+ },
+ "Another release is queued and the Quality profile does not allow upgrades": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Ein anderes Release ist in der Warteschlange und das Qualitätsprofil erlaubt keine Upgrades",
+  "es": "Hay otra versión en cola y el perfil de calidad no permite mejoras",
+  "fr": "Une autre version est en file d'attente et le profil de qualité n'autorise pas les améliorations",
+  "nl": "Er staat al een andere release in de wachtrij en het kwaliteitsprofiel staat geen upgrades toe",
+  "pl": "Inne wydanie jest już w kolejce, a profil jakości nie pozwala na upgrade"
+ },
+ "Artist is not monitored": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Künstler wird nicht überwacht",
+  "es": "El artista no está monitorizado",
+  "fr": "L'artiste n'est pas surveillé",
+  "nl": "Artiest wordt niet gemonitord",
+  "pl": "Wykonawca nie jest monitorowany"
+ },
+ "Artist name mismatch, automatic import is not possible. Check the download troubleshooting entry on the wiki for common causes.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Künstlername stimmt nicht überein, automatischer Import ist nicht möglich. Häufige Ursachen stehen im Wiki unter Download-Fehlerbehebung.",
+  "es": "El nombre del artista no coincide; no es posible la importación automática. Consulta las causas habituales en la sección de solución de problemas de descargas de la wiki.",
+  "fr": "Le nom de l'artiste ne correspond pas, import automatique impossible. Consultez la section de dépannage des téléchargements du wiki pour les causes courantes.",
+  "nl": "Artiestnaam komt niet overeen, automatische import is niet mogelijk. Zie het onderdeel over downloadproblemen op de wiki voor veelvoorkomende oorzaken.",
+  "pl": "Nazwa wykonawcy się nie zgadza, automatyczny import jest niemożliwy. Częste przyczyny opisuje wiki w części o problemach z pobieraniem."
+ },
+ "Artist tags do not match any of the indexer tags": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Künstler-Tags passen zu keinem der Indexer-Tags",
+  "es": "Las etiquetas del artista no coinciden con ninguna del indexador",
+  "fr": "Les tags de l'artiste ne correspondent à aucun tag de l'indexeur",
+  "nl": "Artiesttags komen met geen enkele indexertag overeen",
+  "pl": "Tagi wykonawcy nie pasują do żadnego tagu indeksera"
+ },
+ "CDH is disabled and grab event in history already meets cutoff: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf erreicht bereits den Cutoff: %@",
+  "es": "CDH está desactivado y la captura en el historial ya alcanza el corte: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique atteint déjà le seuil : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis haalt de cutoff al: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii spełnia już próg: %@"
+ },
+ "CDH is disabled and grab event in history and Quality Profile '%@' does not allow upgrades": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf und das Qualitätsprofil '%@' erlaubt keine Upgrades",
+  "es": "CDH está desactivado y la captura en el historial y el perfil de calidad '%@' no permite mejoras",
+  "fr": "CDH est désactivé et la capture dans l'historique et le profil de qualité '%@' n'autorise pas les améliorations",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis en kwaliteitsprofiel '%@' staat geen upgrades toe",
+  "pl": "CDH jest wyłączone, a pobranie w historii, a profil jakości '%@' nie pozwala na upgrade"
+ },
+ "CDH is disabled and grab event in history has Custom Format score within Custom Format score increment: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf hat einen Score benutzerdefinierter Formate innerhalb des Score-Inkrements: %@",
+  "es": "CDH está desactivado y la captura en el historial tiene una puntuación de formato personalizado dentro del incremento de puntuación: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique a un score de format personnalisé dans l'incrément de score : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis heeft een score voor aangepaste formats binnen de scorestap: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii ma ocenę formatu niestandardowego w granicach przyrostu oceny: %@"
+ },
+ "CDH is disabled and grab event in history has an equal or higher Custom Format score: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf hat einen gleichen oder höheren Score benutzerdefinierter Formate: %@",
+  "es": "CDH está desactivado y la captura en el historial tiene una puntuación de formato personalizado igual o superior: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique a un score de format personnalisé égal ou supérieur : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis heeft een gelijke of hogere score voor aangepaste formats: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii ma równą lub wyższą ocenę formatu niestandardowego: %@"
+ },
+ "CDH is disabled and grab event in history is of equal or higher preference: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf hat eine gleiche oder höhere Präferenz: %@",
+  "es": "CDH está desactivado y la captura en el historial tiene una preferencia igual o superior: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique a une préférence égale ou supérieure : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis heeft een gelijke of hogere voorkeur: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii ma równą lub wyższą preferencję: %@"
+ },
+ "CDH is disabled and grab event in history is of equal or higher quality: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf hat eine gleiche oder höhere Qualität: %@",
+  "es": "CDH está desactivado y la captura en el historial tiene una calidad igual o superior: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique a une qualité égale ou supérieure : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis heeft een gelijke of hogere kwaliteit: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii ma równą lub wyższą jakość: %@"
+ },
+ "CDH is disabled and grab event in history is of equal or higher revision: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf hat eine gleiche oder höhere Revision: %@",
+  "es": "CDH está desactivado y la captura en el historial tiene una revisión igual o superior: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique a une révision égale ou supérieure : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis heeft een gelijke of hogere revisie: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii ma równą lub wyższą rewizję: %@"
+ },
+ "CDH is disabled and grab event in history meets Custom Format cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf erreicht den Cutoff benutzerdefinierter Formate: %@",
+  "es": "CDH está desactivado y la captura en el historial alcanza el corte de formato personalizado: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique atteint le seuil de format personnalisé : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis haalt de cutoff voor aangepaste formats: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii spełnia próg formatu niestandardowego: %@"
+ },
+ "CDH is disabled and grab event in history meets quality cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "CDH ist deaktiviert und das Grab-Ereignis im Verlauf erreicht den Qualitäts-Cutoff: %@",
+  "es": "CDH está desactivado y la captura en el historial alcanza el corte de calidad: %@",
+  "fr": "CDH est désactivé et la capture dans l'historique atteint le seuil de qualité : %@",
+  "nl": "CDH is uitgeschakeld en de grab in de geschiedenis haalt de kwaliteitscutoff: %@",
+  "pl": "CDH jest wyłączone, a pobranie w historii spełnia próg jakości: %@"
+ },
+ "Caution: Found executable file": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Achtung: Ausführbare Datei gefunden",
+  "es": "Atención: se encontró un archivo ejecutable",
+  "fr": "Attention : fichier exécutable trouvé",
+  "nl": "Let op: uitvoerbaar bestand gevonden",
+  "pl": "Uwaga: znaleziono plik wykonywalny"
+ },
+ "Caution: Found executable file with extension: %@": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Achtung: Ausführbare Datei mit Erweiterung gefunden: %@",
+  "es": "Atención: se encontró un archivo ejecutable con la extensión: %@",
+  "fr": "Attention : fichier exécutable trouvé avec l'extension : %@",
+  "nl": "Let op: uitvoerbaar bestand gevonden met extensie: %@",
+  "pl": "Uwaga: znaleziono plik wykonywalny z rozszerzeniem: %@"
+ },
+ "Caution: Found executable file with extension: '%@'": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Achtung: Ausführbare Datei mit Erweiterung gefunden: '%@'",
+  "es": "Atención: se encontró un archivo ejecutable con la extensión: '%@'",
+  "fr": "Attention : fichier exécutable trouvé avec l'extension : '%@'",
+  "nl": "Let op: uitvoerbaar bestand gevonden met extensie: '%@'",
+  "pl": "Uwaga: znaleziono plik wykonywalny z rozszerzeniem: '%@'"
+ },
+ "Caution: Found file with user defined rejected extension: %@": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Achtung: Datei mit benutzerdefiniert abgelehnter Erweiterung gefunden: %@",
+  "es": "Atención: se encontró un archivo con una extensión rechazada por el usuario: %@",
+  "fr": "Attention : fichier trouvé avec une extension rejetée par l'utilisateur : %@",
+  "nl": "Let op: bestand gevonden met een door de gebruiker geweigerde extensie: %@",
+  "pl": "Uwaga: znaleziono plik z rozszerzeniem odrzucanym w ustawieniach: %@"
+ },
+ "Caution: Found file with user defined rejected extension: '%@'": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Achtung: Datei mit benutzerdefiniert abgelehnter Erweiterung gefunden: '%@'",
+  "es": "Atención: se encontró un archivo con una extensión rechazada por el usuario: '%@'",
+  "fr": "Attention : fichier trouvé avec une extension rejetée par l'utilisateur : '%@'",
+  "nl": "Let op: bestand gevonden met een door de gebruiker geweigerde extensie: '%@'",
+  "pl": "Uwaga: znaleziono plik z rozszerzeniem odrzucanym w ustawieniach: '%@'"
+ },
+ "Caution: Found potentially dangerous file": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Achtung: Potenziell gefährliche Datei gefunden",
+  "es": "Atención: se encontró un archivo potencialmente peligroso",
+  "fr": "Attention : fichier potentiellement dangereux trouvé",
+  "nl": "Let op: mogelijk gevaarlijk bestand gevonden",
+  "pl": "Uwaga: znaleziono potencjalnie niebezpieczny plik"
+ },
+ "Caution: Found potentially dangerous file with extension: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Achtung: Potenziell gefährliche Datei mit Erweiterung gefunden: %@",
+  "es": "Atención: se encontró un archivo potencialmente peligroso con la extensión: %@",
+  "fr": "Attention : fichier potentiellement dangereux trouvé avec l'extension : %@",
+  "nl": "Let op: mogelijk gevaarlijk bestand gevonden met extensie: %@",
+  "pl": "Uwaga: znaleziono potencjalnie niebezpieczny plik z rozszerzeniem: %@"
+ },
+ "Contains these ignored terms: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Enthält diese ignorierten Begriffe: %@",
+  "es": "Contiene estos términos ignorados: %@",
+  "fr": "Contient ces termes ignorés : %@",
+  "nl": "Bevat deze genegeerde termen: %@",
+  "pl": "Zawiera ignorowane słowa: %@"
+ },
+ "Couldn't find requested release in cache, try searching again": {
+  "arrs": [],
+  "de": "Das angeforderte Release ist nicht mehr im Cache, suche erneut",
+  "es": "La versión solicitada no está en la caché; vuelve a buscar",
+  "fr": "La version demandée n'est pas dans le cache, relancez la recherche",
+  "nl": "De gevraagde release staat niet in de cache, zoek opnieuw",
+  "pl": "Nie ma tego wydania w pamięci podręcznej, wyszukaj ponownie"
+ },
+ "Couldn't find similar album for %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Kein ähnliches Album für %@ gefunden",
+  "es": "No se encontró un álbum similar para %@",
+  "fr": "Aucun album similaire trouvé pour %@",
+  "nl": "Geen vergelijkbaar album gevonden voor %@",
+  "pl": "Nie znaleziono podobnego albumu dla %@"
+ },
+ "Couldn't parse album from: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Album konnte nicht erkannt werden aus: %@",
+  "es": "No se pudo analizar el álbum de: %@",
+  "fr": "Impossible d'analyser l'album depuis : %@",
+  "nl": "Kan album niet herkennen uit: %@",
+  "pl": "Nie udało się rozpoznać albumu z: %@"
+ },
+ "Couldn't parse track from: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht erkannt werden aus: %@",
+  "es": "No se pudo analizar la pista de: %@",
+  "fr": "Impossible d'analyser la piste depuis : %@",
+  "nl": "Kan nummer niet herkennen uit: %@",
+  "pl": "Nie udało się rozpoznać utworu z: %@"
+ },
+ "Custom Formats %@ have score %@ below Artist profile minimum %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Benutzerdefinierte Formate %@ haben den Score %@, unter dem Minimum des Künstlerprofils (%@)",
+  "es": "Los formatos personalizados %@ tienen una puntuación de %@, por debajo del mínimo del perfil del artista (%@)",
+  "fr": "Les formats personnalisés %@ ont un score de %@, sous le minimum du profil de l'artiste (%@)",
+  "nl": "Aangepaste formats %@ hebben score %@, onder het minimum van het artiestprofiel (%@)",
+  "pl": "Formaty niestandardowe %@ mają ocenę %@, poniżej minimum profilu wykonawcy (%@)"
+ },
+ "Custom Formats %@ have score %@ below Movie's profile minimum %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Benutzerdefinierte Formate %@ haben den Score %@, unter dem Minimum des Filmprofils (%@)",
+  "es": "Los formatos personalizados %@ tienen una puntuación de %@, por debajo del mínimo del perfil de la película (%@)",
+  "fr": "Les formats personnalisés %@ ont un score de %@, sous le minimum du profil du film (%@)",
+  "nl": "Aangepaste formats %@ hebben score %@, onder het minimum van het filmprofiel (%@)",
+  "pl": "Formaty niestandardowe %@ mają ocenę %@, poniżej minimum profilu filmu (%@)"
+ },
+ "Custom Formats %@ have score %@ below Series profile minimum %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Benutzerdefinierte Formate %@ haben den Score %@, unter dem Minimum des Serienprofils (%@)",
+  "es": "Los formatos personalizados %@ tienen una puntuación de %@, por debajo del mínimo del perfil de la serie (%@)",
+  "fr": "Les formats personnalisés %@ ont un score de %@, sous le minimum du profil de la série (%@)",
+  "nl": "Aangepaste formats %@ hebben score %@, onder het minimum van het serieprofiel (%@)",
+  "pl": "Formaty niestandardowe %@ mają ocenę %@, poniżej minimum profilu serialu (%@)"
+ },
+ "Destination artist folder %@ is not in a Root Folder": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Zielordner des Künstlers %@ liegt in keinem Stammordner",
+  "es": "La carpeta de destino del artista %@ no está en una carpeta raíz",
+  "fr": "Le dossier de destination de l'artiste %@ n'est pas dans un dossier racine",
+  "nl": "Doelmap van artiest %@ staat niet in een hoofdmap",
+  "pl": "Folder docelowy wykonawcy %@ nie leży w folderze głównym"
+ },
+ "Destination folder %@ is not in a Root Folder": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Zielordner %@ liegt in keinem Stammordner",
+  "es": "La carpeta de destino %@ no está en una carpeta raíz",
+  "fr": "Le dossier de destination %@ n'est pas dans un dossier racine",
+  "nl": "Doelmap %@ staat niet in een hoofdmap",
+  "pl": "Folder docelowy %@ nie leży w folderze głównym"
+ },
+ "Discography release rejected. All albums haven't released yet.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Diskografie-Release abgelehnt. Noch nicht alle Alben sind erschienen.",
+  "es": "Versión de discografía rechazada. Aún no se han publicado todos los álbumes.",
+  "fr": "Version de discographie rejetée. Tous les albums ne sont pas encore sortis.",
+  "nl": "Discografierelease geweigerd. Nog niet alle albums zijn uitgebracht.",
+  "pl": "Odrzucono wydanie dyskografii. Nie wszystkie albumy już wyszły."
+ },
+ "Does not contain one of the required terms: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Enthält keinen der erforderlichen Begriffe: %@",
+  "es": "No contiene ninguno de los términos requeridos: %@",
+  "fr": "Ne contient aucun des termes requis : %@",
+  "nl": "Bevat geen van de vereiste termen: %@",
+  "pl": "Nie zawiera żadnego z wymaganych słów: %@"
+ },
+ "Download doesn't contain intermediate path, Skipping.": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Download enthält keinen Zwischenpfad, wird übersprungen.",
+  "es": "La descarga no contiene una ruta intermedia; se omite.",
+  "fr": "Le téléchargement ne contient pas de chemin intermédiaire, ignoré.",
+  "nl": "Download bevat geen tussenpad, wordt overgeslagen.",
+  "pl": "Pobieranie nie ma ścieżki pośredniej, pomijam."
+ },
+ "Download wasn't grabbed by Lidarr and not in a category, Skipping.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Download wurde nicht von Lidarr gegriffen und hat keine Kategorie, wird übersprungen.",
+  "es": "Lidarr no capturó la descarga y no tiene categoría; se omite.",
+  "fr": "Téléchargement non capturé par Lidarr et sans catégorie, ignoré.",
+  "nl": "Download is niet door Lidarr gepakt en heeft geen categorie, wordt overgeslagen.",
+  "pl": "Tego pobierania nie zlecił Lidarr i nie ma ono kategorii, pomijam."
+ },
+ "Download wasn't grabbed by Lidarr, skipping": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Download wurde nicht von Lidarr gegriffen, wird übersprungen",
+  "es": "Lidarr no capturó la descarga; se omite",
+  "fr": "Téléchargement non capturé par Lidarr, ignoré",
+  "nl": "Download is niet door Lidarr gepakt, wordt overgeslagen",
+  "pl": "Tego pobierania nie zlecił Lidarr, pomijam"
+ },
+ "Download wasn't grabbed by Radarr and not in a category, Skipping.": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Download wurde nicht von Radarr gegriffen und hat keine Kategorie, wird übersprungen.",
+  "es": "Radarr no capturó la descarga y no tiene categoría; se omite.",
+  "fr": "Téléchargement non capturé par Radarr et sans catégorie, ignoré.",
+  "nl": "Download is niet door Radarr gepakt en heeft geen categorie, wordt overgeslagen.",
+  "pl": "Tego pobierania nie zlecił Radarr i nie ma ono kategorii, pomijam."
+ },
+ "Download wasn't grabbed by Sonarr and not in a category, Skipping.": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Download wurde nicht von Sonarr gegriffen und hat keine Kategorie, wird übersprungen.",
+  "es": "Sonarr no capturó la descarga y no tiene categoría; se omite.",
+  "fr": "Téléchargement non capturé par Sonarr et sans catégorie, ignoré.",
+  "nl": "Download is niet door Sonarr gepakt en heeft geen categorie, wordt overgeslagen.",
+  "pl": "Tego pobierania nie zlecił Sonarr i nie ma ono kategorii, pomijam."
+ },
+ "Download wasn't grabbed by Whisparr and not in a category, Skipping.": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Download wurde nicht von Whisparr gegriffen und hat keine Kategorie, wird übersprungen.",
+  "es": "Whisparr no capturó la descarga y no tiene categoría; se omite.",
+  "fr": "Téléchargement non capturé par Whisparr et sans catégorie, ignoré.",
+  "nl": "Download is niet door Whisparr gepakt en heeft geen categorie, wordt overgeslagen.",
+  "pl": "Tego pobierania nie zlecił Whisparr i nie ma ono kategorii, pomijam."
+ },
+ "Download wasn't grabbed by sonarr, skipping": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Download wurde nicht von Sonarr gegriffen, wird übersprungen",
+  "es": "Sonarr no capturó la descarga; se omite",
+  "fr": "Téléchargement non capturé par Sonarr, ignoré",
+  "nl": "Download is niet door Sonarr gepakt, wordt overgeslagen",
+  "pl": "Tego pobierania nie zlecił Sonarr, pomijam"
+ },
+ "Episode %@ was not found in the grabbed release: %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode %@ wurde im gegriffenen Release nicht gefunden: %@",
+  "es": "El episodio %@ no se encontró en la versión capturada: %@",
+  "fr": "L'épisode %@ est introuvable dans la version capturée : %@",
+  "nl": "Aflevering %@ is niet gevonden in de gepakte release: %@",
+  "pl": "Odcinka %@ nie ma w pobranym wydaniu: %@"
+ },
+ "Episode %@ was unexpected considering the %@ folder name": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode %@ war angesichts des Ordnernamens %@ nicht zu erwarten",
+  "es": "El episodio %@ no era esperado según el nombre de carpeta %@",
+  "fr": "L'épisode %@ n'était pas attendu d'après le nom de dossier %@",
+  "nl": "Aflevering %@ was niet verwacht gezien de mapnaam %@",
+  "pl": "Przy nazwie folderu %2$@ odcinek %1$@ jest nieoczekiwany"
+ },
+ "Episode does not have a title and recently aired": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode hat keinen Titel und wurde kürzlich ausgestrahlt",
+  "es": "El episodio no tiene título y se emitió hace poco",
+  "fr": "L'épisode n'a pas de titre et a été diffusé récemment",
+  "nl": "Aflevering heeft geen titel en is onlangs uitgezonden",
+  "pl": "Odcinek nie ma tytułu i niedawno miał premierę"
+ },
+ "Episode does not have an absolute episode number and recently aired": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Episode hat keine absolute Episodennummer und wurde kürzlich ausgestrahlt",
+  "es": "El episodio no tiene número absoluto y se emitió hace poco",
+  "fr": "L'épisode n'a pas de numéro absolu et a été diffusé récemment",
+  "nl": "Aflevering heeft geen absoluut nummer en is onlangs uitgezonden",
+  "pl": "Odcinek nie ma numeru absolutnego i niedawno miał premierę"
+ },
+ "Episode file already imported at %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episodendatei wurde bereits am %@ importiert",
+  "es": "Archivo del episodio ya importado el %@",
+  "fr": "Fichier de l'épisode déjà importé le %@",
+  "nl": "Afleveringsbestand is al geïmporteerd op %@",
+  "pl": "Plik odcinka zaimportowano już %@"
+ },
+ "Episode file on disk contains more episodes than this file contains": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episodendatei auf der Festplatte enthält mehr Episoden als diese Datei",
+  "es": "El archivo del episodio en disco contiene más episodios que este archivo",
+  "fr": "Le fichier de l'épisode sur le disque contient plus d'épisodes que ce fichier",
+  "nl": "Afleveringsbestand op schijf bevat meer afleveringen dan dit bestand",
+  "pl": "Plik odcinka na dysku zawiera więcej odcinków niż ten plik"
+ },
+ "Episode file on disk contains more episodes than this release contains": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episodendatei auf der Festplatte enthält mehr Episoden als dieses Release",
+  "es": "El archivo del episodio en disco contiene más episodios que esta versión",
+  "fr": "Le fichier de l'épisode sur le disque contient plus d'épisodes que cette version",
+  "nl": "Afleveringsbestand op schijf bevat meer afleveringen dan deze release",
+  "pl": "Plik odcinka na dysku zawiera więcej odcinków niż to wydanie"
+ },
+ "Episode has a TBA title and recently aired": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode hat den Titel TBA und wurde kürzlich ausgestrahlt",
+  "es": "El episodio tiene el título TBA y se emitió hace poco",
+  "fr": "L'épisode a le titre TBA et a été diffusé récemment",
+  "nl": "Aflevering heeft de titel TBA en is onlangs uitgezonden",
+  "pl": "Odcinek ma tytuł TBA i niedawno miał premierę"
+ },
+ "Episode has already been imported": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode wurde bereits importiert",
+  "es": "El episodio ya se importó",
+  "fr": "L'épisode a déjà été importé",
+  "nl": "Aflevering is al geïmporteerd",
+  "pl": "Odcinek jest już zaimportowany"
+ },
+ "Episode is not monitored": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode wird nicht überwacht",
+  "es": "El episodio no está monitorizado",
+  "fr": "L'épisode n'est pas surveillé",
+  "nl": "Aflevering wordt niet gemonitord",
+  "pl": "Odcinek nie jest monitorowany"
+ },
+ "Episode wasn't requested": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode wurde nicht angefordert",
+  "es": "El episodio no se solicitó",
+  "fr": "L'épisode n'a pas été demandé",
+  "nl": "Aflevering is niet aangevraagd",
+  "pl": "Nie żądano tego odcinka"
+ },
+ "Episode wasn't requested: %@x%@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode wurde nicht angefordert: %@x%@",
+  "es": "El episodio no se solicitó: %@x%@",
+  "fr": "L'épisode n'a pas été demandé : %@x%@",
+  "nl": "Aflevering is niet aangevraagd: %@x%@",
+  "pl": "Nie żądano tego odcinka: %@x%@"
+ },
+ "Episode wasn't requested: %@x%@-%@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode wurde nicht angefordert: %@x%@-%@",
+  "es": "El episodio no se solicitó: %@x%@-%@",
+  "fr": "L'épisode n'a pas été demandé : %@x%@-%@",
+  "nl": "Aflevering is niet aangevraagd: %@x%@-%@",
+  "pl": "Nie żądano tego odcinka: %@x%@-%@"
+ },
+ "Episodes %@ were not found in the grabbed release: %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episoden %@ wurden im gegriffenen Release nicht gefunden: %@",
+  "es": "Los episodios %@ no se encontraron en la versión capturada: %@",
+  "fr": "Les épisodes %@ sont introuvables dans la version capturée : %@",
+  "nl": "Afleveringen %@ zijn niet gevonden in de gepakte release: %@",
+  "pl": "Odcinków %@ nie ma w pobranym wydaniu: %@"
+ },
+ "Episodes %@ were unexpected considering the %@ folder name": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episoden %@ waren angesichts des Ordnernamens %@ nicht zu erwarten",
+  "es": "Los episodios %@ no eran esperados según el nombre de carpeta %@",
+  "fr": "Les épisodes %@ n'étaient pas attendus d'après le nom de dossier %@",
+  "nl": "Afleveringen %@ waren niet verwacht gezien de mapnaam %@",
+  "pl": "Przy nazwie folderu %2$@ odcinki %1$@ są nieoczekiwane"
+ },
+ "Episodes not selected": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episoden nicht ausgewählt",
+  "es": "Episodios no seleccionados",
+  "fr": "Épisodes non sélectionnés",
+  "nl": "Afleveringen niet geselecteerd",
+  "pl": "Nie wybrano odcinków"
+ },
+ "Existing file and the Quality profile does not allow upgrades": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Eine Datei ist vorhanden und das Qualitätsprofil erlaubt keine Upgrades",
+  "es": "Ya hay un archivo y el perfil de calidad no permite mejoras",
+  "fr": "Un fichier existe déjà et le profil de qualité n'autorise pas les améliorations",
+  "nl": "Er is al een bestand en het kwaliteitsprofiel staat geen upgrades toe",
+  "pl": "Plik już istnieje, a profil jakości nie pozwala na upgrade"
+ },
+ "Existing file meets cutoff: %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei erreicht den Cutoff: %@",
+  "es": "El archivo existente alcanza el corte: %@",
+  "fr": "Le fichier existant atteint le seuil : %@",
+  "nl": "Bestaand bestand haalt de cutoff: %@",
+  "pl": "Istniejący plik spełnia próg: %@"
+ },
+ "Existing file meets cutoff: %@ [%@]": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei erreicht den Cutoff: %@ [%@]",
+  "es": "El archivo existente alcanza el corte: %@ [%@]",
+  "fr": "Le fichier existant atteint le seuil : %@ [%@]",
+  "nl": "Bestaand bestand haalt de cutoff: %@ [%@]",
+  "pl": "Istniejący plik spełnia próg: %@ [%@]"
+ },
+ "Existing file on disk and Quality Profile '%@' does not allow upgrades": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei und das Qualitätsprofil '%@' erlaubt keine Upgrades",
+  "es": "El archivo en disco y el perfil de calidad '%@' no permite mejoras",
+  "fr": "Le fichier sur le disque et le profil de qualité '%@' n'autorise pas les améliorations",
+  "nl": "Bestand op schijf en kwaliteitsprofiel '%@' staat geen upgrades toe",
+  "pl": "Plik na dysku, a profil jakości '%@' nie pozwala na upgrade"
+ },
+ "Existing file on disk has Custom Format score within Custom Format score increment: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei hat einen Score benutzerdefinierter Formate innerhalb des Score-Inkrements: %@",
+  "es": "El archivo en disco tiene una puntuación de formato personalizado dentro del incremento de puntuación: %@",
+  "fr": "Le fichier sur le disque a un score de format personnalisé dans l'incrément de score : %@",
+  "nl": "Bestand op schijf heeft een score voor aangepaste formats binnen de scorestap: %@",
+  "pl": "Plik na dysku ma ocenę formatu niestandardowego w granicach przyrostu oceny: %@"
+ },
+ "Existing file on disk has a equal or higher Custom Format score: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei hat einen gleichen oder höheren Score benutzerdefinierter Formate: %@",
+  "es": "El archivo en disco tiene una puntuación de formato personalizado igual o superior: %@",
+  "fr": "Le fichier sur le disque a un score de format personnalisé égal ou supérieur : %@",
+  "nl": "Bestand op schijf heeft een gelijke of hogere score voor aangepaste formats: %@",
+  "pl": "Plik na dysku ma równą lub wyższą ocenę formatu niestandardowego: %@"
+ },
+ "Existing file on disk is of equal or higher preference: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei hat eine gleiche oder höhere Präferenz: %@",
+  "es": "El archivo en disco tiene una preferencia igual o superior: %@",
+  "fr": "Le fichier sur le disque a une préférence égale ou supérieure : %@",
+  "nl": "Bestand op schijf heeft een gelijke of hogere voorkeur: %@",
+  "pl": "Plik na dysku ma równą lub wyższą preferencję: %@"
+ },
+ "Existing file on disk is of equal or higher revision: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei hat eine gleiche oder höhere Revision: %@",
+  "es": "El archivo en disco tiene una revisión igual o superior: %@",
+  "fr": "Le fichier sur le disque a une révision égale ou supérieure : %@",
+  "nl": "Bestand op schijf heeft een gelijke of hogere revisie: %@",
+  "pl": "Plik na dysku ma równą lub wyższą rewizję: %@"
+ },
+ "Existing file on disk meets Custom Format cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei erreicht den Cutoff benutzerdefinierter Formate: %@",
+  "es": "El archivo en disco alcanza el corte de formato personalizado: %@",
+  "fr": "Le fichier sur le disque atteint le seuil de format personnalisé : %@",
+  "nl": "Bestand op schijf haalt de cutoff voor aangepaste formats: %@",
+  "pl": "Plik na dysku spełnia próg formatu niestandardowego: %@"
+ },
+ "Existing file on disk meets quality cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Vorhandene Datei erreicht den Qualitäts-Cutoff: %@",
+  "es": "El archivo en disco alcanza el corte de calidad: %@",
+  "fr": "Le fichier sur le disque atteint le seuil de qualité : %@",
+  "nl": "Bestand op schijf haalt de kwaliteitscutoff: %@",
+  "pl": "Plik na dysku spełnia próg jakości: %@"
+ },
+ "Existing files and the Quality profile does not allow upgrades": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Dateien sind vorhanden und das Qualitätsprofil erlaubt keine Upgrades",
+  "es": "Ya hay archivos y el perfil de calidad no permite mejoras",
+  "fr": "Des fichiers existent déjà et le profil de qualité n'autorise pas les améliorations",
+  "nl": "Er zijn al bestanden en het kwaliteitsprofiel staat geen upgrades toe",
+  "pl": "Pliki już istnieją, a profil jakości nie pozwala na upgrade"
+ },
+ "Existing files meets cutoff: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Vorhandene Dateien erreichen den Cutoff: %@",
+  "es": "Los archivos existentes alcanzan el corte: %@",
+  "fr": "Les fichiers existants atteignent le seuil : %@",
+  "nl": "Bestaande bestanden halen de cutoff: %@",
+  "pl": "Istniejące pliki spełniają próg: %@"
+ },
+ "Existing files on disk is of equal or higher preference: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Vorhandene Dateien haben eine gleiche oder höhere Präferenz: %@",
+  "es": "Los archivos en disco tienen una preferencia igual o superior: %@",
+  "fr": "Les fichiers sur le disque ont une préférence égale ou supérieure : %@",
+  "nl": "Bestanden op schijf hebben een gelijke of hogere voorkeur: %@",
+  "pl": "Pliki na dysku mają równą lub wyższą preferencję: %@"
+ },
+ "Existing release group is unknown": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Vorhandene Release-Gruppe ist unbekannt",
+  "es": "Se desconoce el grupo de lanzamiento existente",
+  "fr": "Le groupe de release existant est inconnu",
+  "nl": "Bestaande releasegroep is onbekend",
+  "pl": "Grupa istniejącego wydania jest nieznana"
+ },
+ "Extras are not supported": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Extras werden nicht unterstützt",
+  "es": "Los extras no son compatibles",
+  "fr": "Les bonus ne sont pas pris en charge",
+  "nl": "Extra's worden niet ondersteund",
+  "pl": "Dodatki nie są obsługiwane"
+ },
+ "Failed to add missing album": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Fehlendes Album konnte nicht hinzugefügt werden",
+  "es": "No se pudo añadir el álbum que falta",
+  "fr": "Impossible d'ajouter l'album manquant",
+  "nl": "Ontbrekend album kon niet worden toegevoegd",
+  "pl": "Nie udało się dodać brakującego albumu"
+ },
+ "Failed to add missing artist": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Fehlender Künstler konnte nicht hinzugefügt werden",
+  "es": "No se pudo añadir el artista que falta",
+  "fr": "Impossible d'ajouter l'artiste manquant",
+  "nl": "Ontbrekende artiest kon niet worden toegevoegd",
+  "pl": "Nie udało się dodać brakującego wykonawcy"
+ },
+ "Failed to import episode": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode konnte nicht importiert werden",
+  "es": "No se pudo importar el episodio",
+  "fr": "Impossible d'importer l'épisode",
+  "nl": "Aflevering kon niet worden geïmporteerd",
+  "pl": "Nie udało się zaimportować odcinka"
+ },
+ "Failed to import episode, Destination already exists.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode konnte nicht importiert werden, das Ziel existiert bereits.",
+  "es": "No se pudo importar el episodio, el destino ya existe.",
+  "fr": "Impossible d'importer l'épisode, la destination existe déjà.",
+  "nl": "Aflevering kon niet worden geïmporteerd, doel bestaat al.",
+  "pl": "Nie udało się zaimportować odcinka, miejsce docelowe już istnieje."
+ },
+ "Failed to import episode, Root folder missing.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode konnte nicht importiert werden, der Stammordner fehlt.",
+  "es": "No se pudo importar el episodio, falta la carpeta raíz.",
+  "fr": "Impossible d'importer l'épisode, dossier racine manquant.",
+  "nl": "Aflevering kon niet worden geïmporteerd, hoofdmap ontbreekt.",
+  "pl": "Nie udało się zaimportować odcinka, brak folderu głównego."
+ },
+ "Failed to import episode, unable to move existing file to the Recycle Bin.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episode konnte nicht importiert werden, die vorhandene Datei konnte nicht in den Papierkorb verschoben werden.",
+  "es": "No se pudo importar el episodio, no se pudo mover el archivo existente a la papelera.",
+  "fr": "Impossible d'importer l'épisode, impossible de déplacer le fichier existant vers la corbeille.",
+  "nl": "Aflevering kon niet worden geïmporteerd, bestaand bestand kon niet naar de prullenbak worden verplaatst.",
+  "pl": "Nie udało się zaimportować odcinka, nie da się przenieść istniejącego pliku do kosza."
+ },
+ "Failed to import movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film konnte nicht importiert werden",
+  "es": "No se pudo importar la película",
+  "fr": "Impossible d'importer le film",
+  "nl": "Film kon niet worden geïmporteerd",
+  "pl": "Nie udało się zaimportować filmu"
+ },
+ "Failed to import movie, Destination already exists.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film konnte nicht importiert werden, das Ziel existiert bereits.",
+  "es": "No se pudo importar la película, el destino ya existe.",
+  "fr": "Impossible d'importer le film, la destination existe déjà.",
+  "nl": "Film kon niet worden geïmporteerd, doel bestaat al.",
+  "pl": "Nie udało się zaimportować filmu, miejsce docelowe już istnieje."
+ },
+ "Failed to import movie, Root folder missing.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film konnte nicht importiert werden, der Stammordner fehlt.",
+  "es": "No se pudo importar la película, falta la carpeta raíz.",
+  "fr": "Impossible d'importer le film, dossier racine manquant.",
+  "nl": "Film kon niet worden geïmporteerd, hoofdmap ontbreekt.",
+  "pl": "Nie udało się zaimportować filmu, brak folderu głównego."
+ },
+ "Failed to import movie, unable to move existing file to the Recycle Bin.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film konnte nicht importiert werden, die vorhandene Datei konnte nicht in den Papierkorb verschoben werden.",
+  "es": "No se pudo importar la película, no se pudo mover el archivo existente a la papelera.",
+  "fr": "Impossible d'importer le film, impossible de déplacer le fichier existant vers la corbeille.",
+  "nl": "Film kon niet worden geïmporteerd, bestaand bestand kon niet naar de prullenbak worden verplaatst.",
+  "pl": "Nie udało się zaimportować filmu, nie da się przenieść istniejącego pliku do kosza."
+ },
+ "Failed to import track": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht importiert werden",
+  "es": "No se pudo importar la pista",
+  "fr": "Impossible d'importer la piste",
+  "nl": "Nummer kon niet worden geïmporteerd",
+  "pl": "Nie udało się zaimportować utworu"
+ },
+ "Failed to import track, Destination already exists.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht importiert werden, das Ziel existiert bereits.",
+  "es": "No se pudo importar la pista, el destino ya existe.",
+  "fr": "Impossible d'importer la piste, la destination existe déjà.",
+  "nl": "Nummer kon niet worden geïmporteerd, doel bestaat al.",
+  "pl": "Nie udało się zaimportować utworu, miejsce docelowe już istnieje."
+ },
+ "Failed to import track, Permissions error": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht importiert werden, Berechtigungsfehler",
+  "es": "No se pudo importar la pista, error de permisos",
+  "fr": "Impossible d'importer la piste, erreur d'autorisations",
+  "nl": "Nummer kon niet worden geïmporteerd, machtigingsfout",
+  "pl": "Nie udało się zaimportować utworu, błąd uprawnień"
+ },
+ "Failed to import track, Root folder missing.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht importiert werden, der Stammordner fehlt.",
+  "es": "No se pudo importar la pista, falta la carpeta raíz.",
+  "fr": "Impossible d'importer la piste, dossier racine manquant.",
+  "nl": "Nummer kon niet worden geïmporteerd, hoofdmap ontbreekt.",
+  "pl": "Nie udało się zaimportować utworu, brak folderu głównego."
+ },
+ "Failed to import track, unable to move existing file to the Recycle Bin.": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel konnte nicht importiert werden, die vorhandene Datei konnte nicht in den Papierkorb verschoben werden.",
+  "es": "No se pudo importar la pista, no se pudo mover el archivo existente a la papelera.",
+  "fr": "Impossible d'importer la piste, impossible de déplacer le fichier existant vers la corbeille.",
+  "nl": "Nummer kon niet worden geïmporteerd, bestaand bestand kon niet naar de prullenbak worden verplaatst.",
+  "pl": "Nie udało się zaimportować utworu, nie da się przenieść istniejącego pliku do kosza."
+ },
+ "File is still being unpacked": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Datei wird noch entpackt",
+  "es": "El archivo aún se está descomprimiendo",
+  "fr": "Le fichier est encore en cours de décompression",
+  "nl": "Bestand wordt nog uitgepakt",
+  "pl": "Plik jest jeszcze rozpakowywany"
+ },
+ "File is suspected multi-part file, Radarr doesn't support this": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Datei ist vermutlich mehrteilig, Radarr unterstützt das nicht",
+  "es": "El archivo parece ser de varias partes; Radarr no lo admite",
+  "fr": "Le fichier semble être en plusieurs parties, Radarr ne prend pas cela en charge",
+  "nl": "Bestand lijkt uit meerdere delen te bestaan, Radarr ondersteunt dit niet",
+  "pl": "Plik wygląda na wieloczęściowy, Radarr tego nie obsługuje"
+ },
+ "File is suspected multi-part file, Whisparr doesn't support this": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Datei ist vermutlich mehrteilig, Whisparr unterstützt das nicht",
+  "es": "El archivo parece ser de varias partes; Whisparr no lo admite",
+  "fr": "Le fichier semble être en plusieurs parties, Whisparr ne prend pas cela en charge",
+  "nl": "Bestand lijkt uit meerdere delen te bestaan, Whisparr ondersteunt dit niet",
+  "pl": "Plik wygląda na wieloczęściowy, Whisparr tego nie obsługuje"
+ },
+ "Found archive file, might need to be extracted": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Archivdatei gefunden, muss eventuell entpackt werden",
+  "es": "Se encontró un archivo comprimido; puede que haya que extraerlo",
+  "fr": "Archive trouvée, elle doit peut-être être extraite",
+  "nl": "Archiefbestand gevonden, moet mogelijk worden uitgepakt",
+  "pl": "Znaleziono archiwum, może wymagać rozpakowania"
+ },
+ "Found matching movie via grab history, but release was matched to movie by ID. Manual Import required.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Passender Film über den Grab-Verlauf gefunden, aber das Release wurde per ID zugeordnet. Manueller Import erforderlich.",
+  "es": "Se encontró la película en el historial de capturas, pero la versión se asoció por ID. Importación manual requerida.",
+  "fr": "Film correspondant trouvé via l'historique des captures, mais la version a été associée par ID. Import manuel requis.",
+  "nl": "Passende film gevonden via de grabgeschiedenis, maar de release is op ID gekoppeld. Handmatige import vereist.",
+  "pl": "Znaleziono film w historii pobrań, ale wydanie dopasowano po ID. Wymagany import ręczny."
+ },
+ "Found matching series via grab history, but release was matched to series by ID. Automatic import is not possible. See the FAQ for details.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Passende Serie über den Grab-Verlauf gefunden, aber das Release wurde per ID zugeordnet. Automatischer Import ist nicht möglich. Details stehen in der FAQ.",
+  "es": "Se encontró la serie en el historial de capturas, pero la versión se asoció por ID. No es posible la importación automática. Consulta la FAQ.",
+  "fr": "Série correspondante trouvée via l'historique des captures, mais la version a été associée par ID. Import automatique impossible. Consultez la FAQ.",
+  "nl": "Passende serie gevonden via de grabgeschiedenis, maar de release is op ID gekoppeld. Automatische import is niet mogelijk. Zie de FAQ.",
+  "pl": "Znaleziono serial w historii pobrań, ale wydanie dopasowano po ID. Automatyczny import jest niemożliwy. Szczegóły w FAQ."
+ },
+ "Full artist pack": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Komplettpaket des Künstlers",
+  "es": "Paquete completo del artista",
+  "fr": "Pack complet de l'artiste",
+  "nl": "Volledig artiestpakket",
+  "pl": "Pełna paczka wykonawcy"
+ },
+ "Full season pack": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Komplettes Staffelpaket",
+  "es": "Paquete de temporada completa",
+  "fr": "Pack de saison complète",
+  "nl": "Volledig seizoenspakket",
+  "pl": "Pełna paczka sezonu"
+ },
+ "Full season release rejected. All episodes haven't aired yet.": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Release der ganzen Staffel abgelehnt. Noch nicht alle Episoden wurden ausgestrahlt.",
+  "es": "Versión de temporada completa rechazada. Aún no se han emitido todos los episodios.",
+  "fr": "Version de saison complète rejetée. Tous les épisodes n'ont pas encore été diffusés.",
+  "nl": "Release van volledig seizoen geweigerd. Nog niet alle afleveringen zijn uitgezonden.",
+  "pl": "Odrzucono wydanie całego sezonu. Nie wszystkie odcinki już wyemitowano."
+ },
+ "Hardcode subs found: %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Eingebrannte Untertitel gefunden: %@",
+  "es": "Se encontraron subtítulos incrustados: %@",
+  "fr": "Sous-titres incrustés trouvés : %@",
+  "nl": "Ingebrande ondertitels gevonden: %@",
+  "pl": "Znaleziono wypalone napisy: %@"
+ },
+ "Has fewer tracks than existing release": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Hat weniger Titel als das vorhandene Release",
+  "es": "Tiene menos pistas que la versión existente",
+  "fr": "Contient moins de pistes que la version existante",
+  "nl": "Heeft minder nummers dan de bestaande release",
+  "pl": "Ma mniej utworów niż istniejące wydanie"
+ },
+ "Has missing tracks": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Es fehlen Titel",
+  "es": "Faltan pistas",
+  "fr": "Des pistes manquent",
+  "nl": "Er ontbreken nummers",
+  "pl": "Brakuje utworów"
+ },
+ "Has same release name as a grabbed and imported release": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Hat denselben Release-Namen wie ein gegriffenes und importiertes Release",
+  "es": "Tiene el mismo nombre que una versión ya capturada e importada",
+  "fr": "Porte le même nom qu'une version déjà capturée et importée",
+  "nl": "Heeft dezelfde releasenaam als een gepakte en geïmporteerde release",
+  "pl": "Ma taką samą nazwę jak już pobrane i zaimportowane wydanie"
+ },
+ "Has same torrent hash as a grabbed and imported release": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Hat denselben Torrent-Hash wie ein gegriffenes und importiertes Release",
+  "es": "Tiene el mismo hash de torrent que una versión ya capturada e importada",
+  "fr": "A le même hash de torrent qu'une version déjà capturée et importée",
+  "nl": "Heeft dezelfde torrenthash als een gepakte en geïmporteerde release",
+  "pl": "Ma taki sam hash torrenta jak już pobrane i zaimportowane wydanie"
+ },
+ "Has unmatched tracks": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Hat nicht zugeordnete Titel",
+  "es": "Tiene pistas sin asociar",
+  "fr": "Contient des pistes non associées",
+  "nl": "Heeft niet-gekoppelde nummers",
+  "pl": "Ma niedopasowane utwory"
+ },
+ "Import path is mapped to a movie folder": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Importpfad ist einem Filmordner zugeordnet",
+  "es": "La ruta de importación apunta a una carpeta de película",
+  "fr": "Le chemin d'import pointe vers un dossier de film",
+  "nl": "Importpad verwijst naar een filmmap",
+  "pl": "Ścieżka importu wskazuje folder filmu"
+ },
+ "Import path is mapped to a series folder": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Importpfad ist einem Serienordner zugeordnet",
+  "es": "La ruta de importación apunta a una carpeta de serie",
+  "fr": "Le chemin d'import pointe vers un dossier de série",
+  "nl": "Importpad verwijst naar een seriemap",
+  "pl": "Ścieżka importu wskazuje folder serialu"
+ },
+ "Import path is mapped to an artist folder": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Importpfad ist einem Künstlerordner zugeordnet",
+  "es": "La ruta de importación apunta a una carpeta de artista",
+  "fr": "Le chemin d'import pointe vers un dossier d'artiste",
+  "nl": "Importpad verwijst naar een artiestmap",
+  "pl": "Ścieżka importu wskazuje folder wykonawcy"
+ },
+ "Import verification failed for %@, manual import may be required.": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Importprüfung für %@ fehlgeschlagen, eventuell ist ein manueller Import nötig.",
+  "es": "Falló la verificación de importación de %@; puede requerir importación manual.",
+  "fr": "Échec de la vérification de l'import pour %@, un import manuel peut être nécessaire.",
+  "nl": "Importcontrole voor %@ mislukt, handmatige import is mogelijk nodig.",
+  "pl": "Weryfikacja importu %@ nie powiodła się, może być potrzebny import ręczny."
+ },
+ "Indexer %@ is blocked till %@ due to failures, cannot grab release.": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Indexer %@ ist wegen Fehlern bis %@ gesperrt, Release kann nicht gegriffen werden.",
+  "es": "El indexador %@ está bloqueado hasta %@ por errores; no se puede capturar la versión.",
+  "fr": "L'indexeur %@ est bloqué jusqu'à %@ à cause d'erreurs, impossible de capturer la version.",
+  "nl": "Indexer %@ is tot %@ geblokkeerd wegens fouten, release kan niet worden gepakt.",
+  "pl": "Indekser %@ jest zablokowany do %@ z powodu błędów, nie można pobrać wydania."
+ },
+ "Invalid audio file, unsupported extension: '%@'": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Ungültige Audiodatei, nicht unterstützte Erweiterung: '%@'",
+  "es": "Archivo de audio no válido, extensión no compatible: '%@'",
+  "fr": "Fichier audio non valide, extension non prise en charge : '%@'",
+  "nl": "Ongeldig audiobestand, niet-ondersteunde extensie: '%@'",
+  "pl": "Nieprawidłowy plik audio, nieobsługiwane rozszerzenie: '%@'"
+ },
+ "Invalid movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Ungültiger Film",
+  "es": "Película no válida",
+  "fr": "Film non valide",
+  "nl": "Ongeldige film",
+  "pl": "Nieprawidłowy film"
+ },
+ "Invalid music file, filename starts with '._'": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Ungültige Musikdatei, Dateiname beginnt mit '._'",
+  "es": "Archivo de música no válido, el nombre empieza por '._'",
+  "fr": "Fichier musical non valide, le nom commence par '._'",
+  "nl": "Ongeldig muziekbestand, bestandsnaam begint met '._'",
+  "pl": "Nieprawidłowy plik muzyczny, nazwa zaczyna się od '._'"
+ },
+ "Invalid season or episode": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Ungültige Staffel oder Episode",
+  "es": "Temporada o episodio no válidos",
+  "fr": "Saison ou épisode non valide",
+  "nl": "Ongeldig seizoen of ongeldige aflevering",
+  "pl": "Nieprawidłowy sezon lub odcinek"
+ },
+ "Invalid video file, filename starts with '._'": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Ungültige Videodatei, Dateiname beginnt mit '._'",
+  "es": "Archivo de vídeo no válido, el nombre empieza por '._'",
+  "fr": "Fichier vidéo non valide, le nom commence par '._'",
+  "nl": "Ongeldig videobestand, bestandsnaam begint met '._'",
+  "pl": "Nieprawidłowy plik wideo, nazwa zaczyna się od '._'"
+ },
+ "Invalid video file, unsupported extension: '%@'": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Ungültige Videodatei, nicht unterstützte Erweiterung: '%@'",
+  "es": "Archivo de vídeo no válido, extensión no compatible: '%@'",
+  "fr": "Fichier vidéo non valide, extension non prise en charge : '%@'",
+  "nl": "Ongeldig videobestand, niet-ondersteunde extensie: '%@'",
+  "pl": "Nieprawidłowy plik wideo, nieobsługiwane rozszerzenie: '%@'"
+ },
+ "Last episode in this season aired more than %@ days ago, season pack required.": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Die letzte Episode dieser Staffel lief vor mehr als %@ Tagen, ein Staffelpaket ist erforderlich.",
+  "es": "El último episodio de esta temporada se emitió hace más de %@ días; se requiere un paquete de temporada.",
+  "fr": "Le dernier épisode de cette saison a été diffusé il y a plus de %@ jours, un pack de saison est requis.",
+  "nl": "De laatste aflevering van dit seizoen is meer dan %@ dagen geleden uitgezonden, seizoenspakket vereist.",
+  "pl": "Ostatni odcinek sezonu wyemitowano ponad %@ dni temu, wymagana paczka sezonu."
+ },
+ "Locked file, try again later": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Datei ist gesperrt, versuche es später erneut",
+  "es": "Archivo bloqueado; inténtalo más tarde",
+  "fr": "Fichier verrouillé, réessayez plus tard",
+  "nl": "Bestand is vergrendeld, probeer het later opnieuw",
+  "pl": "Plik jest zablokowany, spróbuj później"
+ },
+ "Movie %@ was not found in the grabbed release: %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film %@ wurde im gegriffenen Release nicht gefunden: %@",
+  "es": "La película %@ no se encontró en la versión capturada: %@",
+  "fr": "Le film %@ est introuvable dans la version capturée : %@",
+  "nl": "Film %@ is niet gevonden in de gepakte release: %@",
+  "pl": "Filmu %@ nie ma w pobranym wydaniu: %@"
+ },
+ "Movie %@ will only be considered available %@ days after %@": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Film %@ gilt erst %@ Tage nach %@ als verfügbar",
+  "es": "La película %@ solo se considerará disponible %@ días después de %@",
+  "fr": "Le film %@ ne sera considéré comme disponible que %@ jours après %@",
+  "nl": "Film %@ wordt pas %@ dagen na %@ als beschikbaar beschouwd",
+  "pl": "Film %@ będzie uznany za dostępny dopiero %@ dni po %@"
+ },
+ "Movie file already imported at %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Filmdatei wurde bereits am %@ importiert",
+  "es": "Archivo de la película ya importado el %@",
+  "fr": "Fichier du film déjà importé le %@",
+  "nl": "Filmbestand is al geïmporteerd op %@",
+  "pl": "Plik filmu zaimportowano już %@"
+ },
+ "Movie has already been imported": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film wurde bereits importiert",
+  "es": "La película ya se importó",
+  "fr": "Le film a déjà été importé",
+  "nl": "Film is al geïmporteerd",
+  "pl": "Film jest już zaimportowany"
+ },
+ "Movie is not monitored": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film wird nicht überwacht",
+  "es": "La película no está monitorizada",
+  "fr": "Le film n'est pas surveillé",
+  "nl": "Film wordt niet gemonitord",
+  "pl": "Film nie jest monitorowany"
+ },
+ "Movie runtime is 0, unable to validate size until it is available": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Filmlaufzeit ist 0, die Größe kann erst geprüft werden, wenn sie verfügbar ist",
+  "es": "La duración de la película es 0; no se puede validar el tamaño hasta que esté disponible",
+  "fr": "La durée du film est de 0, impossible de valider la taille tant qu'elle n'est pas disponible",
+  "nl": "Filmduur is 0, de grootte kan pas worden gecontroleerd als die beschikbaar is",
+  "pl": "Długość filmu wynosi 0, rozmiaru nie da się sprawdzić, dopóki nie będzie znana"
+ },
+ "Movie tags do not match any of the indexer tags": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Film-Tags passen zu keinem der Indexer-Tags",
+  "es": "Las etiquetas de la película no coinciden con ninguna del indexador",
+  "fr": "Les tags du film ne correspondent à aucun tag de l'indexeur",
+  "nl": "Filmtags komen met geen enkele indexertag overeen",
+  "pl": "Tagi filmu nie pasują do żadnego tagu indeksera"
+ },
+ "Movie title does not match identified scene title": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Filmtitel stimmt nicht mit dem erkannten Szenentitel überein",
+  "es": "El título de la película no coincide con el título de escena identificado",
+  "fr": "Le titre du film ne correspond pas au titre de scène identifié",
+  "nl": "Filmtitel komt niet overeen met de herkende scènetitel",
+  "pl": "Tytuł filmu nie pasuje do rozpoznanego tytułu sceny"
+ },
+ "Movie title mismatch, automatic import is not possible. Manual Import required.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Filmtitel stimmt nicht überein, automatischer Import ist nicht möglich. Manueller Import erforderlich.",
+  "es": "El título de la película no coincide; no es posible la importación automática. Importación manual requerida.",
+  "fr": "Le titre du film ne correspond pas, import automatique impossible. Import manuel requis.",
+  "nl": "Filmtitel komt niet overeen, automatische import is niet mogelijk. Handmatige import vereist.",
+  "pl": "Tytuł filmu się nie zgadza, automatyczny import jest niemożliwy. Wymagany import ręczny."
+ },
+ "Multi-season download, unable to import automatically": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Download mehrerer Staffeln, automatischer Import nicht möglich",
+  "es": "Descarga de varias temporadas; no se puede importar automáticamente",
+  "fr": "Téléchargement de plusieurs saisons, import automatique impossible",
+  "nl": "Download van meerdere seizoenen, automatisch importeren is niet mogelijk",
+  "pl": "Pobieranie wielu sezonów, automatyczny import jest niemożliwy"
+ },
+ "Multi-season releases are not supported": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Releases mehrerer Staffeln werden nicht unterstützt",
+  "es": "No se admiten versiones de varias temporadas",
+  "fr": "Les versions de plusieurs saisons ne sont pas prises en charge",
+  "nl": "Releases van meerdere seizoenen worden niet ondersteund",
+  "pl": "Wydania wielu sezonów nie są obsługiwane"
+ },
+ "Multiple versions of an album not supported": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Mehrere Versionen eines Albums werden nicht unterstützt",
+  "es": "No se admiten varias versiones de un álbum",
+  "fr": "Plusieurs versions d'un album ne sont pas prises en charge",
+  "nl": "Meerdere versies van een album worden niet ondersteund",
+  "pl": "Wiele wersji albumu nie jest obsługiwanych"
+ },
+ "No Episode Release Date": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Kein Veröffentlichungsdatum der Episode",
+  "es": "El episodio no tiene fecha de estreno",
+  "fr": "Aucune date de sortie pour l'épisode",
+  "nl": "Geen releasedatum voor de aflevering",
+  "pl": "Odcinek nie ma daty premiery"
+ },
+ "No air date available": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kein Ausstrahlungsdatum verfügbar",
+  "es": "No hay fecha de emisión",
+  "fr": "Aucune date de diffusion disponible",
+  "nl": "Geen uitzenddatum beschikbaar",
+  "pl": "Brak daty emisji"
+ },
+ "No audio tracks detected": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Keine Tonspuren erkannt",
+  "es": "No se detectaron pistas de audio",
+  "fr": "Aucune piste audio détectée",
+  "nl": "Geen audiosporen gedetecteerd",
+  "pl": "Nie wykryto ścieżek dźwiękowych"
+ },
+ "No files found are eligible for import in %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Keine importierbaren Dateien in %@ gefunden",
+  "es": "No hay archivos aptos para importar en %@",
+  "fr": "Aucun fichier importable trouvé dans %@",
+  "nl": "Geen importeerbare bestanden gevonden in %@",
+  "pl": "W %@ nie ma plików nadających się do importu"
+ },
+ "No tracks matched": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Keine Titel zugeordnet",
+  "es": "Ninguna pista coincide",
+  "fr": "Aucune piste ne correspond",
+  "nl": "Geen nummers gekoppeld",
+  "pl": "Nie dopasowano żadnego utworu"
+ },
+ "None of the required indexer flags %@ where found. Found flags: %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Keines der erforderlichen Indexer-Flags %@ wurde gefunden. Gefundene Flags: %@",
+  "es": "No se encontró ninguna de las marcas de indexador requeridas %@. Marcas encontradas: %@",
+  "fr": "Aucun des indicateurs d'indexeur requis %@ n'a été trouvé. Indicateurs trouvés : %@",
+  "nl": "Geen van de vereiste indexervlaggen %@ gevonden. Gevonden vlaggen: %@",
+  "pl": "Nie znaleziono żadnej z wymaganych flag indeksera %@. Znalezione flagi: %@"
+ },
+ "Not a Custom Format upgrade for existing episode file(s). AfterRename: [%@] (%@) do not improve on Existing: [%@] (%@) even though BeforeRename: [%@] (%@) did.": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Kein Upgrade benutzerdefinierter Formate für vorhandene Episodendateien. Nach Umbenennung: [%@] (%@) verbessert nicht Vorhanden: [%@] (%@), obwohl Vor Umbenennung: [%@] (%@) es tat.",
+  "es": "No es una mejora de formato personalizado para los archivos de episodio existentes. Tras renombrar: [%@] (%@) no mejora lo existente: [%@] (%@), aunque antes de renombrar: [%@] (%@) sí lo hacía.",
+  "fr": "Pas une amélioration de format personnalisé pour les fichiers d'épisode existants. Après renommage : [%@] (%@) n'améliore pas l'existant : [%@] (%@), alors qu'avant renommage : [%@] (%@) oui.",
+  "nl": "Geen upgrade van aangepaste formats voor bestaande afleveringsbestanden. Na hernoemen: [%@] (%@) is niet beter dan bestaand: [%@] (%@), hoewel vóór hernoemen: [%@] (%@) dat wel was.",
+  "pl": "To nie jest upgrade formatu niestandardowego dla istniejących plików odcinka. Po zmianie nazwy: [%@] (%@) nie poprawia istniejącego: [%@] (%@), choć przed zmianą nazwy: [%@] (%@) poprawiało."
+ },
+ "Not a Custom Format upgrade for existing episode file(s). New: [%@] (%@) do not improve on Existing: [%@] (%@)": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kein Upgrade benutzerdefinierter Formate für vorhandene Episodendateien. Neu: [%@] (%@) verbessert nicht Vorhanden: [%@] (%@)",
+  "es": "No es una mejora de formato personalizado para los archivos de episodio existentes. Nuevo: [%@] (%@) no mejora lo existente: [%@] (%@)",
+  "fr": "Pas une amélioration de format personnalisé pour les fichiers d'épisode existants. Nouveau : [%@] (%@) n'améliore pas l'existant : [%@] (%@)",
+  "nl": "Geen upgrade van aangepaste formats voor bestaande afleveringsbestanden. Nieuw: [%@] (%@) is niet beter dan bestaand: [%@] (%@)",
+  "pl": "To nie jest upgrade formatu niestandardowego dla istniejących plików odcinka. Nowy: [%@] (%@) nie poprawia istniejącego: [%@] (%@)"
+ },
+ "Not a Custom Format upgrade for existing movie file(s). AfterRename: [%@] (%@) do not improve on Existing: [%@] (%@) even though BeforeRename: [%@] (%@) did.": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Kein Upgrade benutzerdefinierter Formate für vorhandene Filmdateien. Nach Umbenennung: [%@] (%@) verbessert nicht Vorhanden: [%@] (%@), obwohl Vor Umbenennung: [%@] (%@) es tat.",
+  "es": "No es una mejora de formato personalizado para los archivos de película existentes. Tras renombrar: [%@] (%@) no mejora lo existente: [%@] (%@), aunque antes de renombrar: [%@] (%@) sí lo hacía.",
+  "fr": "Pas une amélioration de format personnalisé pour les fichiers de film existants. Après renommage : [%@] (%@) n'améliore pas l'existant : [%@] (%@), alors qu'avant renommage : [%@] (%@) oui.",
+  "nl": "Geen upgrade van aangepaste formats voor bestaande filmbestanden. Na hernoemen: [%@] (%@) is niet beter dan bestaand: [%@] (%@), hoewel vóór hernoemen: [%@] (%@) dat wel was.",
+  "pl": "To nie jest upgrade formatu niestandardowego dla istniejących plików filmu. Po zmianie nazwy: [%@] (%@) nie poprawia istniejącego: [%@] (%@), choć przed zmianą nazwy: [%@] (%@) poprawiało."
+ },
+ "Not a Custom Format upgrade for existing movie file(s). New: [%@] (%@) do not improve on Existing: [%@] (%@)": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Kein Upgrade benutzerdefinierter Formate für vorhandene Filmdateien. Neu: [%@] (%@) verbessert nicht Vorhanden: [%@] (%@)",
+  "es": "No es una mejora de formato personalizado para los archivos de película existentes. Nuevo: [%@] (%@) no mejora lo existente: [%@] (%@)",
+  "fr": "Pas une amélioration de format personnalisé pour les fichiers de film existants. Nouveau : [%@] (%@) n'améliore pas l'existant : [%@] (%@)",
+  "nl": "Geen upgrade van aangepaste formats voor bestaande filmbestanden. Nieuw: [%@] (%@) is niet beter dan bestaand: [%@] (%@)",
+  "pl": "To nie jest upgrade formatu niestandardowego dla istniejących plików filmu. Nowy: [%@] (%@) nie poprawia istniejącego: [%@] (%@)"
+ },
+ "Not a quality revision upgrade for existing episode file(s)": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kein Qualitätsrevisions-Upgrade für vorhandene Episodendateien",
+  "es": "No es una mejora de revisión de calidad para los archivos de episodio existentes",
+  "fr": "Pas une amélioration de révision de qualité pour les fichiers d'épisode existants",
+  "nl": "Geen upgrade van kwaliteitsrevisie voor bestaande afleveringsbestanden",
+  "pl": "To nie jest upgrade rewizji jakości dla istniejących plików odcinka"
+ },
+ "Not a quality revision upgrade for existing movie file(s)": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Kein Qualitätsrevisions-Upgrade für vorhandene Filmdateien",
+  "es": "No es una mejora de revisión de calidad para los archivos de película existentes",
+  "fr": "Pas une amélioration de révision de qualité pour les fichiers de film existants",
+  "nl": "Geen upgrade van kwaliteitsrevisie voor bestaande filmbestanden",
+  "pl": "To nie jest upgrade rewizji jakości dla istniejących plików filmu"
+ },
+ "Not an upgrade for existing album file(s)": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Kein Upgrade für vorhandene Albumdateien",
+  "es": "No es una mejora para los archivos de álbum existentes",
+  "fr": "Pas une amélioration pour les fichiers d'album existants",
+  "nl": "Geen upgrade voor bestaande albumbestanden",
+  "pl": "To nie jest upgrade dla istniejących plików albumu"
+ },
+ "Not an upgrade for existing episode file(s)": {
+  "arrs": [],
+  "de": "Kein Upgrade für vorhandene Episodendateien",
+  "es": "No es una mejora para los archivos de episodio existentes",
+  "fr": "Pas une amélioration pour les fichiers d'épisode existants",
+  "nl": "Geen upgrade voor bestaande afleveringsbestanden",
+  "pl": "To nie jest upgrade dla istniejących plików odcinka"
+ },
+ "Not an upgrade for existing episode file(s). Existing quality: %@. New Quality %@.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kein Upgrade für vorhandene Episodendateien. Vorhandene Qualität: %@. Neue Qualität: %@.",
+  "es": "No es una mejora para los archivos de episodio existentes. Calidad existente: %@. Calidad nueva: %@.",
+  "fr": "Pas une amélioration pour les fichiers d'épisode existants. Qualité existante : %@. Nouvelle qualité : %@.",
+  "nl": "Geen upgrade voor bestaande afleveringsbestanden. Bestaande kwaliteit: %@. Nieuwe kwaliteit: %@.",
+  "pl": "To nie jest upgrade dla istniejących plików odcinka. Obecna jakość: %@. Nowa jakość: %@."
+ },
+ "Not an upgrade for existing movie file": {
+  "arrs": [],
+  "de": "Kein Upgrade für die vorhandene Filmdatei",
+  "es": "No es una mejora para el archivo de película existente",
+  "fr": "Pas une amélioration pour le fichier de film existant",
+  "nl": "Geen upgrade voor het bestaande filmbestand",
+  "pl": "To nie jest upgrade dla istniejącego pliku filmu"
+ },
+ "Not an upgrade for existing movie file(s)": {
+  "arrs": [],
+  "de": "Kein Upgrade für vorhandene Filmdateien",
+  "es": "No es una mejora para los archivos de película existentes",
+  "fr": "Pas une amélioration pour les fichiers de film existants",
+  "nl": "Geen upgrade voor bestaande filmbestanden",
+  "pl": "To nie jest upgrade dla istniejących plików filmu"
+ },
+ "Not an upgrade for existing movie file. Existing quality: %@. New Quality %@.": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Kein Upgrade für die vorhandene Filmdatei. Vorhandene Qualität: %@. Neue Qualität: %@.",
+  "es": "No es una mejora para el archivo de película existente. Calidad existente: %@. Calidad nueva: %@.",
+  "fr": "Pas une amélioration pour le fichier de film existant. Qualité existante : %@. Nouvelle qualité : %@.",
+  "nl": "Geen upgrade voor het bestaande filmbestand. Bestaande kwaliteit: %@. Nieuwe kwaliteit: %@.",
+  "pl": "To nie jest upgrade dla istniejącego pliku filmu. Obecna jakość: %@. Nowa jakość: %@."
+ },
+ "Not an upgrade for existing track file(s)": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Kein Upgrade für vorhandene Titeldateien",
+  "es": "No es una mejora para los archivos de pista existentes",
+  "fr": "Pas une amélioration pour les fichiers de piste existants",
+  "nl": "Geen upgrade voor bestaande nummerbestanden",
+  "pl": "To nie jest upgrade dla istniejących plików utworu"
+ },
+ "Not an upgrade for existing track file(s). New Quality is %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Kein Upgrade für vorhandene Titeldateien. Neue Qualität: %@",
+  "es": "No es una mejora para los archivos de pista existentes. Calidad nueva: %@",
+  "fr": "Pas une amélioration pour les fichiers de piste existants. Nouvelle qualité : %@",
+  "nl": "Geen upgrade voor bestaande nummerbestanden. Nieuwe kwaliteit: %@",
+  "pl": "To nie jest upgrade dla istniejących plików utworu. Nowa jakość: %@"
+ },
+ "Not enough free space": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Nicht genug freier Speicherplatz",
+  "es": "No hay suficiente espacio libre",
+  "fr": "Espace libre insuffisant",
+  "nl": "Niet genoeg vrije ruimte",
+  "pl": "Za mało wolnego miejsca"
+ },
+ "Not enough seeders: %@. Minimum seeders: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Nicht genug Seeder: %@. Minimum: %@",
+  "es": "No hay suficientes seeders: %@. Mínimo: %@",
+  "fr": "Pas assez de seeders : %@. Minimum : %@",
+  "nl": "Niet genoeg seeders: %@. Minimum: %@",
+  "pl": "Za mało seederów: %@. Minimum: %@"
+ },
+ "Older than configured retention": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Älter als die eingestellte Retention",
+  "es": "Más antiguo que la retención configurada",
+  "fr": "Plus ancien que la rétention configurée",
+  "nl": "Ouder dan de ingestelde retentie",
+  "pl": "Starsze niż ustawiona retencja"
+ },
+ "One or more episodes expected in this release were not imported or missing from the release": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Mindestens eine erwartete Episode dieses Releases wurde nicht importiert oder fehlt im Release",
+  "es": "Uno o más episodios esperados en esta versión no se importaron o faltan",
+  "fr": "Un ou plusieurs épisodes attendus dans cette version n'ont pas été importés ou sont absents",
+  "nl": "Een of meer verwachte afleveringen in deze release zijn niet geïmporteerd of ontbreken",
+  "pl": "Co najmniej jeden oczekiwany odcinek nie został zaimportowany lub brakuje go w wydaniu"
+ },
+ "One or more episodes is not monitored": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Mindestens eine Episode wird nicht überwacht",
+  "es": "Uno o más episodios no están monitorizados",
+  "fr": "Un ou plusieurs épisodes ne sont pas surveillés",
+  "nl": "Een of meer afleveringen worden niet gemonitord",
+  "pl": "Co najmniej jeden odcinek nie jest monitorowany"
+ },
+ "One or more movies expected in this release were not imported or missing": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Mindestens ein erwarteter Film dieses Releases wurde nicht importiert oder fehlt",
+  "es": "Una o más películas esperadas en esta versión no se importaron o faltan",
+  "fr": "Un ou plusieurs films attendus dans cette version n'ont pas été importés ou sont absents",
+  "nl": "Een of meer verwachte films in deze release zijn niet geïmporteerd of ontbreken",
+  "pl": "Co najmniej jeden oczekiwany film nie został zaimportowany lub go brakuje"
+ },
+ "One or more tracks expected in this release were not imported or missing from the release": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Mindestens ein erwarteter Titel dieses Releases wurde nicht importiert oder fehlt im Release",
+  "es": "Una o más pistas esperadas en esta versión no se importaron o faltan",
+  "fr": "Une ou plusieurs pistes attendues dans cette version n'ont pas été importées ou sont absentes",
+  "nl": "Een of meer verwachte nummers in deze release zijn niet geïmporteerd of ontbreken",
+  "pl": "Co najmniej jeden oczekiwany utwór nie został zaimportowany lub brakuje go w wydaniu"
+ },
+ "Only %@ minutes old, minimum age is %@ minutes": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Erst %@ Minuten alt, Mindestalter ist %@ Minuten",
+  "es": "Solo tiene %@ minutos; la antigüedad mínima es de %@ minutos",
+  "fr": "Seulement %@ minutes, l'âge minimum est de %@ minutes",
+  "nl": "Pas %@ minuten oud, minimumleeftijd is %@ minuten",
+  "pl": "Ma dopiero %@ min, minimalny wiek to %@ min"
+ },
+ "Original Language (%@) is wanted, but found %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Originalsprache (%@) ist gewünscht, gefunden wurde aber %@",
+  "es": "Se busca el idioma original (%@), pero se encontró %@",
+  "fr": "La langue originale (%@) est souhaitée, mais %@ a été trouvé",
+  "nl": "Originele taal (%@) is gewenst, maar %@ gevonden",
+  "pl": "Oczekiwano języka oryginalnego (%@), a znaleziono %@"
+ },
+ "Partial season packs are not supported": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Teilweise Staffelpakete werden nicht unterstützt",
+  "es": "No se admiten paquetes de temporada parciales",
+  "fr": "Les packs de saison partiels ne sont pas pris en charge",
+  "nl": "Gedeeltelijke seizoenspakketten worden niet ondersteund",
+  "pl": "Częściowe paczki sezonu nie są obsługiwane"
+ },
+ "Proper downloading is disabled": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Download von Propers ist deaktiviert",
+  "es": "La descarga de propers está desactivada",
+  "fr": "Le téléchargement des propers est désactivé",
+  "nl": "Downloaden van propers is uitgeschakeld",
+  "pl": "Pobieranie wydań proper jest wyłączone"
+ },
+ "Proper for old file": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Proper für eine alte Datei",
+  "es": "Proper para un archivo antiguo",
+  "fr": "Proper pour un ancien fichier",
+  "nl": "Proper voor een oud bestand",
+  "pl": "Proper dla starego pliku"
+ },
+ "Quality for release in queue already meets cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Qualität des Releases in der Warteschlange erreicht bereits den Cutoff: %@",
+  "es": "La calidad de la versión en cola ya alcanza el corte: %@",
+  "fr": "La qualité de la version en file d'attente atteint déjà le seuil : %@",
+  "nl": "Kwaliteit van de release in de wachtrij haalt de cutoff al: %@",
+  "pl": "Jakość wydania w kolejce spełnia już próg: %@"
+ },
+ "Quality profile does not allow %@": {
+  "arrs": [],
+  "de": "Qualitätsprofil erlaubt %@ nicht",
+  "es": "El perfil de calidad no permite %@",
+  "fr": "Le profil de qualité n'autorise pas %@",
+  "nl": "Kwaliteitsprofiel staat %@ niet toe",
+  "pl": "Profil jakości nie dopuszcza %@"
+ },
+ "Raw Bluray release": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Raw-Bluray-Release",
+  "es": "Versión Bluray sin procesar",
+  "fr": "Version Bluray brute",
+  "nl": "Raw Bluray-release",
+  "pl": "Surowe wydanie Bluray"
+ },
+ "Raw Bluray/DVD release": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Raw-Bluray/DVD-Release",
+  "es": "Versión Bluray/DVD sin procesar",
+  "fr": "Version Bluray/DVD brute",
+  "nl": "Raw Bluray/DVD-release",
+  "pl": "Surowe wydanie Bluray/DVD"
+ },
+ "Raw CD release": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Raw-CD-Release",
+  "es": "Versión CD sin procesar",
+  "fr": "Version CD brute",
+  "nl": "Raw cd-release",
+  "pl": "Surowe wydanie CD"
+ },
+ "Raw DVD release": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Raw-DVD-Release",
+  "es": "Versión DVD sin procesar",
+  "fr": "Version DVD brute",
+  "nl": "Raw dvd-release",
+  "pl": "Surowe wydanie DVD"
+ },
+ "Recent grab event in history already meets cutoff: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf erreicht bereits den Cutoff: %@",
+  "es": "Una captura reciente en el historial ya alcanza el corte: %@",
+  "fr": "Une capture récente dans l'historique atteint déjà le seuil : %@",
+  "nl": "Recente grab in de geschiedenis haalt de cutoff al: %@",
+  "pl": "Niedawne pobranie w historii spełnia już próg: %@"
+ },
+ "Recent grab event in history and Quality Profile '%@' does not allow upgrades": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf und das Qualitätsprofil '%@' erlaubt keine Upgrades",
+  "es": "Una captura reciente en el historial y el perfil de calidad '%@' no permite mejoras",
+  "fr": "Une capture récente dans l'historique et le profil de qualité '%@' n'autorise pas les améliorations",
+  "nl": "Recente grab in de geschiedenis en kwaliteitsprofiel '%@' staat geen upgrades toe",
+  "pl": "Niedawne pobranie w historii, a profil jakości '%@' nie pozwala na upgrade"
+ },
+ "Recent grab event in history has Custom Format score within Custom Format score increment: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf hat einen Score benutzerdefinierter Formate innerhalb des Score-Inkrements: %@",
+  "es": "Una captura reciente en el historial tiene una puntuación de formato personalizado dentro del incremento de puntuación: %@",
+  "fr": "Une capture récente dans l'historique a un score de format personnalisé dans l'incrément de score : %@",
+  "nl": "Recente grab in de geschiedenis heeft een score voor aangepaste formats binnen de scorestap: %@",
+  "pl": "Niedawne pobranie w historii ma ocenę formatu niestandardowego w granicach przyrostu oceny: %@"
+ },
+ "Recent grab event in history has an equal or higher Custom Format score: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf hat einen gleichen oder höheren Score benutzerdefinierter Formate: %@",
+  "es": "Una captura reciente en el historial tiene una puntuación de formato personalizado igual o superior: %@",
+  "fr": "Une capture récente dans l'historique a un score de format personnalisé égal ou supérieur : %@",
+  "nl": "Recente grab in de geschiedenis heeft een gelijke of hogere score voor aangepaste formats: %@",
+  "pl": "Niedawne pobranie w historii ma równą lub wyższą ocenę formatu niestandardowego: %@"
+ },
+ "Recent grab event in history is of equal or higher preference: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf hat eine gleiche oder höhere Präferenz: %@",
+  "es": "Una captura reciente en el historial tiene una preferencia igual o superior: %@",
+  "fr": "Une capture récente dans l'historique a une préférence égale ou supérieure : %@",
+  "nl": "Recente grab in de geschiedenis heeft een gelijke of hogere voorkeur: %@",
+  "pl": "Niedawne pobranie w historii ma równą lub wyższą preferencję: %@"
+ },
+ "Recent grab event in history is of equal or higher quality: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf hat eine gleiche oder höhere Qualität: %@",
+  "es": "Una captura reciente en el historial tiene una calidad igual o superior: %@",
+  "fr": "Une capture récente dans l'historique a une qualité égale ou supérieure : %@",
+  "nl": "Recente grab in de geschiedenis heeft een gelijke of hogere kwaliteit: %@",
+  "pl": "Niedawne pobranie w historii ma równą lub wyższą jakość: %@"
+ },
+ "Recent grab event in history is of equal or higher revision: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf hat eine gleiche oder höhere Revision: %@",
+  "es": "Una captura reciente en el historial tiene una revisión igual o superior: %@",
+  "fr": "Une capture récente dans l'historique a une révision égale ou supérieure : %@",
+  "nl": "Recente grab in de geschiedenis heeft een gelijke of hogere revisie: %@",
+  "pl": "Niedawne pobranie w historii ma równą lub wyższą rewizję: %@"
+ },
+ "Recent grab event in history meets Custom Format cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf erreicht den Cutoff benutzerdefinierter Formate: %@",
+  "es": "Una captura reciente en el historial alcanza el corte de formato personalizado: %@",
+  "fr": "Une capture récente dans l'historique atteint le seuil de format personnalisé : %@",
+  "nl": "Recente grab in de geschiedenis haalt de cutoff voor aangepaste formats: %@",
+  "pl": "Niedawne pobranie w historii spełnia próg formatu niestandardowego: %@"
+ },
+ "Recent grab event in history meets quality cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Kürzliches Grab-Ereignis im Verlauf erreicht den Qualitäts-Cutoff: %@",
+  "es": "Una captura reciente en el historial alcanza el corte de calidad: %@",
+  "fr": "Une capture récente dans l'historique atteint le seuil de qualité : %@",
+  "nl": "Recente grab in de geschiedenis haalt de kwaliteitscutoff: %@",
+  "pl": "Niedawne pobranie w historii spełnia próg jakości: %@"
+ },
+ "Release containing at least one matching episode is already pending, delaying pushed release": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Ein Release mit mindestens einer passenden Episode steht schon aus, das gepushte Release wird zurückgestellt",
+  "es": "Ya hay pendiente una versión con al menos un episodio coincidente; se retrasa la versión enviada",
+  "fr": "Une version contenant au moins un épisode correspondant est déjà en attente, la version envoyée est retardée",
+  "nl": "Er staat al een release met minstens één passende aflevering klaar, de gepushte release wordt uitgesteld",
+  "pl": "Wydanie z co najmniej jednym pasującym odcinkiem już czeka, opóźniam przesłane wydanie"
+ },
+ "Release containing at least one matching movie is already pending, delaying pushed release": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Ein Release mit mindestens einem passenden Film steht schon aus, das gepushte Release wird zurückgestellt",
+  "es": "Ya hay pendiente una versión con al menos una película coincidente; se retrasa la versión enviada",
+  "fr": "Une version contenant au moins un film correspondant est déjà en attente, la version envoyée est retardée",
+  "nl": "Er staat al een release met minstens één passende film klaar, de gepushte release wordt uitgesteld",
+  "pl": "Wydanie z co najmniej jednym pasującym filmem już czeka, opóźniam przesłane wydanie"
+ },
+ "Release date %@ is before adjusted air date of %@ (Air Date: %@. Grace period %@ days)": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Release-Datum %@ liegt vor dem angepassten Ausstrahlungsdatum %@ (Ausstrahlung: %@. Karenzzeit: %@ Tage)",
+  "es": "La fecha de la versión %@ es anterior a la fecha de emisión ajustada %@ (Emisión: %@. Margen: %@ días)",
+  "fr": "La date de la version %@ précède la date de diffusion ajustée %@ (Diffusion : %@. Délai de grâce : %@ jours)",
+  "nl": "Releasedatum %@ ligt vóór de aangepaste uitzenddatum %@ (Uitzending: %@. Respijt: %@ dagen)",
+  "pl": "Data wydania %@ jest wcześniejsza niż skorygowana data emisji %@ (Emisja: %@. Margines: %@ dni)"
+ },
+ "Release date %@ is before adjusted air date of %@ (Air Date: %@. Grace period %@ hours)": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Release-Datum %@ liegt vor dem angepassten Ausstrahlungsdatum %@ (Ausstrahlung: %@. Karenzzeit: %@ Stunden)",
+  "es": "La fecha de la versión %@ es anterior a la fecha de emisión ajustada %@ (Emisión: %@. Margen: %@ horas)",
+  "fr": "La date de la version %@ précède la date de diffusion ajustée %@ (Diffusion : %@. Délai de grâce : %@ heures)",
+  "nl": "Releasedatum %@ ligt vóór de aangepaste uitzenddatum %@ (Uitzending: %@. Respijt: %@ uur)",
+  "pl": "Data wydania %@ jest wcześniejsza niż skorygowana data emisji %@ (Emisja: %@. Margines: %@ godz.)"
+ },
+ "Release group is unknown": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Release-Gruppe ist unbekannt",
+  "es": "Se desconoce el grupo de lanzamiento",
+  "fr": "Le groupe de release est inconnu",
+  "nl": "Releasegroep is onbekend",
+  "pl": "Grupa wydania jest nieznana"
+ },
+ "Release in queue already meets cutoff: %@": {
+  "arrs": [
+   "Lidarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange erreicht bereits den Cutoff: %@",
+  "es": "La versión en cola ya alcanza el corte: %@",
+  "fr": "La version en file d'attente atteint déjà le seuil : %@",
+  "nl": "Release in de wachtrij haalt de cutoff al: %@",
+  "pl": "Wydanie w kolejce spełnia już próg: %@"
+ },
+ "Release in queue and Quality Profile '%@' does not allow upgrades": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange und das Qualitätsprofil '%@' erlaubt keine Upgrades",
+  "es": "La versión en cola y el perfil de calidad '%@' no permite mejoras",
+  "fr": "La version en file d'attente et le profil de qualité '%@' n'autorise pas les améliorations",
+  "nl": "Release in de wachtrij en kwaliteitsprofiel '%@' staat geen upgrades toe",
+  "pl": "Wydanie w kolejce, a profil jakości '%@' nie pozwala na upgrade"
+ },
+ "Release in queue has Custom Format score within Custom Format score increment: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange hat einen Score benutzerdefinierter Formate innerhalb des Score-Inkrements: %@",
+  "es": "La versión en cola tiene una puntuación de formato personalizado dentro del incremento de puntuación: %@",
+  "fr": "La version en file d'attente a un score de format personnalisé dans l'incrément de score : %@",
+  "nl": "Release in de wachtrij heeft een score voor aangepaste formats binnen de scorestap: %@",
+  "pl": "Wydanie w kolejce ma ocenę formatu niestandardowego w granicach przyrostu oceny: %@"
+ },
+ "Release in queue has an equal or higher Custom Format score: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange hat einen gleichen oder höheren Score benutzerdefinierter Formate: %@",
+  "es": "La versión en cola tiene una puntuación de formato personalizado igual o superior: %@",
+  "fr": "La version en file d'attente a un score de format personnalisé égal ou supérieur : %@",
+  "nl": "Release in de wachtrij heeft een gelijke of hogere score voor aangepaste formats: %@",
+  "pl": "Wydanie w kolejce ma równą lub wyższą ocenę formatu niestandardowego: %@"
+ },
+ "Release in queue is of equal or higher preference: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange hat eine gleiche oder höhere Präferenz: %@",
+  "es": "La versión en cola tiene una preferencia igual o superior: %@",
+  "fr": "La version en file d'attente a une préférence égale ou supérieure : %@",
+  "nl": "Release in de wachtrij heeft een gelijke of hogere voorkeur: %@",
+  "pl": "Wydanie w kolejce ma równą lub wyższą preferencję: %@"
+ },
+ "Release in queue is of equal or higher revision: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange hat eine gleiche oder höhere Revision: %@",
+  "es": "La versión en cola tiene una revisión igual o superior: %@",
+  "fr": "La version en file d'attente a une révision égale ou supérieure : %@",
+  "nl": "Release in de wachtrij heeft een gelijke of hogere revisie: %@",
+  "pl": "Wydanie w kolejce ma równą lub wyższą rewizję: %@"
+ },
+ "Release in queue meets Custom Format cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange erreicht den Cutoff benutzerdefinierter Formate: %@",
+  "es": "La versión en cola alcanza el corte de formato personalizado: %@",
+  "fr": "La version en file d'attente atteint le seuil de format personnalisé : %@",
+  "nl": "Release in de wachtrij haalt de cutoff voor aangepaste formats: %@",
+  "pl": "Wydanie w kolejce spełnia próg formatu niestandardowego: %@"
+ },
+ "Release in queue meets quality cutoff: %@": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release in der Warteschlange erreicht den Qualitäts-Cutoff: %@",
+  "es": "La versión en cola alcanza el corte de calidad: %@",
+  "fr": "La version en file d'attente atteint le seuil de qualité : %@",
+  "nl": "Release in de wachtrij haalt de kwaliteitscutoff: %@",
+  "pl": "Wydanie w kolejce spełnia próg jakości: %@"
+ },
+ "Release is a repack for a different release group. Release Group: %@. File release group: %@": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release ist ein Repack einer anderen Release-Gruppe. Release-Gruppe: %@. Gruppe der Datei: %@",
+  "es": "La versión es un repack de otro grupo de lanzamiento. Grupo de la versión: %@. Grupo del archivo: %@",
+  "fr": "La version est un repack d'un autre groupe de release. Groupe de la version : %@. Groupe du fichier : %@",
+  "nl": "Release is een repack van een andere releasegroep. Releasegroep: %@. Groep van het bestand: %@",
+  "pl": "To repack innej grupy. Grupa wydania: %@. Grupa pliku: %@"
+ },
+ "Release is blocklisted": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release steht auf der Sperrliste",
+  "es": "La versión está en la lista de bloqueos",
+  "fr": "La version est sur la liste de blocage",
+  "nl": "Release staat op de blokkeerlijst",
+  "pl": "Wydanie jest na czarnej liście"
+ },
+ "Repack downloading is disabled": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Download von Repacks ist deaktiviert",
+  "es": "La descarga de repacks está desactivada",
+  "fr": "Le téléchargement des repacks est désactivé",
+  "nl": "Downloaden van repacks is uitgeschakeld",
+  "pl": "Pobieranie repacków jest wyłączone"
+ },
+ "Runtime of %@ expected but %@ Found": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Laufzeit von %@ erwartet, aber %@ gefunden",
+  "es": "Se esperaba una duración de %@, pero se encontró %@",
+  "fr": "Durée de %@ attendue, mais %@ trouvée",
+  "nl": "Duur van %@ verwacht, maar %@ gevonden",
+  "pl": "Oczekiwano długości %@, a znaleziono %@"
+ },
+ "Runtime of all episodes is 0, unable to validate size until it is available": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Laufzeit aller Episoden ist 0, die Größe kann erst geprüft werden, wenn sie verfügbar ist",
+  "es": "La duración de todos los episodios es 0; no se puede validar el tamaño hasta que esté disponible",
+  "fr": "La durée de tous les épisodes est de 0, impossible de valider la taille tant qu'elle n'est pas disponible",
+  "nl": "Duur van alle afleveringen is 0, de grootte kan pas worden gecontroleerd als die beschikbaar is",
+  "pl": "Długość wszystkich odcinków wynosi 0, rozmiaru nie da się sprawdzić, dopóki nie będzie znana"
+ },
+ "Season pack does not meet the upgrade criteria. Upgradable: %@/%@ (%@%%), Mode: %@, Threshold: %@%%": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Staffelpaket erfüllt die Upgrade-Kriterien nicht. Upgradefähig: %@/%@ (%@%%), Modus: %@, Schwelle: %@%%",
+  "es": "El paquete de temporada no cumple los criterios de mejora. Mejorables: %@/%@ (%@%%), Modo: %@, Umbral: %@%%",
+  "fr": "Le pack de saison ne remplit pas les critères d'amélioration. Améliorables : %@/%@ (%@%%), Mode : %@, Seuil : %@%%",
+  "nl": "Seizoenspakket voldoet niet aan de upgradecriteria. Upgradebaar: %@/%@ (%@%%), Modus: %@, Drempel: %@%%",
+  "pl": "Paczka sezonu nie spełnia kryteriów upgrade'u. Do upgrade'u: %@/%@ (%@%%), Tryb: %@, Próg: %@%%"
+ },
+ "Series is not monitored": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Serie wird nicht überwacht",
+  "es": "La serie no está monitorizada",
+  "fr": "La série n'est pas surveillée",
+  "nl": "Serie wordt niet gemonitord",
+  "pl": "Serial nie jest monitorowany"
+ },
+ "Series tags do not match any of the indexer tags": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Serien-Tags passen zu keinem der Indexer-Tags",
+  "es": "Las etiquetas de la serie no coinciden con ninguna del indexador",
+  "fr": "Les tags de la série ne correspondent à aucun tag de l'indexeur",
+  "nl": "Serietags komen met geen enkele indexertag overeen",
+  "pl": "Tagi serialu nie pasują do żadnego tagu indeksera"
+ },
+ "Series title mismatch; automatic import is not possible. Check the download troubleshooting entry on the wiki for common causes.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Serientitel stimmt nicht überein, automatischer Import ist nicht möglich. Häufige Ursachen stehen im Wiki unter Download-Fehlerbehebung.",
+  "es": "El título de la serie no coincide; no es posible la importación automática. Consulta las causas habituales en la sección de solución de problemas de descargas de la wiki.",
+  "fr": "Le titre de la série ne correspond pas, import automatique impossible. Consultez la section de dépannage des téléchargements du wiki pour les causes courantes.",
+  "nl": "Serietitel komt niet overeen, automatische import is niet mogelijk. Zie het onderdeel over downloadproblemen op de wiki voor veelvoorkomende oorzaken.",
+  "pl": "Tytuł serialu się nie zgadza, automatyczny import jest niemożliwy. Częste przyczyny opisuje wiki w części o problemach z pobieraniem."
+ },
+ "Single episode file contains all episodes in seasons. Review file name or manually import": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Eine einzelne Episodendatei enthält alle Episoden der Staffeln. Prüfe den Dateinamen oder importiere manuell",
+  "es": "Un único archivo de episodio contiene todos los episodios de las temporadas. Revisa el nombre o importa manualmente",
+  "fr": "Un seul fichier d'épisode contient tous les épisodes des saisons. Vérifiez le nom du fichier ou importez manuellement",
+  "nl": "Eén afleveringsbestand bevat alle afleveringen van de seizoenen. Controleer de bestandsnaam of importeer handmatig",
+  "pl": "Jeden plik odcinka zawiera wszystkie odcinki sezonów. Sprawdź nazwę pliku albo zaimportuj ręcznie"
+ },
+ "Single episode split into multiple files": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Einzelne Episode ist auf mehrere Dateien aufgeteilt",
+  "es": "Un solo episodio dividido en varios archivos",
+  "fr": "Un seul épisode réparti sur plusieurs fichiers",
+  "nl": "Eén aflevering is over meerdere bestanden verdeeld",
+  "pl": "Jeden odcinek podzielony na wiele plików"
+ },
+ "Split episode releases are not supported": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Releases mit geteilten Episoden werden nicht unterstützt",
+  "es": "No se admiten versiones con episodios divididos",
+  "fr": "Les versions avec épisodes scindés ne sont pas prises en charge",
+  "nl": "Releases met gesplitste afleveringen worden niet ondersteund",
+  "pl": "Wydania z podzielonymi odcinkami nie są obsługiwane"
+ },
+ "This show has individual episode mappings on TheXEM but the mapping for this episode has not been confirmed yet by their administrators. TheXEM needs manual input.": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Diese Serie hat auf TheXEM einzelne Episodenzuordnungen, aber die Zuordnung dieser Episode wurde von den Administratoren noch nicht bestätigt. TheXEM braucht eine manuelle Eingabe.",
+  "es": "Esta serie tiene asignaciones de episodios en TheXEM, pero sus administradores aún no han confirmado la de este episodio. TheXEM necesita intervención manual.",
+  "fr": "Cette série a des correspondances d'épisodes sur TheXEM, mais celle de cet épisode n'a pas encore été confirmée par ses administrateurs. TheXEM nécessite une saisie manuelle.",
+  "nl": "Deze serie heeft afleveringskoppelingen op TheXEM, maar de koppeling van deze aflevering is nog niet bevestigd door de beheerders. TheXEM heeft handmatige invoer nodig.",
+  "pl": "Ten serial ma na TheXEM mapowania odcinków, ale mapowania tego odcinka administratorzy jeszcze nie potwierdzili. TheXEM wymaga ręcznego wpisu."
+ },
+ "Torrent is not enabled for this movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Torrent ist für diesen Film nicht aktiviert",
+  "es": "Torrent no está activado para esta película",
+  "fr": "Le torrent n'est pas activé pour ce film",
+  "nl": "Torrent is niet ingeschakeld voor deze film",
+  "pl": "Torrent nie jest włączony dla tego filmu"
+ },
+ "Torrent is not enabled for this series": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Torrent ist für diese Serie nicht aktiviert",
+  "es": "Torrent no está activado para esta serie",
+  "fr": "Le torrent n'est pas activé pour cette série",
+  "nl": "Torrent is niet ingeschakeld voor deze serie",
+  "pl": "Torrent nie jest włączony dla tego serialu"
+ },
+ "Track file on disk contains more tracks than this file contains": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titeldatei auf der Festplatte enthält mehr Titel als diese Datei",
+  "es": "El archivo de pista en disco contiene más pistas que este archivo",
+  "fr": "Le fichier de piste sur le disque contient plus de pistes que ce fichier",
+  "nl": "Nummerbestand op schijf bevat meer nummers dan dit bestand",
+  "pl": "Plik utworu na dysku zawiera więcej utworów niż ten plik"
+ },
+ "Track has already been imported": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel wurde bereits importiert",
+  "es": "La pista ya se importó",
+  "fr": "La piste a déjà été importée",
+  "nl": "Nummer is al geïmporteerd",
+  "pl": "Utwór jest już zaimportowany"
+ },
+ "Track match is not close enough: %@ vs %@ %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Titel stimmt nicht genau genug überein: %@ gegenüber %@ %@",
+  "es": "La coincidencia de la pista no es suficiente: %@ frente a %@ %@",
+  "fr": "La correspondance de la piste est insuffisante : %@ contre %@ %@",
+  "nl": "Nummerovereenkomst is niet groot genoeg: %@ tegenover %@ %@",
+  "pl": "Utwór nie pasuje wystarczająco: %@ przy wymaganych %@ %@"
+ },
+ "Unable to determine if file is a sample": {
+  "arrs": [
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Es lässt sich nicht feststellen, ob die Datei ein Sample ist",
+  "es": "No se puede determinar si el archivo es una muestra",
+  "fr": "Impossible de déterminer si le fichier est un échantillon",
+  "nl": "Kan niet bepalen of het bestand een sample is",
+  "pl": "Nie da się ustalić, czy plik jest próbką"
+ },
+ "Unable to determine release group for the existing file": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release-Gruppe der vorhandenen Datei lässt sich nicht ermitteln",
+  "es": "No se puede determinar el grupo de lanzamiento del archivo existente",
+  "fr": "Impossible de déterminer le groupe de release du fichier existant",
+  "nl": "Kan de releasegroep van het bestaande bestand niet bepalen",
+  "pl": "Nie da się ustalić grupy istniejącego pliku"
+ },
+ "Unable to determine release group for this release": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Release-Gruppe dieses Releases lässt sich nicht ermitteln",
+  "es": "No se puede determinar el grupo de lanzamiento de esta versión",
+  "fr": "Impossible de déterminer le groupe de release de cette version",
+  "nl": "Kan de releasegroep van deze release niet bepalen",
+  "pl": "Nie da się ustalić grupy tego wydania"
+ },
+ "Unable to import automatically, found multiple artists: %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Automatischer Import nicht möglich, mehrere Künstler gefunden: %@",
+  "es": "No se puede importar automáticamente; se encontraron varios artistas: %@",
+  "fr": "Import automatique impossible, plusieurs artistes trouvés : %@",
+  "nl": "Automatisch importeren is niet mogelijk, meerdere artiesten gevonden: %@",
+  "pl": "Automatyczny import jest niemożliwy, znaleziono wielu wykonawców: %@"
+ },
+ "Unable to import automatically, found multiple movies: %@": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Automatischer Import nicht möglich, mehrere Filme gefunden: %@",
+  "es": "No se puede importar automáticamente; se encontraron varias películas: %@",
+  "fr": "Import automatique impossible, plusieurs films trouvés : %@",
+  "nl": "Automatisch importeren is niet mogelijk, meerdere films gevonden: %@",
+  "pl": "Automatyczny import jest niemożliwy, znaleziono wiele filmów: %@"
+ },
+ "Unable to import automatically, found multiple series: %@": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Automatischer Import nicht möglich, mehrere Serien gefunden: %@",
+  "es": "No se puede importar automáticamente; se encontraron varias series: %@",
+  "fr": "Import automatique impossible, plusieurs séries trouvées : %@",
+  "nl": "Automatisch importeren is niet mogelijk, meerdere series gevonden: %@",
+  "pl": "Automatyczny import jest niemożliwy, znaleziono wiele seriali: %@"
+ },
+ "Unable to parse albums from release name": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Alben lassen sich nicht aus dem Release-Namen erkennen",
+  "es": "No se pueden analizar los álbumes del nombre de la versión",
+  "fr": "Impossible d'analyser les albums depuis le nom de la version",
+  "nl": "Kan albums niet herkennen uit de releasenaam",
+  "pl": "Nie da się rozpoznać albumów z nazwy wydania"
+ },
+ "Unable to parse albums from title": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Alben lassen sich nicht aus dem Titel erkennen",
+  "es": "No se pueden analizar los álbumes del título",
+  "fr": "Impossible d'analyser les albums depuis le titre",
+  "nl": "Kan albums niet herkennen uit de titel",
+  "pl": "Nie da się rozpoznać albumów z tytułu"
+ },
+ "Unable to parse download, automatic import is not possible.": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Download lässt sich nicht erkennen, automatischer Import ist nicht möglich.",
+  "es": "No se puede analizar la descarga; no es posible la importación automática.",
+  "fr": "Impossible d'analyser le téléchargement, import automatique impossible.",
+  "nl": "Kan de download niet herkennen, automatische import is niet mogelijk.",
+  "pl": "Nie da się rozpoznać pobierania, automatyczny import jest niemożliwy."
+ },
+ "Unable to parse episodes from title": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Episoden lassen sich nicht aus dem Titel erkennen",
+  "es": "No se pueden analizar los episodios del título",
+  "fr": "Impossible d'analyser les épisodes depuis le titre",
+  "nl": "Kan afleveringen niet herkennen uit de titel",
+  "pl": "Nie da się rozpoznać odcinków z tytułu"
+ },
+ "Unable to parse file": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Datei lässt sich nicht erkennen",
+  "es": "No se puede analizar el archivo",
+  "fr": "Impossible d'analyser le fichier",
+  "nl": "Kan het bestand niet herkennen",
+  "pl": "Nie da się rozpoznać pliku"
+ },
+ "Unable to parse movie from title": {
+  "arrs": [
+   "Radarr"
+  ],
+  "de": "Film lässt sich nicht aus dem Titel erkennen",
+  "es": "No se puede analizar la película del título",
+  "fr": "Impossible d'analyser le film depuis le titre",
+  "nl": "Kan de film niet herkennen uit de titel",
+  "pl": "Nie da się rozpoznać filmu z tytułu"
+ },
+ "Unable to parse release": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Release lässt sich nicht erkennen",
+  "es": "No se puede analizar la versión",
+  "fr": "Impossible d'analyser la version",
+  "nl": "Kan de release niet herkennen",
+  "pl": "Nie da się rozpoznać wydania"
+ },
+ "Unable to process file": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Datei lässt sich nicht verarbeiten",
+  "es": "No se puede procesar el archivo",
+  "fr": "Impossible de traiter le fichier",
+  "nl": "Kan het bestand niet verwerken",
+  "pl": "Nie da się przetworzyć pliku"
+ },
+ "Unexpected error processing file": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Unerwarteter Fehler beim Verarbeiten der Datei",
+  "es": "Error inesperado al procesar el archivo",
+  "fr": "Erreur inattendue lors du traitement du fichier",
+  "nl": "Onverwachte fout bij het verwerken van het bestand",
+  "pl": "Nieoczekiwany błąd przetwarzania pliku"
+ },
+ "Unexpected error processing release": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Unerwarteter Fehler beim Verarbeiten des Releases",
+  "es": "Error inesperado al procesar la versión",
+  "fr": "Erreur inattendue lors du traitement de la version",
+  "nl": "Onverwachte fout bij het verwerken van de release",
+  "pl": "Nieoczekiwany błąd przetwarzania wydania"
+ },
+ "Unknown Artist": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Unbekannter Künstler",
+  "es": "Artista desconocido",
+  "fr": "Artiste inconnu",
+  "nl": "Onbekende artiest",
+  "pl": "Nieznany wykonawca"
+ },
+ "Unknown Movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Unbekannter Film",
+  "es": "Película desconocida",
+  "fr": "Film inconnu",
+  "nl": "Onbekende film",
+  "pl": "Nieznany film"
+ },
+ "Unknown Series": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Unbekannte Serie",
+  "es": "Serie desconocida",
+  "fr": "Série inconnue",
+  "nl": "Onbekende serie",
+  "pl": "Nieznany serial"
+ },
+ "Usenet is not enabled for this movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Usenet ist für diesen Film nicht aktiviert",
+  "es": "Usenet no está activado para esta película",
+  "fr": "Usenet n'est pas activé pour ce film",
+  "nl": "Usenet is niet ingeschakeld voor deze film",
+  "pl": "Usenet nie jest włączony dla tego filmu"
+ },
+ "Usenet is not enabled for this series": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Usenet ist für diese Serie nicht aktiviert",
+  "es": "Usenet no está activado para esta serie",
+  "fr": "Usenet n'est pas activé pour cette série",
+  "nl": "Usenet is niet ingeschakeld voor deze serie",
+  "pl": "Usenet nie jest włączony dla tego serialu"
+ },
+ "Waiting for better quality release": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Warte auf ein Release in besserer Qualität",
+  "es": "Esperando una versión de mejor calidad",
+  "fr": "En attente d'une version de meilleure qualité",
+  "nl": "Wachten op een release van betere kwaliteit",
+  "pl": "Czekam na wydanie lepszej jakości"
+ },
+ "Worst track match: %@ vs %@ %@": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Schlechteste Titelübereinstimmung: %@ gegenüber %@ %@",
+  "es": "Peor coincidencia de pista: %@ frente a %@ %@",
+  "fr": "Pire correspondance de piste : %@ contre %@ %@",
+  "nl": "Slechtste nummerovereenkomst: %@ tegenover %@ %@",
+  "pl": "Najgorsze dopasowanie utworu: %@ przy wymaganych %@ %@"
+ },
+ "Wrong Episode": {
+  "arrs": [
+   "Whisparr"
+  ],
+  "de": "Falsche Episode",
+  "es": "Episodio incorrecto",
+  "fr": "Mauvais épisode",
+  "nl": "Verkeerde aflevering",
+  "pl": "Zły odcinek"
+ },
+ "Wrong album": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Falsches Album",
+  "es": "Álbum incorrecto",
+  "fr": "Mauvais album",
+  "nl": "Verkeerd album",
+  "pl": "Zły album"
+ },
+ "Wrong artist": {
+  "arrs": [
+   "Lidarr"
+  ],
+  "de": "Falscher Künstler",
+  "es": "Artista incorrecto",
+  "fr": "Mauvais artiste",
+  "nl": "Verkeerde artiest",
+  "pl": "Zły wykonawca"
+ },
+ "Wrong episode": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Falsche Episode",
+  "es": "Episodio incorrecto",
+  "fr": "Mauvais épisode",
+  "nl": "Verkeerde aflevering",
+  "pl": "Zły odcinek"
+ },
+ "Wrong movie": {
+  "arrs": [
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "Falscher Film",
+  "es": "Película incorrecta",
+  "fr": "Mauvais film",
+  "nl": "Verkeerde film",
+  "pl": "Zły film"
+ },
+ "Wrong season": {
+  "arrs": [
+   "Sonarr"
+  ],
+  "de": "Falsche Staffel",
+  "es": "Temporada incorrecta",
+  "fr": "Mauvaise saison",
+  "nl": "Verkeerd seizoen",
+  "pl": "Zły sezon"
+ },
+ "Wrong series": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "Falsche Serie",
+  "es": "Serie incorrecta",
+  "fr": "Mauvaise série",
+  "nl": "Verkeerde serie",
+  "pl": "Zły serial"
+ },
+ "[%@] is not a valid local path. You may need a Remote Path Mapping.": {
+  "arrs": [
+   "Lidarr",
+   "Radarr",
+   "Whisparr"
+  ],
+  "de": "[%@] ist kein gültiger lokaler Pfad. Eventuell ist eine Remote-Pfadzuordnung nötig.",
+  "es": "[%@] no es una ruta local válida. Puede que necesites un mapeo de ruta remota.",
+  "fr": "[%@] n'est pas un chemin local valide. Un mappage de chemin distant est peut-être nécessaire.",
+  "nl": "[%@] is geen geldig lokaal pad. Mogelijk is een externe padtoewijzing nodig.",
+  "pl": "[%@] nie jest prawidłową ścieżką lokalną. Może być potrzebne mapowanie ścieżki zdalnej."
+ },
+ "[%@] is not a valid local path. You may need a Remote Path Mapping. Check the download troubleshooting entry on the wiki for details.": {
+  "arrs": [
+   "Sonarr",
+   "Whisparr"
+  ],
+  "de": "[%@] ist kein gültiger lokaler Pfad. Eventuell ist eine Remote-Pfadzuordnung nötig. Details stehen im Wiki unter Download-Fehlerbehebung.",
+  "es": "[%@] no es una ruta local válida. Puede que necesites un mapeo de ruta remota. Consulta la sección de solución de problemas de descargas de la wiki.",
+  "fr": "[%@] n'est pas un chemin local valide. Un mappage de chemin distant est peut-être nécessaire. Consultez la section de dépannage des téléchargements du wiki.",
+  "nl": "[%@] is geen geldig lokaal pad. Mogelijk is een externe padtoewijzing nodig. Zie het onderdeel over downloadproblemen op de wiki.",
+  "pl": "[%@] nie jest prawidłową ścieżką lokalną. Może być potrzebne mapowanie ścieżki zdalnej. Szczegóły opisuje wiki w części o problemach z pobieraniem."
+ }
+}

@@ -394,6 +394,7 @@ private struct CopyBadge: View {
         Button(action: copy) {
             Image(systemName: copied ? "checkmark" : "doc.on.doc")
                 .scaledFont(size: 9, weight: .medium)
+                .symbolSwap()
                 .foregroundStyle(tint ?? .secondary)
                 .frame(width: 18, height: 17)
                 .contentShape(Rectangle())

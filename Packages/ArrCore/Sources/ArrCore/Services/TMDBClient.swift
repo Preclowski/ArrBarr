@@ -173,6 +173,11 @@ nonisolated public struct TMDBClient: Sendable {
     }
     public func movieDetails(movieId: Int, language: String? = nil) async throws -> TMDBDetails { try await read { $0.movie(id: movieId, language: language) } }
     public func tvDetails(tvId: Int, language: String? = nil) async throws -> TMDBDetails { try await read { $0.tv(id: tvId, language: language) } }
+    /// Keyed by season number; Sonarr ships no season artwork or score.
+    public func tvSeasons(tvId: Int) async throws -> [Int: TMDBDetails.Airing] {
+        let seasons = try await tvDetails(tvId: tvId).seasons ?? []
+        return Dictionary(seasons.compactMap { s in s.seasonNumber.map { ($0, s) } }, uniquingKeysWith: { first, _ in first })
+    }
     public func tvCreators(tvId: Int) async throws -> [TMDBPerson] { try await tvDetails(tvId: tvId).createdBy ?? [] }
 
     public func tvIdFromTVDB(_ tvdbId: Int) async throws -> Int? { try await read { $0.find(tvdbID: tvdbId) }.tvResults.first?.id }
@@ -344,6 +349,7 @@ nonisolated public struct TMDBClient: Sendable {
 
     public func movieVideos(movieId: Int) async throws -> [TMDBVideo] { try await read { $0.movieVideos(id: movieId) }.results }
     public func tvVideos(tvId: Int) async throws -> [TMDBVideo] { try await read { $0.tvVideos(id: tvId) }.results }
+    public func tvSeasonVideos(tvId: Int, season: Int) async throws -> [TMDBVideo] { try await read { $0.tvSeasonVideos(id: tvId, season: season) }.results }
 
     public func movieIMDbId(movieId: Int) async throws -> String? {
         let id = try await movieDetails(movieId: movieId).imdbId

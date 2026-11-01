@@ -55,9 +55,40 @@ enum TrailerProvider {
         guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }
         let clips = await fetch(configStore: configStore) { client in
             guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
-            return try await client.tvVideos(tvId: id)
+            let series = try await client.tvVideos(tvId: id)
+            // TMDB files most series trailers under the seasons, leaving the series' own list empty or extras only.
+            guard !series.contains(where: { $0.type == "Trailer" || $0.type == "Teaser" }) else { return series }
+            return series + (await seasonVideos(tvId: id, client: client))
         }
         return await playable(TrailerReel(featuredKey: nil, clips: clips))
+    }
+
+    /// Only the season's own clips: the series' ones already lead the series detail.
+    static func seasonReel(tmdbId: Int?, tvdbId: Int?, season: Int,
+                           configStore: ConfigStore) async -> TrailerReel? {
+        guard (tmdbId ?? 0) > 0 || (tvdbId ?? 0) > 0 else { return nil }
+        let clips = await fetch(configStore: configStore) { client in
+            guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [] }
+            return try await client.tvSeasonVideos(tvId: id, season: season)
+        }
+        return await playable(TrailerReel(featuredKey: nil, clips: clips))
+    }
+
+    /// Oldest season first, so among equal ranks the first season's trailer leads.
+    private static func seasonVideos(tvId: Int, client: TMDBClient) async -> [TMDBVideo] {
+        let details = await Logger.extras.attempt("series seasons") { try await client.tvDetails(tvId: tvId) }
+        let seasons = details?.seasons?.compactMap(\.seasonNumber).filter { $0 > 0 }.sorted() ?? []
+        let bySeason = await withTaskGroup(of: (Int, [TMDBVideo]).self) { group in
+            for season in seasons {
+                group.addTask {
+                    (season, await Logger.extras.attempt("season videos") { try await client.tvSeasonVideos(tvId: tvId, season: season) } ?? [])
+                }
+            }
+            var lists: [Int: [TMDBVideo]] = [:]
+            for await (season, videos) in group { lists[season] = videos }
+            return lists
+        }
+        return seasons.flatMap { bySeason[$0] ?? [] }
     }
 
     // MARK: - Fetch
@@ -84,6 +115,8 @@ enum TrailerProvider {
     private static func fetch(configStore: ConfigStore,
                               _ videos: @escaping (TMDBClient) async throws -> [TMDBVideo]) async -> [TrailerClip] {
         guard !configStore.tmdbApiKey.isEmpty, let list = await Logger.extras.attempt("trailer videos", { try await videos(configStore.tmdbClient) }) else { return [] }
-        return TMDBVideo.rankedYouTube(list).map { TrailerClip(key: $0.key, name: $0.name) }
+        // Seasons can list the same clip twice, and the reel is keyed by it.
+        var seen: Set<String> = []
+        return TMDBVideo.rankedYouTube(list).filter { seen.insert($0.key).inserted }.map { TrailerClip(key: $0.key, name: $0.name) }
     }
 }

@@ -124,8 +124,11 @@ public struct TMDBDetails: Codable, Sendable, Equatable, Hashable {
     public let voteCount: Int?
     public struct Genre: Codable, Sendable, Equatable, Hashable { public let id: Int; public let name: String }
     /// An episode or a season: when it aired and which season it belongs to.
-    /// `episodeCount` is set on seasons only.
-    public struct Airing: Codable, Sendable, Equatable, Hashable { public let airDate: String?; public let seasonNumber: Int?; public let episodeCount: Int? }
+    /// `episodeCount`, `posterPath` and `voteAverage` are set on seasons only.
+    public struct Airing: Codable, Sendable, Equatable, Hashable {
+        public let airDate: String?; public let seasonNumber: Int?; public let episodeCount: Int?
+        public let posterPath: String?; public let voteAverage: Double?
+    }
 
     /// Production countries first for movies, origin country first for series; uppercased, without repeats.
     public func countryCodes(preferOrigin: Bool) -> [String] {

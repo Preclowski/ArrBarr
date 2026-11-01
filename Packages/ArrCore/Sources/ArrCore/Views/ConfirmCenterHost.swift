@@ -27,7 +27,7 @@ private struct ConfirmCenterHost: ViewModifier {
                 if let pending = center.pending {
                     ConfirmAlertOverlay(
                         title: LocalizedStringKey(pending.title),
-                        message: LocalizedStringKey(pending.message ?? ""),
+                        message: Text(LocalizedStringKey(pending.message ?? ""), bundle: .module),
                         confirmLabelKey: LocalizedStringKey(pending.confirmLabel),
                         cancelLabelKey: LocalizedStringKey(pending.cancelLabel),
                         destructive: pending.isDestructive,

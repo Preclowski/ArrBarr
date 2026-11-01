@@ -5,12 +5,12 @@ import Foundation
 nonisolated enum AppLocalized {
     /// Loads the per-language bundle: `String(localized:locale:)` uses `locale` only for formatting,
     /// not for picking the table.
-    static func string(_ key: String, locale: Locale) -> String {
+    static func string(_ key: String, locale: Locale, table: String? = nil) -> String {
         if let code = locale.language.languageCode?.identifier,
            let path = Bundle.module.path(forResource: code, ofType: "lproj"),
            let langBundle = Bundle(path: path) {
-            return langBundle.localizedString(forKey: key, value: nil, table: nil)
+            return langBundle.localizedString(forKey: key, value: nil, table: table)
         }
-        return Bundle.module.localizedString(forKey: key, value: nil, table: nil)
+        return Bundle.module.localizedString(forKey: key, value: nil, table: table)
     }
 }

@@ -122,6 +122,10 @@ struct DetailView: View {
     @State var enlargedPoster: URL?
     /// Nil = no badge (no trailer, or no TMDB key for the series path).
     @State var trailer: TrailerReel?
+    /// The `trailerLookupToken` the current `trailer` answers.
+    @State var resolvedTrailerToken: String?
+    /// TMDB's poster, premiere and score per season number.
+    @State var tmdbSeasons: [Int: TMDBDetails.Airing] = [:]
     /// Shared session, so the clip survives the popover closing mid-play.
     var trailerSession: TrailerSession { .shared }
     @State var seasonDrill: SeasonDrill?
@@ -367,7 +371,7 @@ struct DetailView: View {
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
             title: "Remove this download?",
-            message: LocalizedStringKey("This will remove the download from the client."),
+            message: Text("This will remove the download from the client.", bundle: .module),
             confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: {

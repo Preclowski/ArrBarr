@@ -16,6 +16,12 @@ import Testing
         #expect(message(#"{"title":"Series not found"}"#) == "Series not found")
     }
 
+    /// A refused `POST /release`, as Radarr and Sonarr send it: the reason, never the stack trace beside it.
+    @Test func arrClientErrorGivesTheMessageNotTheStackTrace() {
+        let body = #"{"message":"Couldn't find requested release in cache, try searching again","description":"NzbDrone.Core.Exceptions.NzbDroneClientException: Couldn't find requested release in cache\n   at Radarr.Api.V3.Indexers.ReleaseController.DownloadRelease(ReleaseResource release)"}"#
+        #expect(message(body) == "Couldn't find requested release in cache, try searching again")
+    }
+
     @Test func problemDetailsErrorsWinOverTheTitle() {
         #expect(message(#"{"title":"One or more validation errors occurred.","errors":{"path":["Path does not exist"]}}"#) == "Path does not exist")
     }

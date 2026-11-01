@@ -37,23 +37,40 @@ enum MonitorEntity: Sendable {
 struct MonitorBookmark: View {
     let isMonitored: Bool
     var size: CGFloat
-    /// Hover on a toggle: the glyph grows and previews the state a click sets.
+    /// Hover on a toggle: a small lift, which must not look like the click's result.
     var hovering = false
+    /// Each increment plays the click's pop.
+    var pops = 0
 
-    init(isMonitored: Bool, size: CGFloat = 10, hovering: Bool = false) {
+    init(isMonitored: Bool, size: CGFloat = 10, hovering: Bool = false, pops: Int = 0) {
         self.isMonitored = isMonitored
         self.size = size
         self.hovering = hovering
+        self.pops = pops
     }
 
-    private var showsFilled: Bool { hovering ? !isMonitored : isMonitored }
+    private var style: AnyShapeStyle {
+        switch (isMonitored, hovering) {
+        case (true, true): AnyShapeStyle(.primary)
+        case (true, false), (false, true): AnyShapeStyle(.secondary)
+        case (false, false): AnyShapeStyle(.tertiary)
+        }
+    }
 
     var body: some View {
-        Image(systemName: showsFilled ? "bookmark.fill" : "bookmark")
+        Image(systemName: isMonitored ? "bookmark.fill" : "bookmark")
             .scaledFont(size: size, weight: .medium)
-            .foregroundStyle(hovering ? AnyShapeStyle(.primary)
-                             : isMonitored ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tertiary))
-            .scaleEffect(hovering ? 1.25 : 1)
+            .symbolSwap()
+            .foregroundStyle(style)
+            .scaleEffect(hovering ? 1.1 : 1)
+            .animation(.monitorHover, value: isMonitored)
+            .animation(.monitorHover, value: hovering)
+            .keyframeAnimator(initialValue: CGFloat(1), trigger: pops) { content, scale in
+                content.scaleEffect(scale)
+            } keyframes: { _ in
+                SpringKeyframe(1.5, duration: 0.12)
+                SpringKeyframe(1, duration: 0.35, spring: .bouncy)
+            }
     }
 }
 
@@ -71,8 +88,10 @@ struct MonitorPosterToggle: View {
 
     @State private var inFlight = false
     @State private var hovering = false
-    /// Set by a click, cleared on exit: the pointer still over it must not preview the old state back.
-    @State private var toggledUnderPointer = false
+    /// Only the value a click asked for pops, not one that loaded or a failure snapping back.
+    @State private var requested: Bool?
+    @State private var pops = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(isMonitored: Bool, entity: MonitorEntity, onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
@@ -92,19 +111,17 @@ struct MonitorPosterToggle: View {
             if let onToggle {
                 Button {
                     guard !inFlight else { return }
+                    requested = !isMonitored
                     Task {
                         inFlight = true
                         await onToggle(!isMonitored)
                         inFlight = false
-                        toggledUnderPointer = true
                     }
                 } label: { plate }
                 .buttonStyle(.plain)
                 .disabled(inFlight)
-                .opacity(inFlight ? 0.5 : 1)
                 .onHover { over in
                     withAnimation(.monitorHover) { hovering = over }
-                    if !over { toggledUnderPointer = false }
                 }
                 #if os(macOS)
                 .pointerStyle(.link)
@@ -113,6 +130,11 @@ struct MonitorPosterToggle: View {
                 plate
             }
         }
+        .onChange(of: isMonitored) { _, now in
+            if now == requested, !reduceMotion { pops += 1 }
+            requested = nil
+        }
+        .preference(key: PosterCornerHoverKey.self, value: hovering)
         .padding(.leading, 5)
         .help(Text(LocalizedStringKey(helpKey), bundle: .module))
         .accessibilityLabel(Text(LocalizedStringKey(helpKey), bundle: .module))
@@ -126,7 +148,13 @@ struct MonitorPosterToggle: View {
 
     private var plate: some View {
         // Larger than the ribbon (a 12pt strip is unhittable on a phone), top-leading so the mark stays flush.
-        MonitorRibbon(width: Self.ribbonWidth, filled: isMonitored, hovering: hovering && !inFlight && !toggledUnderPointer)
+        MonitorRibbon(width: Self.ribbonWidth, filled: isMonitored, hovering: hovering)
+            .keyframeAnimator(initialValue: CGFloat(1), trigger: pops) { content, stretch in
+                content.scaleEffect(x: 1, y: stretch, anchor: .top)
+            } keyframes: { _ in
+                SpringKeyframe(1.4, duration: 0.14)
+                SpringKeyframe(1, duration: 0.4, spring: .bouncy)
+            }
             .frame(width: 26, height: 30, alignment: .topLeading)
             .contentShape(Rectangle())
     }
@@ -138,21 +166,20 @@ struct MonitorRowToggle: View {
     let isMonitored: Bool
     let entity: MonitorEntity
     var size: CGFloat
-    var alignment: Alignment = .leading
     let onToggle: ((Bool) async -> Void)?
 
     @State private var inFlight = false
     @State private var hovering = false
-    /// Set by a click, cleared on exit: the pointer still over it must not preview the old state back.
-    @State private var toggledUnderPointer = false
+    /// Only the value a click asked for pops, not one that loaded or a failure snapping back.
+    @State private var requested: Bool?
+    @State private var pops = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(isMonitored: Bool, entity: MonitorEntity, size: CGFloat = 10,
-                alignment: Alignment = .leading,
                 onToggle: ((Bool) async -> Void)? = nil) {
         self.isMonitored = isMonitored
         self.entity = entity
         self.size = size
-        self.alignment = alignment
         self.onToggle = onToggle
     }
 
@@ -168,19 +195,17 @@ struct MonitorRowToggle: View {
             if let onToggle {
                 Button {
                     guard !inFlight else { return }
+                    requested = !isMonitored
                     Task {
                         inFlight = true
                         await onToggle(!isMonitored)
                         inFlight = false
-                        toggledUnderPointer = true
                     }
                 } label: { glyph }
                 .buttonStyle(.plain)
                 .disabled(inFlight)
-                .opacity(inFlight ? 0.5 : 1)
                 .onHover { over in
                     withAnimation(.monitorHover) { hovering = over }
-                    if !over { toggledUnderPointer = false }
                 }
                 #if os(macOS)
                 .pointerStyle(.link)
@@ -198,11 +223,15 @@ struct MonitorRowToggle: View {
                     .accessibilityHidden(true)
             }
         }
+        .onChange(of: isMonitored) { _, now in
+            if now == requested, !reduceMotion { pops += 1 }
+            requested = nil
+        }
     }
 
     private var glyph: some View {
-        MonitorBookmark(isMonitored: isMonitored, size: size, hovering: hovering && !inFlight && !toggledUnderPointer)
-            .frame(width: 16, height: 20, alignment: alignment)
+        MonitorBookmark(isMonitored: isMonitored, size: size, hovering: hovering, pops: pops)
+            .frame(width: 16, height: 20, alignment: .leading)
             .contentShape(Rectangle())
     }
 }

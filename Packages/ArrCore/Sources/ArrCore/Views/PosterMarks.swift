@@ -53,20 +53,19 @@ struct MonitorRibbon: View {
     var width: CGFloat = 10
     /// Surfaces that only draw a ribbon when monitored never pass `false`.
     var filled: Bool = true
-    /// Hover on a toggle: the ribbon drops a little and previews the state a click sets.
+    /// Hover on a toggle: a small drop, which must not look like the click's result.
     var hovering: Bool = false
 
-    private var height: CGFloat { width * (hovering ? 2 : 1.6) }
-    private var fillOpacity: Double {
-        guard hovering else { return filled ? 1 : 0.35 }
-        return filled ? 0.6 : 0.8
-    }
+    private var height: CGFloat { width * (hovering ? 1.75 : 1.6) }
+    private var fillOpacity: Double { filled ? 1 : (hovering ? 0.5 : 0.35) }
 
     var body: some View {
         // Flat, no lift: a mark on the artwork. Solid white stays readable over any poster.
         Ribbon()
             .fill(Color.white.opacity(fillOpacity))
             .frame(width: width, height: height)
+            .animation(.monitorHover, value: hovering)
+            .animation(.monitorHover, value: filled)
             .accessibilityLabel(Text(LocalizedStringKey(filled ? "common.monitored.button"
                                                               : "common.notMonitored.label"),
                                      bundle: .module))

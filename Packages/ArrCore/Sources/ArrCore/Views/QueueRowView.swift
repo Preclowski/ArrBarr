@@ -335,6 +335,10 @@ struct QueueItemTooltip: View {
         }
         TooltipInfoGrid(lines: infoLines)
 
+        if !item.statusMessages.isEmpty {
+            QueueStatusMessagesBanner(messages: item.statusMessages, tint: item.status.tint, inTooltip: true)
+        }
+
         if !item.isUpgrade, !item.customFormats.isEmpty || item.customFormatScore != 0 {
             customFormatChipStrip(
                 tags: item.customFormats,

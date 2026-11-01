@@ -16,11 +16,15 @@ extension DetailView {
         }
     }
 
+    /// `loading` too: until the record lands the lookup has no ids to answer for.
+    var trailerLoading: Bool { loading || resolvedTrailerToken != trailerLookupToken }
+
     func resolveTrailer() async {
         // Dismiss only OUR clip: on a fresh mount `trailer` is nil and a session restored across
         // a popover reopen must be left alone.
         if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
         trailer = nil
+        let token = trailerLookupToken
         let reel: TrailerReel?
         switch item.source {
         case .radarr, .whisparr:
@@ -38,7 +42,12 @@ extension DetailView {
         case .lidarr:
             reel = nil
         }
-        withAnimation(DetailView.landing) { trailer = reel }
+        // A superseded lookup finishing late must not claim the newer token's answer.
+        guard !Task.isCancelled else { return }
+        withAnimation(DetailView.landing) {
+            trailer = reel
+            resolvedTrailerToken = token
+        }
     }
 
     func movieRatingChipsFor(_ detail: ArrMovie?) -> [RatingChip] {

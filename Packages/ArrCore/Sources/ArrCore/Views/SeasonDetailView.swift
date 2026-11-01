@@ -54,6 +54,9 @@ struct SeasonDetailView: View {
     @State private var countries: [String] = []
     @State private var cast: [CastMember] = []
     @State private var profileName: String?
+    @State private var trailer: TrailerReel?
+    @State private var trailerLoading = true
+    private var trailerSession: TrailerSession { .shared }
 
     /// Every poster on this screen goes through here so header, lightbox and rows agree.
     private var posterURL: URL? { mediaServerSeasonPoster ?? seriesPosterURL }
@@ -76,9 +79,12 @@ struct SeasonDetailView: View {
         sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.monitored
     }
 
+    private var seasonStatistics: ArrStatistics? {
+        sonarrDetail?.seasons?.first { $0.seasonNumber == drill.seasonNumber }?.statistics
+    }
+
     private var seasonLibraryMark: LibraryMark? {
-        guard let stats = sonarrDetail?.seasons?.first(where: { $0.seasonNumber == drill.seasonNumber })?.statistics
-        else { return nil }
+        guard let stats = seasonStatistics else { return nil }
         return LibraryMark(downloaded: EpisodeFileCounts(have: stats.episodeFileCount ?? 0,
                                                          total: stats.episodeCount ?? 0).isComplete)
     }
@@ -117,6 +123,11 @@ struct SeasonDetailView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     seasonHeader
+                    if let trailer {
+                        TrailerRow(reel: trailer)
+                    } else if trailerLoading, !configStore.tmdbApiKey.isEmpty {
+                        SkeletonTrailerRow()
+                    }
                     VStack(alignment: .leading, spacing: 6) {
                         DetailSectionHeader(
                         "queue.episodes.button",
@@ -148,6 +159,13 @@ struct SeasonDetailView: View {
                             }
                         }
                     }
+                    // As on the series detail: many files, so their count and total.
+                    if let stats = seasonStatistics, let size = stats.sizeOnDisk, size > 0 {
+                        VStack(alignment: .leading, spacing: 6) {
+                            DetailSectionHeader("Existing files", count: stats.episodeFileCount)
+                            ExistingFileBanner(quality: nil, size: size, customFormatScore: nil, customFormats: [], fileName: nil)
+                        }
+                    }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
@@ -168,6 +186,20 @@ struct SeasonDetailView: View {
             let credits = await CastProvider.seriesCredits(
                 tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId, configStore: configStore)
             withAnimation(DetailView.landing) { cast = credits.cast }
+        }
+        .task(id: drill.id) {
+            // Dismiss only our clip: a session restored across a popover reopen stays.
+            if trailerSession.isShowing(trailer) { trailerSession.dismiss() }
+            trailer = nil
+            trailerLoading = true
+            let reel = await TrailerProvider.seasonReel(
+                tmdbId: sonarrDetail?.tmdbId, tvdbId: sonarrDetail?.tvdbId,
+                season: drill.seasonNumber, configStore: configStore)
+            guard !Task.isCancelled else { return }
+            withAnimation(DetailView.landing) {
+                trailer = reel
+                trailerLoading = false
+            }
         }
         .task(id: sonarrDetail?.qualityProfileId) {
             guard let id = sonarrDetail?.qualityProfileId else { return }

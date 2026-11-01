@@ -260,13 +260,23 @@ nonisolated enum ArrCompositions {
                                  formats: (file.customFormats ?? []).map(\.name), filename: file.relativePath)
     }
 
+    /// A reason shared by several files shows once, without a file name: Lidarr repeats it per track, dozens of times.
     static func flatten(_ messages: [MediaKit.ArrStatusMessage]?) -> [String] {
+        let entries = (messages ?? []).map { entry in
+            (title: entry.title?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
+             lines: (entry.messages ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty })
+        }
+        var occurrences: [String: Int] = [:]
+        for entry in entries {
+            for line in entry.lines { occurrences[line, default: 0] += 1 }
+        }
         var out: [String] = []
-        for entry in messages ?? [] {
-            let title = entry.title?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let lines = (entry.messages ?? []).map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
-            if lines.isEmpty { if let title, !title.isEmpty { out.append(title) } }
-            else { let prefix = (title?.isEmpty == false) ? "\(title!): " : ""; out += lines.map { prefix + $0 } }
+        for entry in entries {
+            if entry.lines.isEmpty, !entry.title.isEmpty { out.append(entry.title) }
+            for line in entry.lines {
+                let text = entry.title.isEmpty || occurrences[line, default: 0] > 1 ? line : "\(entry.title): \(line)"
+                if !out.contains(text) { out.append(text) }
+            }
         }
         return out
     }

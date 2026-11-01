@@ -171,7 +171,7 @@ struct InlineConfirmCard: View {
 /// No shield: an alert already owns the screen; the red verb is the warning.
 struct ConfirmAlertOverlay: View {
     let title: LocalizedStringKey
-    let message: LocalizedStringKey
+    let message: Text
     let confirmLabelKey: LocalizedStringKey
     let cancelLabelKey: LocalizedStringKey
     let destructive: Bool
@@ -183,7 +183,7 @@ struct ConfirmAlertOverlay: View {
 
     init(
         title: LocalizedStringKey,
-        message: LocalizedStringKey,
+        message: Text,
         confirmLabelKey: LocalizedStringKey = "Confirm",
         cancelLabelKey: LocalizedStringKey = "Cancel",
         destructive: Bool = true,
@@ -208,7 +208,7 @@ struct ConfirmAlertOverlay: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(title, bundle: .module)
                     .scaledFont(size: 13, weight: .bold)
-                Text(message, bundle: .module)
+                message
                     .scaledFont(size: 13)
                     .fixedSize(horizontal: false, vertical: true)
             }

@@ -54,6 +54,9 @@ struct EpisodeRow: View {
             onTap?(episode)
         } label: {
             HStack(spacing: 6) {
+                // Reserves the glyph's width; the overlay below draws it.
+                Color.clear
+                    .frame(width: 11, height: 12)
                 // Dim everything but the bookmark together; dimming only the title
                 // left the code brighter than the name.
                 HStack(spacing: 6) {
@@ -91,14 +94,8 @@ struct EpisodeRow: View {
                         .foregroundStyle(.tertiary)
                 }
                 }
-                // Spacing 0: with the row's spacing the bookmark read as a right margin.
-                HStack(spacing: 0) {
-                    stateIndicator
-                        .frame(width: 14, height: 14, alignment: .center)
-                    // Reserves the glyph's width; the overlay below draws it.
-                    Color.clear
-                        .frame(width: 11, height: 12)
-                }
+                stateIndicator
+                    .frame(width: 14, height: 14, alignment: .center)
             }
             // No horizontal inset, so the row lines up with the section header.
             .padding(.vertical, 4)
@@ -110,9 +107,8 @@ struct EpisodeRow: View {
             onAutomatic: onAutomaticSearch, onManual: onManualSearch))
         // Outside the row Button: a Button nested in a Button's label doesn't
         // reliably win the tap.
-        .overlay(alignment: .trailing) {
-            MonitorRowToggle(isMonitored: isMonitored, entity: .episode,
-                             alignment: .trailing, onToggle: onToggleMonitored)
+        .overlay(alignment: .leading) {
+            MonitorRowToggle(isMonitored: isMonitored, entity: .episode, onToggle: onToggleMonitored)
         }
         .accessibilityValue(
             isMonitored ? Text(verbatim: "")

@@ -1,5 +1,6 @@
 import SwiftUI
 import os
+import MediaKit
 
 extension DetailView {
     // MARK: - Loading
@@ -8,6 +9,13 @@ extension DetailView {
     private static func profileName(id: Int?, config: ServiceConfig, source: QueueItem.Source) async -> String? {
         guard let id else { return nil }
         return await SearchClient.profileNameMap(config: config, source: source)[id]
+    }
+
+    static func tmdbSeasons(tmdbId: Int?, tvdbId: Int?, configStore: ConfigStore) async -> [Int: TMDBDetails.Airing] {
+        guard !configStore.tmdbApiKey.isEmpty else { return [:] }
+        let client = configStore.tmdbClient
+        guard let id = await client.seriesId(tmdbId: tmdbId, tvdbId: tvdbId) else { return [:] }
+        return await Logger.extras.attempt("tmdb seasons") { try await client.tvSeasons(tvId: id) } ?? [:]
     }
 
     /// Two batches (the arr's record, then TMDB's credits and countries), each landing in one animated
@@ -72,8 +80,11 @@ extension DetailView {
                     tmdbId: series.tmdbId, tvdbId: series.tvdbId, configStore: configStore)
                 let seriesCredits = await CastProvider.seriesCredits(
                     tmdbId: series.tmdbId, tvdbId: series.tvdbId, configStore: configStore)
+                async let seasonInfo = Self.tmdbSeasons(tmdbId: series.tmdbId, tvdbId: series.tvdbId, configStore: configStore)
                 let names = await seriesCountries
+                let seasons = await seasonInfo
                 withAnimation(Self.landing) {
+                    tmdbSeasons = seasons
                     cast = seriesCredits.cast
                     directors = seriesCredits.directors
                     countries = names

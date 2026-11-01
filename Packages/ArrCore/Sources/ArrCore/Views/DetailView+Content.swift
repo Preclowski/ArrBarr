@@ -36,6 +36,7 @@ extension DetailView {
                     cast: cast,
                     onTapPerson: openPerson,
                     trailer: trailer,
+                    trailerLoading: trailerLoading,
                     arrWebURLForItem: { q in arrWebURL(for: q, in: configStore) },
                     onPauseItem: { q in Task { await viewModel.pause(q); await viewModel.refresh() } },
                     onResumeItem: { q in Task { await viewModel.resume(q); await viewModel.refresh() } },
@@ -69,6 +70,8 @@ extension DetailView {
                     cast: cast,
                     onTapPerson: openPerson,
                     trailer: trailer,
+                    trailerLoading: trailerLoading,
+                    tmdbSeasons: tmdbSeasons,
                     sonarrDetail: $sonarrDetail,
                     onTapSeason: { season in
                         seasonDrill = SeasonDrill(

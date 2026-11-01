@@ -125,20 +125,27 @@ struct QueueStatusMessagesBanner: View {
     let tint: Color
     /// These messages are usually actionable only in the arr's own UI, hence the CTA.
     let actionURL: URL?
+    /// A tooltip closes on hover-out, so "Show more" can't be reached: it shows more lines up front.
+    let inTooltip: Bool
 
     @State private var expanded = false
     @State private var clampedHeight: CGFloat = 0
     @State private var fullHeight: CGFloat = 0
     private let collapsedLineLimit = 3
+    private let tooltipLineLimit = 8
 
-    init(messages: [String], tint: Color, actionURL: URL? = nil) {
+    init(messages: [String], tint: Color, actionURL: URL? = nil, inTooltip: Bool = false) {
         self.messages = messages
         self.tint = tint
         self.actionURL = actionURL
+        self.inTooltip = inTooltip
     }
 
     /// One block so `lineLimit` clamps the whole warning, not each line.
-    private var text: String { messages.joined(separator: "\n") }
+    private var text: String {
+        let locale = ConfigStore.shared.currentLocale
+        return messages.map { ArrMessageTranslator.translate($0, locale: locale) }.joined(separator: "\n")
+    }
 
     /// Measured from hidden probes, not the visible text, so "Show less" survives
     /// expanding. +0.5 slop for sub-pixel rounding.
@@ -162,12 +169,12 @@ struct QueueStatusMessagesBanner: View {
                 .scaledFont(size: 11)
                 .foregroundStyle(.primary)
                 .lineSpacing(2)
-                .lineLimit(showsFullText ? nil : collapsedLineLimit)
+                .lineLimit(inTooltip ? tooltipLineLimit : showsFullText ? nil : collapsedLineLimit)
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(alignment: .topLeading) { heightProbes }
 
-            if isTruncated && hiddenOverflowIsWorthAButton {
+            if !inTooltip && isTruncated && hiddenOverflowIsWorthAButton {
                 Button {
                     withAnimation(.smooth(duration: 0.18)) { expanded.toggle() }
                 } label: {

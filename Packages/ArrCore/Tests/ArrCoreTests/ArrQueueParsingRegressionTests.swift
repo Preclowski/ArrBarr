@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import MediaKit
 @testable import ArrCore
 
 /// Regressions in the three parsers every queue row is built from
@@ -204,5 +205,26 @@ struct ArrDateParsingTimeZoneTests {
         let east = withTimeZone("Europe/Warsaw") { _ in parseArrDate("2026-03-15T20:00:00") }
         #expect(west != nil)
         #expect(west == east)
+    }
+}
+
+@Suite struct StatusMessageFlatteningTests {
+    private func flatten(_ json: String) throws -> [String] {
+        ArrCompositions.flatten(try JSONDecoder().decode([ArrStatusMessage].self, from: Data(json.utf8)))
+    }
+
+    /// The shape Lidarr sends for a failed import.
+    @Test func aReasonRepeatedPerTrackShowsOnceWithoutTheFileName() throws {
+        let lines = try flatten(#"""
+        [{"title":"Caution: Found executable file","messages":[]},
+         {"title":"101-track.mp3","messages":["Couldn't find similar album for [/downloads/album]"]},
+         {"title":"102-track.mp3","messages":["Couldn't find similar album for [/downloads/album]"]}]
+        """#)
+        #expect(lines == ["Caution: Found executable file", "Couldn't find similar album for [/downloads/album]"])
+    }
+
+    @Test func aReasonOnlyOneFileHasKeepsItsFileName() throws {
+        let lines = try flatten(#"[{"title":"a.mkv","messages":["Not an upgrade"]},{"title":"b.mkv","messages":["Sample"]}]"#)
+        #expect(lines == ["a.mkv: Not an upgrade", "b.mkv: Sample"])
     }
 }

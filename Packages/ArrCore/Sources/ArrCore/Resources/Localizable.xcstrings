@@ -6360,47 +6360,6 @@
         }
       }
     },
-    "Your *arr rejected it — downloading anyway overrides that.": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Your *arr rejected it — downloading anyway overrides that."
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Twój *arr je odrzucił — pobranie mimo to wymusi grab."
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dein *arr hat es abgelehnt — trotzdem laden überschreibt das."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu *arr la rechazó; descargarla de todos modos lo anula."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Votre *arr l'a rejetée — la télécharger passe outre."
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Je *arr weigerde hem — toch downloaden overschrijft dat."
-          }
-        }
-      }
-    },
     "Your library across services.": {
       "extractionState": "manual",
       "localizations": {
@@ -35878,47 +35837,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Details niet geladen"
-          }
-        }
-      }
-    },
-    "toast.grabFailed.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Couldn't grab"
-          }
-        },
-        "pl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nie złapano"
-          }
-        },
-        "de": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Greifen fehlgeschlagen"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo capturar"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Capture impossible"
-          }
-        },
-        "nl": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pakken mislukt"
           }
         }
       }

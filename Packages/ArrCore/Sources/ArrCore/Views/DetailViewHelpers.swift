@@ -113,10 +113,12 @@ struct SearchFeedbackIcon: View {
             Image(systemName: "checkmark")
                 .scaledFont(size: size, weight: .semibold)
                 .foregroundStyle(.secondary)
+                .symbolEffectOnArrival(.bounce)
         case let .failed(reason):
             Image(systemName: "exclamationmark.triangle.fill")
                 .scaledFont(size: size, weight: .semibold)
                 .foregroundStyle(.orange)
+                .symbolEffectOnArrival(.wiggle)
                 .help(Text(verbatim: reason))
                 .accessibilityLabel(Text(verbatim: reason))
         }

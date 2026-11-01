@@ -235,7 +235,7 @@ struct EpisodeDetailOverlay: View {
         .inlineConfirm(
             isPresented: $ctaPendingDelete,
             title: "Remove this download?",
-            message: LocalizedStringKey("This will remove the download from the client."),
+            message: Text("This will remove the download from the client.", bundle: .module),
             confirmLabel: "Remove",
             isDestructive: true,
             onConfirm: {
