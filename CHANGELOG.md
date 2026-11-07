@@ -9,6 +9,28 @@ Releases before 0.10.0 are described on the
 
 ## [Unreleased]
 
+## [3.5.0] — 2026-11-07
+
+### Added
+
+- Add defaults per arr in Settings: quality profile, metadata profile, root folder, monitoring and series type.
+- A film with several downloads is one queue row; its actions reach every download.
+- Shift-click selects a range of queue rows.
+- Live downloads show a glint running through the bar.
+- Episode search from the context menu shows a spinner, then a toast.
+
+### Changed
+
+- Pause wins in a mixed group; a second click resumes everything.
+- An added title stays in search results, marked as in the library; a tap opens it.
+
+### Fixed
+
+- A title removed in the arr no longer shows as in the library in search and Library.
+- A Lidarr album no longer hides an artist with the same id in search.
+- A repeated notification no longer stacks after a relaunch.
+- A download starting no longer shifts the queue list.
+
 ## [3.4.0] — 2026-11-01
 
 ### Added
