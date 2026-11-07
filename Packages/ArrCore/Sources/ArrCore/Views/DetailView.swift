@@ -216,7 +216,7 @@ struct DetailView: View {
     }
 
     func seasonSearchTitle(_ seasonNumber: Int) -> String {
-        let season = String(format: String(localized: "detail.seasonLld.label", bundle: .module), seasonNumber)
+        let season = EpisodeCode.seasonName(seasonNumber)
         return "\(sonarrDetail?.title ?? splitTitleAndYear(item.title).title) · \(season)"
     }
 

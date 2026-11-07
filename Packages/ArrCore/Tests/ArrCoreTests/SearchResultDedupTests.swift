@@ -5,14 +5,15 @@ import Foundation
 @Suite("SearchResultDedup")
 struct SearchResultDedupTests {
     private func result(id: Int, foreignId: String = "foreign", title: String = "title",
-                        source: QueueItem.Source = .radarr, inLibraryArrId: Int?) -> SearchResult {
+                        source: QueueItem.Source = .radarr, inLibraryArrId: Int?, isLidarrAlbum: Bool = false) -> SearchResult {
         SearchResult(
             externalId: id, foreignId: foreignId, title: title, subtitle: nil,
             year: nil, rating: nil, imdb: nil, rottenTomatoes: nil,
             metacritic: nil, overview: nil, runtime: nil,
             genres: [], network: nil, certification: nil,
             posterURL: nil, source: source,
-            inLibraryArrId: inLibraryArrId
+            inLibraryArrId: inLibraryArrId,
+            isLidarrAlbum: isLidarrAlbum
         )
     }
 
@@ -43,6 +44,29 @@ struct SearchResultDedupTests {
             ratingImdb: nil, ratingTmdb: nil, ratingArr: nil,
             releaseStatus: nil, searchIndex: TitleMatch.searchIndex(["t"])
         )
+    }
+
+    // MARK: - Lidarr's two numberings
+
+    @Test("An album is not hidden by the library artist with the same number")
+    func albumKeepsAgainstArtist() {
+        let album = result(id: 1, source: .lidarr, inLibraryArrId: 12, isLidarrAlbum: true)
+        let hits: [LocalHit] = [.library(libraryEntry(arrId: 12, source: .lidarr))]
+        #expect(SearchResultDedup.removingLocalDuplicates(results: [album], localHits: hits).count == 1)
+    }
+
+    @Test("An artist is not hidden by the queued album with the same number")
+    func artistKeepsAgainstQueuedAlbum() {
+        let artist = result(id: 1, source: .lidarr, inLibraryArrId: 12)
+        let hits: [LocalHit] = [.queue(.single(queueItem(entityId: 12, source: .lidarr)))]
+        #expect(SearchResultDedup.removingLocalDuplicates(results: [artist], localHits: hits).count == 1)
+    }
+
+    @Test("A queued album still replaces its own lookup row")
+    func queuedAlbumReplacesItsRow() {
+        let album = result(id: 1, source: .lidarr, inLibraryArrId: 12, isLidarrAlbum: true)
+        let hits: [LocalHit] = [.queue(.single(queueItem(entityId: 12, source: .lidarr)))]
+        #expect(SearchResultDedup.removingLocalDuplicates(results: [album], localHits: hits).isEmpty)
     }
 
     // MARK: - Queue hits

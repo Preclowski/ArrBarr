@@ -2,6 +2,13 @@ import os
 import Foundation
 import MediaKit
 
+/// What an arr lets a new title be added with.
+nonisolated struct ArrAddChoices: Sendable {
+    var qualityProfiles: [ArrQualityProfile] = []
+    var metadataProfiles: [ArrMetadataProfile] = []
+    var rootFolders: [String] = []
+}
+
 /// Lookups and adds for one arr, through MediaKit; results keep ArrCore's `SearchResult` shape.
 public actor SearchClient {
     private let config: ServiceConfig
@@ -79,6 +86,13 @@ public actor SearchClient {
     func fetchMetadataProfiles() async throws -> [ArrMetadataProfile] { try await client.read { $0.metadataProfiles() } }
     /// The arr's root folder paths; the pickers need nothing else.
     func fetchRootFolders() async throws -> [String] { try await client.read { $0.rootFolders() }.compactMap(\.path) }
+
+    func fetchAddChoices() async throws -> ArrAddChoices {
+        async let profiles = fetchQualityProfiles()
+        async let folders = fetchRootFolders()
+        async let metadata = source == .lidarr ? fetchMetadataProfiles() : []
+        return try await ArrAddChoices(qualityProfiles: profiles, metadataProfiles: metadata, rootFolders: folders)
+    }
 
     private func ensureRefCompatible(_ result: SearchResult) throws {
         let ref = result.mediaRef

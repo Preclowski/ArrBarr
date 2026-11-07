@@ -213,7 +213,7 @@ extension LocalToolBackend {
         let seasons = rec.seasons?.filter { $0.seasonNumber > 0 } ?? []
         guard !seasons.isEmpty else { return "" }
         if let target = filter {
-            guard let s = seasons.first(where: { $0.seasonNumber == target }) else {
+            guard let s = rec.seasons?.first(where: { $0.seasonNumber == target }) else {
                 return " · S\(target): not found in record"
             }
             return " · " + Self.formatSeasonLine(s)

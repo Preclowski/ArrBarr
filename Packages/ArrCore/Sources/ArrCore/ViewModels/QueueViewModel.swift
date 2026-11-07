@@ -156,7 +156,7 @@ public final class QueueViewModel {
         self.configStore = configStore
         self.notificationDefaults = notificationDefaults
         self.aggregator = aggregator
-        self.coalescer = NotificationCoalescer(configStore: configStore)
+        self.coalescer = NotificationCoalescer(configStore: configStore, deliver: { _, _ in }, deliverHealth: { _, _ in })
         self.toasts = ToastCenter()
         commonSetup(autostart: autostart)
     }

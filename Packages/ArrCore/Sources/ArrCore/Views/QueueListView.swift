@@ -160,11 +160,12 @@ struct QueueListView: View {
     }
 
     func displayRows(for source: QueueItem.Source) -> [QueueDisplayRow] {
-        let base = entries(for: source)
-        guard queueUI.groupsQueueItems else {
-            return base.map { .entry($0) }
-        }
-        return QueueGrouping.groupByTitle(base)
+        QueueGrouping.displayRows(entries(for: source), source: source, grouping: queueUI.groupsQueueItems)
+    }
+
+    /// The group as it stands now: an open alert outlives the render that asked, and downloads finish or join meanwhile.
+    func currentGroup(_ group: QueueTitleGroup) -> QueueTitleGroup {
+        QueueGrouping.currentGroup(id: group.id, in: entries(for: group.representative.source))
     }
 
     func isGroupExpanded(_ group: QueueTitleGroup) -> Bool {

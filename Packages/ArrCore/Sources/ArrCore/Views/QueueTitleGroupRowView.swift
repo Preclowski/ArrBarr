@@ -1,14 +1,26 @@
 import SwiftUI
 
+extension QueueTitleGroup {
+    /// The verb the group's pause/resume control carries out, and on how many downloads.
+    var pauseResumeTitle: Text {
+        pauseResumeAction == .pause
+            ? Text("Pause all (\(pauseTargets.count))", bundle: .module)
+            : Text("Resume all (\(resumeTargets.count))", bundle: .module)
+    }
+}
+
 /// Collapsible container for many independent downloads of one title; children keep their own controls.
-/// Row tap toggles; the poster opens DetailView.
+/// Row tap toggles; the title opens DetailView. A film's row doesn't expand: any tap opens its detail.
 struct QueueTitleGroupRowView: View {
     let group: QueueTitleGroup
     let isExpanded: Bool
     let onToggle: () -> Void
     var onShowDetail: (() -> Void)? = nil
-    let onPauseAll: () -> Void
-    let onResumeAll: () -> Void
+    var selectionState: RowSelectionState = .hidden
+    /// A group that can't be picked stays `.hidden` while the list is selecting, so this says so itself.
+    var isSelecting = false
+    let onPauseAll: @MainActor () -> Void
+    let onResumeAll: @MainActor () -> Void
     let onDeleteAll: @MainActor () -> Void
 
     @Environment(ConfigStore.self) var configStore
@@ -19,8 +31,6 @@ struct QueueTitleGroupRowView: View {
 
     private var rep: QueueItem { group.representative }
 
-    private var canControl: Bool { configStore.canControlDownload(rep) }
-
     private var downloadCountText: String {
         String.localizedStringWithFormat(
             NSLocalizedString("queue.titleGroup.downloadsCount", bundle: .module, comment: ""),
@@ -30,6 +40,17 @@ struct QueueTitleGroupRowView: View {
 
     private func requestDeleteAllConfirm() {
         ConfirmCenter.request(.removeAllDownloads(count: group.downloadCount, locale: configStore.currentLocale, onConfirm: onDeleteAll))
+    }
+
+    /// The downloads may sit on different clients, and the app may reach only some of them.
+    private var controlGroup: QueueTitleGroup { group.controllable { configStore.canControlDownload($0) } }
+
+    private var canPauseResume: Bool { !isOffline && controlGroup.pauseResumeAction != nil }
+
+    private func requestPauseResumeConfirm(_ action: QueueTitleGroup.PauseResumeAction? = nil) {
+        guard let confirm = PendingConfirm.pauseResumeAll(controlGroup, action: action, locale: configStore.currentLocale,
+                                                          onPause: onPauseAll, onResume: onResumeAll) else { return }
+        ConfirmCenter.request(confirm)
     }
 
     var body: some View {
@@ -53,6 +74,21 @@ struct QueueTitleGroupRowView: View {
                     .posterMarks(watched: rep.watched, library: LibraryMark(downloaded: group.allItems.allSatisfy(\.isUpgrade)),
                                  cornerRadius: Tokens.Radius.chip, ribbonWidth: 7)
                     .overlay(alignment: .bottomTrailing) { countBadge }
+                    .modifier(PosterLeavingMark())
+                    #if os(macOS)
+                    .overlay {
+                        // A film's downloads are alternatives, not parts: one click starting them all makes no sense.
+                        if !isSelecting && isHovering && canPauseResume && group.isExpandable {
+                            posterControl.transition(.opacity)
+                        }
+                    }
+                    #endif
+                    .overlay {
+                        if selectionState != .hidden {
+                            SelectionCircle(selected: selectionState == .selected)
+                                .transition(.opacity)
+                        }
+                    }
             }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -68,8 +104,8 @@ struct QueueTitleGroupRowView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture { onShowDetail?() }
-                    // Lights only on the title itself, since the row-wide gesture here is the toggle.
-                    .environment(\.linkRowHovering, titleHovering)
+                    // Lights only on the title itself where the row-wide gesture is the toggle.
+                    .environment(\.linkRowHovering, group.isExpandable ? titleHovering : isHovering)
                     #if os(macOS)
                     .onHover { hovering in
                         withAnimation(.easeInOut(duration: 0.15)) { titleHovering = hovering }
@@ -104,34 +140,43 @@ struct QueueTitleGroupRowView: View {
                 }
 
                 LiveProgress(group: group) { progress in
-                    ThinProgressBar(progress: progress, tint: aggregateTint, height: 6,
+                    ThinProgressBar(progress: progress, tint: group.aggregateStatus.tint, height: 6,
                                     flowing: group.allItems.contains { $0.status == .downloading })
                 }
             }
 
-            Image(systemName: "chevron.down")
-                .scaledFont(size: 12, weight: .semibold)
-                .foregroundStyle(isHovering && !titleHovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
-                .rotationEffect(.degrees(isExpanded ? 180 : 0))
-                .accessibilityHidden(true)
+            if group.isExpandable {
+                Image(systemName: "chevron.down")
+                    .scaledFont(size: 12, weight: .semibold)
+                    .foregroundStyle(isHovering && !titleHovering ? AnyShapeStyle(.primary) : AnyShapeStyle(.secondary))
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                    .accessibilityHidden(true)
+            }
         }
         .padding(.horizontal, Tokens.Spacing.queueRowH)
         .padding(.vertical, 6)
         .contentShape(Rectangle())
-        .onTapGesture(perform: onToggle)
+        .onTapGesture {
+            if group.isExpandable { onToggle() } else { onShowDetail?() }
+        }
         #if os(macOS)
-        .onHover { hovering in
-            withAnimation(.easeInOut(duration: 0.15)) { isHovering = hovering }
+        // A film's downloads aren't listed here, so the tooltip speaks for the one with a problem.
+        .hoverTooltip(enabled: !group.isExpandable, hovering: $isHovering.animation(.easeInOut(duration: 0.15))) {
+            let item = group.downloads.first { !$0.statusMessages.isEmpty } ?? rep
+            QueueItemTooltip(item: item, apiKey: item.posterRequiresAuth ? configStore.config(for: item.source).apiKey : nil)
         }
         #endif
         .contextMenu {
             if !isOffline {
-                if canControl {
-                    Button(action: onPauseAll) {
-                        Label { Text("Pause all (\(group.downloadCount))", bundle: .module) } icon: { Image(systemName: "pause.fill") }
+                let control = controlGroup
+                if !control.pauseTargets.isEmpty {
+                    Button { requestPauseResumeConfirm(.pause) } label: {
+                        Label { Text("Pause all (\(control.pauseTargets.count))", bundle: .module) } icon: { Image(systemName: "pause.fill") }
                     }
-                    Button(action: onResumeAll) {
-                        Label { Text("Resume all (\(group.downloadCount))", bundle: .module) } icon: { Image(systemName: "play.fill") }
+                }
+                if !control.resumeTargets.isEmpty {
+                    Button { requestPauseResumeConfirm(.resume) } label: {
+                        Label { Text("Resume all (\(control.resumeTargets.count))", bundle: .module) } icon: { Image(systemName: "play.fill") }
                     }
                 }
             }
@@ -154,15 +199,40 @@ struct QueueTitleGroupRowView: View {
         // The badge is a bare number, so VoiceOver gets the whole phrase here.
         .accessibilityValue(Text(verbatim: "\(downloadCountText), \(group.aggregateProgress.formatted(.percent.precision(.fractionLength(0))))"))
         .accessibilityAddTraits(.isButton)
-        .accessibilityHint(Text(isExpanded ? "Collapse section" : "Expand section", bundle: .module))
+        .accessibilityAddTraits(selectionState == .selected ? .isSelected : [])
+        .accessibilityHint(group.isExpandable
+                           ? Text(isExpanded ? "Collapse section" : "Expand section", bundle: .module)
+                           : Text("Show download details", bundle: .module))
+        // The hover and swipe controls are out of VoiceOver's reach.
+        .accessibilityActions {
+            if canPauseResume {
+                Button { requestPauseResumeConfirm() } label: { controlGroup.pauseResumeTitle }
+            }
+        }
     }
 
-    private var aggregateTint: Color {
-        let items = group.allItems
-        if items.contains(where: { $0.status == .downloading }) { return QueueItem.Status.downloading.tint }
-        if items.allSatisfy({ $0.status == .paused }) { return QueueItem.Status.paused.tint }
-        return rep.status.tint
+    #if os(macOS)
+    /// A single row's control, except that one click reaches every download, so it asks first.
+    private var posterControl: some View {
+        Button { requestPauseResumeConfirm() } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: Tokens.Radius.chip)
+                    .fill(.black.opacity(0.5))
+                LiveProgress(group: group) { progress in
+                    DownloadProgressRing(
+                        systemName: controlGroup.pauseResumeAction?.symbol ?? "pause.fill",
+                        progress: progress,
+                        diameter: 26,
+                        lineWidth: 2
+                    )
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(controlGroup.pauseResumeTitle)
+        .accessibilityLabel(controlGroup.pauseResumeTitle)
     }
+    #endif
 
     private var poster: some View {
         PosterBlurContainer(blurred: configStore.shouldBlurPoster(for: rep.source), cornerRadius: Tokens.Radius.chip) {
@@ -209,6 +279,6 @@ struct QueueTitleGroupRowView: View {
     /// Series groups are keyed per season, so the representative's season is the group's.
     private var seasonText: String? {
         guard rep.source == .sonarr, let season = rep.seasonNumber else { return nil }
-        return String(format: String(localized: "queue.season02lld.button", bundle: .module), season)
+        return EpisodeCode.paddedSeasonName(season)
     }
 }

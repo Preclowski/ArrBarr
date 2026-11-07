@@ -129,6 +129,32 @@ struct NotificationCoalescerTests {
         )
     }
 
+    // MARK: - Seams
+
+    @Test("A health issue goes through its seam")
+    func healthIssueUsesItsSeam() {
+        var delivered: [(QueueItem.Source, String)] = []
+        let sut = NotificationCoalescer(
+            configStore: Self.makeConfigStore(),
+            scheduler: VirtualClock(),
+            deliver: { _, _ in },
+            deliverHealth: { delivered.append(($0, $1)) }
+        )
+
+        sut.postHealthIssue(source: .radarr, message: "Disk full")
+
+        #expect(delivered.count == 1)
+        #expect(delivered.first?.0 == .radarr)
+        #expect(delivered.first?.1 == "Disk full")
+        #expect(!sut.postsToSystem)
+    }
+
+    /// Spelled out because `hashValue` would pass any same-process comparison and still change on relaunch.
+    @Test("A health issue's identifier comes from its text")
+    func healthIdentifierIsStable() {
+        #expect(NotificationCoalescer.healthIdentifier(source: .radarr, message: "Disk full") == "arrbarr.health.radarr.Disk full")
+    }
+
     // MARK: - Series (held + grouped)
 
     @Test("A lone series grab is held, then delivered once")

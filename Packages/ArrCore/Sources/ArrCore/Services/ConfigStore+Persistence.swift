@@ -31,6 +31,8 @@ extension ConfigStore {
         static let mcpHostPort = "ArrBarr.mcpHostPort"
         static let mcpRequireAuth = "ArrBarr.mcpRequireAuth"
         static let mcpDisabledTools = "ArrBarr.mcpDisabledTools"
+        /// One per arr: iCloud keeps the last write per key, and a bad value then costs only that arr.
+        static func addDefaults(_ source: QueueItem.Source) -> String { "ArrBarr.addDefaults.\(source.rawValue)" }
     }
 
     /// Sentinel value stored in `notificationSoundName` to mean "play no sound".
@@ -106,6 +108,9 @@ extension ConfigStore {
         self.prowlarr.apiKey = secrets.read(.prowlarrKey) ?? self.prowlarr.apiKey
         // Prowlarr configs saved before it had an Enabled switch persisted as `enabled: false`.
         if !self.prowlarr.enabled, !self.prowlarr.baseURL.isEmpty { self.prowlarr.enabled = true }
+        self.addDefaults = QueueItem.Source.allCases.reduce(into: [:]) { stored, source in
+            stored[source] = decoded(ArrAddDefaults.self, forKey: Keys.addDefaults(source))
+        }
         self.mcpEnabled = value(Keys.mcpEnabled, false)
         self.mcpHostPort = value(Keys.mcpHostPort, "127.0.0.1:8080")
         self.mcpRequireAuth = value(Keys.mcpRequireAuth, true)

@@ -103,6 +103,7 @@ extension SettingsView {
                 Section {
                     serviceFields(spec)
                 } header: { serviceSectionHeader(spec.kind, LocalizedStringKey(spec.title)) }
+                addDefaultsSection(spec)
             }
             .formStyle(.grouped)
             .disabled(isDownloadClient && !storeManager.isPro)

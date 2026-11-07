@@ -6,7 +6,7 @@ import SwiftUI
 struct CTAButtonStyle: ButtonStyle {
     var tint: Color? = nil
     var fill: Double = 1
-    /// Waves run through the fill: the download behind it is live.
+    /// A glint runs through the fill: the download behind it is live.
     var flowing: Bool = false
     var fullWidth: Bool = true
     var glass: Bool = false
@@ -45,7 +45,9 @@ struct CTAButtonStyle: ButtonStyle {
                 .padding(.horizontal, 14)
                 .background {
                     if !style.glass { Capsule().fill(.quaternary) }
-                    if let tint = style.tint { ProgressFill(progress: style.fill, tint: tint, flowing: style.flowing) }
+                    if let tint = style.tint {
+                        ProgressFill(progress: style.fill, tint: tint, flowing: style.flowing, shaded: style.glass)
+                    }
                 }
                 .clipShape(.capsule)
                 .contentShape(.capsule)
@@ -59,18 +61,38 @@ private struct ProgressFill: View {
     let progress: Double
     let tint: Color
     let flowing: Bool
+    /// The fill lies on top of the glass, so a flat colour hides it: shaded, it reads as the glass's own volume.
+    let shaded: Bool
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let edge: CGFloat = 28
+
+    @ViewBuilder
+    private var colour: some View {
+        if shaded {
+            ZStack {
+                LinearGradient(colors: [tint.opacity(0.62), tint.opacity(0.36)], startPoint: .top, endPoint: .bottom)
+                LinearGradient(stops: [.init(color: .white.opacity(0.24), location: 0),
+                                       .init(color: .white.opacity(0.08), location: 0.3),
+                                       .init(color: .clear, location: 0.65)],
+                               startPoint: .top, endPoint: .bottom)
+                LinearGradient(stops: [.init(color: .clear, location: 0.6),
+                                       .init(color: .white.opacity(0.12), location: 1)],
+                               startPoint: .top, endPoint: .bottom)
+            }
+        } else {
+            tint.opacity(0.35)
+        }
+    }
 
     var body: some View {
         GeometryReader { geo in
             let span = geo.size.width + Self.edge
             // One fixed-width layer that slides: an offset animates smoothly where a resized gradient would jump.
-            tint.opacity(0.35)
+            colour
                 .overlay {
                     if flowing && !reduceMotion {
-                        FlowWaves().transition(.opacity)
+                        FlowGlint().transition(.opacity)
                     }
                 }
                 .frame(width: span)
@@ -88,27 +110,38 @@ private struct ProgressFill: View {
     }
 }
 
-/// Lighter bands drifting left to right, so a slow download still reads as moving.
-private struct FlowWaves: View {
-    private static let wavelength: CGFloat = 90
-    private static let speed: Double = 50
+/// A slanted glint travelling over the glass, so a slow download still reads as moving.
+private struct FlowGlint: View {
+    private static let spacing: CGFloat = 260
+    private static let width: CGFloat = 90
+    private static let speed: Double = 70
+    private static let slant: CGFloat = -0.5
+
+    @State private var running = false
 
     var body: some View {
         GeometryReader { geo in
-            let count = Int(geo.size.width / Self.wavelength) + 2
-            TimelineView(.animation) { context in
-                let shift = (context.date.timeIntervalSinceReferenceDate * Self.speed)
-                    .truncatingRemainder(dividingBy: Double(Self.wavelength))
-                HStack(spacing: 0) {
-                    ForEach(0..<count, id: \.self) { _ in
-                        LinearGradient(colors: [.white.opacity(0), .white.opacity(0.22), .white.opacity(0)],
-                                       startPoint: .leading, endPoint: .trailing)
-                            .frame(width: Self.wavelength)
-                    }
+            let count = Int(geo.size.width / Self.spacing) + 3
+            HStack(spacing: 0) {
+                ForEach(0..<count, id: \.self) { _ in
+                    LinearGradient(colors: [.white.opacity(0), .white.opacity(0.26), .white.opacity(0)],
+                                   startPoint: .leading, endPoint: .trailing)
+                        .frame(width: Self.width)
+                        .frame(width: Self.spacing, alignment: .leading)
                 }
-                .offset(x: CGFloat(shift) - Self.wavelength)
             }
+            .transformEffect(CGAffineTransform(a: 1, b: 0, c: Self.slant, d: 1,
+                                               tx: -Self.slant * geo.size.height / 2, ty: 0))
+            .offset(x: running ? 0 : -Self.spacing)
         }
         .clipped()
+        // Explicit: the scoped `.animation(_:body:)` left the offset still.
+        .onAppear {
+            withAnimation(.linear(duration: Self.spacing / Self.speed).repeatForever(autoreverses: false)) {
+                running = true
+            }
+        }
+        // A panel that closes stops the animation; flipping it back restarts on reopen.
+        .onDisappear { running = false }
     }
 }

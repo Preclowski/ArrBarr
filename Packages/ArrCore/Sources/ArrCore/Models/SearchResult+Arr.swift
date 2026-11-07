@@ -50,6 +50,7 @@ nonisolated extension SearchResult {
             year: year, rating: r.ratings?.value, votes: r.ratings?.votes, imdb: nil, rottenTomatoes: nil, metacritic: nil, overview: r.overview,
             runtime: nil, genres: r.genres ?? [], network: nil, certification: nil, posterURL: r.coverURL(baseURL: baseURL).0,
             source: .lidarr, inLibraryArrId: (r.id ?? 0) != 0 ? r.id : nil, sourceRank: sourceRank, isLidarrAlbum: true)
+        lidarrArtistId = r.artistId
     }
 
     init?(artist r: ArrArtist, baseURL: String, sourceRank: Int = 0) {

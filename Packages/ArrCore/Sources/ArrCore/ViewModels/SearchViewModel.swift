@@ -5,6 +5,18 @@ import MediaKit
 
 @Observable
 final class SearchViewModel {
+    @ObservationIgnored private var removeObserver: NotificationCenter.ObservationToken?
+
+    init() {
+        removeObserver = NotificationCenter.default.addObserver(of: nil as AppMessageBus?, for: AppMessages.DidRemoveFromLibrary.self) { [weak self] message in
+            await self?.markRemoved(source: message.source, arrId: message.arrId, isLidarrAlbum: message.isLidarrAlbum)
+        }
+    }
+
+    isolated deinit {
+        if let removeObserver { NotificationCenter.default.removeObserver(removeObserver) }
+    }
+
     /// Every search field on every surface binds straight to this; `didSet` is the trigger.
     var query = "" {
         didSet {
@@ -49,7 +61,7 @@ final class SearchViewModel {
 
     struct StarringSection: Identifiable, Equatable {
         let person: TMDBPerson
-        let titles: [SearchResult]
+        var titles: [SearchResult]
         /// A full-name query: the person is the answer, so the section renders above
         /// the titles, and `titles` may be empty.
         var isPrimary: Bool = false
@@ -218,6 +230,22 @@ final class SearchViewModel {
         peopleResults = pRes.rows
         starring = pRes.starring
         isSearching = false
+        resyncLoadedLibraries(scope: effective)
+    }
+
+    /// The lookup just read each arr's library for ownership; when that moved the index (a title removed in the
+    /// arr's own UI), the local hits must follow, or they keep it as owned beside the lookup's unowned row.
+    /// Only libraries already loaded: a search must not pull a whole library in.
+    private func resyncLoadedLibraries(scope: SearchScope) {
+        guard let library else { return }
+        let loaded = QueueItem.Source.allCases.compactMap { source -> (QueueItem.Source, ServiceConfig)? in
+            guard scope.allows(source), library.entries[source] != nil, let config = configs[source] else { return nil }
+            return (source, config)
+        }
+        guard !loaded.isEmpty else { return }
+        Task {
+            for (source, config) in loaded { await library.loadIfNeeded(source: source, config: config) }
+        }
     }
 
     /// Synchronous and cheap, so it runs per keystroke. `nil` when an in-scope
@@ -343,10 +371,10 @@ final class SearchViewModel {
         isLoadingOptions = true
         defer { isLoadingOptions = false }
         do {
-            async let profiles = client.fetchQualityProfiles()
-            async let folders = client.fetchRootFolders()
-            async let metadata = source == .lidarr ? client.fetchMetadataProfiles() : []
-            (qualityProfiles, rootFolders, metadataProfiles) = try await (profiles, folders, metadata)
+            let choices = try await client.fetchAddChoices()
+            qualityProfiles = choices.qualityProfiles
+            metadataProfiles = choices.metadataProfiles
+            rootFolders = choices.rootFolders
         } catch {
             // Empty pickers would read as "this arr has no profiles"; the reason is what the user can act on.
             addError = error.localizedDescription
@@ -363,7 +391,7 @@ final class SearchViewModel {
             let arrId = try await client.addScene(result, qualityProfileId: qualityProfileId,
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
                                                   searchOnAdd: searchOnAdd)
-            whisparrResults.removeAll { $0.id == result.id }
+            markAdded(result, arrId: arrId)
             if searchOnAdd, let arrId { watchAddSearch(result, source: .whisparr, arrId: arrId) }
             navigateToAdded(result, source: .whisparr, arrId: arrId)
         } catch {
@@ -381,7 +409,7 @@ final class SearchViewModel {
             let arrId = try await client.addMovie(result, qualityProfileId: qualityProfileId,
                                                  rootFolderPath: rootFolderPath, monitor: monitor,
                                                  searchOnAdd: searchOnAdd)
-            radarrResults.removeAll { $0.id == result.id }
+            markAdded(result, arrId: arrId)
             if searchOnAdd, let arrId { watchAddSearch(result, source: .radarr, arrId: arrId) }
             navigateToAdded(result, source: .radarr, arrId: arrId)
         } catch {
@@ -409,7 +437,7 @@ final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath, monitor: monitor,
                                                   seriesType: seriesType, seasonFolder: seasonFolder,
                                                   searchOnAdd: searchOnAdd)
-            sonarrResults.removeAll { $0.id == result.id }
+            markAdded(result, arrId: arrId)
             if searchOnAdd, let arrId { watchAddSearch(result, source: .sonarr, arrId: arrId) }
             navigateToAdded(result, source: .sonarr, arrId: arrId)
         } catch {
@@ -430,7 +458,7 @@ final class SearchViewModel {
                                                   rootFolderPath: rootFolderPath,
                                                   monitor: monitor.rawValue,
                                                   searchOnAdd: searchOnAdd)
-            lidarrResults.removeAll { $0.id == result.id }
+            markAdded(result, arrId: arrId)
             navigateToAdded(result, source: .lidarr, arrId: arrId)
         } catch {
             addError = error.localizedDescription
@@ -448,13 +476,60 @@ final class SearchViewModel {
                                                   metadataProfileId: metadataProfileId,
                                                   rootFolderPath: rootFolderPath,
                                                   searchOnAdd: searchOnAdd)
-            lidarrResults.removeAll { $0.id == result.id }
+            markAdded(result, arrId: arrId)
             guard let arrId else { return }
             if searchOnAdd { watchAddSearch(result, source: .lidarr, arrId: arrId, isLidarrAlbum: true) }
             DetailRequest.open(source: .lidarr, arrId: arrId, title: result.title,
                                posterURL: result.posterURL, isLidarrAlbum: true)
         } catch {
             addError = error.localizedDescription
+        }
+    }
+
+    /// The row stays in the results, owned: a tap now opens the title instead of offering the add again.
+    /// Without an id (demo mode, unparseable response) there is nothing to open, so the row is left as it was.
+    func markAdded(_ result: SearchResult, arrId: Int?) {
+        guard let arrId else { return }
+        // By TMDB id too: a TMDB-sourced series row changes `id` once its tvdbId is resolved.
+        func mark(_ rows: inout [SearchResult]) {
+            for row in rows.indices where rows[row].id == result.id
+                || (rows[row].tmdbTVId != nil && rows[row].tmdbTVId == result.tmdbTVId) {
+                rows[row] = rows[row].withLibraryOwnership(LibraryOwnership(arrId: arrId, isDownloaded: false))
+            }
+        }
+        switch result.source {
+        case .radarr: mark(&radarrResults)
+        case .sonarr: mark(&sonarrResults)
+        case .lidarr: mark(&lidarrResults)
+        case .whisparr: mark(&whisparrResults)
+        }
+        if var section = starring {
+            mark(&section.titles)
+            starring = section
+        }
+    }
+
+    /// The mirror of `markAdded`: the row stays, offering the add again. An artist takes its albums with it.
+    func markRemoved(source: QueueItem.Source, arrId: Int, isLidarrAlbum: Bool = false) {
+        func gone(_ row: SearchResult) -> Bool {
+            guard row.source == source, row.inLibraryArrId != nil else { return false }
+            if isLidarrAlbum { return row.isLidarrAlbum && row.inLibraryArrId == arrId }
+            return row.isLidarrAlbum ? row.lidarrArtistId == arrId : row.inLibraryArrId == arrId
+        }
+        func unmark(_ rows: inout [SearchResult]) {
+            for row in rows.indices where gone(rows[row]) {
+                rows[row] = rows[row].withLibraryOwnership(nil)
+            }
+        }
+        switch source {
+        case .radarr: unmark(&radarrResults)
+        case .sonarr: unmark(&sonarrResults)
+        case .lidarr: unmark(&lidarrResults)
+        case .whisparr: unmark(&whisparrResults)
+        }
+        if var section = starring {
+            unmark(&section.titles)
+            starring = section
         }
     }
 

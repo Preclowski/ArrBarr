@@ -33,26 +33,16 @@ struct SearchAddPanel: View {
     @State private var addFormHeight: CGFloat = 320
     #endif
 
-    // Radarr state
-    @State private var selectedProfileId: Int?
-    @State private var selectedRootFolder: String?
-    @State private var radarrMonitor: RadarrMonitorMode = .movieOnly
-
-    // Sonarr state
-    @State private var sonarrMonitor: SonarrMonitorMode = .all
-    @State private var seriesType: SonarrSeriesType = .standard
+    /// Starts from the arr's defaults in Settings.
+    @State private var selection = ArrAddDefaults()
+    @State private var appliedDefaults = false
     /// Always on, like Sonarr's own default; kept to preserve the API call shape.
     private let seasonFolder = true
 
-    // Lidarr state
-    @State private var selectedMetadataProfileId: Int?
-
-    // Whisparr state
-    @State private var whisparrMonitor: RadarrMonitorMode = .movieOnly
-    @State private var lidarrMonitor: LidarrMonitorMode = .all
     @State private var enlargedPoster: URL?
 
     @Environment(ConfigStore.self) private var configStore
+    @Environment(\.locale) private var locale
     /// Movies/series only; stays empty without a TMDB key.
     @State private var cast: [CastMember] = []
     @State private var directors: [CastMember] = []
@@ -144,14 +134,10 @@ struct SearchAddPanel: View {
                     .padding(.horizontal, 14)
                     .padding(.bottom, 4)
             } else {
-                if result.source == .radarr {
-                    radarrForm
-                } else if result.source == .sonarr {
-                    sonarrForm
-                } else if result.source == .whisparr {
-                    whisparrForm
-                } else {
-                    lidarrForm
+                switch result.source {
+                case .radarr, .whisparr: movieForm
+                case .sonarr: sonarrForm
+                case .lidarr: lidarrForm
                 }
             }
             if let err = viewModel.addError {
@@ -205,17 +191,23 @@ struct SearchAddPanel: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .task {
+            // Once: returning from a person page restarts this task, which must not undo the user's picks.
+            if !appliedDefaults {
+                selection = configStore.addDefaults(for: result.source)
+                appliedDefaults = true
+            }
             // Parallel with loadOptions — they hit different endpoints.
             async let enrich: Void = { @MainActor in
                 if needsEnrichment, let enriched = await viewModel.enrich(result) {
                     result = enriched
                 }
             }()
-            async let options: Void = viewModel.loadOptions(source: result.source)
-            _ = await (enrich, options)
-            selectedProfileId = viewModel.qualityProfiles.first?.id
-            selectedRootFolder = viewModel.rootFolders.first
-            selectedMetadataProfileId = viewModel.metadataProfiles.first?.id
+            await viewModel.loadOptions(source: result.source)
+            // Right away, not after a slow enrich: the form opens as soon as the options land.
+            selection.qualityProfileId = ArrAddDefaults.pick(selection.qualityProfileId, among: viewModel.qualityProfiles.map(\.id))
+            selection.rootFolder = ArrAddDefaults.pick(selection.rootFolder, among: viewModel.rootFolders)
+            selection.metadataProfileId = ArrAddDefaults.pick(selection.metadataProfileId, among: viewModel.metadataProfiles.map(\.id))
+            await enrich
         }
         .task(id: identityKey) {
             // `addError` lives on the shared SearchViewModel; clear it or the last failure shows
@@ -410,39 +402,47 @@ struct SearchAddPanel: View {
         }
     }
 
-    // MARK: - Lidarr form
+    // MARK: - Forms
+
+    private var qualityProfilePicker: some View {
+        formPicker("search.qualityProfile.button",
+                   selection: Binding(
+                       get: { selection.qualityProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
+                       set: { selection.qualityProfileId = $0 }
+                   ),
+                   options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
+    }
+
+    private var rootFolderPicker: some View {
+        formPicker("search.rootFolder.button",
+                   selection: Binding(
+                       get: { selection.rootFolder ?? viewModel.rootFolders.first ?? "" },
+                       set: { selection.rootFolder = $0 }
+                   ),
+                   options: viewModel.rootFolders.map { ($0, $0) })
+    }
 
     private var lidarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("search.qualityProfile.button",
-                       selection: Binding(
-                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
-                           set: { selectedProfileId = $0 }
-                       ),
-                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
+            qualityProfilePicker
 
             if viewModel.metadataProfiles.count > 1 {
                 formPicker("search.metadataProfile.button",
                            selection: Binding(
-                               get: { selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 0 },
-                               set: { selectedMetadataProfileId = $0 }
+                               get: { selection.metadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 0 },
+                               set: { selection.metadataProfileId = $0 }
                            ),
                            options: viewModel.metadataProfiles.map { ($0.id, $0.name) })
             }
 
-            formPicker("search.rootFolder.button",
-                       selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
-                           set: { selectedRootFolder = $0 }
-                       ),
-                       options: viewModel.rootFolders.map { ($0, $0) })
+            rootFolderPicker
 
             // An album row always monitors just that album (the artist is added with `monitor: none`),
             // so the picker would be a lie there.
             if !result.isLidarrAlbum {
                 formPicker("search.monitor.button",
-                           selection: $lidarrMonitor,
-                           options: LidarrMonitorMode.allCases.map { ($0, $0.displayName) })
+                           selection: $selection.artistMonitor,
+                           options: LidarrMonitorMode.allCases.map { ($0, $0.displayName(locale: locale)) })
             }
         }
         .padding(.horizontal, 14)
@@ -475,32 +475,6 @@ struct SearchAddPanel: View {
         return chips
     }
 
-    // MARK: - Whisparr form
-
-    private var whisparrForm: some View {
-        VStack(spacing: 4) {
-            formPicker("search.qualityProfile.button",
-                       selection: Binding(
-                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
-                           set: { selectedProfileId = $0 }
-                       ),
-                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
-
-            formPicker("search.rootFolder.button",
-                       selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
-                           set: { selectedRootFolder = $0 }
-                       ),
-                       options: viewModel.rootFolders.map { ($0, $0) })
-
-            formPicker("search.monitor.button",
-                       selection: $whisparrMonitor,
-                       options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
-        }
-        .padding(.horizontal, 14)
-        .padding(.bottom, 4)
-    }
-
     private var formRowCount: Int {
         switch result.source {
         case .sonarr, .lidarr: 4
@@ -508,57 +482,29 @@ struct SearchAddPanel: View {
         }
     }
 
-    // MARK: - Radarr form
-
-    private var radarrForm: some View {
+    /// Radarr and Whisparr.
+    private var movieForm: some View {
         VStack(spacing: 4) {
-            formPicker("search.qualityProfile.button",
-                       selection: Binding(
-                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
-                           set: { selectedProfileId = $0 }
-                       ),
-                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
-
-            formPicker("search.rootFolder.button",
-                       selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
-                           set: { selectedRootFolder = $0 }
-                       ),
-                       options: viewModel.rootFolders.map { ($0, $0) })
-
+            qualityProfilePicker
+            rootFolderPicker
             formPicker("search.monitor.button",
-                       selection: $radarrMonitor,
-                       options: RadarrMonitorMode.allCases.map { ($0, $0.displayName) })
+                       selection: $selection.movieMonitor,
+                       options: RadarrMonitorMode.allCases.map { ($0, $0.displayName(locale: locale)) })
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 4)
     }
 
-    // MARK: - Sonarr form
-
     private var sonarrForm: some View {
         VStack(spacing: 4) {
-            formPicker("search.qualityProfile.button",
-                       selection: Binding(
-                           get: { selectedProfileId ?? viewModel.qualityProfiles.first?.id ?? 0 },
-                           set: { selectedProfileId = $0 }
-                       ),
-                       options: viewModel.qualityProfiles.map { ($0.id, $0.name) })
-
-            formPicker("search.rootFolder.button",
-                       selection: Binding(
-                           get: { selectedRootFolder ?? viewModel.rootFolders.first ?? "" },
-                           set: { selectedRootFolder = $0 }
-                       ),
-                       options: viewModel.rootFolders.map { ($0, $0) })
-
+            qualityProfilePicker
+            rootFolderPicker
             formPicker("search.seriesType.button",
-                       selection: $seriesType,
-                       options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
-
+                       selection: $selection.seriesType,
+                       options: SonarrSeriesType.allCases.map { ($0, $0.displayName(locale: locale)) })
             formPicker("search.monitor.button",
-                       selection: $sonarrMonitor,
-                       options: SonarrMonitorMode.allCases.map { ($0, $0.displayName) })
+                       selection: $selection.seriesMonitor,
+                       options: SonarrMonitorMode.allCases.map { ($0, $0.displayName(locale: locale)) })
         }
         .padding(.horizontal, 14)
         .padding(.bottom, 4)
@@ -580,26 +526,26 @@ struct SearchAddPanel: View {
     private func addButton(searchOnAdd: Bool) -> some View {
         Button {
             Task {
-                guard let pid = selectedProfileId ?? viewModel.qualityProfiles.first?.id,
-                      let folder = selectedRootFolder ?? viewModel.rootFolders.first else { return }
+                guard let pid = selection.qualityProfileId ?? viewModel.qualityProfiles.first?.id,
+                      let folder = selection.rootFolder ?? viewModel.rootFolders.first else { return }
                 // Whisparr and Radarr both carry `.tmdb` refs, so the inner source check disambiguates.
                 switch result.mediaRef {
                 case .tmdb where result.source == .whisparr:
                     await viewModel.addScene(result, qualityProfileId: pid,
-                                            rootFolderPath: folder, monitor: whisparrMonitor,
+                                            rootFolderPath: folder, monitor: selection.movieMonitor,
                                             searchOnAdd: searchOnAdd)
                 case .tmdb:
                     await viewModel.addMovie(result, qualityProfileId: pid,
-                                            rootFolderPath: folder, monitor: radarrMonitor,
+                                            rootFolderPath: folder, monitor: selection.movieMonitor,
                                             searchOnAdd: searchOnAdd)
                 // `addSeries` resolves the tvdbId before posting and refuses if it can't.
                 case .tvdb, .tmdbTV:
                     await viewModel.addSeries(result, qualityProfileId: pid,
-                                             rootFolderPath: folder, monitor: sonarrMonitor,
-                                             seriesType: seriesType, seasonFolder: seasonFolder,
+                                             rootFolderPath: folder, monitor: selection.seriesMonitor,
+                                             seriesType: selection.seriesType, seasonFolder: seasonFolder,
                                              searchOnAdd: searchOnAdd)
                 case .musicBrainz:
-                    let metaPid = selectedMetadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
+                    let metaPid = selection.metadataProfileId ?? viewModel.metadataProfiles.first?.id ?? 1
                     if result.isLidarrAlbum {
                         // The artist is created unmonitored-for-new so only this album is tracked.
                         await viewModel.addAlbum(result, qualityProfileId: pid,
@@ -608,7 +554,7 @@ struct SearchAddPanel: View {
                     } else {
                         await viewModel.addArtist(result, qualityProfileId: pid,
                                                  metadataProfileId: metaPid, rootFolderPath: folder,
-                                                 monitor: lidarrMonitor,
+                                                 monitor: selection.artistMonitor,
                                                  searchOnAdd: searchOnAdd)
                     }
                 case .imdb:

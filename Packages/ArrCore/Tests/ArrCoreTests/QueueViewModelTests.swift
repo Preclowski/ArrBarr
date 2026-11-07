@@ -157,6 +157,14 @@ private let configuredArr = ServiceConfig(
 @Suite("QueueViewModel.refresh")
 @MainActor
 struct QueueViewModelRefreshTests {
+
+    /// The system centre throws outside an app bundle. A banner posted while a view model under test was still
+    /// alive took the whole test run down, and with it a release.
+    @Test("A view model under test stays off the system notification centre")
+    func testSeamPostsNoBanners() {
+        #expect(!makeSUT().sut.coalescer.postsToSystem)
+    }
+
     @Test("Maps fetched per-source items into the published queues")
     func mapsFetchIntoQueues() async {
         let (sut, fake, _) = makeSUT()

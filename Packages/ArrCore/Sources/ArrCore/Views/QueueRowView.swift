@@ -14,7 +14,7 @@ public extension QueueItem.Status {
     }
 }
 
-extension QueueItem {
+nonisolated extension QueueItem {
     var canPauseResume: Bool { status == .downloading || status == .paused || status == .queued }
 
     /// A queued item gets "play" too; for it that force-starts the download.
@@ -402,7 +402,8 @@ struct ThinProgressBar: View {
             // Unclipped, so the glow spills past the thin bar.
             .overlay(alignment: .leading) {
                 if flowing && !reduceMotion && fillWidth > 16 {
-                    Spark(fillWidth: fillWidth, tint: tint).transition(.opacity)
+                    // Sized for a 6 pt bar; a thinner one sits closer to its row's text.
+                    Spark(fillWidth: fillWidth, tint: tint, scale: min(1, height / 6)).transition(.opacity)
                 }
             }
         }
@@ -417,6 +418,7 @@ struct ThinProgressBar: View {
 private struct Spark: View {
     let fillWidth: CGFloat
     let tint: Color
+    let scale: CGFloat
 
     private static let run: Double = 2.4
     private static let fade: Double = 0.5
@@ -432,6 +434,7 @@ private struct Spark: View {
             let eased = 0.4 * p + 0.6 * (0.5 + pow(2 * p - 1, 3) / 2)
             let brightness = t < Self.run ? pow(eased, 1.5) : max(0, 1 - (t - Self.run) / Self.fade)
             glow
+                .scaleEffect(scale)
                 .opacity(brightness)
                 .offset(x: fillWidth * (0.5 + 0.5 * eased) - Self.size / 2)
         }

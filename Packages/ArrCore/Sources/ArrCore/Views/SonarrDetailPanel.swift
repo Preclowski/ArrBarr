@@ -41,6 +41,12 @@ struct SonarrDetailPanel<Header: View>: View {
         return (posterURL, posterRequiresAuth ? posterAPIKey : nil)
     }
 
+    /// Worded like the host's grab toast for the same search.
+    private func seasonSearchTitle(_ season: Int) -> String? {
+        guard let title = sonarrDetail?.title else { return nil }
+        return "\(title) · \(EpisodeCode.seasonName(season))"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             header
@@ -81,7 +87,9 @@ struct SonarrDetailPanel<Header: View>: View {
             }
 
             if let seasons = sonarrDetail?.seasons {
+                // Specials last, as Sonarr lists them; an empty season 0 is just a placeholder.
                 let visibleSeasons = seasons.filter { $0.seasonNumber > 0 }
+                    + seasons.filter { $0.seasonNumber == 0 && ($0.statistics?.totalEpisodeCount ?? 0) > 0 }
                 if !visibleSeasons.isEmpty {
                     SeasonSection(count: visibleSeasons.count) {
                         ForEach(visibleSeasons, id: \.seasonNumber) { season in
@@ -108,7 +116,8 @@ struct SonarrDetailPanel<Header: View>: View {
                                 },
                                 onManualSearch: onManualSeasonSearch.map { search in
                                     { search(season) }
-                                }
+                                },
+                                searchTitle: seasonSearchTitle(season.seasonNumber)
                             )
                         }
                     }

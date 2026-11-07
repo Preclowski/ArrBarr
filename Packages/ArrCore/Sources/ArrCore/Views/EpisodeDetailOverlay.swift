@@ -79,8 +79,7 @@ struct EpisodeDetailOverlay: View {
     }
 
     private var seasonLabel: String {
-        String(format: String(localized: "detail.seasonLld.label", bundle: .module),
-               episode.seasonNumber ?? 0)
+        EpisodeCode.seasonName(episode.seasonNumber ?? 0)
     }
 
     private var seriesTitleWithYear: String {

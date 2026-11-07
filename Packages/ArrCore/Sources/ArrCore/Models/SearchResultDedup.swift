@@ -11,7 +11,7 @@ nonisolated enum SearchResultDedup {
         let keys = Set(localHits.flatMap(\.ownershipKeys))
         return results.filter { result in
             guard let arrId = result.inLibraryArrId else { return true }
-            return !keys.contains(OwnershipKey(source: result.source, arrId: arrId))
+            return !keys.contains(OwnershipKey(source: result.source, arrId: arrId, isLidarrAlbum: result.isLidarrAlbum))
         }
     }
 }

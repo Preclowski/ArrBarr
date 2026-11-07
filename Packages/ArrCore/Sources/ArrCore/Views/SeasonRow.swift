@@ -32,6 +32,8 @@ struct SeasonRow: View {
     /// Both nil leaves the row without a menu.
     var onAutomaticSearch: (() async throws -> Void)? = nil
     var onManualSearch: (() -> Void)? = nil
+    /// The search toast's line, worded like the grab toast that follows it; the season alone without it.
+    var searchTitle: String? = nil
 
     @State private var searchFeedback: SearchFeedback = .idle
 
@@ -69,7 +71,7 @@ struct SeasonRow: View {
                     if season != nil {
                         MonitorRowToggle(isMonitored: isMonitored, entity: .season, onToggle: onSetMonitored)
                     }
-                    Text(String(format: String(localized: "queue.season02lld.button", bundle: .module), number))
+                    Text(EpisodeCode.paddedSeasonName(number))
                         .scaledFont(size: 12)
                         .lineLimit(1)
                         .opacity(isMonitored ? 1 : 0.55)
@@ -125,7 +127,7 @@ struct SeasonRow: View {
                         : Text("common.notMonitored.label", bundle: .module)
         )
         .modifier(OptionalRowSearchMenu(
-            feedback: $searchFeedback,
+            feedback: $searchFeedback, detail: searchTitle ?? EpisodeCode.seasonName(number),
             onAutomatic: onAutomaticSearch, onManual: onManualSearch))
     }
 }

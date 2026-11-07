@@ -45,6 +45,7 @@ nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
     let entries: [QueueRowEntry]
 
     var representative: QueueItem { entries[0].representativeItem }
+    var isExpandable: Bool { !representative.source.keepsDownloadsInOneRow }
     /// A season pack counts as 1.
     var downloadCount: Int { entries.count }
     var allItems: [QueueItem] { entries.flatMap(\.allItems) }
@@ -78,6 +79,45 @@ nonisolated public struct QueueTitleGroup: Identifiable, Equatable {
     }
 
     var isInterpolatingProgress: Bool { allItems.contains { $0.isInterpolatingProgress } }
+
+    /// Trouble first: a film's row is all the queue shows of its downloads.
+    var aggregateStatus: QueueItem.Status {
+        let items = allItems
+        if items.contains(where: { $0.status == .failed }) { return .failed }
+        if items.contains(where: { $0.status == .warning }) { return .warning }
+        if items.contains(where: { $0.status == .downloading }) { return .downloading }
+        if items.allSatisfy({ $0.status == .paused }) { return .paused }
+        return representative.status
+    }
+
+    enum PauseResumeAction {
+        case pause, resume
+
+        var symbol: String { self == .pause ? "pause.fill" : "play.fill" }
+    }
+
+    /// Pause wins a mixed group: it stops what runs, and a second click then starts everything.
+    var pauseResumeAction: PauseResumeAction? {
+        if pauseTargets.contains(where: { $0.status == .downloading }) { return .pause }
+        return resumeTargets.isEmpty ? nil : .resume
+    }
+
+    /// A row still waiting for its release has no download to pause.
+    var pauseTargets: [QueueItem] {
+        allItems.filter { $0.canPauseResume && !$0.isPaused && !$0.isPendingRelease }.uniqueDownloads
+    }
+
+    var resumeTargets: [QueueItem] { allItems.filter(\.showsPlay).uniqueDownloads }
+
+    /// The downloads on clients the app can reach. For the pause/resume targets only: it may end up empty.
+    func controllable(by canControl: (QueueItem) -> Bool) -> QueueTitleGroup {
+        QueueTitleGroup(id: id, entries: entries.filter { canControl($0.representativeItem) })
+    }
+}
+
+nonisolated extension QueueItem.Source {
+    /// A film stays one row: the list of its downloads lives in its detail.
+    var keepsDownloadsInOneRow: Bool { self == .radarr }
 }
 
 nonisolated enum QueueDisplayRow: Identifiable {
@@ -151,6 +191,26 @@ nonisolated enum QueueGrouping {
         return order.compactMap { buckets[$0] }
     }
 
+    static func displayRows(_ entries: [QueueRowEntry], source: QueueItem.Source, grouping: Bool) -> [QueueDisplayRow] {
+        guard grouping || source.keepsDownloadsInOneRow else { return entries.map { .entry($0) } }
+        return groupByTitle(entries)
+    }
+
+    /// The group's members among `entries` as they are now, whether or not they'd still form a group.
+    static func currentGroup(id: String, in entries: [QueueRowEntry]) -> QueueTitleGroup {
+        QueueTitleGroup(id: id, entries: entries.filter { titleKey(for: $0.representativeItem) == id })
+    }
+
+    /// A pack's episodes all show one download, so only the first carries the live spark.
+    static func firstEpisodePerDownload(_ episodeIDs: [Int], queue: [Int: [QueueItem]]) -> Set<Int> {
+        var seen = Set<String>()
+        return Set(episodeIDs.filter { id in
+            guard let item = queue[id]?.first else { return false }
+            guard let download = item.downloadId, !download.isEmpty else { return true }
+            return seen.insert(download).inserted
+        })
+    }
+
     /// Only buckets of ≥2 group; the group takes its first (best-ranked) member's position.
     static func groupByTitle(_ entries: [QueueRowEntry]) -> [QueueDisplayRow] {
         var counts: [String: Int] = [:]
@@ -178,5 +238,41 @@ nonisolated enum QueueGrouping {
             }
             return row
         }
+    }
+}
+
+/// A film's row holds all its downloads and is picked as one: whatever part of it `selected` names, the row reads
+/// as selected and actions reach every download, so what's shown is what's acted on.
+nonisolated enum QueueSelection {
+    /// Display order. Headers and a collapsed group's hidden children aren't selectable.
+    static func rows(_ display: [QueueDisplayRow], isExpanded: (QueueTitleGroup) -> Bool) -> [[QueueRowEntry]] {
+        display.flatMap { row -> [[QueueRowEntry]] in
+            switch row {
+            case .entry(let entry): return [[entry]]
+            case .titleGroup(let group):
+                if !group.isExpandable { return [group.entries] }
+                return isExpanded(group) ? group.entries.map { [$0] } : []
+            }
+        }
+    }
+
+    static func isSelected(_ row: [QueueRowEntry], in selected: Set<String>) -> Bool {
+        row.contains { selected.contains($0.id) }
+    }
+
+    static func selectedEntries(rows: [[QueueRowEntry]], in selected: Set<String>) -> [QueueRowEntry] {
+        rows.filter { isSelected($0, in: selected) }.flatMap { $0 }
+    }
+
+    static func toggled(_ row: [QueueRowEntry], in selected: Set<String>) -> Set<String> {
+        let ids = row.map(\.id)
+        return isSelected(row, in: selected) ? selected.subtracting(ids) : selected.union(ids)
+    }
+
+    /// Whole rows from one id's row to the other's, ends included; nil when either has left the queue.
+    static func ids(betweenRowsOf a: String, and b: String, rows: [[QueueRowEntry]]) -> [String]? {
+        guard let ai = rows.firstIndex(where: { $0.contains { $0.id == a } }),
+              let bi = rows.firstIndex(where: { $0.contains { $0.id == b } }) else { return nil }
+        return rows[min(ai, bi)...max(ai, bi)].flatMap { $0.map(\.id) }
     }
 }

@@ -218,7 +218,7 @@ nonisolated enum ArrCompositions {
             if let ep = r.episode, let s = ep.seasonNumber, let e = ep.episodeNumber {
                 subtitle = EpisodeCode.line(season: s, episode: e, title: ep.title)
                 if eventType == .imported || eventType == .grabbed, let batch = r.downloadId ?? r.sourceTitle {
-                    groupHint = .init(key: "\(batch)|s\(s)", collapsedSubtitle: String(format: String(localized: "detail.seasonLld.label", bundle: .module), s))
+                    groupHint = .init(key: "\(batch)|s\(s)", collapsedSubtitle: EpisodeCode.seasonName(s))
                 }
             }
             (poster, auth) = (r.series?.images ?? []).posterURL(baseURL: baseURL, mediaServerKeys: r.series?.mediaServerKeys ?? [])

@@ -171,7 +171,7 @@ struct QueueGroupRowView: View {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
         let packLabel = String(localized: "queue.seasonPack.button", bundle: .module)
         if seasons.count == 1, let s = seasons.first {
-            let seasonText = String(format: String(localized: "queue.season02lld.button", bundle: .module), s)
+            let seasonText = EpisodeCode.paddedSeasonName(s)
             return "\(seasonText) · \(packLabel) · \(episodeCountText)"
         }
         if seasons.count > 1 {
@@ -276,9 +276,7 @@ struct QueueGroupTooltip: View {
                 let seasonHeader: Text = {
                     let uniqueSeasons = Set(group.items.compactMap(\.seasonNumber))
                     if uniqueSeasons.count == 1, let s = uniqueSeasons.first {
-                        return Text(String(format: NSLocalizedString("queue.season02d.button",
-                                                                     bundle: .module,
-                                                                     comment: "Tooltip section header"), s))
+                        return Text(EpisodeCode.paddedSeasonName(s))
                     }
                     return Text("queue.episodes.button", bundle: .module)
                 }()
@@ -361,9 +359,7 @@ struct QueueGroupTooltip: View {
     private var seasonLabel: String? {
         let seasons = Set(group.items.compactMap(\.seasonNumber))
         if seasons.count == 1, let s = seasons.first {
-            // LocalizedStringKey interpolation can't express `%02lld`, so format through the catalog.
-            let fmt = String(localized: "queue.season02lld.button", bundle: Bundle.module)
-            return String(format: fmt, s)
+            return EpisodeCode.paddedSeasonName(s)
         }
         if seasons.count > 1 {
             return String(localized: "queue.multipleSeasons.button", bundle: Bundle.module)

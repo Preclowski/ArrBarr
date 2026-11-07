@@ -58,6 +58,75 @@ struct QueueTitleGroupingTests {
         }
     }
 
+    @Test("A film's downloads share one row that doesn't expand; a series' group does")
+    func onlyFilmsStayOneRow() {
+        let film = QueueGrouping.groupByTitle(entries([
+            item(id: "a", title: "Alpha", source: .radarr, entityId: 1),
+            item(id: "b", title: "Alpha", source: .radarr, entityId: 1),
+        ]))
+        guard film.count == 1, case .titleGroup(let filmGroup) = film[0] else {
+            Issue.record("expected one row for the film")
+            return
+        }
+        #expect(filmGroup.downloadCount == 2)
+        #expect(!filmGroup.isExpandable)
+
+        let series = QueueGrouping.groupByTitle(entries([
+            item(id: "c", title: "Beta", entityId: 2, season: 1),
+            item(id: "d", title: "Beta", entityId: 2, season: 1),
+        ]))
+        guard case .titleGroup(let seriesGroup) = series[0] else {
+            Issue.record("expected a group for the season")
+            return
+        }
+        #expect(seriesGroup.isExpandable)
+    }
+
+    @Test("With grouping off a film still gets one row; a series goes flat")
+    func groupingOffSparesOnlyFilms() {
+        let film = QueueGrouping.displayRows(entries([
+            item(id: "a", title: "Alpha", source: .radarr, entityId: 1),
+            item(id: "b", title: "Alpha", source: .radarr, entityId: 1),
+        ]), source: .radarr, grouping: false)
+        #expect(film.count == 1)
+
+        let series = QueueGrouping.displayRows(entries([
+            item(id: "c", title: "Beta", entityId: 2, season: 1),
+            item(id: "d", title: "Beta", entityId: 2, season: 1),
+        ]), source: .sonarr, grouping: false)
+        #expect(series.count == 2)
+    }
+
+    @Test("A group's status puts trouble before anything running")
+    func aggregateStatusPutsTroubleFirst() {
+        func group(_ statuses: QueueItem.Status...) -> QueueTitleGroup {
+            QueueTitleGroup(id: "g", entries: statuses.enumerated().map { index, status in
+                let base = item(id: "\(index)", title: "Alpha", source: .radarr, entityId: 1)
+                return .single(QueueItem(
+                    id: base.id, source: base.source, arrQueueId: base.arrQueueId,
+                    downloadId: base.downloadId, downloadProtocol: base.downloadProtocol,
+                    downloadClient: nil, title: base.title, subtitle: nil,
+                    status: status, progress: 0.5, sizeTotal: 0, sizeLeft: 0, timeLeft: nil,
+                    customFormats: [], customFormatScore: 0, quality: nil, isUpgrade: false,
+                    contentSlug: nil, entityId: 1))
+            })
+        }
+        #expect(group(.downloading, .failed).aggregateStatus == .failed)
+        #expect(group(.completed, .failed).aggregateStatus == .failed)
+        #expect(group(.downloading, .warning).aggregateStatus == .warning)
+        #expect(group(.paused, .downloading).aggregateStatus == .downloading)
+        #expect(group(.paused, .paused).aggregateStatus == .paused)
+        #expect(group(.completed, .paused).aggregateStatus == .completed)
+    }
+
+    @Test("Only the first episode of a pack carries the spark")
+    func sparkPerDownload() {
+        let pack = item(id: "p", title: "Beta", downloadId: "pack")
+        let lone = item(id: "l", title: "Beta", downloadId: "lone")
+        let ids = QueueGrouping.firstEpisodePerDownload([1, 2, 3, 4], queue: [1: [pack], 2: [pack], 3: [lone]])
+        #expect(ids == [1, 3])
+    }
+
     @Test("Two entries of one title form a group at the first member's position")
     func groupsAtFirstPosition() {
         let rows = QueueGrouping.groupByTitle(entries([
@@ -182,5 +251,65 @@ struct QueueTitleGroupingTests {
             item(id: "b", title: "Alpha", progress: 0.8),
         ]))
         #expect(abs(group.aggregateProgress - 0.5) < 0.0001)
+    }
+}
+
+
+@Suite("QueueSelection")
+struct QueueSelectionTests {
+    private func entry(_ id: String, source: QueueItem.Source = .radarr, entityId: Int = 1) -> QueueRowEntry {
+        .single(QueueItem(
+            id: id, source: source, arrQueueId: 1, downloadId: id, downloadProtocol: .torrent,
+            downloadClient: nil, title: "Title \(entityId)", subtitle: nil,
+            status: .downloading, progress: 0.5, sizeTotal: 0, sizeLeft: 0, timeLeft: nil,
+            customFormats: [], customFormatScore: 0, quality: nil, isUpgrade: false,
+            contentSlug: nil, entityId: entityId))
+    }
+
+    /// Lone film X, then film F with two downloads.
+    private var rows: [[QueueRowEntry]] {
+        let display = QueueGrouping.groupByTitle([
+            entry("x", entityId: 1), entry("f1", entityId: 2), entry("f2", entityId: 2),
+        ])
+        return QueueSelection.rows(display, isExpanded: { _ in false })
+    }
+
+    @Test("A film is one selectable row; a collapsed series' children aren't selectable at all")
+    func rowsPerKind() {
+        #expect(rows.map { $0.map(\.id) } == [["single.x"], ["single.f1", "single.f2"]])
+
+        let series = QueueGrouping.groupByTitle([
+            entry("a", source: .sonarr, entityId: 3), entry("b", source: .sonarr, entityId: 3),
+        ])
+        #expect(QueueSelection.rows(series, isExpanded: { _ in false }).isEmpty)
+        #expect(QueueSelection.rows(series, isExpanded: { _ in true }).count == 2)
+    }
+
+    /// What's shown is what's acted on: the row never reads unselected while a download of it is picked.
+    @Test("Part of a film picked selects the whole row and acts on all of it")
+    func partOfAFilmCountsAsAll() {
+        let film = rows[1]
+        #expect(QueueSelection.isSelected(film, in: ["single.f1"]))
+        #expect(QueueSelection.selectedEntries(rows: rows, in: ["single.f1"]).map(\.id) == ["single.f1", "single.f2"])
+    }
+
+    @Test("Toggling a partly picked film clears all of it")
+    func togglePartial() {
+        let film = rows[1]
+        #expect(QueueSelection.toggled(film, in: ["single.f1"]).isEmpty)
+        #expect(QueueSelection.toggled(film, in: []) == ["single.f1", "single.f2"])
+    }
+
+    @Test("A range covers whole rows, from either end")
+    func rangeCoversWholeRows() {
+        #expect(QueueSelection.ids(betweenRowsOf: "single.f1", and: "single.x", rows: rows)
+                == ["single.x", "single.f1", "single.f2"])
+        #expect(QueueSelection.ids(betweenRowsOf: "single.x", and: "single.f1", rows: rows)
+                == ["single.x", "single.f1", "single.f2"])
+    }
+
+    @Test("A range from an anchor that left the queue is nil, so the tap falls back to a toggle")
+    func rangeFromAGoneAnchor() {
+        #expect(QueueSelection.ids(betweenRowsOf: "single.gone", and: "single.x", rows: rows) == nil)
     }
 }

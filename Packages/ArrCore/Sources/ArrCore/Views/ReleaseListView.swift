@@ -387,6 +387,7 @@ private struct ReleaseRow: View {
     let onTap: () -> Void
     let onGrab: () -> Void
     @Environment(\.locale) private var locale
+    @State private var isHovering = false
     private let controlDiameter: CGFloat = 24
 
     var body: some View {
@@ -404,7 +405,7 @@ private struct ReleaseRow: View {
         }
         #if os(macOS)
         // The hover card is the whole detail; the indexer's page moves to the context menu.
-        .hoverTooltip(delay: .milliseconds(400)) {
+        .hoverTooltip(delay: .milliseconds(400), hovering: $isHovering) {
             ReleaseDetail(release: release, existing: existing, indexerName: indexerName, showsLink: false)
                 .padding(12)
                 .frame(width: 340)
@@ -552,8 +553,11 @@ private struct ReleaseRow: View {
                     .font(.system(size: controlDiameter * 0.5, weight: .semibold))
                     .foregroundStyle(.primary)
                     .frame(width: controlDiameter, height: controlDiameter)
-                    .background(controlFill, in: Circle())
+                    .background(isHovering ? Color.primary.opacity(0.2) : controlFill, in: Circle())
                     .contentShape(Circle())
+                    // Small on purpose: the click is what turns this into the ring.
+                    .scaleEffect(isHovering ? 1.12 : 1)
+                    .animation(.monitorHover, value: isHovering)
             }
             .buttonStyle(.plain)
             .help(Text("Download", bundle: .module))

@@ -71,7 +71,7 @@ struct SeasonDetailView: View {
     }
 
     private var navTitle: String {
-        String(format: String(localized: "detail.seasonLld.label", bundle: .module), drill.seasonNumber)
+        EpisodeCode.seasonName(drill.seasonNumber)
     }
 
     /// Read live off the parent's series detail so it can't go stale; nil renders no bookmark.
@@ -134,11 +134,14 @@ struct SeasonDetailView: View {
                         have: episodes.count { $0.hasFile == true },
                         total: episodes.count
                     )
+                        let sorted = episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })
+                        let withSpark = QueueGrouping.firstEpisodePerDownload(sorted.map(\.id), queue: queueByEpisodeId)
                         VStack(alignment: .leading, spacing: 4) {
-                            ForEach(episodes.sorted(by: { ($0.episodeNumber ?? 0) < ($1.episodeNumber ?? 0) })) { ep in
+                            ForEach(sorted) { ep in
                                 EpisodeRow(
                                     episode: ep,
                                     queueItems: queueByEpisodeId[ep.id] ?? [],
+                                    showsSpark: withSpark.contains(ep.id),
                                     episodeFile: ep.episodeFileId.flatMap { fileByEpisodeFileId[$0] },
                                     onTap: { episode in
                                         withAnimation(.smooth(duration: 0.22)) { selectedEpisode = episode }
@@ -154,7 +157,8 @@ struct SeasonDetailView: View {
                                     onManualSearch: {
                                         manualSearchTarget = SeasonReleaseSearch(target: .episode(
                                             episodeId: ep.id, title: episodeSearchTitle(ep)))
-                                    }
+                                    },
+                                    searchTitle: episodeSearchTitle(ep)
                                 )
                             }
                         }

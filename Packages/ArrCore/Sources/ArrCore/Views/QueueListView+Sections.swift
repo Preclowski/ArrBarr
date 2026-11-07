@@ -52,7 +52,7 @@ extension QueueListView {
             swipeableRow(for: entry, isStale: isStale)
         case .titleGroup(let group):
             titleGroupHeader(group, isStale: isStale)
-            if isGroupExpanded(group) {
+            if group.isExpandable && isGroupExpanded(group) {
                 ForEach(group.entries) { entry in
                     swipeableRow(for: entry, isStale: isStale, indented: true)
                 }
@@ -62,23 +62,37 @@ extension QueueListView {
 
     @ViewBuilder
     private func titleGroupHeader(_ group: QueueTitleGroup, isStale: Bool) -> some View {
+        // Episode coords stripped so DetailView opens the title, whose download
+        // section lists every sibling.
+        let target = group.representative.seasonContext()
+        let reachable: @MainActor () -> QueueTitleGroup = {
+            currentGroup(group).controllable { configStore.canControlDownload($0) }
+        }
+        let pauseAll: @MainActor () -> Void = { [weak viewModel] in
+            let items = reachable().pauseTargets
+            Task { for item in items { await viewModel?.pause(item) } }
+        }
+        let resumeAll: @MainActor () -> Void = { [weak viewModel] in
+            let items = reachable().resumeTargets
+            Task { for item in items { await viewModel?.resume(item) } }
+        }
         let header = QueueTitleGroupRowView(
             group: group,
             isExpanded: isGroupExpanded(group),
             onToggle: {
                 withAnimation(.smooth(duration: 0.22)) { toggleTitleGroup(group) }
             },
-            // Episode coords stripped so DetailView opens the title, whose download
-            // section lists every sibling.
-            onShowDetail: { onShowDetail(group.representative.seasonContext()) },
-            onPauseAll: { [weak viewModel] in
-                let items = Self.oneRowPerDownload(group.allItems.filter { $0.canPauseResume && !$0.isPaused })
-                Task { for item in items { await viewModel?.pause(item) } }
+            onShowDetail: {
+                if group.isExpandable {
+                    onShowDetail(target)
+                } else {
+                    rowTapped(group.entries, defaultTarget: target)
+                }
             },
-            onResumeAll: { [weak viewModel] in
-                let items = Self.oneRowPerDownload(group.allItems.filter(\.isPaused))
-                Task { for item in items { await viewModel?.resume(item) } }
-            },
+            selectionState: group.isExpandable ? .hidden : selectionState(for: group.entries),
+            isSelecting: selecting,
+            onPauseAll: pauseAll,
+            onResumeAll: resumeAll,
             onDeleteAll: { [weak viewModel] in
                 let items = group.allItems
                 Task { await viewModel?.deleteAll(items) }
@@ -86,6 +100,11 @@ extension QueueListView {
         )
         .environment(\.queueOffline, viewModel.isFullyOffline || isStale)
         .opacity(rowOpacity(isStale: isStale, items: group.allItems))
+        // All of them: removing one download of several leaves the row in place.
+        .modifier(LeavingRow(
+            leaving: group.allItems.allSatisfy { viewModel.leavingIDs.contains($0.id) },
+            sliding: group.allItems.allSatisfy { viewModel.slidingIDs.contains($0.id) }
+        ))
         #if os(iOS)
         header
             .plainQueueRow()
@@ -99,18 +118,29 @@ extension QueueListView {
                     .accessibilityLabel(Text("queue.delete.button", bundle: .module))
                 }
             }
+            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                let control = group.controllable(by: { configStore.canControlDownload($0) })
+                // Like the macOS poster control: a film's downloads are alternatives, never started together.
+                if group.isExpandable, !viewModel.isFullyOffline, !isStale, let action = control.pauseResumeAction {
+                    Button {
+                        if let confirm = PendingConfirm.pauseResumeAll(control, locale: configStore.currentLocale,
+                                                                       onPause: pauseAll, onResume: resumeAll) {
+                            ConfirmCenter.request(confirm)
+                        }
+                    } label: {
+                        Image(systemName: action.symbol)
+                    }
+                    .tint(action == .resume ? .green : .orange)
+                    .accessibilityLabel(control.pauseResumeTitle)
+                }
+            }
         #else
-        header.plainQueueRow()
-        #endif
-    }
-
-    /// Season-pack members share one download: one client call covers them all.
-    static func oneRowPerDownload(_ items: [QueueItem]) -> [QueueItem] {
-        var seen = Set<String>()
-        return items.filter { item in
-            guard let id = item.downloadId, !id.isEmpty else { return true }
-            return seen.insert(id.lowercased()).inserted
+        if group.isExpandable {
+            header.plainQueueRow()
+        } else {
+            selectableRow(header, row: group.entries)
         }
+        #endif
     }
 
     #if os(iOS)
@@ -163,6 +193,13 @@ extension QueueListView {
                 }
             }
         #else
+        selectableRow(content, row: [entry])
+        #endif
+    }
+
+    #if os(macOS)
+    @ViewBuilder
+    private func selectableRow<Content: View>(_ content: Content, row: [QueueRowEntry]) -> some View {
         if selecting {
             content
                 // Direct state write: preferences don't reliably climb out of the
@@ -170,15 +207,15 @@ extension QueueListView {
                 .onGeometryChange(for: CGRect.self) { proxy in
                     proxy.frame(in: .global)
                 } action: { frame in
-                    rowFrames[entry.id] = frame
+                    rowFrames[row[0].id] = frame
                 }
                 .plainQueueRow()
-                .simultaneousGesture(dragSelectGesture(anchor: entry.id))
+                .simultaneousGesture(dragSelectGesture(row: row))
         } else {
             content.plainQueueRow()
         }
-        #endif
     }
+    #endif
 
     @ViewBuilder
     private func sectionHeader(_ source: QueueItem.Source, error: String?, isUnreachable: Bool, collapsed: Bool) -> some View {

@@ -30,6 +30,17 @@ nonisolated public enum AppMessages {
         public let append: Bool
         public init(items: [DiscoverItem], append: Bool) { self.items = items; self.append = append }
     }
+    /// A title left an arr's library; search and the library model drop what they still show as owned.
+    public struct DidRemoveFromLibrary: NotificationCenter.AsyncMessage {
+        public typealias Subject = AppMessageBus
+        public let source: QueueItem.Source
+        public let arrId: Int
+        /// A single Lidarr album; otherwise the arr's top-level record (an artist for Lidarr).
+        public let isLidarrAlbum: Bool
+        public init(source: QueueItem.Source, arrId: Int, isLidarrAlbum: Bool = false) {
+            self.source = source; self.arrId = arrId; self.isLidarrAlbum = isLidarrAlbum
+        }
+    }
     /// A title was added to an arr; the quiz drops a card it was still offering.
     public struct DidAddToLibrary: NotificationCenter.AsyncMessage {
         public typealias Subject = AppMessageBus

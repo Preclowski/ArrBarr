@@ -9,6 +9,7 @@ struct SyncedKeysSuite {
         #expect(SyncedKeys.all.contains("ArrBarr.arrOrder"))
         #expect(SyncedKeys.all.contains("ArrBarr.whisparrAgeConfirmed"))
         #expect(SyncedKeys.all.contains("ArrBarr.openai"))
+        #expect(SyncedKeys.all.contains("ArrBarr.addDefaults.radarr"))
     }
 
     @Test("Excludes platform-specific, MCP, and one-shot keys")

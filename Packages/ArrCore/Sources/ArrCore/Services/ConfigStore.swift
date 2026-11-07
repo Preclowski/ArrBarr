@@ -125,6 +125,17 @@ public final class ConfigStore {
         }
     }
 
+    /// What the add form starts with; read it through `addDefaults(for:)`. Apart from `ServiceConfig`: a change
+    /// here must not look like a re-pointed server.
+    var addDefaults: [QueueItem.Source: ArrAddDefaults] = [:] {
+        didSet {
+            guard !isLoading else { return }
+            for (source, defaults) in addDefaults where defaults != oldValue[source] {
+                store(defaults, forKey: Keys.addDefaults(source))
+            }
+        }
+    }
+
     // MARK: - MCP server
     // On macOS the AppDelegate restarts `MCPServerController` whenever these change.
     public var mcpEnabled: Bool = false { didSet { persist(mcpEnabled, oldValue, Keys.mcpEnabled) } }

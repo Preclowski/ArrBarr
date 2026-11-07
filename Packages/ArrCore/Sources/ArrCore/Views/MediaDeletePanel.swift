@@ -198,9 +198,14 @@ struct MediaDeletePanel: View {
             case let .record(id):
                 try await configStore.arrClient(for: request.source)
                     .deleteLibraryRecord(entityId: id, deleteFiles: deleteFiles, addImportExclusion: addExclusion)
+                AppMessages.post(AppMessages.DidRemoveFromLibrary(source: request.source, arrId: id))
+                // A download of the gone title still names it until the queue is read again.
+                let source = request.source
+                Task { await QueueViewModel.shared.refreshQueue(source: source) }
             case let .album(id, artistId):
                 try await configStore.lidarrClient
                     .deleteAlbum(albumId: id, artistId: artistId, deleteFiles: deleteFiles, addImportListExclusion: addExclusion)
+                AppMessages.post(AppMessages.DidRemoveFromLibrary(source: .lidarr, arrId: id, isLidarrAlbum: true))
             case let .episodeFile(id, seriesId):
                 try await configStore.sonarrClient.deleteEpisodeFile(id: id, seriesId: seriesId)
             }

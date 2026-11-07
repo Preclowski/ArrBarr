@@ -6,6 +6,8 @@ struct EpisodeRow: View {
     /// Active queue items for this episode; 2+ when it was grabbed twice. The
     /// row renders off the first and badges the extras.
     var queueItems: [QueueItem] = []
+    /// Off for all but one episode of a season pack, which share a download.
+    var showsSpark: Bool = true
     var episodeFile: ArrFile? = nil
     /// Tap on the row body (not the state indicator); `nil` keeps the row passive.
     var onTap: ((ArrEpisode) -> Void)? = nil
@@ -17,14 +19,15 @@ struct EpisodeRow: View {
     /// Row context-menu search. Both nil → no menu.
     var onAutomaticSearch: (() async throws -> Void)? = nil
     var onManualSearch: (() -> Void)? = nil
+    /// The search toast's line, worded like the grab toast that follows it; code and title without it.
+    var searchTitle: String? = nil
 
     private var queueItem: QueueItem? { queueItems.first }
 
     @Environment(ConfigStore.self) private var configStore
     /// Long-hover tooltip: a downloading row shows `QueueItemTooltip`, any other
     /// row the episode (synopsis, air date, file) its one trailing slot can't fit.
-    /// Search fired from the context menu, shown in the trailing state slot
-    /// because the menu is gone by the time it runs.
+    /// Search fired from the context menu: a spinner in the trailing slot while it is sent, then a toast.
     @State private var searchFeedback: SearchFeedback = .idle
 
     private var episodeCode: String {
@@ -57,12 +60,10 @@ struct EpisodeRow: View {
                 // Reserves the glyph's width; the overlay below draws it.
                 Color.clear
                     .frame(width: 11, height: 12)
-                // Dim everything but the bookmark together; dimming only the title
-                // left the code brighter than the name.
-                HStack(spacing: 6) {
                 Text(episodeCode)
                     .scaledFont(size: 10, weight: .semibold, monospacedDigit: true)
                     .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
                 Text(episode.title ?? "—")
                     .scaledFont(size: 11)
                     .foregroundStyle(episodeTitleStyle)
@@ -94,6 +95,17 @@ struct EpisodeRow: View {
                         .foregroundStyle(.tertiary)
                 }
                 }
+                // Under the title, like a queue row's bar under its text. In the row's bottom
+                // padding, so a download starting doesn't move the list.
+                .overlay(alignment: .bottom) {
+                    if let q = queueItem {
+                        LiveProgress(item: q) { progress in
+                            ThinProgressBar(progress: progress, tint: q.status.tint, height: 2.5,
+                                            flowing: showsSpark && q.status == .downloading)
+                        }
+                        .offset(y: 4.5)
+                    }
+                }
                 stateIndicator
                     .frame(width: 14, height: 14, alignment: .center)
             }
@@ -104,6 +116,8 @@ struct EpisodeRow: View {
         .buttonStyle(.plain)
         .modifier(OptionalRowSearchMenu(
             feedback: $searchFeedback,
+            detail: searchTitle ?? [EpisodeCode.string(season: episode.seasonNumber ?? 0, episode: episode.episodeNumber),
+                                    episode.title].compactMap { $0 }.joined(separator: " · "),
             onAutomatic: onAutomaticSearch, onManual: onManualSearch))
         // Outside the row Button: a Button nested in a Button's label doesn't
         // reliably win the tap.
@@ -113,19 +127,6 @@ struct EpisodeRow: View {
         .accessibilityValue(
             isMonitored ? Text(verbatim: "")
                         : Text("common.notMonitored.label", bundle: .module)
-        )
-        .background(
-            // Progress fill for an active download only.
-            ZStack(alignment: .leading) {
-                if let q = queueItem {
-                    GeometryReader { geo in
-                        Rectangle()
-                            .fill(q.status.tint.opacity(0.16))
-                            .frame(width: geo.size.width * max(0.02, min(1, q.progress)))
-                    }
-                }
-            }
-            .clipShape(RoundedRectangle(cornerRadius: Tokens.Radius.chip))
         )
         // No hover actions: download controls belong to the queue.
         #if os(macOS)

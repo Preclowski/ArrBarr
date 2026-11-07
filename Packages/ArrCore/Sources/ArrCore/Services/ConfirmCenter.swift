@@ -46,6 +46,26 @@ extension PendingConfirm {
             onConfirm: onConfirm
         )
     }
+
+    /// The group's pause/resume control; nil when nothing in the group can take the action.
+    /// `action` names one where a menu offers both, otherwise the group's own applies.
+    static func pauseResumeAll(_ group: QueueTitleGroup, action: QueueTitleGroup.PauseResumeAction? = nil, locale: Locale,
+                               onPause: @escaping @MainActor () -> Void,
+                               onResume: @escaping @MainActor () -> Void) -> PendingConfirm? {
+        func title(_ key: String, _ count: Int) -> String {
+            String.localizedStringWithFormat(AppLocalized.string(key, locale: locale), count)
+        }
+        switch action ?? group.pauseResumeAction {
+        case .pause where !group.pauseTargets.isEmpty:
+            return PendingConfirm(title: title("queue.titleGroup.pauseAll.title", group.pauseTargets.count),
+                                  confirmLabel: "queue.pause.button", onConfirm: onPause)
+        case .resume where !group.resumeTargets.isEmpty:
+            return PendingConfirm(title: title("queue.titleGroup.startAll.title", group.resumeTargets.count),
+                                  confirmLabel: "queue.titleGroup.start.button", onConfirm: onResume)
+        default:
+            return nil
+        }
+    }
 }
 
 /// State, not an event: macOS tears the MenuBarExtra panel down when a context menu takes focus, so a posted

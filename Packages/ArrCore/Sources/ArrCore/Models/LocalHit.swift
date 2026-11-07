@@ -20,13 +20,9 @@ nonisolated public enum LocalHit: Identifiable {
     var ownershipKeys: [OwnershipKey] {
         switch self {
         case .queue(let entry):
-            return entry.allItems.compactMap { item in
-                item.entityId.map { OwnershipKey(source: item.source, arrId: $0) }
-            }
+            return entry.allItems.compactMap(OwnershipKey.init(queueItem:))
         case .queueSeries(let group):
-            return group.allItems.compactMap { item in
-                item.entityId.map { OwnershipKey(source: item.source, arrId: $0) }
-            }
+            return group.allItems.compactMap(OwnershipKey.init(queueItem:))
         case .library(let entry):
             return [OwnershipKey(source: entry.source, arrId: entry.arrId)]
         }
@@ -34,13 +30,22 @@ nonisolated public enum LocalHit: Identifiable {
 }
 
 /// Arr record ids only mean something within one arr: without the source, Radarr #42 would hide Sonarr #42.
+/// Lidarr numbers albums and artists separately, so album #12 must not hide artist #12 either.
 nonisolated struct OwnershipKey: Hashable, Sendable {
     let source: QueueItem.Source
     let arrId: Int
+    let isLidarrAlbum: Bool
 
-    init(source: QueueItem.Source, arrId: Int) {
+    init(source: QueueItem.Source, arrId: Int, isLidarrAlbum: Bool = false) {
         self.source = source
         self.arrId = arrId
+        self.isLidarrAlbum = isLidarrAlbum
+    }
+
+    /// A Lidarr queue row carries its album's id; the library lists artists.
+    init?(queueItem item: QueueItem) {
+        guard let entityId = item.entityId else { return nil }
+        self.init(source: item.source, arrId: entityId, isLidarrAlbum: item.source == .lidarr)
     }
 }
 

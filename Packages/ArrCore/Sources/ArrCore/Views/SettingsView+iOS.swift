@@ -47,7 +47,7 @@ extension SettingsView {
         @ViewBuilder fields: @escaping () -> Content
     ) -> some View {
         NavigationLink {
-            Form { Section { fields() } }
+            Form { fields() }
                 .navigationTitle(Text(verbatim: title))
                 .navigationBarTitleDisplayMode(.inline)
         } label: {
@@ -87,7 +87,8 @@ extension SettingsView {
                 ForEach(reorderable ? orderedByQueueSections(specs) : specs) { spec in
                     iosServiceLink(kind: spec.kind, title: spec.title,
                                    configured: spec.config.wrappedValue.isConfigured) {
-                        serviceFields(spec)
+                        Section { serviceFields(spec) }
+                        addDefaultsSection(spec)
                     }
                 }
                 .onMove(perform: reorderable ? { moveMediaManagers(from: $0, to: $1) } : nil)

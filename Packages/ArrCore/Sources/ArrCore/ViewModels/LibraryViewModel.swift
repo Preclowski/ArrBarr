@@ -88,7 +88,37 @@ public final class LibraryViewModel {
     /// The grid re-unifies when, and only when, the index's version for the source moves.
     private var indexVersions: [QueueItem.Source: LibraryIndex.Version] = [:]
 
-    public init() {}
+    @ObservationIgnored private var removeObserver: NotificationCenter.ObservationToken?
+    /// Of the config each snapshot was saved under, so a removal can rewrite it without one.
+    @ObservationIgnored private var snapshotFingerprints: [QueueItem.Source: String] = [:]
+
+    public init() {
+        // The store's library tag is invalidated by the delete, but nothing reloads this model until the
+        // Library tab appears; search would keep matching the gone title as owned.
+        removeObserver = NotificationCenter.default.addObserver(of: nil as AppMessageBus?, for: AppMessages.DidRemoveFromLibrary.self) { [weak self] message in
+            // Lidarr's grid lists artists; an album leaving changes no entry.
+            guard !message.isLidarrAlbum else { return }
+            await self?.removeEntry(source: message.source, arrId: message.arrId)
+        }
+    }
+
+    isolated deinit {
+        if let removeObserver { NotificationCenter.default.removeObserver(removeObserver) }
+    }
+
+    /// `indexVersions` stays as it was, so the next load still refetches. The snapshot is rewritten too, or the
+    /// next launch paints the title back until that load lands.
+    func removeEntry(source: QueueItem.Source, arrId: Int) {
+        guard let list = entries[source], list.contains(where: { $0.arrId == arrId }) else { return }
+        let byTitle = sortCache[source]?[Self.defaultSortCacheKey]?.filter { $0.arrId != arrId }
+        entries[source] = list.filter { $0.arrId != arrId }
+        sortCache[source] = byTitle.map { [Self.defaultSortCacheKey: $0] }
+        filterCache[source] = nil
+        countCache[source] = nil
+        if let byTitle, let fingerprint = snapshotFingerprints[source] {
+            LibrarySnapshotStore.save(byTitle, source: source, fingerprint: fingerprint)
+        }
+    }
 
     /// `cacheKey` identifies the axis (a comparator can't be compared); callers keep key ↔ comparator consistent.
     public func sorted(
@@ -214,6 +244,7 @@ public final class LibraryViewModel {
         commit(projection.entries, byTitle: projection.byTitle, for: source,
                version: await LibraryIndex.shared.version(for: source, config: config))
         LibrarySnapshotStore.save(projection.byTitle, source: source, fingerprint: config.identityFingerprint)
+        snapshotFingerprints[source] = config.identityFingerprint
         Self.logAliasCoverage(projection.entries, source: source)
 
         // Painted from the stored copy; now revalidate under the visible grid. A network first pass needs no second one.

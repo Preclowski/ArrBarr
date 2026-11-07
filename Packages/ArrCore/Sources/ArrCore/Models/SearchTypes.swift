@@ -39,6 +39,8 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
     var releaseStatus: String?
     /// Lidarr only: album vs artist. Stamped at unify time because the two lookups return disjoint shapes.
     let isLidarrAlbum: Bool
+    /// An owned album's artist, so deleting the artist drops the album's library mark too.
+    var lidarrArtistId: Int?
     /// TMDB's series id, for `.sonarr` rows only. TMDB-sourced rows have no tvdbId, so this keeps the
     /// lookup exact; `SeriesIdentityResolver` uses it to verify a `tmdb:N` answer.
     let tmdbTVId: Int?
@@ -124,20 +126,28 @@ nonisolated public struct SearchResult: Identifiable, Equatable, Hashable, Senda
 
 // MARK: - Monitor modes
 
-nonisolated enum RadarrMonitorMode: String, CaseIterable, Identifiable {
+/// A picker value named per locale: `String(localized:)` stays on the launch language until a relaunch.
+nonisolated protocol LocalizedPickerValue {
+    var labelKey: String { get }
+}
+
+nonisolated extension LocalizedPickerValue {
+    func displayName(locale: Locale) -> String { AppLocalized.string(labelKey, locale: locale) }
+}
+
+nonisolated enum RadarrMonitorMode: String, CaseIterable, Identifiable, LocalizedPickerValue, Codable {
     case movieOnly, movieAndCollection, none
     var id: String { rawValue }
-    /// Localized here: `Text(someString)` takes the non-localizing overload, so a raw string stays English.
-    var displayName: String {
+    var labelKey: String {
         switch self {
-        case .movieOnly: return String(localized: "search.movieOnly.button", bundle: .module)
-        case .movieAndCollection: return String(localized: "search.movieAndCollection.button", bundle: .module)
-        case .none: return String(localized: "search.none.button", bundle: .module)
+        case .movieOnly: return "search.movieOnly.button"
+        case .movieAndCollection: return "search.movieAndCollection.button"
+        case .none: return "search.none.button"
         }
     }
 }
 
-nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable, LocalizedPickerValue, Codable {
     case all, future, missing, existing, first, latest, none
     var id: String { rawValue }
     /// Sonarr's `MonitorTypes` is camelCase (`firstSeason`, `latestSeason`); the raw values get a 400.
@@ -148,57 +158,57 @@ nonisolated enum SonarrMonitorMode: String, CaseIterable, Identifiable {
         default: return rawValue
         }
     }
-    var displayName: String {
+    var labelKey: String {
         switch self {
-        case .all: return String(localized: "search.all.button", bundle: .module)
-        case .future: return String(localized: "search.future.button", bundle: .module)
-        case .missing: return String(localized: "search.missing.button", bundle: .module)
-        case .existing: return String(localized: "search.existing.button", bundle: .module)
-        case .first: return String(localized: "search.firstSeason.button", bundle: .module)
-        case .latest: return String(localized: "search.latestSeason.button", bundle: .module)
-        case .none: return String(localized: "search.none.button", bundle: .module)
+        case .all: return "search.all.button"
+        case .future: return "search.future.button"
+        case .missing: return "search.missing.button"
+        case .existing: return "search.existing.button"
+        case .first: return "search.firstSeason.button"
+        case .latest: return "search.latestSeason.button"
+        case .none: return "search.none.button"
         }
     }
 }
 
 /// Lidarr's `MonitorTypes` serialise 1:1; unlike Sonarr, `first`/`latest` need no remapping.
-nonisolated enum LidarrMonitorMode: String, CaseIterable, Identifiable {
+nonisolated enum LidarrMonitorMode: String, CaseIterable, Identifiable, LocalizedPickerValue, Codable {
     case all, future, missing, existing, first, latest, none
     var id: String { rawValue }
-    var displayName: String {
+    var labelKey: String {
         switch self {
-        case .all: return String(localized: "search.all.button", bundle: .module)
-        case .future: return String(localized: "search.future.button", bundle: .module)
-        case .missing: return String(localized: "search.missing.button", bundle: .module)
-        case .existing: return String(localized: "search.existing.button", bundle: .module)
-        case .first: return String(localized: "search.firstAlbum.button", bundle: .module)
-        case .latest: return String(localized: "search.latestAlbum.button", bundle: .module)
-        case .none: return String(localized: "search.none.button", bundle: .module)
+        case .all: return "search.all.button"
+        case .future: return "search.future.button"
+        case .missing: return "search.missing.button"
+        case .existing: return "search.existing.button"
+        case .first: return "search.firstAlbum.button"
+        case .latest: return "search.latestAlbum.button"
+        case .none: return "search.none.button"
         }
     }
 }
 
 /// Radarr's `minimumAvailability`: when a monitored movie becomes eligible for searching.
-nonisolated enum RadarrMinimumAvailability: String, CaseIterable, Identifiable {
+nonisolated enum RadarrMinimumAvailability: String, CaseIterable, Identifiable, LocalizedPickerValue {
     case announced, inCinemas, released
     var id: String { rawValue }
-    var displayName: String {
+    var labelKey: String {
         switch self {
-        case .announced: return String(localized: "edit.availability.announced.button", bundle: .module)
-        case .inCinemas: return String(localized: "edit.availability.inCinemas.button", bundle: .module)
-        case .released: return String(localized: "edit.availability.released.button", bundle: .module)
+        case .announced: return "edit.availability.announced.button"
+        case .inCinemas: return "edit.availability.inCinemas.button"
+        case .released: return "edit.availability.released.button"
         }
     }
 }
 
-nonisolated enum SonarrSeriesType: String, CaseIterable, Identifiable {
+nonisolated enum SonarrSeriesType: String, CaseIterable, Identifiable, LocalizedPickerValue, Codable {
     case standard, daily, anime
     var id: String { rawValue }
-    var displayName: String {
+    var labelKey: String {
         switch self {
-        case .standard: return String(localized: "search.standard.button", bundle: .module)
-        case .daily: return String(localized: "search.daily.button", bundle: .module)
-        case .anime: return String(localized: "search.anime.button", bundle: .module)
+        case .standard: return "search.standard.button"
+        case .daily: return "search.daily.button"
+        case .anime: return "search.anime.button"
         }
     }
 }

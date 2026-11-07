@@ -16,6 +16,9 @@ nonisolated enum SyncedKeys {
         for kind in ServiceKind.allCases {
             keys.insert("ArrBarr.config.\(kind.rawValue)")
         }
+        for source in QueueItem.Source.allCases {
+            keys.insert(Keys.addDefaults(source))
+        }
         return keys
     }()
 

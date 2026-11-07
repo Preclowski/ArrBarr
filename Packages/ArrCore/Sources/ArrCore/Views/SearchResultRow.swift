@@ -33,7 +33,12 @@ struct SearchResultRow: View {
             title: titleWithYear,
             metadataSegments: metadataSegments,
             onTap: onTap,
-            titleBadge: { SourceGlyphChip(source: result.source) }
+            titleBadge: { SourceGlyphChip(source: result.source) },
+            metadataBadge: {
+                // No tooltip on iOS, so every score stays in the row.
+                ForEach(result.ratingChips, id: \.label) { RatingPill(chip: $0) }
+            },
+            metadataBadge2: { EmptyView() }
         ) { EmptyView() }
         #if os(macOS)
         // No extra request: uses what the lookup already sent.
@@ -73,10 +78,6 @@ struct SearchResultRow: View {
         let country: String? = CountryProvider.displayNames(countries, locale: locale, limit: 1).first
         let segments: [String?] = [
             result.subtitle.flatMap { $0.isEmpty ? nil : $0 },
-            result.imdb.flatMap { $0 > 0 ? "IMDb \($0.ratingText)" : nil },
-            result.rottenTomatoes.flatMap { $0 > 0 ? "RT \(Int($0))%" : nil },
-            result.metacritic.flatMap { $0 > 0 ? "MC \(Int($0))" : nil },
-            result.imdb == nil ? result.rating.flatMap { $0 > 0 ? "★\($0.ratingText)" : nil } : nil,
             result.runtime.flatMap { $0 > 0 ? $0.runtimeText : nil },
             result.certification.flatMap { $0.isEmpty ? nil : $0 },
             country,
@@ -114,7 +115,7 @@ struct SearchResultTooltip: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                TooltipRatingPills(chips: ratingChips)
+                TooltipRatingPills(chips: result.ratingChips)
                 TooltipInfoGrid(lines: infoLines)
                 TooltipOverview(text: result.overview)
             }
@@ -141,16 +142,24 @@ struct SearchResultTooltip: View {
         return parts.joined(separator: " · ")
     }
 
-    /// No links — a tooltip is hover chrome. The bare-rating fallback is TVDB for Sonarr, TMDB otherwise.
-    private var ratingChips: [RatingChip] {
+}
+
+extension SearchResult {
+    /// No links, the row and the tooltip are hover chrome. The bare score is TVDB's for Sonarr, TMDB's for Radarr
+    /// and Whisparr; Lidarr's names no source.
+    var ratingChips: [RatingChip] {
         var chips: [RatingChip] = [
-            result.imdb.flatMap { RatingChip.imdb($0) },
-            result.rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0) },
-            result.metacritic.flatMap { RatingChip.metacritic($0) },
+            imdb.flatMap { RatingChip.imdb($0) },
+            rottenTomatoes.flatMap { RatingChip.rottenTomatoes($0) },
+            metacritic.flatMap { RatingChip.metacritic($0) },
         ].compactMap { $0 }
-        if result.imdb == nil, let v = result.rating,
-           let chip = result.source == .sonarr ? RatingChip.tvdb(v) : RatingChip.tmdb(v) {
-            chips.append(chip)
+        if imdb == nil, let v = rating {
+            let primary: RatingChip? = switch source {
+            case .sonarr: RatingChip.tvdb(v)
+            case .radarr, .whisparr: RatingChip.tmdb(v)
+            case .lidarr: RatingChip.plain(v)
+            }
+            if let primary { chips.append(primary) }
         }
         return chips
     }

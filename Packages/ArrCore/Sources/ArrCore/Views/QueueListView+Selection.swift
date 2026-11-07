@@ -46,12 +46,12 @@ extension QueueListView {
     }
 
     private var allSelected: Bool {
-        let ids = orderedSelectableEntries.map(\.id)
-        return !ids.isEmpty && selected.count == ids.count
+        let rows = selectionRows
+        return !rows.isEmpty && rows.allSatisfy { QueueSelection.isSelected($0, in: selected) }
     }
 
     private func selectAll() {
-        selected = Set(orderedSelectableEntries.map(\.id))
+        selected = Set(selectionRows.joined().map(\.id))
     }
     #endif
 
@@ -110,38 +110,41 @@ extension QueueListView {
     var selectionCountLabel: String {
         String.localizedStringWithFormat(
             NSLocalizedString("queue.selectedItemsCount", bundle: .module, comment: ""),
-            selected.count
+            QueueSelection.selectedEntries(rows: selectionRows, in: selected).count
         )
     }
 
     func selectionState(for entry: QueueRowEntry) -> RowSelectionState {
-        guard selecting else { return .hidden }
-        return selected.contains(entry.id) ? .selected : .unselected
+        selectionState(for: [entry])
     }
 
-    private func toggleSelection(_ entry: QueueRowEntry) {
-        if selected.contains(entry.id) { selected.remove(entry.id) }
-        else { selected.insert(entry.id) }
+    func selectionState(for row: [QueueRowEntry]) -> RowSelectionState {
+        guard selecting else { return .hidden }
+        return QueueSelection.isSelected(row, in: selected) ? .selected : .unselected
+    }
+
+    func rowTapped(_ entry: QueueRowEntry, defaultTarget: QueueItem) {
+        rowTapped([entry], defaultTarget: defaultTarget)
     }
 
     /// Selecting: tap toggles, ⇧-click extends from the anchor. Otherwise ⌘-click
     /// enters selecting with this row picked, a plain click opens the detail.
-    func rowTapped(_ entry: QueueRowEntry, defaultTarget: QueueItem) {
+    func rowTapped(_ row: [QueueRowEntry], defaultTarget: QueueItem) {
         if selecting {
             #if os(macOS)
             if NSEvent.modifierFlags.contains(.shift), let anchor = lastAnchorID {
-                selectRange(from: anchor, to: entry.id)
+                selectRange(from: anchor, to: row)
                 return
             }
             #endif
-            toggleSelection(entry)
-            lastAnchorID = entry.id
+            selected = QueueSelection.toggled(row, in: selected)
+            lastAnchorID = row[0].id
             return
         }
         #if os(macOS)
         if NSEvent.modifierFlags.contains(.command) {
-            selected = [entry.id]
-            lastAnchorID = entry.id
+            selected = Set(row.map(\.id))
+            lastAnchorID = row[0].id
             withAnimation(.snappy(duration: 0.18)) { selecting = true }
             return
         }
@@ -151,20 +154,14 @@ extension QueueListView {
 
     #if os(macOS)
     /// Additive like Finder; the anchor stays put so successive ⇧-clicks re-extend.
-    private func selectRange(from anchor: String, to target: String) {
-        let ids = orderedSelectableEntries.map(\.id)
-        guard let ai = ids.firstIndex(of: anchor), let ti = ids.firstIndex(of: target) else {
-            toggleSelection(target: target)
-            return
+    /// With the anchor gone from the queue, it's a plain toggle.
+    private func selectRange(from anchor: String, to row: [QueueRowEntry]) {
+        if let ids = QueueSelection.ids(betweenRowsOf: anchor, and: row[0].id, rows: selectionRows) {
+            selected.formUnion(ids)
+        } else {
+            selected = QueueSelection.toggled(row, in: selected)
+            lastAnchorID = row[0].id
         }
-        selected.formUnion(ids[min(ai, ti)...max(ai, ti)])
-    }
-
-    /// Fallback when the anchor left the queue mid-selection.
-    private func toggleSelection(target: String) {
-        if selected.contains(target) { selected.remove(target) }
-        else { selected.insert(target) }
-        lastAnchorID = target
     }
     #endif
 
@@ -173,29 +170,16 @@ extension QueueListView {
         withAnimation(.snappy(duration: 0.18)) { selecting = false }
     }
 
-    /// Arr-section rows in display order. Headers and a collapsed group's
-    /// hidden children aren't selectable.
-    private var orderedSelectableEntries: [QueueRowEntry] {
-        orderedEntries.flatMap { entry -> [QueueRowEntry] in
+    /// Arr-section rows in display order.
+    private var selectionRows: [[QueueRowEntry]] {
+        orderedEntries.flatMap { entry -> [[QueueRowEntry]] in
             guard case .arr(let source) = entry else { return [] }
-            return displayRows(for: source).flatMap { display -> [QueueRowEntry] in
-                switch display {
-                case .entry(let e): return [e]
-                case .titleGroup(let g): return isGroupExpanded(g) ? g.entries : []
-                }
-            }
+            return QueueSelection.rows(displayRows(for: source), isExpanded: isGroupExpanded)
         }
     }
 
     private func selectedItems() -> [QueueItem] {
-        orderedSelectableEntries
-            .filter { selected.contains($0.id) }
-            .flatMap { entry -> [QueueItem] in
-                switch entry {
-                case .single(let item): return [item]
-                case .group(let group): return group.items
-                }
-            }
+        QueueSelection.selectedEntries(rows: selectionRows, in: selected).flatMap(\.allItems)
     }
 
     private func bulk(_ action: @escaping (QueueItem) async -> Void) {
@@ -209,13 +193,13 @@ extension QueueListView {
     #if os(macOS)
     /// Global coordinates are the one space that means the same inside and outside
     /// the List's per-row cells. macOS click-drag never scrolls, so this doesn't fight the List.
-    func dragSelectGesture(anchor: String) -> some Gesture {
+    func dragSelectGesture(row: [QueueRowEntry]) -> some Gesture {
         DragGesture(minimumDistance: 6, coordinateSpace: .global)
             .onChanged { value in
                 if dragAnchorID == nil {
                     dragBaseline = selected
-                    dragAnchorID = anchor
-                    dragPaintAdding = !selected.contains(anchor)
+                    dragAnchorID = row[0].id
+                    dragPaintAdding = !QueueSelection.isSelected(row, in: selected)
                 }
                 applyDragSelection(to: value.location.y)
             }
@@ -228,12 +212,11 @@ extension QueueListView {
 
     private func applyDragSelection(to y: CGFloat) {
         guard let anchor = dragAnchorID, let baseline = dragBaseline else { return }
-        let ids = orderedSelectableEntries.map(\.id)
-        guard let ai = ids.firstIndex(of: anchor),
-              let current = rowID(near: y, among: Set(ids)),
-              let ci = ids.firstIndex(of: current) else { return }
+        let rows = selectionRows
+        guard let current = rowID(near: y, among: Set(rows.joined().map(\.id))),
+              let ids = QueueSelection.ids(betweenRowsOf: anchor, and: current, rows: rows) else { return }
         var next = baseline
-        for id in ids[min(ai, ci)...max(ai, ci)] {
+        for id in ids {
             if dragPaintAdding { next.insert(id) } else { next.remove(id) }
         }
         selected = next

@@ -15,6 +15,16 @@ extension ConfigStore {
         _ = try await ProwlarrClient().testConnection()
     }
 
+    func addDefaults(for source: QueueItem.Source) -> ArrAddDefaults {
+        addDefaults[source, default: ArrAddDefaults()].forServer(config(for: source).identityFingerprint)
+    }
+
+    func setAddDefaults(_ defaults: ArrAddDefaults, for source: QueueItem.Source) {
+        var stamped = defaults
+        stamped.server = config(for: source).identityFingerprint
+        addDefaults[source] = stamped
+    }
+
     public func config(for source: QueueItem.Source) -> ServiceConfig { config(for: source.serviceKind) }
 
     public func shouldBlurPoster(for source: QueueItem.Source) -> Bool {

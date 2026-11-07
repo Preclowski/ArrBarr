@@ -76,25 +76,41 @@ enum SearchFeedback: Equatable {
 
     private static let log = Logger(category: "Search")
 
-    /// Sends `action` once at a time, then shows the outcome briefly.
+    /// Where the outcome shows: in the control itself, or in a toast for a menu that is gone by then.
+    enum Outcome { case inline, toast(detail: String?) }
+
+    /// Sends `action` once at a time, then shows the outcome; inline only briefly.
     @MainActor
-    static func run(_ feedback: Binding<SearchFeedback>, _ action: @escaping () async throws -> Void) {
+    static func run(_ feedback: Binding<SearchFeedback>, outcome: Outcome = .inline,
+                    _ action: @escaping () async throws -> Void) {
         guard !feedback.wrappedValue.isSending else { return }
         feedback.wrappedValue = .sending
         Task {
-            let shown: Duration
+            let result: SearchFeedback
             do {
                 try await action()
-                feedback.wrappedValue = .queued
-                shown = .seconds(1.6)
+                result = .queued
             } catch {
                 log.error("search command failed: \(error.logKind, privacy: .public): \(error.localizedDescription, privacy: .private)")
-                feedback.wrappedValue = .failed(error.localizedDescription)
-                shown = .seconds(4)
+                result = .failed(error.localizedDescription)
             }
-            try? await Task.sleep(for: shown)
+            switch outcome {
+            case .inline:
+                feedback.wrappedValue = result
+                try? await Task.sleep(for: result == .queued ? .seconds(1.6) : .seconds(4))
+            case let .toast(detail):
+                ToastCenter.shared.show(result == .queued
+                    ? Toast(tone: .neutral, symbol: "magnifyingglass", title: "toast.searchStarted.title", detail: detail)
+                    : Toast(tone: .failure, symbol: "exclamationmark.triangle.fill", title: "toast.searchFailed.title",
+                            detail: result.failureReason))
+            }
             feedback.wrappedValue = .idle
         }
+    }
+
+    private var failureReason: String? {
+        if case let .failed(reason) = self { return reason }
+        return nil
     }
 }
 
@@ -130,13 +146,15 @@ struct SearchFeedbackIcon: View {
 /// Right-click / long-press twin of the header menu's search items, so a row can be searched in place.
 struct RowSearchContextMenu: ViewModifier {
     @Binding var feedback: SearchFeedback
+    /// The toast's second line: which season or episode.
+    let detail: String?
     let onAutomatic: () async throws -> Void
     let onManual: () -> Void
 
     func body(content: Content) -> some View {
         content.contextMenu {
             Button {
-                SearchFeedback.run($feedback, onAutomatic)
+                SearchFeedback.run($feedback, outcome: .toast(detail: detail), onAutomatic)
             } label: {
                 Label { Text("Automatic search", bundle: .module) } icon: { Image(systemName: "bolt.fill") }
             }
@@ -151,12 +169,14 @@ struct RowSearchContextMenu: ViewModifier {
 /// With either closure missing there is no menu, rather than a dead item.
 struct OptionalRowSearchMenu: ViewModifier {
     @Binding var feedback: SearchFeedback
+    var detail: String? = nil
     let onAutomatic: (() async throws -> Void)?
     let onManual: (() -> Void)?
 
     func body(content: Content) -> some View {
         if let onAutomatic, let onManual {
-            content.modifier(RowSearchContextMenu(feedback: $feedback, onAutomatic: onAutomatic, onManual: onManual))
+            content.modifier(RowSearchContextMenu(feedback: $feedback, detail: detail,
+                                                  onAutomatic: onAutomatic, onManual: onManual))
         } else {
             content
         }

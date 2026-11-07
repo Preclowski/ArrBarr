@@ -42,6 +42,16 @@ extension SettingsView {
                       nsfwFilterBinding: spec.nsfwFilter)
     }
 
+    /// Arrs only, and only once there is a server to ask for its profiles.
+    @ViewBuilder
+    func addDefaultsSection(_ spec: ServiceSpec) -> some View {
+        if let source = QueueItem.Source(rawValue: spec.kind.rawValue), spec.config.wrappedValue.isVisible {
+            AddDefaultsSection(source: source, config: spec.config.wrappedValue,
+                               defaults: Binding(get: { configStore.addDefaults(for: source) },
+                                                 set: { configStore.setAddDefaults($0, for: source) }))
+        }
+    }
+
     // MARK: - Panes
 
     @ViewBuilder

@@ -81,6 +81,9 @@ public final class NotificationCoalescer {
 
     /// `nil` ⇒ the real `UNUserNotificationCenter` banner; tests substitute a recorder.
     private let deliver: (@MainActor (QueueItem.Source, [QueueItem]) -> Void)?
+    private let deliverHealth: (@MainActor (QueueItem.Source, String) -> Void)?
+    /// The system centre throws in a process without an app bundle, so nothing under test may reach it.
+    var postsToSystem: Bool { deliver == nil || deliverHealth == nil }
 
     private let configStore: ConfigStore
     private let scheduler: any CoalescerScheduler
@@ -104,7 +107,8 @@ public final class NotificationCoalescer {
         seriesGroupingDelay: TimeInterval = 5,
         seriesGroupingCap: TimeInterval = 60,
         scheduler: any CoalescerScheduler = RunLoopCoalescerScheduler(),
-        deliver: (@MainActor (QueueItem.Source, [QueueItem]) -> Void)? = nil
+        deliver: (@MainActor (QueueItem.Source, [QueueItem]) -> Void)? = nil,
+        deliverHealth: (@MainActor (QueueItem.Source, String) -> Void)? = nil
     ) {
         self.configStore = configStore
         self.burstWindow = burstWindow
@@ -112,6 +116,7 @@ public final class NotificationCoalescer {
         self.seriesGroupingCap = seriesGroupingCap
         self.scheduler = scheduler
         self.deliver = deliver
+        self.deliverHealth = deliverHealth
     }
 
     private func emit(source: QueueItem.Source, items: [QueueItem]) {
@@ -156,7 +161,7 @@ public final class NotificationCoalescer {
         ]
         Task { @MainActor [weak self] in
             for (source, items) in stages {
-                self?.post(source: source, items: items)
+                self?.emit(source: source, items: items)
                 try? await Task.sleep(nanoseconds: 1_200_000_000)
             }
         }
@@ -316,6 +321,10 @@ public final class NotificationCoalescer {
     /// Not coalesced: health errors are rare and each names a different fix. The
     /// identifier comes from the message so a repeat replaces rather than stacks.
     func postHealthIssue(source: QueueItem.Source, message: String) {
+        if let deliverHealth {
+            deliverHealth(source, message)
+            return
+        }
         let content = UNMutableNotificationContent()
         // The one notification about the arr rather than a title, so its name stays.
         content.title = source.displayName
@@ -325,13 +334,17 @@ public final class NotificationCoalescer {
         if let art = NotificationArtwork.attachment(for: source) {
             content.attachments = [art]
         }
-        let digest = String(message.hashValue, radix: 16)
         let req = UNNotificationRequest(
-            identifier: "arrbarr.health.\(source.rawValue).\(digest)",
+            identifier: Self.healthIdentifier(source: source, message: message),
             content: content,
             trigger: nil
         )
         UNUserNotificationCenter.current().add(req)
+    }
+
+    /// The message itself: `hashValue` changes with every launch, so a repeat after a relaunch would stack.
+    nonisolated static func healthIdentifier(source: QueueItem.Source, message: String) -> String {
+        "arrbarr.health.\(source.rawValue).\(message)"
     }
 
     private func post(source: QueueItem.Source, items: [QueueItem]) {

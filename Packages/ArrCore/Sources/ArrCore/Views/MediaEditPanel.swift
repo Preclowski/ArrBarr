@@ -32,6 +32,7 @@ struct MediaEditPanel: View {
     @State private var selectedMetadataProfileId: Int?
     @State private var selectedRootFolder: String?
     @State private var availability: RadarrMinimumAvailability = .released
+    @Environment(\.locale) private var locale
     @State private var seriesType: SonarrSeriesType = .standard
     /// Sonarr's values are "all" / "none"; Lidarr adds "new".
     @State private var monitorNewItems = "all"
@@ -142,13 +143,13 @@ struct MediaEditPanel: View {
         switch request.source {
         case .radarr, .whisparr:
             Picker(selection: $availability) {
-                ForEach(RadarrMinimumAvailability.allCases, id: \.self) { Text(verbatim: $0.displayName).tag($0) }
+                ForEach(RadarrMinimumAvailability.allCases, id: \.self) { Text(verbatim: $0.displayName(locale: locale)).tag($0) }
             } label: {
                 Text("edit.availability.button", bundle: .module)
             }
         case .sonarr:
             Picker(selection: $seriesType) {
-                ForEach(SonarrSeriesType.allCases, id: \.self) { Text(verbatim: $0.displayName).tag($0) }
+                ForEach(SonarrSeriesType.allCases, id: \.self) { Text(verbatim: $0.displayName(locale: locale)).tag($0) }
             } label: {
                 Text("search.seriesType.button", bundle: .module)
             }
@@ -245,11 +246,11 @@ struct MediaEditPanel: View {
             case .radarr, .whisparr:
                 formPicker("edit.availability.button",
                            selection: $availability,
-                           options: RadarrMinimumAvailability.allCases.map { ($0, $0.displayName) })
+                           options: RadarrMinimumAvailability.allCases.map { ($0, $0.displayName(locale: locale)) })
             case .sonarr:
                 formPicker("search.seriesType.button",
                            selection: $seriesType,
-                           options: SonarrSeriesType.allCases.map { ($0, $0.displayName) })
+                           options: SonarrSeriesType.allCases.map { ($0, $0.displayName(locale: locale)) })
                 formPicker("edit.monitorNewSeasons.button",
                            selection: $monitorNewItems,
                            options: [
