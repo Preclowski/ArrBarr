@@ -39,7 +39,7 @@ extension PendingConfirm {
     /// and an interpolated sentence never matches the catalogue's plural entry.
     static func removeAllDownloads(count: Int, locale: Locale, onConfirm: @escaping @MainActor () -> Void) -> PendingConfirm {
         PendingConfirm(
-            title: String.localizedStringWithFormat(AppLocalized.string("Remove %lld downloads?", locale: locale), count),
+            title: String(format: AppLocalized.string("Remove %lld downloads?", locale: locale), locale: locale, count),
             message: "This will remove every download of this title from the client.",
             confirmLabel: "Remove All",
             isDestructive: true,
@@ -53,7 +53,7 @@ extension PendingConfirm {
                                onPause: @escaping @MainActor () -> Void,
                                onResume: @escaping @MainActor () -> Void) -> PendingConfirm? {
         func title(_ key: String, _ count: Int) -> String {
-            String.localizedStringWithFormat(AppLocalized.string(key, locale: locale), count)
+            String(format: AppLocalized.string(key, locale: locale), locale: locale, count)
         }
         switch action ?? group.pauseResumeAction {
         case .pause where !group.pauseTargets.isEmpty:
